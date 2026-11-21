@@ -1,0 +1,870 @@
+const $ = id => document.getElementById(id);
+const CDRAGON = 'https://raw.communitydragon.org/latest/plugins';
+const iconUrl = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/profile-icons/${id}.jpg`;
+const crestUrl = tier => `${CDRAGON}/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${tier.toLowerCase()}.svg`;
+
+const TIERS = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'];
+const DIVS = ['IV', 'III', 'II', 'I'];
+const APEX = ['MASTER', 'GRANDMASTER', 'CHALLENGER'];
+// the ranked queues shown on tiles / in the profile: [key, label]
+const QUEUES = [['solo', 'Solo/Duo'], ['flex', 'Flex'], ['r5', 'Ranked 5v5'], ['classic', 'Classic 5v5']];
+const RISKY = ['ChampSelect', 'InProgress', 'GameStart', 'Reconnect', 'ReadyCheck'];
+
+let S = { accounts: [], active: null, live: {}, pendingAdd: false, busy: false, settings: {} };
+let menuFor = null;
+let shownSaveError = null;
+
+// ---------- language ----------
+const lang = () => (S.settings && S.settings.lang) || 'en';
+const t = (key, vars) => I18N.t(lang(), key, vars);
+const locale = () => (lang() === 'de' ? 'de-DE' : 'en-GB');
+const tierName = tier => t('tier.' + tier);
+let appliedLang = null;
+// fills every data-i18n / data-i18n-title / data-i18n-ph element of the static page
+function applyStaticTexts() {
+  if (appliedLang === lang()) return;
+  appliedLang = lang();
+  document.documentElement.lang = appliedLang;
+  document.title = t('app.name');
+  document.querySelectorAll('[data-i18n]').forEach(el => (el.textContent = t(el.dataset.i18n)));
+  document.querySelectorAll('[data-i18n-title]').forEach(el => (el.title = t(el.dataset.i18nTitle)));
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => (el.placeholder = t(el.dataset.i18nPh)));
+  document.querySelectorAll('#langSeg [data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === appliedLang));
+}
+
+// ---------- what a tile shows (Customise tiles) ----------
+const TILE_DEFAULTS = { icon: true, level: true, tag: true, note: true, lock: true, solo: true, flex: true, r5: false, classic: false,
+  winrate: true, mmr: true, ranked: true, inactive: true, lastPlayed: false, wallet: false };
+const TILE_GROUPS = [
+  ['te.g.head', ['icon', 'level', 'tag', 'note', 'lock']],
+  ['te.g.ranks', ['solo', 'flex', 'r5', 'classic', 'winrate', 'mmr']],
+  ['te.g.extra', ['ranked', 'inactive', 'lastPlayed', 'wallet']],
+];
+const tileOpt = () => ({ ...TILE_DEFAULTS, ...((S.settings && S.settings.tile) || {}) });
+
+// ---------- streamer mode: what's on screen may be seen by viewers ----------
+const STREAM_DEFAULTS = { name: true, tag: true, icon: false, level: false, note: false, ranks: false, wallet: true, login: true };
+const STREAM_KEYS = ['name', 'tag', 'icon', 'level', 'note', 'ranks', 'wallet', 'login'];
+const streaming = () => !!(S.settings && S.settings.streamer);
+const hides = k => streaming() && !!({ ...STREAM_DEFAULTS, ...((S.settings && S.settings.streamerHide) || {}) })[k];
+// shown instead of the Riot name: the note (if visible), else "Account 3"
+function dispName(a) {
+  const real = a.gameName === 'Gespeicherter Login' ? t('tile.savedLogin') : a.gameName;
+  if (!hides('name') && !(a.placeholder && !a.tagLine && hides('login'))) return real;
+  if (a.note && !hides('note')) return a.note;
+  return t('stream.alias', { n: S.accounts.findIndex(x => x.puuid === a.puuid) + 1 });
+}
+const dispTag = a => (hides('tag') || hides('name') ? '' : a.tagLine || '');
+const fullName = a => dispName(a) + (dispTag(a) ? '#' + dispTag(a) : '');
+
+// ---------- MMR estimate ----------
+// Riot doesn't publish MMR. This is a rough guess: rank + LP as the base,
+// nudged by win rate (weighted by how many games back it up).
+function rankScore(r) {
+  const i = TIERS.indexOf(r.tier);
+  if (APEX.includes(r.tier)) return 700 * 4 + r.lp;          // Master+ : LP stacks on top
+  return i * 400 + DIVS.indexOf(r.division) * 100 + Math.min(r.lp, 100);
+}
+function scoreToLabel(s) {
+  if (s >= 2800) return tierName('MASTER') + '+';
+  s = Math.max(0, s);
+  const i = Math.min(6, Math.floor(s / 400));
+  const d = Math.min(3, Math.floor((s - i * 400) / 100));
+  return `${tierName(TIERS[i])} ${DIVS[d]}`;
+}
+function mmrEstimate(a) {
+  const qs = [a.solo, a.flex].filter(Boolean);
+  if (!qs.length) return null;
+  const q = (a.solo && (a.solo.wins + a.solo.losses) >= 10) ? a.solo
+    : qs.sort((x, y) => (y.wins + y.losses) - (x.wins + x.losses))[0];
+  const games = q.wl === false ? 0 : q.wins + q.losses;
+  const wr = games ? q.wins / games : 0.5;
+  const conf = Math.min(1, games / 80);
+  const adj = Math.max(-200, Math.min(200, (wr - 0.5) * 800 * conf));
+  return { label: scoreToLabel(rankScore(q) + adj), queue: q === a.solo ? 'Solo/Duo' : 'Flex', diff: adj };
+}
+
+// ---------- rendering ----------
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+const num = n => (n == null ? '–' : n.toLocaleString(locale()));
+
+function rankRow(label, r, showWr = true) {
+  if (!r) return `<div class="rank"><span class="ph"></span><div><div class="q">${label}</div><div class="t"><i>${t('tile.unranked')}</i></div></div></div>`;
+  const div = APEX.includes(r.tier) ? '' : ' ' + r.division;
+  const head = `<img src="${crestUrl(r.tier)}" alt="">
+    <div><div class="q">${label}</div><div class="t">${tierName(r.tier)}${div} <i>· ${r.lp} LP</i></div></div>`;
+  if (!showWr) return `<div class="rank">${head}</div>`;
+  if (r.wl === false) {
+    return `<div class="rank" title="${esc(t('tile.wlUnknown'))}">${head}<div class="wr"><b>–</b>${t('tile.wins', { n: r.wins })}</div></div>`;
+  }
+  const games = r.wins + r.losses;
+  const wr = games ? Math.round(100 * r.wins / games) : 0;
+  const cls = wr >= 53 ? 'good' : wr <= 47 ? 'bad' : '';
+  return `<div class="rank" title="${esc(t('tile.wlTitle', { w: r.wins, l: r.losses }) + (r.wlStale ? t('tile.wlStale') : ''))}">${head}
+    <div class="wr"><b class="${cls}">${wr}%</b>${t('tile.games', { n: games })}</div></div>`;
+}
+
+const LOCK = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+const DOTS = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>';
+const EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF = '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+const CHEV = '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+
+function lockHtml(a, o) {
+  if (!o.lock) return '';
+  if (a.credBroken) return `<span class="lock broken" title="${esc(t('tile.lockBroken'))}">${LOCK}</span>`;
+  return a.hasCred || a.placeholder ? `<span class="lock" title="${esc(t('tile.lockTitle'))}">${LOCK}</span>` : '';
+}
+
+function tileHtml(a, o = tileOpt(), preview = false) {
+  if (a.placeholder) return placeholderHtml(a, o);
+  const active = a.puuid === S.active;
+  const m = mmrEstimate(a);
+  const trend = m ? (m.diff > 40 ? ' ↑' : m.diff < -40 ? ' ↓' : '') : '';
+  const idle = o.inactive ? decayWarning(a) : 0;
+  const p = a.profile || {};
+  const extras = [];
+  if (o.lastPlayed && a.lastPlayed) extras.push(`<span>${t('tile.lastPlayed', { ago: ago(a.lastPlayed) })}</span>`);
+  if (o.wallet && p.be != null && !hides('wallet')) extras.push(`<span><b class="be">${num(p.be)}</b> BE</span><span><b class="rp">${num(p.rp)}</b> RP</span>`);
+  const draggable = !preview;
+  const showLvl = o.level && !hides('level');
+  return `<div class="tile ${active ? 'active' : ''}" data-id="${esc(a.puuid)}" draggable="${draggable}">
+    ${active ? `<span class="badge">${t('tile.active')}</span>` : idle ? `<span class="badge warn" title="${esc(t('tile.idleTitle', { date: fmtDate(a.lastPlayed) }))}">${t('tile.idle', { d: idle })}</span>` : ''}
+    ${lockHtml(a, o)}
+    <button class="more" data-more title="${esc(t('common.more'))}">${DOTS}</button>
+    ${o.icon ? `<div class="avatar">
+      ${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : '<div class="ph"></div>'}
+      ${showLvl && a.level ? `<span class="level">${a.level}</span>` : ''}
+    </div>` : `<div class="no-avatar"></div>`}
+    <div class="name" title="${esc(fullName(a))}">${esc(dispName(a))}${o.tag && dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}</div>
+    ${!o.icon && showLvl && a.level ? `<div class="lvl-line">Level ${a.level}</div>` : ''}
+    ${o.note && !hides('note') ? `<div class="note" data-note>${esc(a.note || '')}</div>` : '<div data-note></div>'}
+    ${o.ranked && !hides('ranks') ? rankedBlock(a) : ''}
+    ${hides('ranks') ? `<div class="stream-hidden">${t('stream.ranksHidden')}</div>` : QUEUES.some(([k]) => o[k]) ? `<div class="ranks">${QUEUES.filter(([k]) => o[k]).map(([k, n]) => rankRow(n, a[k], o.winrate)).join('')}</div>` : ''}
+    ${extras.length ? `<div class="tile-extra">${extras.join('')}</div>` : ''}
+    ${o.mmr && !hides('ranks') ? `<div class="mmr" title="${esc(t('tile.mmrTitle', { q: m ? m.queue : '–' }))}">
+      <span>${t('tile.mmr')}</span><b>${m ? '≈ ' + m.label + trend : '–'}</b>
+    </div>` : ''}
+  </div>`;
+}
+
+// masked login names (no Riot ID given): revealed on demand, never stored in plain text
+const revealed = new Map();
+function placeholderHtml(a, o = tileOpt()) {
+  const masked = !a.tagLine && !a.credBroken && !hides('login') && !hides('name');
+  const shown = masked && revealed.has(a.puuid);
+  const label = dispName(a);
+  const nameHtml = masked
+    ? `<span class="masked">${esc(shown ? revealed.get(a.puuid) : label)}</span><button class="reveal" data-reveal title="${esc(shown ? t('tile.hideLogin') : t('tile.showLogin'))}">${shown ? EYE_OFF : EYE}</button>`
+    : `${esc(label)}${dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}`;
+  return `<div class="tile pending" data-id="${esc(a.puuid)}" draggable="true">
+    <span class="badge new">${t('tile.new')}</span>
+    ${lockHtml(a, o)}
+    <button class="more" data-more title="${esc(t('common.more'))}">${DOTS}</button>
+    <div class="avatar"><div class="ph q">?</div></div>
+    <div class="name${masked ? ' with-eye' : ''}">${nameHtml}</div>
+    <div class="note" data-note>${hides('note') ? '' : esc(a.note || '')}</div>
+    <div class="first-login">
+      <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+      <b>${t('tile.notLoggedIn')}</b>
+      <span>${t('tile.firstLogin')}</span>
+    </div>
+  </div>`;
+}
+
+async function toggleReveal(id) {
+  if (revealed.has(id)) revealed.delete(id);
+  else { const u = await api.getCredUser(id); if (u) revealed.set(id, u); }
+  render();
+}
+
+// ---------- categories ----------
+let renameCat = null;      // category whose name is being edited
+let dragging = false;
+const cats = () => S.categories || [];
+const catOf = a => (a.category && cats().some(c => c.id === a.category)) ? a.category : '';
+
+function gridHtml(cat, list) {
+  return `<div class="grid" data-cat="${esc(cat)}">${list.length ? list.map(a => tileHtml(a)).join('')
+    : `<div class="cat-empty">${t('cat.dropHere')}</div>`}</div>`;
+}
+function sectionHtml(c, list) {
+  const nameHtml = renameCat === c.id
+    ? `<input class="cat-input" data-cat-input maxlength="32" value="${esc(c.name)}">`
+    : `<span class="cat-name" data-cat-name title="${esc(t('cat.rename'))}">${esc(c.name)}</span>`;
+  return `<section class="cat${c.collapsed ? ' collapsed' : ''}" data-cat="${esc(c.id)}">
+    <div class="cat-head">
+      <button class="chev" data-cat-toggle title="${esc(c.collapsed ? t('cat.expand') : t('cat.collapse'))}">${CHEV}</button>
+      ${nameHtml}<span class="cat-count">${list.length}</span>
+      <span class="cat-line"></span>
+      <button class="cat-more" data-cat-more title="${esc(t('cat.menu'))}">${DOTS}</button>
+    </div>
+    ${c.collapsed ? '' : gridHtml(c.id, list)}
+  </section>`;
+}
+function renderBoard() {
+  const accs = sortList(filterList(S.accounts));
+  const searching = !!$('search').value.trim();
+  if (searching && !accs.length) { $('board').innerHTML = `<div class="no-hits">${t('noHits')}</div>`; return; }
+  if (!cats().length) { $('board').innerHTML = accs.length ? gridHtml('', accs) : ''; return; }
+  const loose = accs.filter(a => !catOf(a));
+  // tiles without a category come first, above all categories
+  $('board').innerHTML = ((loose.length || dragging) ? `<section class="cat loose" data-cat="">
+        <div class="cat-head"><span class="cat-name plain">${t('cat.none')}</span><span class="cat-count">${loose.length}</span><span class="cat-line"></span></div>
+        ${gridHtml('', loose)}</section>` : '')
+    + cats().filter(c => !searching || accs.some(a => catOf(a) === c.id))
+      .map(c => sectionHtml(c, accs.filter(a => catOf(a) === c.id))).join('');
+  const inp = document.querySelector('[data-cat-input]');
+  if (inp) { inp.focus(); inp.select(); }
+}
+function finishRename(save) {
+  const inp = document.querySelector('[data-cat-input]');
+  const id = renameCat;
+  renameCat = null;
+  if (save && inp && id) api.catRename(id, inp.value); else render();
+}
+// order + category of every tile -> main process
+function arrange(list) {
+  S.accounts = list.map(x => Object.assign(S.accounts.find(a => a.puuid === x.puuid), { category: x.category || undefined }));
+  render();
+  api.arrange(list);
+}
+function moveTo(id, cat, beforeId) {
+  const list = S.accounts.filter(a => a.puuid !== id).map(a => ({ puuid: a.puuid, category: catOf(a) }));
+  let at = beforeId ? list.findIndex(x => x.puuid === beforeId) : -1;
+  if (at < 0) {   // end of that category (or end of the list)
+    let last = -1;
+    list.forEach((x, i) => { if (x.category === cat) last = i; });
+    at = last >= 0 ? last + 1 : list.length;
+  }
+  list.splice(at, 0, { puuid: id, category: cat });
+  arrange(list);
+}
+
+// ---------- search, sorting ----------
+function filterList(list) {
+  const q = $('search').value.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(a => [a.gameName, a.tagLine, a.note].some(x => (x || '').toLowerCase().includes(q)));
+}
+function queueScore(q) { return q ? rankScore(q) : -1; }
+const sortMode = () => (S.settings && S.settings.sort) || 'level';
+function sortList(list) {
+  const mode = sortMode();
+  const by = {
+    level: (x, y) => (y.level || 0) - (x.level || 0) || queueScore(y.solo) - queueScore(x.solo),
+    rank: (x, y) => queueScore(y.solo) - queueScore(x.solo),
+    flex: (x, y) => queueScore(y.flex) - queueScore(x.flex),
+    played: (x, y) => (y.lastPlayed || 0) - (x.lastPlayed || 0),
+    name: (x, y) => (x.gameName || '').localeCompare(y.gameName || '', locale()),
+  }[mode];
+  return by ? [...list].sort(by) : list;
+}
+
+// ---------- dates, decay ----------
+const DAY = 86400000;
+function ago(ts) {
+  if (!ts) return t('common.unknown');
+  const d = Math.floor((Date.now() - ts) / DAY);
+  if (d <= 0) { const h = Math.floor((Date.now() - ts) / 3600000); return h <= 0 ? t('ago.now') : t('ago.hours', { n: h }); }
+  return d === 1 ? t('ago.yesterday') : t('ago.days', { n: d });
+}
+function fmtDate(ts) { return ts ? new Date(ts).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '–'; }
+// Diamond+ loses LP when inactive; warn after two weeks without a game
+function decayWarning(a) {
+  if (!a.solo || TIERS.indexOf(a.solo.tier) < TIERS.indexOf('DIAMOND') || !a.lastPlayed) return 0;
+  const d = Math.floor((Date.now() - a.lastPlayed) / DAY);
+  return d >= 14 ? d : 0;
+}
+
+// ---------- ranked readiness ----------
+// Ranked needs level 30 and 20 owned champions. When the account was logged in,
+// Riot's own answer (incl. bans, leaver locks …) is used on top.
+const OWN_REASONS = ['PlayerMinLevelRestriction', 'PlayerAvailableChampionRestriction'];
+function reasonText(x) {
+  const args = x.args || {};
+  const n = args.playerMinLevelRestriction || args.playerAvailableChampionRestriction;
+  const key = 'restrict.' + x.code;
+  const known = I18N.STRINGS.en[key];
+  const txt = known ? t(key, { n: n || (x.code === 'PlayerMinLevelRestriction' ? 30 : 20) })
+    : String(x.code || '').replace(/Restriction$/, '').replace(/([a-z])([A-Z])/g, '$1 $2')
+      + (Object.values(args).filter(v => /^d+$/.test(String(v))).length ? ' (' + Object.values(args).filter(v => /^d+$/.test(String(v))).join('/') + ')' : '');
+  return txt + (x.until > Date.now() ? t('rk.until', { date: new Date(x.until).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }) : '');
+}
+function rankedStatus(a) {
+  if (a.placeholder || a.level == null) return null;
+  const champs = a.profile && a.profile.champs;
+  const lvlOk = a.level >= 30;
+  const chOk = champs == null ? null : champs >= 20;
+  const rc = a.rankedCheck;
+  const ranked = QUEUES.some(([k]) => a[k]);
+  // 10 normal Summoner's Rift games (new accounts); counted from the match history
+  const normals = a.normals ? a.normals.count : null;
+  // a rank or any ranked game in the history = unlocked; otherwise count recent normals
+  const nOk = ranked || (a.normals && a.normals.hasRanked) ? true : normals == null ? null : normals >= 10;
+  // Riot's check counts, unless level/champions have changed since (then our numbers are newer)
+  const riotOnlyOwn = rc && rc.solo && rc.solo.reasons.every(x => OWN_REASONS.includes(x.code));
+  let ready;
+  if (rc && rc.solo && !(riotOnlyOwn && lvlOk && chOk)) ready = rc.solo.ok;
+  else if (ranked) ready = true;     // already has a rank
+  else ready = lvlOk && chOk !== false ? (chOk ? true : null) : false;
+  if (ready !== false && nOk === false) ready = false;
+  return { ready, lvlOk, chOk, nOk, normals, ranked, level: a.level, champs, rc };
+}
+function rankedBlock(a) {
+  const st = rankedStatus(a);
+  if (!st || st.ready !== false) return '';
+  const bar = (v, max) => `<span class="bar"><i style="width:${Math.min(100, Math.round(100 * v / max))}%"></i></span>`;
+  const extra = st.rc && st.rc.solo ? st.rc.solo.reasons.filter(x => !OWN_REASONS.includes(x.code)).map(reasonText) : [];
+  return `<div class="rk-block" title="${esc(t('rk.title'))}">
+    <div class="rk-title">${t('rk.notReady')}</div>
+    ${st.lvlOk ? '' : `<div class="rk-row"><span>${t('rk.level')}</span>${bar(st.level, 30)}<b>${st.level}/30</b></div>`}
+    ${st.chOk === false ? `<div class="rk-row"><span>${t('rk.champs')}</span>${bar(st.champs, 20)}<b>${st.champs}/20</b></div>` : ''}
+    ${st.nOk === false ? `<div class="rk-row" title="${esc(t('rk.normalsNote'))}"><span>${t('rk.normals')}</span>${bar(st.normals, 10)}<b>${st.normals}/10</b></div>` : ''}
+    ${extra.map(x => `<div class="rk-row warn">${esc(x)}</div>`).join('')}
+  </div>`;
+}
+function rankedChecklist(a) {
+  const st = rankedStatus(a);
+  if (!st) return '';
+  const row = (ok, label, val) => `<div class="ck ${ok === true ? 'ok' : ok === false ? 'no' : 'na'}"><span class="ico">${ok === true ? '✓' : ok === false ? '✕' : '?'}</span>${label}<b>${val}</b></div>`;
+  const q = (name, x) => !x ? row(null, t('rk.riot', { q: name }), t('rk.afterLogin'))
+    : row(x.ok, t('rk.riot', { q: name }), x.ok ? t('rk.cleared') : esc(x.reasons.map(reasonText).join(', ') || t('rk.blocked')));
+  return `<h3>${t('rk.section')} ${st.rc ? '<i>' + t('rk.riotAsOf', { date: fmtDate(st.rc.at) }) + '</i>' : ''}</h3>
+    <div class="checklist">
+      ${row(st.lvlOk, t('rk.lvl30'), st.level + '/30')}
+      ${row(st.chOk, t('rk.champs20'), st.champs == null ? t('rk.afterLogin') : st.champs + '/20')}
+      ${row(st.nOk, t('rk.normals10'), st.nOk === true && (st.ranked || st.normals < 10) ? t('rk.cleared') : st.normals == null ? t('rk.afterLogin') : st.normals + '/10')}
+      ${QUEUES.map(([k, n]) => q(n, st.rc && st.rc[k])).join('')}
+    </div>`;
+}
+
+// ---------- open with ----------
+const SITE_REGION = {
+  short: { EUW: 'euw', EUNE: 'eune', NA: 'na', KR: 'kr', BR: 'br', LAN: 'lan', LAS: 'las', OCE: 'oce', OC1: 'oce', TR: 'tr', RU: 'ru', JP: 'jp' },
+  ugg: { EUW: 'euw1', EUNE: 'eun1', NA: 'na1', KR: 'kr', BR: 'br1', LAN: 'la1', LAS: 'la2', OCE: 'oc1', OC1: 'oc1', TR: 'tr1', RU: 'ru', JP: 'jp1' },
+};
+function siteUrl(a, site) {
+  const R = (a.region || 'EUW').toUpperCase();
+  const r = SITE_REGION.short[R] || 'euw';
+  const id = encodeURIComponent(a.gameName + '-' + a.tagLine);
+  const low = id.toLowerCase();
+  return {
+    opgg: `https://op.gg/lol/summoners/${r}/${id}`,
+    poro: `https://porofessor.gg/live/${r}/${low}`,
+    log: `https://www.leagueofgraphs.com/summoner/${r}/${id}`,
+    moba: `https://mobalytics.gg/lol/profile/${r}/${low}/overview`,
+    ugg: `https://u.gg/lol/profile/${SITE_REGION.ugg[R] || 'euw1'}/${low}/overview`,
+  }[site];
+}
+function openSite(a, site) { const u = siteUrl(a, site); if (u) api.openExternal(u); }
+
+// ---------- profile window ----------
+const CHAMP_ICON = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/champion-icons/${id}.png`;
+const SITES = [['opgg', 'op.gg'], ['poro', 'Porofessor'], ['log', 'League of Graphs'], ['moba', 'Mobalytics'], ['ugg', 'u.gg']];
+let profileFor = null;
+let profileHistory = [];
+
+function historyChart(h) {
+  const pts = (h || []).filter(e => e.solo || e.flex);
+  if (pts.length < 2) return `<div class="chart-empty">${t('p.historyEmpty')}</div>`;
+  const W = 520, H = 150, P = 8;
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t || t0 + 1;
+  const vals = pts.flatMap(e => [e.solo, e.flex].filter(Boolean).map(rankScore));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  lo = Math.floor((lo - 30) / 100) * 100; hi = Math.ceil((hi + 30) / 100) * 100;
+  const x = ts => P + (W - 2 * P) * ((ts - t0) / Math.max(1, t1 - t0));
+  const y = v => H - P - (H - 2 * P) * ((v - lo) / Math.max(1, hi - lo));
+  const line = key => {
+    const p = pts.filter(e => e[key]).map(e => `${x(e.t).toFixed(1)},${y(rankScore(e[key])).toFixed(1)}`);
+    return p.length > 1 ? `<polyline class="l-${key}" points="${p.join(' ')}"/>` : '';
+  };
+  // a guide line + label for every division in view
+  let grid = '';
+  for (let v = lo; v <= hi; v += 100) {
+    if (v < 0 || v >= 2800) continue;
+    grid += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}"/><text x="${W - P}" y="${y(v) - 3}">${scoreToLabel(v)}</text>`;
+  }
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${grid}${line('flex')}${line('solo')}</svg>
+    <div class="chart-legend"><span class="k solo"></span>Solo/Duo <span class="k flex"></span>Flex <i>${fmtDate(t0)} – ${fmtDate(t1)}</i></div>`;
+}
+
+function renderProfile() {
+  const a = S.accounts.find(x => x.puuid === profileFor);
+  if (!a) { $('profileBox').hidden = true; return; }
+  const p = a.profile || {};
+  const stat = (label, val, sub) => `<div class="stat"><b>${val}</b><span>${label}</span>${sub ? '<i>' + sub + '</i>' : ''}</div>`;
+  const idle = decayWarning(a);
+  $('profileCard').innerHTML = `
+    <button class="icon pclose" data-pclose title="${esc(t('common.close'))}"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
+    <div class="p-head">
+      <div class="avatar">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : '<div class="ph"></div>'}${a.level && !hides('level') ? `<span class="level">${a.level}</span>` : ''}</div>
+      <div>
+        <h2>${esc(dispName(a))}${dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}</h2>
+        <div class="p-sub">${esc(a.region || '')}${a.note && !hides('note') ? ' · <span class="gold">' + esc(a.note) + '</span>' : ''}</div>
+        <div class="p-sub ${idle ? 'warn' : ''}">${t('p.lastPlayed', { ago: ago(a.lastPlayed) })}${a.lastPlayed ? ' (' + fmtDate(a.lastPlayed) + ')' : ''}${idle ? t('p.decay') : ''}</div>
+      </div>
+    </div>
+    ${hides('ranks') ? `<div class="chart-empty">${t('stream.ranksHidden')}</div>` : `<div class="ranks two">${QUEUES.map(([k, n]) => rankRow(n, a[k])).join('')}</div>
+    ${rankedChecklist(a)}
+    <h3>${t('p.history')}</h3>
+    ${historyChart(profileHistory)}`}
+    <h3>${t('p.account')} ${p.at ? '<i>' + t('p.asOf', { date: fmtDate(p.at) }) + '</i>' : ''}</h3>
+    ${p.at ? `<div class="stats">
+      ${stat(t('p.be'), hides('wallet') ? '•••' : num(p.be))}${stat(t('p.rp'), hides('wallet') ? '•••' : num(p.rp))}
+      ${stat(t('p.champs'), num(p.champs), p.champsTotal ? t('p.of', { n: p.champsTotal }) : '')}${stat(t('p.skins'), num(p.skins))}
+      ${stat(t('p.honor'), p.honor == null ? '–' : t('p.honorLvl', { n: p.honor }))}${stat(t('p.mastery'), num(p.masteryScore))}
+    </div>
+    ${(p.topMastery || []).length ? `<div class="top-m">${p.topMastery.map(m => `<div class="tm"><img src="${CHAMP_ICON(m.id)}" alt=""><b>${t('p.mLevel', { n: m.level })}</b><span>${t('p.points', { n: num(m.points) })}</span></div>`).join('')}</div>` : ''}`
+    : `<div class="chart-empty">${t('p.loadLater')}</div>`}
+    <div class="p-actions">
+      <span class="p-open">${t('p.openWith')}</span>${SITES.map(([k, n]) => `<button class="chip" data-site="${k}">${n}</button>`).join('')}
+      <span class="grow"></span>
+      ${a.puuid === S.active && S.live && S.live.puuid === a.puuid ? '' : `<button class="btn gold" data-pswitch>${t('p.switch')}</button>`}
+    </div>`;
+  $('profileBox').hidden = false;
+}
+async function openProfile(id) {
+  profileFor = id;
+  profileHistory = [];
+  renderProfile();
+  profileHistory = await api.getHistory(id);
+  if (profileFor === id) renderProfile();
+}
+function closeProfile() { profileFor = null; $('profileBox').hidden = true; }
+$('profileBox').addEventListener('click', e => {
+  if (e.target === $('profileBox') || e.target.closest('[data-pclose]')) return closeProfile();
+  const a = S.accounts.find(x => x.puuid === profileFor);
+  const site = e.target.closest('[data-site]');
+  if (site && a) return openSite(a, site.dataset.site);
+  if (e.target.closest('[data-pswitch]')) { const id = profileFor; closeProfile(); switchTo(id); }
+});
+
+// ---------- tile editor ----------
+let teOpen = false;
+// sample for the preview: the active account, else the one with the most data
+function previewAccount() {
+  const real = S.accounts.filter(a => !a.placeholder);
+  return real.find(a => a.puuid === S.active) || real.sort((x, y) => (!!y.solo - !!x.solo) || ((y.level || 0) - (x.level || 0)))[0]
+    || { puuid: 'preview', gameName: 'Summoner', tagLine: 'EUW', level: 120, iconId: 29, note: 'Main',
+      solo: { tier: 'GOLD', division: 'II', lp: 54, wins: 48, losses: 41 }, flex: null, lastPlayed: Date.now() - 2 * DAY };
+}
+function renderTileEditor() {
+  if (!teOpen) return;
+  const o = tileOpt();
+  $('tePreview').innerHTML = tileHtml(previewAccount(), o, true);
+  $('teOptions').innerHTML = TILE_GROUPS.map(([g, keys]) => `<div class="te-group"><div class="te-g">${t(g)}</div>
+    ${keys.map(k => `<label class="te-opt"><input type="checkbox" data-tile="${k}" ${o[k] ? 'checked' : ''}><span class="cb"></span>${t('te.' + k)}</label>`).join('')}</div>`).join('');
+}
+function openTileEditor() { teOpen = true; $('tileEditor').hidden = false; renderTileEditor(); }
+function closeTileEditor() { teOpen = false; $('tileEditor').hidden = true; }
+$('teOptions').addEventListener('change', e => {
+  const k = e.target.dataset.tile;
+  if (!k) return;
+  const o = { ...tileOpt(), [k]: e.target.checked };
+  S.settings = { ...S.settings, tile: o };    // instant feedback, main confirms
+  render();
+  api.setSetting('tile', o);
+});
+$('teReset').onclick = () => { S.settings = { ...S.settings, tile: { ...TILE_DEFAULTS } }; render(); api.setSetting('tile', { ...TILE_DEFAULTS }); };
+$('teDone').onclick = closeTileEditor;
+$('tileEditor').addEventListener('click', e => { if (e.target === $('tileEditor')) closeTileEditor(); });
+$('editTiles').onclick = openTileEditor;
+const SUPPORT_URL = 'https://buymeacoffee.com/zlizz3r';
+$('supportBtn').onclick = () => api.openExternal(SUPPORT_URL);
+$('openTileEditor').onclick = () => { openSettings(false); openTileEditor(); };
+
+// ---------- streamer mode settings ----------
+function renderStreamOptions() {
+  const h = { ...STREAM_DEFAULTS, ...((S.settings && S.settings.streamerHide) || {}) };
+  const box = $('streamOpts');
+  box.classList.toggle('off', !streaming());
+  box.innerHTML = `<div class="te-g">${t('stream.hides')}</div>` + STREAM_KEYS.map(k =>
+    `<label class="te-opt"><input type="checkbox" data-stream="${k}" ${h[k] ? 'checked' : ''}><span class="cb"></span>${t('stream.' + k)}</label>`).join('');
+}
+$('streamOpts').addEventListener('change', e => {
+  const k = e.target.dataset.stream;
+  if (!k) return;
+  const h = { ...STREAM_DEFAULTS, ...((S.settings && S.settings.streamerHide) || {}), [k]: e.target.checked };
+  S.settings = { ...S.settings, streamerHide: h };
+  render();
+  api.setSetting('streamerHide', h);
+});
+$('streamPill').onclick = () => { S.settings = { ...S.settings, streamer: false }; render(); api.setSetting('streamer', false); };
+
+// ---------- settings ----------
+function openSettings(open) {
+  $('settingsDrawer').classList.toggle('open', open);
+  $('navSettings').classList.toggle('active', open);
+  if (open) openDrawer(false);
+}
+document.querySelectorAll('[data-setting]').forEach(cb => cb.onchange = () => api.setSetting(cb.dataset.setting, cb.checked));
+document.querySelectorAll('#langSeg [data-lang]').forEach(b => b.onclick = () => {
+  S.settings = { ...S.settings, lang: b.dataset.lang };
+  render();
+  api.setSetting('lang', b.dataset.lang);
+});
+
+function render() {
+  applyStaticTexts();
+  $('cryptoWarn').hidden = !S.cryptoBroken;
+  const accs = S.accounts;
+  $('count').textContent = accs.length ? accs.length : '';
+  $('empty').hidden = accs.length > 0;
+  renderBoard();
+
+  const live = S.live || {};
+  const cur = accs.find(a => a.puuid === live.puuid);
+  const el = $('live');
+  el.className = 'live' + (live.clientUp ? ' on' : '');
+  el.innerHTML = live.clientUp
+    ? `<span><span class="dot"></span>${esc(cur ? dispName(cur) : t('app.unknownAccount'))} · ${esc(t('phase.' + (live.phase || 'None')))}</span>`
+    : `<span><span class="dot"></span>${S.busy ? t('app.switching') : t('app.closed')}</span>`;
+
+  const unknownLive = live.clientUp && !cur;
+  $('optCurrent').disabled = !unknownLive;
+  $('optCurrentSub').textContent = !live.clientUp ? t('add.notOpen')
+    : cur ? t('add.already', { name: dispName(cur) }) : t('add.takeOver');
+
+  $('pending').hidden = !S.pendingAdd || !!S.login;
+  renderLogin(S.login);
+  const st = S.settings || {};
+  document.querySelectorAll('[data-setting]').forEach(cb => (cb.checked = !!st[cb.dataset.setting]));
+  renderStreamOptions();
+  $('streamPill').hidden = !streaming();
+  document.body.classList.toggle('streaming', streaming());
+  $('sort').value = sortMode();
+  if (profileFor) renderProfile();
+  renderTileEditor();
+  if (S.saveError && S.saveError !== shownSaveError) toast(t('saveFailed', { e: S.saveError }), true);
+  shownSaveError = S.saveError;
+  $('navRefresh').classList.toggle('spin', !!S.busy);
+}
+
+function renderLogin(l) {
+  $('loginBox').hidden = !l;
+  if (!l) return;
+  const failed = l.stage === 'failed';
+  const stage = ['wait', 'typing', 'verify', 'check'].includes(l.stage) ? l.stage : 'wait';
+  $('loginTitle').textContent = failed ? t('login.failed') : t('login.' + stage, { name: l.name || '' });
+  $('loginText').textContent = failed ? (l.msgKey ? t(l.msgKey) : (l.msg || '')) + t('login.manual') : t('login.' + stage + 'T', { name: l.name || '' });
+  $('loginSpin').hidden = failed || l.stage === 'check';
+  $('loginFail').hidden = !failed;
+  $('loginDismiss').textContent = failed ? t('common.close') : t('common.hide');
+}
+
+// ---------- actions ----------
+let toastTimer;
+function toast(msg, err) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (el.className = 'toast' + (err ? ' err' : '')), 3200);
+}
+// errors from the main process come as keys (m.*), older ones as plain text
+const errText = r => (r.errorKey ? t(r.errorKey) : r.error);
+
+function confirmBox(title, text, yes = t('common.anyway')) {
+  return new Promise(res => {
+    $('confirmTitle').textContent = title;
+    $('confirmText').textContent = text;
+    $('confirmYes').textContent = yes;
+    $('confirm').hidden = false;
+    $('confirmYes').focus();
+    const done = v => { $('confirm').hidden = true; $('confirmYes').onclick = $('confirmNo').onclick = null; document.removeEventListener('keydown', key, true); res(v); };
+    const key = e => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } };
+    document.addEventListener('keydown', key, true);
+    $('confirmYes').onclick = () => done(true);
+    $('confirmNo').onclick = () => done(false);
+  });
+}
+
+async function guardRunningGame() {
+  const p = S.live && S.live.phase;
+  if (!RISKY.includes(p)) return true;
+  return confirmBox(t('sw.risky', { phase: t('phase.' + p) }), p === 'ChampSelect' ? t('sw.dodge') : t('sw.abort'));
+}
+
+async function switchTo(id) {
+  if (S.busy) return;
+  if (id === S.active && S.live && S.live.puuid === id) return toast(t('sw.already'));
+  const a = S.accounts.find(x => x.puuid === id);
+  const p = S.live && S.live.phase;
+  if (RISKY.includes(p)) {
+    // in champ select / in game: always ask, with the warning
+    if (!(await guardRunningGame())) return;
+  } else if (!S.settings || S.settings.confirmSwitch !== false) {
+    const name = a ? fullName(a) : t('sw.this');
+    const ok = await confirmBox(t('sw.confirm', { name }), S.live && S.live.clientUp ? t('sw.restart') : t('sw.start'), t('sw.btn'));
+    if (!ok) return;
+  }
+  toast(t('sw.to', { name: a ? dispName(a) : '…' }));
+  const r = await api.switchTo(id);
+  if (!r.ok) toast(errText(r), true); else toast(t('sw.starting'));
+}
+
+function openDrawer(open) {
+  if (open) openSettings(false);
+  $('drawer').classList.toggle('open', open);
+  $('navAdd').classList.toggle('active', open);
+  $('navAccounts').classList.toggle('active', !open && !$('settingsDrawer').classList.contains('open'));
+}
+
+function showMenu(id, x, y) {
+  menuFor = id;
+  const a = S.accounts.find(acc => acc.puuid === id);
+  const here = a ? catOf(a) : '';
+  const targets = cats().filter(c => c.id !== here).map(c => [c.id, c.name]);
+  if (here) targets.unshift(['', t('cat.none')]);
+  $('menuCats').innerHTML = targets.length
+    ? `<hr><div class="menu-label">${t('menu.moveTo')}</div>` + targets.map(([cid, n]) => `<button data-act="move" data-cat="${esc(cid)}">${esc(n)}</button>`).join('')
+    : '';
+  $('menu').querySelectorAll('[data-real]').forEach(el => (el.hidden = !a || !!a.placeholder));
+  const m = $('menu');
+  m.hidden = false;
+  const w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.min(x, innerWidth - w - 8) + 'px';
+  m.style.top = Math.min(y, innerHeight - h - 8) + 'px';
+}
+
+function editNote(id) {
+  const tile = document.querySelector(`.tile[data-id="${CSS.escape(id)}"]`);
+  const a = S.accounts.find(x => x.puuid === id);
+  if (!tile || !a) return;
+  const slot = tile.querySelector('[data-note]');
+  slot.className = 'note';
+  slot.innerHTML = `<input class="note-edit" maxlength="24" placeholder="${esc(t('menu.notePh'))}">`;
+  const inp = slot.querySelector('input');
+  inp.value = a.note || '';
+  inp.focus(); inp.select();
+  const finish = ok => { if (ok) api.setNote(id, inp.value.trim()); else render(); };
+  inp.addEventListener('click', e => e.stopPropagation());
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
+  inp.addEventListener('blur', () => finish(true));
+}
+
+// ---------- events ----------
+$('board').addEventListener('click', e => {
+  const sec = e.target.closest('section.cat');
+  if (sec && e.target.closest('[data-cat-toggle]')) return api.catToggle(sec.dataset.cat);
+  if (sec && e.target.closest('[data-cat-more]')) {
+    const b = e.target.closest('[data-cat-more]').getBoundingClientRect();
+    return showCatMenu(sec.dataset.cat, b.left, b.bottom + 4);
+  }
+  const tile = e.target.closest('.tile');
+  if (!tile) return;
+  if (e.target.closest('[data-more]')) {
+    const r = e.target.closest('[data-more]').getBoundingClientRect();
+    return showMenu(tile.dataset.id, r.left, r.bottom + 4);
+  }
+  if (e.target.closest('input')) return;
+  if (e.target.closest('[data-reveal]')) return toggleReveal(tile.dataset.id);
+  switchTo(tile.dataset.id);
+});
+$('board').addEventListener('dblclick', e => {
+  const sec = e.target.closest('section.cat');
+  if (sec && sec.dataset.cat && e.target.closest('[data-cat-name]')) { renameCat = sec.dataset.cat; render(); }
+});
+$('board').addEventListener('keydown', e => {
+  if (!e.target.matches('[data-cat-input]')) return;
+  if (e.key === 'Enter') finishRename(true);
+  if (e.key === 'Escape') { e.stopPropagation(); finishRename(false); }
+});
+$('board').addEventListener('focusout', e => { if (e.target.matches('[data-cat-input]')) finishRename(true); });
+$('board').addEventListener('contextmenu', e => {
+  const head = e.target.closest('.cat-head');
+  const hsec = head && head.closest('section.cat');
+  if (hsec && hsec.dataset.cat) { e.preventDefault(); return showCatMenu(hsec.dataset.cat, e.clientX, e.clientY); }
+  const tile = e.target.closest('.tile');
+  if (!tile) return;
+  e.preventDefault();
+  showMenu(tile.dataset.id, e.clientX, e.clientY);
+});
+
+$('menu').addEventListener('click', async e => {
+  if (e.target.closest('.sub-btn')) return;   // just opens the submenu
+  const btn = e.target.closest('[data-act]');
+  const act = btn && btn.dataset.act;
+  const id = menuFor;
+  $('menu').hidden = true;
+  if (!act || !id) return;
+  const a = S.accounts.find(x => x.puuid === id);
+  if (act === 'switch') switchTo(id);
+  if (act === 'note') editNote(id);
+  if (act === 'move') moveTo(id, btn.dataset.cat || '');
+  if (act === 'cred') openCred(id);
+  if (act === 'open' && a) openSite(a, btn.dataset.site);
+  if (act === 'profile') openProfile(id);
+  if (act === 'remove' && a && await confirmBox(t('menu.removeTitle', { name: dispName(a) }), t('menu.removeText'), t('menu.remove'))) {
+    api.remove(id);
+  }
+});
+let catMenuFor = null;
+function showCatMenu(id, x, y) {
+  catMenuFor = id;
+  const i = cats().findIndex(c => c.id === id);
+  $('catMenu').querySelector('[data-cact=up]').hidden = i <= 0;
+  $('catMenu').querySelector('[data-cact=down]').hidden = i >= cats().length - 1;
+  const m = $('catMenu');
+  m.hidden = false;
+  m.style.left = Math.min(x, innerWidth - m.offsetWidth - 8) + 'px';
+  m.style.top = Math.min(y, innerHeight - m.offsetHeight - 8) + 'px';
+}
+$('catMenu').addEventListener('click', async e => {
+  const act = e.target.dataset.cact, id = catMenuFor;
+  $('catMenu').hidden = true;
+  const c = cats().find(x => x.id === id);
+  if (!act || !c) return;
+  if (act === 'rename') { renameCat = id; render(); }
+  if (act === 'up') api.catMove(id, -1);
+  if (act === 'down') api.catMove(id, 1);
+  if (act === 'del') {
+    const n = S.accounts.filter(a => catOf(a) === id).length;
+    if (!n || await confirmBox(t('cat.delTitle', { name: c.name }), n === 1 ? t('cat.delOne') : t('cat.delMany', { n }), t('common.delete'))) api.catDel(id);
+  }
+});
+$('addCat').onclick = async () => {
+  const id = await api.catAdd(t('cat.new'));
+  renameCat = id;
+  // the state push from main renders the new section with its name field open
+};
+document.addEventListener('click', e => {
+  if (!e.target.closest('.menu') && !e.target.closest('[data-more]')) $('menu').hidden = true;
+  if (!e.target.closest('#catMenu') && !e.target.closest('[data-cat-more]')) $('catMenu').hidden = true;
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  $('menu').hidden = true; openDrawer(false); openSettings(false); closeProfile(); closeTileEditor();
+  if (!$('credBox').hidden) closeCred();
+});
+
+// drag tiles: reorder, or drop into another category
+let dragId = null;
+function clearDrop() { document.querySelectorAll('.drop').forEach(x => x.classList.remove('drop')); }
+$('board').addEventListener('dragstart', e => {
+  const tile = e.target.closest('.tile');
+  if (!tile) return;
+  dragId = tile.dataset.id;
+  e.dataTransfer.effectAllowed = 'move';
+  // show the "No category" drop zone while dragging
+  setTimeout(() => { dragging = true; render(); document.querySelector(`.tile[data-id="${CSS.escape(dragId)}"]`)?.classList.add('dragging'); }, 0);
+});
+$('board').addEventListener('dragend', () => { dragId = null; dragging = false; render(); });
+$('board').addEventListener('dragover', e => {
+  if (!dragId) return;
+  const sec = e.target.closest('[data-cat]');
+  if (!sec) return;
+  e.preventDefault();
+  clearDrop();
+  const tile = e.target.closest('.tile');
+  if (tile && tile.dataset.id !== dragId) tile.classList.add('drop');
+  else if (!tile) (sec.closest('section.cat') || sec).classList.add('drop');
+});
+$('board').addEventListener('drop', e => {
+  if (!dragId) return;
+  const sec = e.target.closest('[data-cat]');
+  if (!sec) return;
+  e.preventDefault();
+  const tile = e.target.closest('.tile');
+  const id = dragId;
+  dragId = null; dragging = false;
+  if (tile && tile.dataset.id === id) return render();
+  // moving a tile by hand = your own order from now on, starting from what you see
+  if (sortMode() !== 'custom') {
+    S.accounts = sortList(S.accounts);
+    S.settings = { ...S.settings, sort: 'custom' };
+    api.setSetting('sort', 'custom');
+    toast(t('drag.toCustom'));
+  }
+  moveTo(id, sec.dataset.cat || '', tile ? tile.dataset.id : null);
+});
+
+$('min').onclick = () => api.win('min');
+$('close').onclick = () => api.win('close');
+$('navAccounts').onclick = () => { openDrawer(false); openSettings(false); };
+$('navSettings').onclick = () => openSettings(!$('settingsDrawer').classList.contains('open'));
+$('settingsClose').onclick = () => openSettings(false);
+$('search').addEventListener('input', render);
+$('sort').onchange = () => api.setSetting('sort', $('sort').value);
+api.onTraySwitch(id => stateReady.then(() => switchTo(id)));   // a freshly opened window loads its state first
+api.onToast(key => toast(t(key)));
+$('navAdd').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
+$('emptyAdd').onclick = () => openDrawer(true);
+$('drawerClose').onclick = () => openDrawer(false);
+$('navRefresh').onclick = async () => {
+  if (!S.live || !S.live.clientUp) return toast(t('refresh.later'));
+  await api.refresh(); toast(t('refresh.done'));
+};
+$('optCurrent').onclick = async () => {
+  const r = await api.addCurrent();
+  if (r.ok) { openDrawer(false); toast(t('add.currentSaved')); } else toast(errText(r), true);
+};
+$('addForm').onsubmit = async e => {
+  e.preventDefault();
+  const riotId = $('addRiotId').value.trim(), u = $('addUser').value.trim(), p = $('addPass').value;
+  if (!u || !p) return toast(t('add.fill'), true);
+  const r = await api.addSaved({ riotId, u, p });
+  if (!r.ok) return toast(errText(r), true);
+  $('addRiotId').value = $('addUser').value = $('addPass').value = '';
+  openDrawer(false);
+  toast(r.found ? t('add.savedFound') : r.riotId ? t('add.savedLater') : t('add.saved'));
+};
+$('optManual').onclick = async () => {
+  if (!(await guardRunningGame())) return;
+  openDrawer(false);
+  const r = await api.addNew(null);
+  if (!r.ok) toast(errText(r), true);
+};
+
+// show / hide password
+document.querySelectorAll('[data-eye]').forEach(b => b.onclick = () => {
+  const inp = $(b.dataset.eye);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  b.classList.toggle('on', inp.type === 'text');
+});
+
+// login details for an existing account
+let credFor = null;
+async function openCred(id) {
+  const a = S.accounts.find(x => x.puuid === id);
+  if (!a) return;
+  credFor = id;
+  $('credFor').textContent = fullName(a);
+  $('credUser').value = a.hasCred ? await api.getCredUser(id) : '';
+  $('credUser').type = hides('login') ? 'password' : 'text';   // login name not readable on stream
+  $('credPass').value = '';
+  $('credPass').type = 'password';
+  $('credPass').placeholder = a.hasCred ? t('cred.keep') : '';
+  $('credDelete').hidden = !a.hasCred;
+  $('credBox').hidden = false;
+  ($('credUser').value ? $('credPass') : $('credUser')).focus();
+}
+function closeCred() { $('credBox').hidden = true; $('credPass').value = ''; credFor = null; }
+$('credCancel').onclick = closeCred;
+$('credForm').onsubmit = async e => {
+  e.preventDefault();
+  const r = await api.setCred(credFor, { u: $('credUser').value, p: $('credPass').value });
+  if (!r.ok) return toast(errText(r), true);
+  closeCred(); toast(t('cred.saved'));
+};
+$('credDelete').onclick = async () => {
+  const id = credFor;
+  closeCred();
+  await api.delCred(id); toast(t('cred.deleted'));
+};
+$('loginDismiss').onclick = () => api.dismissLogin();
+$('cancelAdd').onclick = () => api.cancelAdd();
+
+// Don't rebuild the board while the user types a note / category name or drags a tile:
+// that would wipe the input. Catch up as soon as they're done.
+let renderLater = false;
+const editing = () => dragId || (document.activeElement && document.activeElement.closest && document.activeElement.closest('#board input'));
+api.onState(s => {
+  S = s;
+  if (editing()) { renderLater = true; return; }
+  render();
+});
+document.addEventListener('focusout', () => setTimeout(() => { if (renderLater && !editing()) { renderLater = false; render(); } }, 0));
+$('board').addEventListener('dragend', () => { if (renderLater) { renderLater = false; render(); } });
+const stateReady = api.getState().then(s => { S = s; render(); });

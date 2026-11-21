@@ -1,0 +1,26 @@
+{
+  "name": "rift-switch",
+  "version": "1.0.0",
+  "description": "A good-looking League of Legends account switcher for Windows (English/German).",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "league-of-legends",
+    "account-switcher",
+    "electron",
+    "riot-client"
+  ],
+  "author": "Zlizz3R",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^45.4.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zlizz3R/rift-switch.git"
+  },
+  "homepage": "https://github.com/Zlizz3R/rift-switch"
+}
