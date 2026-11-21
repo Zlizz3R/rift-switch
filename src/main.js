@@ -8,6 +8,13 @@ const liveData = require('./live');
 const lcuEvents = require('./lcuevents');
 const updater = require('./updater');
 const matches = require('./matches');
+const { RANK_QUEUES, isId, isPlaceholder, validCred, maskLogin, bestNormals, mergeRankedGames, upsertInto } = require('./core/accounts');
+const { DEFAULT_SETTINGS, cleanSetting } = require('./core/settings');
+const { sealSecrets, openSecrets, makeLock, lockMatches } = require('./core/secrets');
+const backup = require('./core/backup');
+const store = require('./core/store');
+const menu = require('./core/menu');
+const LANG_CODES = i18n.LANGS.map(([l]) => l);
 
 // Data always lives in %APPDATA%\rift-switch – also for the installed app, whose product
 // name "Rift Switch" would otherwise give it a new, empty folder.
@@ -30,10 +37,6 @@ const SESSIONS = path.join(DATA, 'sessions');
 const CREDS = path.join(DATA, 'creds');
 
 let win = null;
-const DEFAULT_SETTINGS = { autostart: false, closeToTray: true, autoAccept: false, autoPlay: true, confirmSwitch: true,
-  sort: 'level', lang: 'en', theme: 'system', champPool: null, lane: 'top', tile: null, streamer: false, streamerHide: null,
-  uiScale: '100' };
-const UI_SCALES = ['80', '90', '100', '110', '125', '150'];
 const tr = (key, vars) => i18n.t(state.settings.lang || 'en', key, vars);
 let state = { accounts: [], categories: [], active: null, settings: { ...DEFAULT_SETTINGS } };
 let tray = null;
@@ -50,24 +53,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ---------- store ----------
 
-function load() {
-  // accounts.json.bak: left by a one-time repair; read it if the real file is missing
-  const src = fs.existsSync(STORE) ? STORE : (fs.existsSync(STORE + '.bak') ? STORE + '.bak' : null);
-  if (src) {
-    try { state = { accounts: [], categories: [], active: null, ...JSON.parse(fs.readFileSync(src, 'utf8')) }; }
-    catch (e) {
-      // never silently overwrite a damaged file: keep a copy first
-      try { fs.copyFileSync(src, path.join(DATA, `accounts.damaged-${Date.now()}.json`)); } catch {}
-      logError('load', e);
-    }
-  }
-  if (!Array.isArray(state.categories)) state.categories = [];
-  state.settings = { ...DEFAULT_SETTINGS, ...(state.settings || {}) };
-  // one-time: sorting by level became the default (existing saves had "custom")
-  if (!state.settings.sortLevelDefault) { state.settings.sort = 'level'; state.settings.sortLevelDefault = true; }
-  // one-time: "Start League automatically" is on by default (older saves may have it off)
-  if (!state.settings.autoPlayDefault) { state.settings.autoPlay = true; state.settings.autoPlayDefault = true; }
-}
+function load() { state = store.readState(STORE, logError); }
 let saveError = null;
 function logError(where, e) {
   const line = `${new Date().toISOString()} ${where}: ${e && (e.stack || e.message || e)}\n`;
@@ -81,11 +67,7 @@ function save() {
   try {
     const text = JSON.stringify(state);
     if (text !== lastSaved) {
-      fs.mkdirSync(DATA, { recursive: true });
-      const tmp = STORE + '.tmp';
-      fs.writeFileSync(tmp, text);
-      try { fs.renameSync(tmp, STORE); }
-      catch (e) { fs.writeFileSync(STORE, text); try { fs.unlinkSync(tmp); } catch {} }
+      store.writeAtomic(STORE, text);
       lastSaved = text;
       updateTray();
     }
@@ -200,62 +182,12 @@ async function checkCreds() {
   }
 }
 
-const RANK_QUEUES = ['solo', 'flex', 'r5', 'classic'];
-
-// The match history sometimes returns only a few games (e.g. during a game):
-// never let a short answer lower a count we already saw.
-function bestNormals(prev, n) {
-  const hasRanked = !!(n.hasRanked || (prev && prev.hasRanked));   // once seen, stays true
-  if (!prev || n.count >= prev.count || n.sample >= prev.sample) return { ...n, hasRanked };
-  return { ...prev, hasRanked, at: n.at };
-}
-
-// Ranked games seen in match histories, kept per account (newest first, max 300).
-// The client only shows a few recent games at a time, so the list grows over time.
-function mergeRankedGames(a, games) {
-  if (!a || !Array.isArray(games) || !games.length) return;
-  const byId = new Map((a.rankedGames || []).map(g => [g.id, g]));
-  for (const g of games) byId.set(g.id, g);
-  a.rankedGames = [...byId.values()].sort((x, y) => y.t - x.t).slice(0, 300);
-}
-
-// unknown win/loss (other account) -> keep the last real numbers from its own login
-function keepWL(q, prevQ) {
-  if (!q || q.wl !== false || !prevQ || prevQ.wl !== true) return q;
-  return { ...q, wins: prevQ.wins, losses: prevQ.losses, wl: true, wlStale: true };
-}
-
-function upsert(acc) {
-  const i = state.accounts.findIndex(a => a.puuid === acc.puuid);
-  const prev = i >= 0 ? state.accounts[i] : { note: '', addedAt: Date.now() };
-  for (const k of RANK_QUEUES) if (acc[k]) acc[k] = keepWL(acc[k], prev[k]);
-  const merged = { ...prev, ...acc };
-  delete merged.updatedAt;
-  // keep old rank data if a refresh came back empty
-  for (const k of RANK_QUEUES) if (acc[k] === undefined) merged[k] = prev[k];
-  recordHistory(merged);
-  if (i >= 0) state.accounts[i] = merged; else state.accounts.push(merged);
-  return merged;
-}
-
-// LP history: one entry whenever Solo/Duo or Flex changes
-const rankKey = q => (q ? q.tier + '|' + q.division + '|' + q.lp : '-');
-function recordHistory(a) {
-  if (!a.solo && !a.flex) return;
-  const pick = q => (q ? { tier: q.tier, division: q.division, lp: q.lp } : null);
-  const e = { t: Date.now(), solo: pick(a.solo), flex: pick(a.flex) };
-  const h = a.history || (a.history = []);
-  const last = h[h.length - 1];
-  if (last && rankKey(last.solo) === rankKey(e.solo) && rankKey(last.flex) === rankKey(e.flex)) return;
-  h.push(e);
-  if (h.length > 300) h.splice(0, h.length - 300);
-}
+const upsert = acc => upsertInto(state.accounts, acc);
 
 // ---------- saved-but-never-logged-in accounts ----------
 // They live under a temporary id ("new-…") until we learn their real puuid,
 // either from the Riot ID lookup or from their first login.
 
-const isPlaceholder = id => typeof id === 'string' && id.startsWith('new-');
 
 function moveFile(from, to) {
   try { if (fs.existsSync(from)) { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.renameSync(from, to); } } catch {}
@@ -280,10 +212,6 @@ function resolvePlaceholder(oldId, newId) {
   }
   if (state.active === oldId) state.active = newId;
   if (expecting === oldId) expecting = newId;
-}
-
-function maskLogin(u) {
-  return u.length <= 3 ? u[0] + '•••' : u.slice(0, 2) + '•••' + u.slice(-1);
 }
 
 // ---------- watcher: keeps tiles fresh while League is open ----------
@@ -469,10 +397,6 @@ async function withBusy(fn) {
   finally { busy = false; push(); }
 }
 
-function validCred(c) {
-  return c && typeof c.u === 'string' && typeof c.p === 'string' && c.u.trim() && c.p ? { u: c.u.trim(), p: c.p } : null;
-}
-
 // ---------- app lock ----------
 // Optional password asked on start and whenever the window comes back from the tray.
 // While locked the window gets no account data and every action except unlocking is refused.
@@ -480,13 +404,6 @@ function validCred(c) {
 // encrypted for the Windows user anyway.)
 let locked = false;
 const LOCK_FREE = new Set(['get-state', 'unlock', 'win']);
-const lockHash = (pass, salt) => crypto.scryptSync(String(pass), Buffer.from(salt, 'base64'), 32, { N: 1 << 14, r: 8, p: 1 }).toString('base64');
-function lockMatches(pass) {
-  const l = state.lock;
-  if (!l || !l.salt || !l.hash || typeof pass !== 'string') return false;
-  const a = Buffer.from(lockHash(pass, l.salt), 'base64'), b = Buffer.from(l.hash, 'base64');
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
 function lockNow() { if (state.lock) { locked = true; lastPushed = null; push(); updateTray(); } }
 {
   const handle = ipcMain.handle.bind(ipcMain);
@@ -495,7 +412,7 @@ function lockNow() { if (state.lock) { locked = true; lastPushed = null; push();
 let unlockFails = 0;
 ipcMain.handle('unlock', async (_e, pass) => {
   await sleep(Math.min(5000, 400 * unlockFails));      // slows down guessing
-  if (!lockMatches(pass)) { unlockFails++; return false; }
+  if (!lockMatches(state.lock, pass)) { unlockFails++; return false; }
   unlockFails = 0; locked = false; lastPushed = null; push(); updateTray();
   return true;
 });
@@ -503,20 +420,18 @@ ipcMain.handle('lock', (_e, what, pass, oldPass) => {
   if (what === 'now') return lockNow(), true;
   if (what === 'set') {
     if (typeof pass !== 'string' || pass.length < 4) return false;
-    if (state.lock && !lockMatches(oldPass)) return false;
-    const salt = crypto.randomBytes(16).toString('base64');
-    state.lock = { salt, hash: lockHash(pass, salt) };
+    if (state.lock && !lockMatches(state.lock, oldPass)) return false;
+    state.lock = makeLock(pass);
     save(); push(); return true;
   }
   if (what === 'off') {
-    if (state.lock && !lockMatches(pass)) return false;
+    if (state.lock && !lockMatches(state.lock, pass)) return false;
     delete state.lock; save(); push(); return true;
   }
   return false;
 });
 
 // account ids coming from the window: a puuid or a "new-<uuid>" placeholder, nothing else
-const isId = id => typeof id === 'string' && /^(new-)?[0-9a-f-]{36}$/i.test(id);
 ipcMain.handle('get-state', () => { lastPushed = null; return snapshot(); });
 ipcMain.handle('get-history', (_e, puuid) => {
   const a = state.accounts.find(x => x.puuid === puuid);
@@ -798,19 +713,10 @@ ipcMain.handle('open-external', (_e, url) => {
 });
 
 ipcMain.handle('set-setting', (_e, key, value) => {
-  if (!(key in DEFAULT_SETTINGS)) return;
-  if (key === 'tile' || key === 'streamerHide') {
-    // only known on/off switches
-    state.settings[key] = value && typeof value === 'object'
-      ? Object.fromEntries(Object.entries(value).filter(([k, v]) => /^[a-zA-Z0-9]{1,20}$/.test(k) && typeof v === 'boolean')) : null;
-  } else if (key === 'champPool') {
-    state.settings.champPool = Array.isArray(value) ? value.map(Number).filter(n => n > 0 && n < 3000).slice(0, 40) : null;
-  } else if (key === 'uiScale') {
-    state.settings.uiScale = UI_SCALES.includes(String(value)) ? String(value) : '100';
-    applyScale();
-  } else if (key === 'lang') {
-    state.settings.lang = i18n.LANGS.some(([l]) => l === value) ? value : 'en';
-  } else state.settings[key] = typeof DEFAULT_SETTINGS[key] === 'boolean' ? !!value : String(value);
+  const r = cleanSetting(key, value, LANG_CODES);
+  if (!r.ok) return;
+  state.settings[key] = r.value;
+  if (key === 'uiScale') applyScale();
   if (key === 'autostart') applyAutostart();
   save();
 });
@@ -824,35 +730,11 @@ function applyScale() {
 // ---------- export / import ----------
 // Accounts, categories and settings. Saved logins and sessions are encrypted for this
 // Windows user only, so they are never part of the file.
-const EXPORT_FIELDS = ['puuid', 'gameName', 'tagLine', 'region', 'note', 'category', 'addedAt', 'iconId', 'level',
-  'solo', 'flex', 'r5', 'classic', 'lastPlayed', 'history', 'rankedGames'];
-// saved logins in an export: AES-256-GCM, key from the user's own password (scrypt)
-const SCRYPT = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
-function sealSecrets(obj, pass) {
-  const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12);
-  const key = crypto.scryptSync(pass, salt, 32, SCRYPT);
-  const c = crypto.createCipheriv('aes-256-gcm', key, iv);
-  const data = Buffer.concat([c.update(JSON.stringify(obj), 'utf8'), c.final()]);
-  return { kdf: 'scrypt', N: SCRYPT.N, salt: salt.toString('base64'), iv: iv.toString('base64'),
-    tag: c.getAuthTag().toString('base64'), data: data.toString('base64') };
-}
-function openSecrets(box, pass) {
-  try {
-    if (!box || box.kdf !== 'scrypt' || box.N !== SCRYPT.N) return null;
-    const key = crypto.scryptSync(String(pass), Buffer.from(box.salt, 'base64'), 32, SCRYPT);
-    const d = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
-    d.setAuthTag(Buffer.from(box.tag, 'base64'));
-    return JSON.parse(Buffer.concat([d.update(Buffer.from(box.data, 'base64')), d.final()]).toString('utf8'));
-  } catch { return null; }
-}
 let importFile = null;   // the file picked for an import that still waits for its password
 
 ipcMain.handle('data-export', async (_e, pass) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: 'rift-switch-backup.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
   if (r.canceled || !r.filePath) return { ok: false };
-  const accounts = state.accounts.filter(a => !a.placeholder)
-    .map(a => Object.fromEntries(EXPORT_FIELDS.filter(k => a[k] !== undefined).map(k => [k, a[k]])));
-  const { autostart, lockHash, ...settings } = state.settings;
   let secrets;
   if (typeof pass === 'string' && pass.length >= 8) {
     const logins = [];
@@ -862,17 +744,14 @@ ipcMain.handle('data-export', async (_e, pass) => {
     }
     secrets = sealSecrets({ logins }, pass);
   }
+  const file = backup.buildExport(state, secrets);
   try {
-    fs.writeFileSync(r.filePath, JSON.stringify({ app: 'rift-switch', version: 1, exportedAt: Date.now(),
-      accounts, categories: state.categories, settings, ...(secrets ? { secrets } : {}) }, null, 1));
-    return { ok: true, n: accounts.length };
+    fs.writeFileSync(r.filePath, JSON.stringify(file, null, 1));
+    return { ok: true, n: file.accounts.length };
   } catch (e) { return { ok: false, error: e.code || e.message }; }
 });
 function readImport(file) {
-  try {
-    const d = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
-    return d && d.app === 'rift-switch' && Array.isArray(d.accounts) ? d : null;
-  } catch { return null; }
+  try { return backup.checkFile(JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''))); } catch { return null; }
 }
 ipcMain.handle('check-import-pass', (_e, pass) => {
   const d = importFile && readImport(importFile);
@@ -896,54 +775,12 @@ ipcMain.handle('data-import', async (_e, pass) => {
   }
   importFile = null;
   gen++;
-  const catIds = new Set(state.categories.map(c => c.id));
-  for (const c of Array.isArray(d.categories) ? d.categories : []) {
-    if (c && typeof c.id === 'string' && /^c[\w-]{1,40}$/.test(c.id) && !catIds.has(c.id)) {
-      state.categories.push({ id: c.id, name: String(c.name || '').slice(0, 32) || tr('cat.new'), collapsed: !!c.collapsed });
-      catIds.add(c.id);
-    }
-  }
-  let added = 0, updated = 0;
-  for (const x of d.accounts) {
-    if (!x || !/^[0-9a-f-]{36}$/i.test(x.puuid || '')) continue;
-    const acc = Object.fromEntries(EXPORT_FIELDS.filter(k => x[k] !== undefined).map(k => [k, x[k]]));
-    acc.note = String(acc.note || '').slice(0, 24);
-    if (acc.category && !catIds.has(acc.category)) delete acc.category;
-    const have = state.accounts.find(a => a.puuid === acc.puuid);
-    if (have) {   // this PC's data wins; only fill gaps
-      if (!have.note && acc.note) have.note = acc.note;
-      if (!have.category && acc.category) have.category = acc.category;
-      updated++;
-    } else { state.accounts.push({ ...acc, addedAt: acc.addedAt || Date.now() }); added++; }
-  }
-  if (d.settings && typeof d.settings === 'object') {
-    for (const [k, v] of Object.entries(d.settings)) {
-      if (!(k in DEFAULT_SETTINGS) || k === 'autostart') continue;
-      if (typeof DEFAULT_SETTINGS[k] === 'boolean') state.settings[k] = !!v;
-      else if (k === 'lang') { if (i18n.LANGS.some(([l]) => l === v)) state.settings.lang = v; }
-      else if (k === 'uiScale') { if (UI_SCALES.includes(String(v))) state.settings.uiScale = String(v); }
-      else if (k === 'champPool') state.settings.champPool = Array.isArray(v) ? v.map(Number).filter(n => n > 0 && n < 3000).slice(0, 40) : null;
-      else if (k === 'tile' || k === 'streamerHide') state.settings[k] = v && typeof v === 'object'
-        ? Object.fromEntries(Object.entries(v).filter(([kk, vv]) => /^[a-z0-9]+$/i.test(kk) && typeof vv === 'boolean')) : null;
-      else if (typeof v === 'string') state.settings[k] = v.slice(0, 20);
-    }
-    applyScale();
-  }
-  // saved logins: stored encrypted for this Windows user again; a login on this PC wins
-  let nLogins = 0;
-  for (const l of logins) {
-    const cred = l && validCred({ u: l.u, p: l.p });
-    if (!cred || !/^(new-)?[0-9a-f-]{36}$/i.test(l.puuid || '')) continue;
-    let a = state.accounts.find(x => x.puuid === l.puuid);
-    if (!a && l.placeholder) {
-      a = { puuid: l.puuid, placeholder: true, note: '', addedAt: Date.now(),
-        gameName: String(l.gameName || maskLogin(cred.u)).slice(0, 32), tagLine: String(l.tagLine || '').slice(0, 8) };
-      state.accounts.push(a);
-    }
-    if (!a || (a.hasCred && !a.credBroken)) continue;
-    await storeCred(a.puuid, cred);
-    nLogins++;
-  }
+  const { added, updated } = backup.applyImport(state, d, { langs: LANG_CODES, newCatName: tr('cat.new') });
+  applyScale();
+  // saved logins: stored encrypted for this Windows user again
+  const restore = backup.loginsToRestore(state, logins);
+  for (const x of restore) await storeCred(x.puuid, x.cred);
+  const nLogins = restore.length;
   save(); push();
   return { ok: true, added, updated, logins: nLogins };
 });
@@ -972,34 +809,15 @@ function showWindow(then) {
 }
 
 // streamer mode in the tray menu: same rules as the window (see renderer.js)
-const STREAM_DEFAULTS = { name: true, tag: true, ranks: false, note: false, login: true };
-const hides = k => !!state.settings.streamer && !!({ ...STREAM_DEFAULTS, ...(state.settings.streamerHide || {}) })[k];
-function trayName(a) {
-  if (!hides('name') && !(a.placeholder && !a.tagLine && hides('login')))
-    return (a.gameName === 'Gespeicherter Login' ? tr('tile.savedLogin') : a.gameName) + (a.tagLine && !hides('tag') ? '#' + a.tagLine : '');
-  if (a.note && !hides('note')) return a.note;
-  return tr('stream.alias', { n: state.accounts.indexOf(a) + 1 });
-}
+const trayName = a => menu.displayName(a, state, tr);
 const SUPPORT_URL = 'https://buymeacoffee.com/zlizz3r';
-const rankText = q => (q ? tr('tier.' + q.tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(q.tier) ? '' : ' ' + q.division) : '');
 
 function updateTray() {
   if (!tray) return;
-  const accItem = a => ({
-    label: trayName(a) + (a.solo && !hides('ranks') ? '   ·   ' + rankText(a.solo) : ''),
-    type: 'radio', checked: a.puuid === state.active,
-    click: () => showWindow(() => win.webContents.send('tray-switch', a.puuid)),
-  });
-  const items = [];
-  const catIds = new Set(state.categories.map(c => c.id));
-  const loose = state.accounts.filter(a => !catIds.has(a.category));
-  if (locked) items.push({ label: '🔒 ' + tr('lock.locked'), enabled: false }, { type: 'separator' });
-  else if (loose.length) items.push(...loose.map(accItem), { type: 'separator' });
-  for (const c of locked ? [] : state.categories) {
-    const list = state.accounts.filter(a => a.category === c.id);
-    if (!list.length) continue;
-    items.push({ label: c.name, enabled: false }, ...list.map(accItem), { type: 'separator' });
-  }
+  const items = menu.accountItems(state, { locked, tr }).map(x =>
+    x.type === 'account' ? { label: x.label, type: 'radio', checked: x.checked,
+      click: () => showWindow(() => win.webContents.send('tray-switch', x.puuid)) }
+    : x.type === 'separator' ? { type: 'separator' } : { label: x.label, enabled: false });
   items.push(
     { label: tr('tray.accept'), type: 'checkbox', checked: !!state.settings.autoAccept,
       click: i => { state.settings.autoAccept = i.checked; save(); } },
@@ -1023,22 +841,14 @@ function updateTray() {
 let lastJump = null;
 function updateJumpList() {
   if (process.platform !== 'win32' || process.env.RS_DATA) return;
-  const base = app.isPackaged ? [] : [JSON.stringify(path.resolve(__dirname, '..'))];
-  const tasks = locked ? [] : state.accounts.filter(a => !a.placeholder || a.hasCred).slice(0, 10).map(a => ({
-    program: process.execPath, arguments: [...base, '--switch=' + a.puuid].join(' '),
-    title: trayName(a), description: tr('jump.switch', { name: trayName(a) }),
-    iconPath: process.execPath, iconIndex: 0,
-  }));
+  const tasks = menu.jumpTasks(state, { locked, tr, program: process.execPath,
+    baseArgs: app.isPackaged ? [] : [JSON.stringify(path.resolve(__dirname, '..'))] });
   const key = JSON.stringify(tasks);
   if (key === lastJump) return;
   lastJump = key;
   try { app.setUserTasks(tasks); } catch {}
 }
-function switchArg(argv) {
-  const a = (argv || []).find(x => /^--switch=/.test(x));
-  const id = a && a.slice(9);
-  return id && isId(id) && state.accounts.some(x => x.puuid === id) ? id : null;
-}
+const switchArg = argv => menu.switchArg(argv, state.accounts);
 function switchFromOutside(argv) {
   const id = switchArg(argv);
   showWindow(id && !locked ? () => win.webContents.send('tray-switch', id) : undefined);

@@ -79,12 +79,24 @@ Or double-click `Rift Switch.cmd` after `npm install`. Build the installer yours
 
 ## Development notes
 
-- `src/main.js` – main process (storage, polling, switching, tray)
-- `src/riot.js` – Riot Client / League Client API, process handling
-- `src/renderer.js`, `index.html`, `style.css` – the UI
-- `src/i18n.js` – English and German texts, `src/lang/*.js` – the other 9 languages
-- Test copy on its own data folder: `RS_DATA=<folder> npx electron .`
+-  – main process: window, tray, IPC, switching, polling
+-  – pure logic with tests: accounts & LP history, settings, export/import, password sealing
+  and app lock, tray/jump-list content, the accounts.json store
+-  – Riot Client / League Client API, process handling;  – client events (WebSocket)
+-  – live page data, champion data, matchups;  – match history store
+-  – typing a login into the Riot Client (UI Automation, picture scan as fallback)
+- , , , , ,  – the window
+-  – English and German texts,  – the other 9 languages
+- Tests: Unknown command: "test"
 
+
+Did you mean this?
+  npm test # Test a package
+To see a list of supported npm commands, run:
+  npm help (Node's built-in test runner, no Electron needed); they run on every push (GitHub Actions)
+- Releases: push a tag  matching package.json – GitHub Actions builds and publishes the installer,
+  installed copies update themselves
+- Test copy on its own data folder: 
 ## Support
 
 Rift Switch is free and open source. If it saves you some clicks, you can [buy me a coffee ☕](https://buymeacoffee.com/zlizz3r) – thank you!

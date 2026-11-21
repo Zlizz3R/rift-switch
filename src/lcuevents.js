@@ -30,15 +30,21 @@ function connect(lf, handler) {
   ws = sock;
   sock.on('open', () => { for (const t of TOPICS) sock.send(JSON.stringify([5, eventName(t)])); });
   sock.on('message', raw => {
-    let m;
-    try { m = JSON.parse(raw); } catch { return; }
-    // [8, "OnJsonApiEvent_…", { uri, eventType, data }]
-    if (!Array.isArray(m) || m[0] !== 8 || !m[2] || !m[2].uri) return;
-    try { onEvent(m[2].uri, m[2].data, m[2].eventType); } catch {}
+    const ev = parseEvent(raw);
+    if (ev) try { onEvent(ev.uri, ev.data, ev.type); } catch {}
   });
   const drop = () => { if (ws === sock) { ws = null; port = null; } };
   sock.on('close', drop);
   sock.on('error', drop);
+}
+
+// one WAMP message -> { uri, data, type } for an API event, else null
+// (format: [8, "OnJsonApiEvent_…", { uri, eventType, data }])
+function parseEvent(raw) {
+  let m;
+  try { m = JSON.parse(String(raw)); } catch { return null; }
+  if (!Array.isArray(m) || m[0] !== 8 || !m[2] || typeof m[2].uri !== 'string') return null;
+  return { uri: m[2].uri, data: m[2].data, type: m[2].eventType };
 }
 
 function close() {
@@ -46,4 +52,4 @@ function close() {
   ws = null; port = null;
 }
 
-module.exports = { connect, close, connected };
+module.exports = { connect, close, connected, parseEvent, TOPICS, eventName };

@@ -3,9 +3,7 @@ const CDRAGON = 'https://raw.communitydragon.org/latest/plugins';
 const iconUrl = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/profile-icons/${id}.jpg`;
 const crestUrl = tier => `${CDRAGON}/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${tier.toLowerCase()}.svg`;
 
-const TIERS = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'];
-const DIVS = ['IV', 'III', 'II', 'I'];
-const APEX = ['MASTER', 'GRANDMASTER', 'CHALLENGER'];
+const { TIERS, DIVS, APEX, DAY, rankScore } = RankMath;   // rankmath.js
 // the ranked queues shown on tiles / in the profile: [key, label]
 const QUEUES = [['solo', 'Solo/Duo'], ['flex', 'Flex'], ['r5', 'Ranked 5v5'], ['classic', 'Classic 5v5']];
 const RISKY = ['ChampSelect', 'InProgress', 'GameStart', 'Reconnect', 'ReadyCheck'];
@@ -66,30 +64,16 @@ function phaseName(p) {
 }
 
 // ---------- MMR estimate ----------
-// Riot doesn't publish MMR. This is a rough guess: rank + LP as the base,
-// nudged by win rate (weighted by how many games back it up).
-function rankScore(r) {
-  const i = TIERS.indexOf(r.tier);
-  if (APEX.includes(r.tier)) return 700 * 4 + r.lp;          // Master+ : LP stacks on top
-  return i * 400 + DIVS.indexOf(r.division) * 100 + Math.min(r.lp, 100);
-}
-function scoreToLabel(s) {
-  if (s >= 2800) return tierName('MASTER') + '+';
-  s = Math.max(0, s);
-  const i = Math.min(6, Math.floor(s / 400));
-  const d = Math.min(3, Math.floor((s - i * 400) / 100));
-  return `${tierName(TIERS[i])} ${DIVS[d]}`;
-}
+// rough guess from rank, LP and win rate (rankmath.js)
 function mmrEstimate(a) {
-  const qs = [a.solo, a.flex].filter(Boolean);
-  if (!qs.length) return null;
-  const q = (a.solo && (a.solo.wins + a.solo.losses) >= 10) ? a.solo
-    : qs.sort((x, y) => (y.wins + y.losses) - (x.wins + x.losses))[0];
-  const games = q.wl === false ? 0 : q.wins + q.losses;
-  const wr = games ? q.wins / games : 0.5;
-  const conf = Math.min(1, games / 80);
-  const adj = Math.max(-200, Math.min(200, (wr - 0.5) * 800 * conf));
-  return { label: scoreToLabel(rankScore(q) + adj), queue: q === a.solo ? 'Solo/Duo' : 'Flex', diff: adj };
+  const m = RankMath.mmrScore(a);
+  if (!m) return null;
+  return { label: scoreToLabel(m.score), queue: m.queue, diff: m.diff };
+}
+const decayInfo = a => RankMath.decayInfo(a, S.active);
+function scoreToLabel(v) {
+  const r = RankMath.scoreToRank(v);
+  return r.plus ? tierName('MASTER') + '+' : tierName(r.tier) + ' ' + r.division;
 }
 
 // ---------- rendering ----------
@@ -274,7 +258,6 @@ function sortList(list) {
 }
 
 // ---------- dates, decay ----------
-const DAY = 86400000;
 function ago(ts) {
   if (!ts) return t('common.unknown');
   const d = Math.floor((Date.now() - ts) / DAY);
@@ -287,30 +270,6 @@ function decayWarning(a) {
   if (!a.solo || TIERS.indexOf(a.solo.tier) < TIERS.indexOf('DIAMOND') || !a.lastPlayed) return 0;
   const d = Math.floor((Date.now() - a.lastPlayed) / DAY);
   return d >= 14 ? d : 0;
-}
-
-// Ranked decay (Solo/Duo, Diamond and up): Riot keeps a bank of days. It only tells the
-// signed-in account; we keep that number and count it down. Without it: estimate from the
-// last game, assuming the bank was full then (Diamond 28 days, Master and up 14).
-function decayInfo(a) {
-  const high = q => q && TIERS.indexOf(q.tier) >= TIERS.indexOf('DIAMOND');
-  const queues = ['solo', 'flex'].filter(k => high(a[k]));
-  if (!queues.length) return null;
-  const qName = k => (k === 'solo' ? 'Solo/Duo' : 'Flex');
-  const riot = a.decay && a.decay.q && a.decay.at ? a.decay : null;
-  const gone = !riot || a.puuid === S.active ? 0 : Math.floor((Date.now() - riot.at) / DAY);
-  let best = null;
-  for (const k of queues) {
-    let x;
-    if (riot && riot.q[k] != null) x = { days: Math.max(0, riot.q[k] - gone), est: false };
-    else if (a.lastPlayed) {
-      const bank = APEX.includes(a[k].tier) ? 14 : 28;
-      x = { days: Math.max(0, bank - Math.floor((Date.now() - a.lastPlayed) / DAY)), est: true, bank };
-    } else continue;
-    x.q = qName(k);
-    if (!best || x.days < best.days) best = x;
-  }
-  return best;
 }
 
 // ---------- ranked readiness ----------
