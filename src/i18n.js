@@ -11,7 +11,7 @@
     // nav
     'nav.accounts': 'Accounts', 'nav.add': 'Add account', 'nav.settings': 'Settings', 'nav.refresh': 'Refresh ranks',
     // header
-    'head.title': 'Accounts', 'head.sub': 'Click a tile to switch.', 'head.addCat': 'Category', 'head.addCatTitle': 'Add category',
+    'head.title': 'Accounts', 'head.sub': 'Click a tile to switch.', 'head.addCat': 'Category', 'head.addAcc': "Account", 'head.addCatTitle': 'Add category',
     'head.search': 'Search …', 'head.editTiles': 'Customise tiles',
     'sort.level': 'Level', 'sort.custom': 'Custom order', 'sort.rank': 'Rank Solo/Duo', 'sort.flex': 'Rank Flex', 'sort.played': 'Last played', 'sort.name': 'Name',
     'empty.title': 'No accounts yet', 'empty.text': 'Add your first account from the sidebar.', 'empty.btn': 'Add account',
@@ -27,7 +27,7 @@
     // tile
     'tile.active': 'ACTIVE', 'tile.new': 'NEW', 'tile.idle': '{d} D. INACTIVE',
     'tile.idleTitle': 'From Diamond up you lose LP when inactive. Last played: {date}',
-    'tile.lockTitle': 'Password saved – auto-login on',
+    'tile.lockTitle': "Auto-login ready – password saved",
     'tile.lockBroken': 'Saved password can\'t be decrypted – please re-enter it under "Login details …"',
     'tile.unranked': 'Unranked', 'tile.games': '{n} games', 'tile.wins': '{n} W',
     'tile.wlTitle': '{w} W / {l} L', 'tile.wlStale': ' (as of last login)',
@@ -109,7 +109,7 @@
     'te.title': 'Customise tiles', 'te.sub': 'Choose what every tile shows. Changes apply immediately.', 'te.preview': 'Preview',
     'te.reset': 'Reset', 'te.done': 'Done',
     'te.g.head': 'Top', 'te.g.ranks': 'Ranks', 'te.g.extra': 'Extras',
-    'te.icon': 'Profile icon', 'te.level': 'Level', 'te.tag': 'Riot tag (#…)', 'te.note': 'Note', 'te.lock': 'Auto-login lock',
+    'te.icon': 'Profile icon', 'te.level': 'Level', 'te.tag': 'Riot tag (#…)', 'te.note': 'Note', 'te.lock': "Auto-login ready",
     'te.solo': 'Solo/Duo', 'te.flex': 'Flex', 'te.r5': 'Ranked 5v5', 'te.classic': 'Classic 5v5', 'te.winrate': 'Win rate & games', 'te.mmr': 'MMR estimate',
     'te.ranked': 'Ranked readiness', 'te.inactive': 'Inactivity warning', 'te.lastPlayed': 'Last played', 'te.wallet': 'Blue Essence & RP',
     // main process
@@ -209,7 +209,7 @@
     'common.anyway': 'Trotzdem', 'common.hide': 'Ausblenden', 'common.more': 'Mehr', 'common.unknown': 'unbekannt',
     'win.min': 'Minimieren', 'win.close': 'Schließen',
     'nav.accounts': 'Accounts', 'nav.add': 'Account hinzufügen', 'nav.settings': 'Einstellungen', 'nav.refresh': 'Ränge aktualisieren',
-    'head.title': 'Accounts', 'head.sub': 'Klick auf eine Kachel, um zu wechseln.', 'head.addCat': 'Kategorie', 'head.addCatTitle': 'Kategorie hinzufügen',
+    'head.title': 'Accounts', 'head.sub': 'Klick auf eine Kachel, um zu wechseln.', 'head.addCat': 'Kategorie', 'head.addAcc': "Account", 'head.addCatTitle': 'Kategorie hinzufügen',
     'head.search': 'Suchen …', 'head.editTiles': 'Kacheln anpassen',
     'sort.level': 'Level', 'sort.custom': 'Eigene Reihenfolge', 'sort.rank': 'Rang Solo/Duo', 'sort.flex': 'Rang Flex', 'sort.played': 'Zuletzt gespielt', 'sort.name': 'Name',
     'empty.title': 'Noch keine Accounts', 'empty.text': 'Füge über die Seitenleiste deinen ersten Account hinzu.', 'empty.btn': 'Account hinzufügen',
@@ -222,7 +222,7 @@
     'tier.EMERALD': 'Smaragd', 'tier.DIAMOND': 'Diamant', 'tier.MASTER': 'Meister', 'tier.GRANDMASTER': 'Großmeister', 'tier.CHALLENGER': 'Herausforderer',
     'tile.active': 'AKTIV', 'tile.new': 'NEU', 'tile.idle': '{d} T. INAKTIV',
     'tile.idleTitle': 'Ab Diamant verlierst du bei Inaktivität LP. Zuletzt gespielt: {date}',
-    'tile.lockTitle': 'Passwort gespeichert – Auto-Login aktiv',
+    'tile.lockTitle': "Auto-Login bereit – Passwort gespeichert",
     'tile.lockBroken': 'Gespeichertes Passwort lässt sich nicht entschlüsseln – bitte unter „Login-Daten …“ neu eingeben',
     'tile.unranked': 'Unranked', 'tile.games': '{n} Sp.', 'tile.wins': '{n} S',
     'tile.wlTitle': '{w} S / {l} N', 'tile.wlStale': ' (Stand letzter Login)',
@@ -293,7 +293,7 @@
     'te.title': 'Kacheln anpassen', 'te.sub': 'Wähle, was jede Kachel anzeigt. Änderungen gelten sofort.', 'te.preview': 'Vorschau',
     'te.reset': 'Zurücksetzen', 'te.done': 'Fertig',
     'te.g.head': 'Oben', 'te.g.ranks': 'Ränge', 'te.g.extra': 'Extras',
-    'te.icon': 'Profil-Icon', 'te.level': 'Level', 'te.tag': 'Riot-Tag (#…)', 'te.note': 'Notiz', 'te.lock': 'Auto-Login-Schloss',
+    'te.icon': 'Profil-Icon', 'te.level': 'Level', 'te.tag': 'Riot-Tag (#…)', 'te.note': 'Notiz', 'te.lock': "Auto-Login bereit",
     'te.solo': 'Solo/Duo', 'te.flex': 'Flex', 'te.r5': 'Ranked 5v5', 'te.classic': 'Classic 5v5', 'te.winrate': 'Winrate & Spiele', 'te.mmr': 'MMR-Schätzung',
     'te.ranked': 'Ranked-Bereitschaft', 'te.inactive': 'Inaktivitäts-Warnung', 'te.lastPlayed': 'Zuletzt gespielt', 'te.wallet': 'Blue Essence & RP',
     'm.busy': 'Bin noch beschäftigt …', 'm.noSession': 'Für diesen Account ist weder eine Anmeldung noch ein Passwort gespeichert.',

@@ -115,11 +115,12 @@ const DOTS = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle c
 const EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const EYE_OFF = '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
 const CHEV = '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>';
 
 function lockHtml(a, o) {
   if (!o.lock) return '';
   if (a.credBroken) return `<span class="lock broken" title="${esc(t('tile.lockBroken'))}">${LOCK}</span>`;
-  return a.hasCred || a.placeholder ? `<span class="lock" title="${esc(t('tile.lockTitle'))}">${LOCK}</span>` : '';
+  return a.hasCred || a.placeholder ? `<span class="lock ready" title="${esc(t('tile.lockTitle'))}">${CHECK}</span>` : '';
 }
 
 function tileHtml(a, o = tileOpt(), preview = false) {
@@ -132,7 +133,7 @@ function tileHtml(a, o = tileOpt(), preview = false) {
   if (o.lastPlayed && a.lastPlayed) extras.push(`<span>${t('tile.lastPlayed', { ago: ago(a.lastPlayed) })}</span>`);
   const dc = o.inactive && !hides('ranks') ? decayInfo(a) : null;
   if (dc) extras.push(`<span class="decay${dc.days <= 3 ? ' bad' : dc.days <= 7 ? ' warn' : ''}" title="${esc(dc.est ? t('tile.decayEstT', { n: dc.bank }) : t('tile.decayT'))}">${
-    dc.days <= 0 ? t('tile.decayNow') : t(dc.est ? 'tile.decayEst' : 'tile.decayIn', { d: dc.days })}</span>`);
+    (dc.days <= 0 ? t('tile.decayNow') : t(dc.est ? 'tile.decayEst' : 'tile.decayIn', { d: dc.days })) + (dc.q === 'Flex' ? ' (Flex)' : '')}</span>`);
   if (o.wallet && p.be != null && !hides('wallet')) extras.push(`<span><b class="be">${num(p.be)}</b> BE</span><span><b class="rp">${num(p.rp)}</b> RP</span>`);
   const draggable = !preview;
   const showLvl = o.level && !hides('level');
@@ -290,14 +291,24 @@ function decayWarning(a) {
 // signed-in account; we keep that number and count it down. Without it: estimate from the
 // last game, assuming the bank was full then (Diamond 28 days, Master and up 14).
 function decayInfo(a) {
-  if (!a.solo || TIERS.indexOf(a.solo.tier) < TIERS.indexOf('DIAMOND')) return null;
-  const bank = APEX.includes(a.solo.tier) ? 14 : 28;
-  if (a.decay && a.decay.days != null && a.decay.days >= 0 && a.decay.at) {
-    const gone = a.puuid === S.active ? 0 : Math.floor((Date.now() - a.decay.at) / DAY);
-    return { days: Math.max(0, a.decay.days - gone), est: false };
+  const high = q => q && TIERS.indexOf(q.tier) >= TIERS.indexOf('DIAMOND');
+  const queues = ['solo', 'flex'].filter(k => high(a[k]));
+  if (!queues.length) return null;
+  const qName = k => (k === 'solo' ? 'Solo/Duo' : 'Flex');
+  const riot = a.decay && a.decay.q && a.decay.at ? a.decay : null;
+  const gone = !riot || a.puuid === S.active ? 0 : Math.floor((Date.now() - riot.at) / DAY);
+  let best = null;
+  for (const k of queues) {
+    let x;
+    if (riot && riot.q[k] != null) x = { days: Math.max(0, riot.q[k] - gone), est: false };
+    else if (a.lastPlayed) {
+      const bank = APEX.includes(a[k].tier) ? 14 : 28;
+      x = { days: Math.max(0, bank - Math.floor((Date.now() - a.lastPlayed) / DAY)), est: true, bank };
+    } else continue;
+    x.q = qName(k);
+    if (!best || x.days < best.days) best = x;
   }
-  if (!a.lastPlayed) return null;
-  return { days: Math.max(0, bank - Math.floor((Date.now() - a.lastPlayed) / DAY)), est: true, bank };
+  return best;
 }
 
 // ---------- ranked readiness ----------
@@ -753,11 +764,15 @@ $('board').addEventListener('click', e => {
   }
   if (e.target.closest('input')) return;
   if (e.target.closest('[data-reveal]')) return toggleReveal(tile.dataset.id);
-  selectAccount(tile.dataset.id);
+  const id = tile.dataset.id, now = Date.now();
+  if (lastTileClick.id === id && now - lastTileClick.t < 450) { lastTileClick = { id: null, t: 0 }; return switchTo(id); }
+  lastTileClick = { id, t: now };
+  selectAccount(id);
 });
+let lastTileClick = { id: null, t: 0 };
 $('board').addEventListener('dblclick', e => {
   const tile = e.target.closest('.tile');
-  if (tile && !e.target.closest('input, [data-more], [data-reveal]')) { switchTo(tile.dataset.id); return; }
+  if (tile) return;   // handled in the click handler above
   const sec = e.target.closest('section.cat');
   if (sec && sec.dataset.cat && e.target.closest('[data-cat-name]')) { renameCat = sec.dataset.cat; render(); }
 });
@@ -894,6 +909,7 @@ $('search').addEventListener('input', render);
 $('sort').onchange = () => api.setSetting('sort', $('sort').value);
 api.onTraySwitch(id => stateReady.then(() => switchTo(id)));   // a freshly opened window loads its state first
 api.onToast(key => toast(t(key)));
+$('addAcc').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
 $('navAdd').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
 $('emptyAdd').onclick = () => openDrawer(true);
 $('drawerClose').onclick = () => openDrawer(false);

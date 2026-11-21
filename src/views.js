@@ -53,7 +53,7 @@ function selected() {
 // Riot's own decay counter (signed-in account only); fallback: our inactivity guess
 function decayText(a) {
   const dc = decayInfo(a);
-  if (dc) return dc.days <= 0 ? t('tile.decayNow') : t(dc.est ? 'tile.decayEst' : 'tile.decayIn', { d: dc.days });
+  if (dc) return (dc.days <= 0 ? t('tile.decayNow') : t(dc.est ? 'tile.decayEst' : 'tile.decayIn', { d: dc.days })) + ' (' + dc.q + ')';
   const idle = decayWarning(a);
   return idle ? t('d.inactive', { d: idle }) : '';
 }
@@ -76,6 +76,7 @@ function renderDetail() {
   const signedIn = a.puuid === S.active && S.live && S.live.puuid === a.puuid;
   const st = !a.placeholder && rankedStatus(a);
   const dec = !a.placeholder ? decayText(a) : '';
+  const dci = !a.placeholder && decayInfo(a), decClose = !dci || dci.days <= 7;
   const ranks = QUEUES.filter(([k]) => a[k] || k === 'solo' || k === 'flex');
   const ic = (p) => `<svg viewBox="0 0 24 24">${p}</svg>`;
   box.innerHTML = `
@@ -90,7 +91,7 @@ function renderDetail() {
     ${hides('ranks') ? `<div class="chart-empty">${t('stream.ranksHidden')}</div>` : `<div class="ranks">${ranks.map(([k, n]) => rankRow(n, a[k])).join('')}</div>`}
     <div class="d-lines">
       <div>${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}${t('p.lastPlayed', { ago: ago(a.lastPlayed) })}</div>
-      ${dec ? `<div class="warn">${ic('<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h0"/>')}${esc(dec)}</div>` : ''}
+      ${dec ? `<div class="${decClose ? 'warn' : ''}">${ic('<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h0"/>')}${esc(dec)}</div>` : ''}
       ${st && st.ready === false ? `<div class="warn">${ic('<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/>')}${t('rk.notReady')}</div>` : ''}
     </div>
     ${hides('ranks') ? '' : `<div class="d-chart">${detailData.id === a.puuid ? historyChart(detailData.hist, detailData.est, true) : ''}</div>`}`}

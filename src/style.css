@@ -581,3 +581,13 @@ main { overflow-x: hidden; }
 .data-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .data-row .option { padding: 10px 12px; }
 #scaleSelect { min-width: 90px; }
+
+/* auto-login ready: green check */
+.lock.ready { color: #3ecf8e; opacity: .95; }
+.lock.ready svg { fill: rgba(62,207,142,.16); stroke: currentColor; stroke-width: 1.8; }
+.add-cat + .add-cat { margin-left: 6px; }
+/* rank rows: name/LP and win rate never overlap on narrow tiles */
+.rank > div:nth-child(2) { flex: 1 1 auto; overflow: hidden; }
+.rank .t { white-space: normal; line-height: 1.3; }
+.rank .t i { white-space: nowrap; }
+.rank .wr { flex: none; padding-left: 4px; }

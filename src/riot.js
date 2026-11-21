@@ -93,12 +93,16 @@ function pickQueue(stats, q, own) {
   return { tier: x.tier, division: x.division, lp: x.leaguePoints, wins: x.wins, losses: x.losses, wl };
 }
 
-// Riot's own decay info – only reported for the signed-in account
+// Riot's own decay counter – only reported for the signed-in account, per queue
+// (Solo/Duo and Flex, Diamond and up). The client shows it even when the warning flag is off.
 function decayOf(stats) {
-  const w = stats && stats.queueMap && stats.queueMap.RANKED_SOLO_5x5 && stats.queueMap.RANKED_SOLO_5x5.warnings;
-  if (!w) return null;
-  const days = Number(w.daysUntilDecay);
-  return { show: !!w.displayDecayWarning, days: Number.isFinite(days) ? days : null, at: Date.now() };
+  const qs = {};
+  for (const [k, key] of [['solo', 'RANKED_SOLO_5x5'], ['flex', 'RANKED_FLEX_SR']]) {
+    const w = stats && stats.queueMap && stats.queueMap[key] && stats.queueMap[key].warnings;
+    const d = w ? Number(w.daysUntilDecay) : NaN;
+    if (Number.isFinite(d) && d >= 0) qs[k] = d;
+  }
+  return Object.keys(qs).length ? { q: qs, at: Date.now() } : null;
 }
 
 // One match-history request for everything the app needs about recent games:
