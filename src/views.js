@@ -153,14 +153,12 @@ document.querySelectorAll('[data-tool]').forEach(b => b.onclick = async () => {
 
 // ---------- Live: lobby check, champ select helper, Clash ----------
 let liveData = null, liveTimer = null, champs = [];
-const DEFAULT_POOL = ['Illaoi', 'Yorick', 'Darius', 'Garen', 'Jax', 'Pantheon', 'Heimerdinger'];
 let helper = { enemy: 0, results: null, running: false };
 const champById = id => champs.find(c => c.id === id);
 const champIcon = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/champion-icons/${id}.png`;
 function pool() {
   const p = S.settings && S.settings.champPool;
-  if (Array.isArray(p)) return p;
-  return DEFAULT_POOL.map(n => (champs.find(c => c.name === n) || {}).id).filter(Boolean);
+  return Array.isArray(p) ? p : [];   // empty until the user adds their own champions
 }
 function savePool(p) { S.settings = { ...S.settings, champPool: p }; api.setSetting('champPool', p); }
 
@@ -219,7 +217,7 @@ function helperHtml() {
   const res = helper.results;
   return `<div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')}</h3>
       <select id="hLane">${['top', 'jungle', 'mid', 'adc', 'support'].map(l => `<option value="${l}" ${((S.settings && S.settings.lane) || 'top') === l ? 'selected' : ''}>${t('lane.' + l)}</option>`).join('')}</select></div>
-    <div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
+    ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
       <select id="hAdd"><option value="">+ ${t('live.addChamp')}</option>${opts}</select></div>
     <div class="h-enemy"><span>${t('live.enemy')}</span><select id="hEnemy"><option value="">–</option>${champs.map(c => `<option value="${c.id}" ${helper.enemy === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
       <button class="btn gold" id="hRun" ${helper.running ? 'disabled' : ''}>${helper.running ? t('live.loading') : t('live.bestPick')}</button></div>
