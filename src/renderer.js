@@ -296,7 +296,13 @@ function rankedStatus(a) {
   const champs = a.profile && a.profile.champs;
   const lvlOk = a.level >= 30;
   const chOk = champs == null ? null : champs >= 20;
-  const rc = a.rankedCheck;
+  // older saved checks may still hold lobby ("Team…") reasons: they don't concern the account
+  const clean = x => {
+    if (!x) return x;
+    const reasons = (x.reasons || []).filter(r => !/^Team/.test(r.code || ''));
+    return { ...x, reasons, ok: x.ok || reasons.length === 0 };
+  };
+  const rc = a.rankedCheck && Object.fromEntries(Object.entries(a.rankedCheck).map(([k, v]) => [k, k === 'at' ? v : clean(v)]));
   const ranked = QUEUES.some(([k]) => a[k]);
   // 10 normal Summoner's Rift games (new accounts); counted from the match history
   const normals = a.normals ? a.normals.count : null;

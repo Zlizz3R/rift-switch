@@ -208,6 +208,38 @@ New-Item -ItemType Directory -Force $dbg | Out-Null
 $stamp = Get-Date -Format 'HHmmss'
 function Write-Dbg([string]$line) { Add-Content -Path (Join-Path $dbg 'autofill.log') -Value ("$stamp " + $line) -Encoding ascii }
 
+# Ticks "Stay signed in" through Windows UI Automation (no mouse, no focus change needed).
+# Idea and approach from lost-league-manager, Copyright (c) 2026 Lostgames, ISC licence.
+function Set-StaySignedInUia {
+  try {
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $AE = [System.Windows.Automation.AutomationElement]
+    $root = $AE::FromHandle([RiotType]::Target)
+    $isBox = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::CheckBox)
+    $boxes = $null
+    for ($i = 0; $i -lt 8; $i++) {
+      $boxes = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $isBox)
+      if ($boxes.Count -gt 0) { break }
+      Start-Sleep -Milliseconds 500
+    }
+    if (-not $boxes -or $boxes.Count -eq 0) { return 'checkbox not found' }
+    $box = $null
+    foreach ($b in $boxes) { if ($b.Current.Name -match 'stay signed in|signed in|angemeldet') { $box = $b; break } }
+    if (-not $box -and $boxes.Count -eq 1) { $box = $boxes[0] }
+    if (-not $box) { return "checkbox ambiguous ($($boxes.Count))" }
+    $p = $null
+    if ($box.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$p)) {
+      if ($p.Current.ToggleState -eq [System.Windows.Automation.ToggleState]::On) { return 'already ticked' }
+      $p.Toggle()
+      Start-Sleep -Milliseconds 200
+      if ($p.Current.ToggleState -eq [System.Windows.Automation.ToggleState]::On) { return 'ticked' }
+      return 'toggle had no effect'
+    }
+    if ($box.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$p)) { $p.Invoke(); return 'ticked' }
+    return 'checkbox not clickable'
+  } catch { return 'uia error: ' + $_.Exception.Message }
+}
+
 # test only: report what is recognised, touch nothing
 if ($env:RS_AUTOFILL_IMAGE) { [RiotType]::TestImage = $env:RS_AUTOFILL_IMAGE }
 if ($env:RS_AUTOFILL_PROBE) {
@@ -245,9 +277,15 @@ if ($form) {
   if (-not [RiotType]::Click([RiotType]::PassX, [RiotType]::PassY)) { 'lostfocus'; exit }
   [RiotType]::Ctrl(0x41)
   if (-not [RiotType]::Type([string]$cred.p)) { 'lostfocus'; exit }
-  # "Stay signed in": without it the Riot Client forgets the login and switching can't restore it
-  $ticked = [RiotType]::BoxTicked()
+  # "Stay signed in": without it the Riot Client forgets the login and switching can't restore it.
+  # 1st try: UI Automation (approach from lost-league-manager by Lostgames, ISC licence) -
+  # Chromium only builds its accessibility tree after the first query, so retry a few seconds.
+  $uia = Set-StaySignedInUia
+  Write-Dbg ('uia: ' + $uia)
+  $ticked = ($uia -eq 'ticked' -or $uia -eq 'already ticked')
+  if (-not $ticked) { $ticked = [RiotType]::BoxTicked() }
   [RiotType]::SaveBoxCrop((Join-Path $dbg "$stamp-1-before.png"))
+  # 2nd try: click the box found in the picture
   if (-not $ticked) {
     if (-not [RiotType]::Click([RiotType]::BoxX, [RiotType]::BoxY)) { 'lostfocus'; exit }
     Start-Sleep -Milliseconds 400

@@ -182,8 +182,11 @@ async function rankedEligibility() {
   const one = id => {
     const q = list.find(x => x.queueId === id);
     if (!q) return null;
-    return { ok: !!q.eligible, reasons: (q.restrictions || []).map(r => ({
-      code: r.restrictionCode, args: r.restrictionArgs || {}, until: r.expiredTimestamp || 0 })) };
+    // "Team…" reasons (party too big, rank spread, …) are about the current lobby,
+    // not the account – they must not mark the account as not ranked-ready
+    const reasons = (q.restrictions || []).filter(r => !/^Team/.test(r.restrictionCode || '')).map(r => ({
+      code: r.restrictionCode, args: r.restrictionArgs || {}, until: r.expiredTimestamp || 0 }));
+    return { ok: !!q.eligible || reasons.length === 0, reasons };
   };
   return { at: Date.now(), solo: one(420), flex: one(440), r5: one(710), classic: one(4310) };
 }
