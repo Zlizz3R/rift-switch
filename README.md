@@ -79,24 +79,19 @@ Or double-click `Rift Switch.cmd` after `npm install`. Build the installer yours
 
 ## Development notes
 
--  – main process: window, tray, IPC, switching, polling
--  – pure logic with tests: accounts & LP history, settings, export/import, password sealing
+- `src/main.js` – main process: window, tray, IPC, switching, polling
+- `src/core/` – pure logic with tests: accounts & LP history, settings, export/import, password sealing
   and app lock, tray/jump-list content, the accounts.json store
--  – Riot Client / League Client API, process handling;  – client events (WebSocket)
--  – live page data, champion data, matchups;  – match history store
--  – typing a login into the Riot Client (UI Automation, picture scan as fallback)
-- , , , , ,  – the window
--  – English and German texts,  – the other 9 languages
-- Tests: Unknown command: "test"
-
-
-Did you mean this?
-  npm test # Test a package
-To see a list of supported npm commands, run:
-  npm help (Node's built-in test runner, no Electron needed); they run on every push (GitHub Actions)
-- Releases: push a tag  matching package.json – GitHub Actions builds and publishes the installer,
+- `src/riot.js` – Riot Client / League Client API, process handling; `src/lcuevents.js` – client events (WebSocket)
+- `src/live.js` – live page data, champion data, matchups; `src/matches.js` – match history store
+- `src/autofill.ps1` – typing a login into the Riot Client (UI Automation, picture scan as fallback)
+- `src/renderer.js`, `views.js`, `matches-view.js`, `rankmath.js`, `index.html`, `style.css` – the window
+- `src/i18n.js` – English and German texts, `src/lang/*.js` – the other 9 languages
+- Tests: `npm test` (Node's built-in test runner, no Electron needed); they run on every push (GitHub Actions)
+- Releases: push a tag `vX.Y.Z` matching package.json – GitHub Actions builds and publishes the installer,
   installed copies update themselves
-- Test copy on its own data folder: 
+- Test copy on its own data folder: `RS_DATA=<folder> npx electron .`
+
 ## Support
 
 Rift Switch is free and open source. If it saves you some clicks, you can [buy me a coffee ☕](https://buymeacoffee.com/zlizz3r) – thank you!
