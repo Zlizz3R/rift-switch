@@ -96,7 +96,7 @@ function renderDetail() {
     <div class="d-actions">
       ${a.placeholder ? '' : `<button data-d="profile">${ic('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')}<span>${t('d.profile')}</span></button>`}
       <button data-d="login">${ic('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>')}<span>${t('d.login')}</span></button>
-      ${a.placeholder ? '' : `<button data-d="opgg">${ic('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>')}<span>op.gg</span></button>`}
+      ${a.placeholder ? '' : `<button data-d="open">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('menu.openWith')}</span></button>`}
       <button data-d="note">${ic('<path d="M4 20h4L19 9l-4-4L4 16z"/>')}<span>${t('d.edit')}</span></button>
       <button data-d="more">${ic('<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>')}<span>${t('common.more')}</span></button>
       <button data-d="remove" class="danger">${ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}<span>${t('common.delete')}</span></button>
@@ -111,13 +111,33 @@ $('detail').addEventListener('click', async e => {
   const btn = e.target.closest('[data-d]');
   if (!btn) return;
   const act = btn.dataset.d;
+  if (act === 'more' || act === 'open') e.stopPropagation();
   if (act === 'profile') openProfile(a.puuid);
   if (act === 'login') openCred(a.puuid);
-  if (act === 'opgg') openSite(a, 'opgg');
+  if (act === 'open') {
+    const r = btn.getBoundingClientRect();
+    const m = $('siteMenu');
+    m.innerHTML = SITES.map(([k, n]) => `<button data-site="${k}">${n}</button>`).join('');
+    m.dataset.id = a.puuid;
+    m.hidden = false;
+    m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 8) + 'px';
+    m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
+  }
   if (act === 'note') editNote(a.puuid);
-  if (act === 'more') { const r = btn.getBoundingClientRect(); showMenu(a.puuid, r.left - 60, r.bottom + 4); }
+  if (act === 'more') { const r = btn.getBoundingClientRect(); $('siteMenu').hidden = true; showMenu(a.puuid, r.left - 60, r.bottom + 4); }
   if (act === 'remove' && await confirmBox(t('menu.removeTitle', { name: dispName(a) }), t('menu.removeText'), t('menu.remove'))) api.remove(a.puuid);
 });
+
+const siteMenu = document.createElement('div');
+siteMenu.className = 'menu'; siteMenu.id = 'siteMenu'; siteMenu.hidden = true;
+document.body.appendChild(siteMenu);
+siteMenu.addEventListener('click', e => {
+  const b = e.target.closest('[data-site]');
+  const a = S.accounts.find(x => x.puuid === siteMenu.dataset.id);
+  siteMenu.hidden = true;
+  if (b && a) openSite(a, b.dataset.site);
+});
+document.addEventListener('click', e => { if (!e.target.closest('#siteMenu')) siteMenu.hidden = true; });
 
 // ---------- Tools ----------
 document.querySelectorAll('[data-tool]').forEach(b => b.onclick = async () => {
