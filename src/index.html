@@ -254,8 +254,11 @@
 </div>
 
 <div class="menu" id="menu" hidden>
+  <!-- same order as the detail panel: Switch | Profile, Login, Open with, Note, Move | Delete -->
   <button data-act="switch" data-i18n="menu.switch"></button>
+  <hr>
   <button data-act="profile" data-real data-i18n="menu.profile"></button>
+  <button data-act="cred" data-i18n="menu.login"></button>
   <div class="sub" data-real>
     <button class="sub-btn"><span data-i18n="menu.openWith"></span> <span class="arrow">›</span></button>
     <div class="submenu">
@@ -266,8 +269,6 @@
       <button data-act="open" data-site="ugg">u.gg</button>
     </div>
   </div>
-  <hr>
-  <button data-act="cred" data-i18n="menu.login"></button>
   <button data-act="note" data-i18n="menu.note"></button>
   <div id="menuCats"></div>
   <hr>
