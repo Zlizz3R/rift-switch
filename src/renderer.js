@@ -578,7 +578,6 @@ function renderMain() {
   renderTileEditor();
   if (S.saveError && S.saveError !== shownSaveError) toast(t('saveFailed', { e: S.saveError }), true);
   shownSaveError = S.saveError;
-  $('navRefresh').classList.toggle('spin', !!S.busy);
 }
 
 function renderLogin(l) {
@@ -845,7 +844,7 @@ api.onToast(key => toast(t(key)));
 $('navAdd').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
 $('emptyAdd').onclick = () => openDrawer(true);
 $('drawerClose').onclick = () => openDrawer(false);
-$('navRefresh').onclick = async () => {
+$('toolRefresh').onclick = async () => {
   if (!S.live || !S.live.clientUp) return toast(t('refresh.later'));
   await api.refresh(); toast(t('refresh.done'));
 };

@@ -98,7 +98,7 @@ function renderDetail() {
       <button data-d="login">${ic('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>')}<span>${t('d.login')}</span></button>
       ${a.placeholder ? '' : `<button data-d="open">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('menu.openWith')}</span></button>`}
       <button data-d="note">${ic('<path d="M4 20h4L19 9l-4-4L4 16z"/>')}<span>${t('d.edit')}</span></button>
-      <button data-d="more">${ic('<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>')}<span>${t('common.more')}</span></button>
+      <button data-d="move">${ic('<path d="M3 7h7l2 2h9v10H3z"/><path d="M12 13h5M15 11l2 2-2 2"/>')}<span>${t('d.move')}</span></button>
       <button data-d="remove" class="danger">${ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}<span>${t('common.delete')}</span></button>
     </div>
     <p class="fine d-hint">${t('d.hint')}</p>`;
@@ -111,7 +111,7 @@ $('detail').addEventListener('click', async e => {
   const btn = e.target.closest('[data-d]');
   if (!btn) return;
   const act = btn.dataset.d;
-  if (act === 'more' || act === 'open') e.stopPropagation();
+  if (act === 'move' || act === 'open') e.stopPropagation();
   if (act === 'profile') openProfile(a.puuid);
   if (act === 'login') openCred(a.puuid);
   if (act === 'open') {
@@ -124,7 +124,20 @@ $('detail').addEventListener('click', async e => {
     m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
   }
   if (act === 'note') editNote(a.puuid);
-  if (act === 'more') { const r = btn.getBoundingClientRect(); $('siteMenu').hidden = true; showMenu(a.puuid, r.left - 60, r.bottom + 4); }
+  if (act === 'move') {
+    // categories to move this account to (the panel's small menu)
+    const here = catOf(a);
+    const targets = cats().filter(c => c.id !== here).map(c => [c.id, c.name]);
+    if (here) targets.unshift(['', t('cat.none')]);
+    const m = $('siteMenu');
+    m.innerHTML = targets.length ? targets.map(([cid, n]) => `<button data-cat="${esc(cid)}">${esc(n)}</button>`).join('')
+      : `<div class="menu-label">${t('d.noCats')}</div>`;
+    m.dataset.id = a.puuid;
+    const r = btn.getBoundingClientRect();
+    m.hidden = false;
+    m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 8) + 'px';
+    m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
+  }
   if (act === 'remove' && await confirmBox(t('menu.removeTitle', { name: dispName(a) }), t('menu.removeText'), t('menu.remove'))) api.remove(a.puuid);
 });
 
@@ -133,9 +146,11 @@ siteMenu.className = 'menu'; siteMenu.id = 'siteMenu'; siteMenu.hidden = true;
 document.body.appendChild(siteMenu);
 siteMenu.addEventListener('click', e => {
   const b = e.target.closest('[data-site]');
+  const c = e.target.closest('[data-cat]');
   const a = S.accounts.find(x => x.puuid === siteMenu.dataset.id);
   siteMenu.hidden = true;
   if (b && a) openSite(a, b.dataset.site);
+  if (c && a) moveTo(a.puuid, c.dataset.cat || '');
 });
 document.addEventListener('click', e => { if (!e.target.closest('#siteMenu')) siteMenu.hidden = true; });
 
@@ -155,6 +170,9 @@ document.querySelectorAll('[data-tool]').forEach(b => b.onclick = async () => {
 let liveData = null, liveTimer = null, champs = [];
 let helper = { enemy: 0, results: null, running: false };
 const champById = id => champs.find(c => c.id === id);
+// typed name -> champion (ignores case, spaces and apostrophes: "kai sa" finds Kai'Sa)
+const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const champByName = s => { const n = norm(s); return n ? champs.find(c => norm(c.name) === n || norm(c.alias) === n) || champs.find(c => norm(c.name).startsWith(n)) : null; };
 const champIcon = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/champion-icons/${id}.png`;
 function pool() {
   const p = S.settings && S.settings.champPool;
@@ -180,7 +198,8 @@ function playerRow(p) {
     ${p.gameName ? `<button class="chip" data-opgg="${esc(p.gameName + '#' + p.tagLine)}">op.gg</button>` : ''}
   </div>`;
 }
-function renderLive() {
+function renderLive(force) {
+  if (!force && document.activeElement && document.activeElement.closest && document.activeElement.closest('#liveBody input')) return;
   const d = liveData || {};
   $('liveSub').textContent = !d.clientUp ? t('app.closed') : t('phase.' + (d.phase || 'None'));
   $('liveDot').hidden = !(d.clash && d.clash.opponents && d.clash.opponents.length) && !d.champSelect && !d.lobby;
@@ -188,7 +207,7 @@ function renderLive() {
   if (d.clash && d.clash.opponents && d.clash.opponents.length) {
     const ids = d.clash.opponents.filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
     parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.clash')} – ${esc(d.clash.teamName || '')} ${d.clash.teamTag ? '[' + esc(d.clash.teamTag) + ']' : ''}</h3>
-      <button class="btn gold" id="clashAll" data-ids="${esc(ids.join('|'))}">${t('live.allOpgg')}</button></div>
+      <button class="btn gold ext-btn" id="clashAll" data-ids="${esc(ids.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button></div>
       ${d.clash.opponents.map(playerRow).join('')}</div>`);
   }
   if (d.lobby && d.lobby.members.length) {
@@ -213,13 +232,13 @@ function renderLive() {
 }
 function helperHtml() {
   const p = pool();
-  const opts = champs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  const opts = champs.map(c => `<option value="${esc(c.name)}">`).join('');
   const res = helper.results;
-  return `<div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')}</h3>
+  return `<datalist id="champList">${opts}</datalist><div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')}</h3>
       <select id="hLane">${['top', 'jungle', 'mid', 'adc', 'support'].map(l => `<option value="${l}" ${((S.settings && S.settings.lane) || 'top') === l ? 'selected' : ''}>${t('lane.' + l)}</option>`).join('')}</select></div>
     ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
-      <select id="hAdd"><option value="">+ ${t('live.addChamp')}</option>${opts}</select></div>
-    <div class="h-enemy"><span>${t('live.enemy')}</span><select id="hEnemy"><option value="">–</option>${champs.map(c => `<option value="${c.id}" ${helper.enemy === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+      <input id="hAdd" list="champList" placeholder="+ ${esc(t('live.addChamp'))}" spellcheck="false"></div>
+    <div class="h-enemy"><span>${t('live.enemy')}</span><input id="hEnemy" list="champList" placeholder="${esc(t('live.typeChamp'))}" spellcheck="false" value="${esc((champById(helper.enemy) || {}).name || '')}">
       <button class="btn gold" id="hRun" ${helper.running ? 'disabled' : ''}>${helper.running ? t('live.loading') : t('live.bestPick')}</button></div>
     ${res ? `<div class="h-results">${res.map((r, i) => `<div class="h-res ${i === 0 && r.wr != null ? 'best' : ''}">
       <img src="${champIcon(r.id)}" alt=""><b>${esc((champById(r.id) || {}).name || '')}</b>
@@ -252,12 +271,18 @@ $('liveBody').addEventListener('click', async e => {
   }
 });
 $('liveBody').addEventListener('change', e => {
-  if (e.target.id === 'hAdd' && e.target.value) {
-    const id = Number(e.target.value);
-    if (!pool().includes(id)) savePool([...pool(), id]);
-    helper.results = null; renderLive();
+  if (e.target.id === 'hAdd' && e.target.value.trim()) {
+    const c = champByName(e.target.value);
+    if (!c) return toast(t('live.unknownChamp'), true);
+    if (!pool().includes(c.id)) savePool([...pool(), c.id]);
+    helper.results = null; renderLive(true);
+    $('hAdd') && $('hAdd').focus();
   }
-  if (e.target.id === 'hEnemy') { helper.enemy = Number(e.target.value) || 0; helper.results = null; renderLive(); }
+  if (e.target.id === 'hEnemy') {
+    const c = champByName(e.target.value);
+    if (e.target.value.trim() && !c) return toast(t('live.unknownChamp'), true);
+    helper.enemy = c ? c.id : 0; helper.results = null; renderLive(true);
+  }
   if (e.target.id === 'hLane') { S.settings = { ...S.settings, lane: e.target.value }; api.setSetting('lane', e.target.value); helper.results = null; renderLive(); }
 });
 
