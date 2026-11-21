@@ -9,8 +9,17 @@ const lcu = riot.lcu;
 
 // ---------- players ----------
 
-// Riot ID + Solo/Duo + Flex rank of a player (by puuid or summoner id)
+// Riot ID + Solo/Duo + Flex rank of a player (by puuid or summoner id), cached 5 minutes
+const playerCache = new Map();
 async function player(ref) {
+  const key = ref.puuid || 's' + ref.summonerId;
+  const c = playerCache.get(key);
+  if (c && Date.now() - c.at < 300000) return { ...c.p, position: ref.position || '', championId: ref.championId || 0 };
+  const p = await playerFresh(ref);
+  if (p) playerCache.set(key, { at: Date.now(), p });
+  return p;
+}
+async function playerFresh(ref) {
   const s = ref.puuid
     ? await lcu('/lol-summoner/v2/summoners/puuid/' + encodeURIComponent(ref.puuid))
     : await lcu('/lol-summoner/v1/summoners/' + encodeURIComponent(ref.summonerId));
@@ -53,7 +62,15 @@ async function champSelect() {
 
 // ---------- Clash ----------
 
+// the Clash bracket changes rarely: ask at most once a minute
+let clashCache = { at: 0, v: null };
 async function clash() {
+  if (Date.now() - clashCache.at < 60000) return clashCache.v;
+  const v = await clashFresh();
+  clashCache = { at: Date.now(), v };
+  return v;
+}
+async function clashFresh() {
   const sum = await lcu('/lol-clash/v1/tournament-summary', 3000);
   const t = Array.isArray(sum) && sum[0];
   if (!t || !t.bracketId || !t.rosterId) return null;
@@ -77,12 +94,13 @@ async function clash() {
 async function snapshot() {
   const phase = await riot.gameflowPhase();
   if (!phase) return { clientUp: false };
+  const reg = await lcu('/riotclient/region-locale', 2000);
   const [lb, cs, cl] = await Promise.all([
     ['Lobby', 'Matchmaking', 'ReadyCheck'].includes(phase) ? lobby() : null,
     phase === 'ChampSelect' ? champSelect() : null,
     clash(),
   ]);
-  return { clientUp: true, phase, lobby: lb, champSelect: cs, clash: cl };
+  return { clientUp: true, phase, region: reg ? reg.region : '', lobby: lb, champSelect: cs, clash: cl };
 }
 
 // ---------- champion list (CommunityDragon, cached for a day) ----------
@@ -129,8 +147,11 @@ async function champions(dataDir) {
 // win rate in that matchup, so ours is 100 minus it. Fallback: u.gg matchup page.
 // Both are web pages, not APIs: if they change their layout this returns null.
 const matchupCache = new Map();
-const slug = n => String(n || '').toLowerCase().replace(/['\s.&]/g, '');
+const SLUG = { 'nunu & willump': 'nunu', 'renata glasc': 'renata', 'wukong': 'wukong' };
+const slug = n => SLUG[String(n || '').toLowerCase()] || String(n || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const LANES = ['top', 'jungle', 'mid', 'adc', 'support'];
 async function matchup(mine, enemy, lane = 'top') {
+  if (!LANES.includes(lane)) lane = 'top';
   const key = mine + '|' + enemy + '|' + lane;
   if (matchupCache.has(key)) return matchupCache.get(key);
   let wr = null, source = null;
@@ -141,15 +162,9 @@ async function matchup(mine, enemy, lane = 'top') {
       if (v >= 35 && v <= 65) { wr = Math.round((100 - v) * 10) / 10; source = 'counterstats.net'; break; }
     }
   }
-  if (wr == null) {
-    const u = await getJson(`https://u.gg/lol/champions/${slug(mine)}/build/${lane}?opp=${slug(enemy)}`, 5000);
-    if (u && u.status === 200) {
-      const m = /"win_rate":\s*([\d.]+)/.exec(u.text) || /(\d{2}\.\d{1,2})%\s*Win Rate/i.exec(u.text);
-      if (m) { const v = parseFloat(m[1]); wr = v <= 1 ? Math.round(v * 1000) / 10 : v; source = 'u.gg'; }
-    }
-  }
+  // (no u.gg fallback any more: its page only reliably shows the champion's overall win rate)
   const res = { wr, source };
-  matchupCache.set(key, res);
+  if (wr != null) matchupCache.set(key, res);   // failures are retried next time
   return res;
 }
 

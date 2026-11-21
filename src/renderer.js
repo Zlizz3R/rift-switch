@@ -57,6 +57,12 @@ function dispName(a) {
 const dispTag = a => (hides('tag') || hides('name') ? '' : a.tagLine || '');
 const fullName = a => dispName(a) + (dispTag(a) ? '#' + dispTag(a) : '');
 
+// phase of the League client as text; phases without a translation are shown readable
+function phaseName(p) {
+  const key = 'phase.' + (p || 'None');
+  return I18N.STRINGS.en[key] ? t(key) : String(p || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
 // ---------- MMR estimate ----------
 // Riot doesn't publish MMR. This is a rough guess: rank + LP as the base,
 // nudged by win rate (weighted by how many games back it up).
@@ -288,7 +294,7 @@ function reasonText(x) {
   const known = I18N.STRINGS.en[key];
   const txt = known ? t(key, { n: n || (x.code === 'PlayerMinLevelRestriction' ? 30 : 20) })
     : String(x.code || '').replace(/Restriction$/, '').replace(/([a-z])([A-Z])/g, '$1 $2')
-      + (Object.values(args).filter(v => /^d+$/.test(String(v))).length ? ' (' + Object.values(args).filter(v => /^d+$/.test(String(v))).join('/') + ')' : '');
+      + (Object.values(args).filter(v => /^\d+$/.test(String(v))).length ? ' (' + Object.values(args).filter(v => /^\d+$/.test(String(v))).join('/') + ')' : '');
   return txt + (x.until > Date.now() ? t('rk.until', { date: new Date(x.until).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }) : '');
 }
 function rankedStatus(a) {
@@ -558,7 +564,7 @@ function renderMain() {
   const el = $('live');
   el.className = 'live' + (live.clientUp ? ' on' : '');
   el.innerHTML = live.clientUp
-    ? `<span><span class="dot"></span>${esc(cur ? dispName(cur) : t('app.unknownAccount'))} · ${esc(t('phase.' + (live.phase || 'None')))}</span>`
+    ? `<span><span class="dot"></span>${esc(cur ? dispName(cur) : t('app.unknownAccount'))} · ${esc(phaseName(live.phase))}</span>`
     : `<span><span class="dot"></span>${S.busy ? t('app.switching') : t('app.closed')}</span>`;
 
   const unknownLive = live.clientUp && !cur;
@@ -678,7 +684,14 @@ function editNote(id) {
   const inp = slot.querySelector('input');
   inp.value = a.note || '';
   inp.focus(); inp.select();
-  const finish = ok => { if (ok) api.setNote(id, inp.value.trim()); else render(); };
+  let done = false;
+  const finish = ok => {
+    if (done) return; done = true;
+    const v = inp.value.trim();
+    if (ok && v !== (a.note || '')) { a.note = v; api.setNote(id, v); }
+    inp.blur();
+    render();
+  };
   inp.addEventListener('click', e => e.stopPropagation());
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
   inp.addEventListener('blur', () => finish(true));
@@ -846,7 +859,8 @@ $('emptyAdd').onclick = () => openDrawer(true);
 $('drawerClose').onclick = () => openDrawer(false);
 $('toolRefresh').onclick = async () => {
   if (!S.live || !S.live.clientUp) return toast(t('refresh.later'));
-  await api.refresh(); toast(t('refresh.done'));
+  const r = await api.refresh();
+  toast(r && r.busy ? t('refresh.busy') : t('refresh.done'));
 };
 $('optCurrent').onclick = async () => {
   const r = await api.addCurrent();

@@ -101,6 +101,27 @@ function decayOf(stats) {
   return { show: !!w.displayDecayWarning, days: Number.isFinite(days) ? days : null, at: Date.now() };
 }
 
+// One match-history request for everything the app needs about recent games:
+// last played, ranked games (for the LP estimate) and the normal-games count.
+async function historySummary(puuid) {
+  const mh = await lcu('/lol-match-history/v1/products/lol/' + encodeURIComponent(puuid) + '/matches?begIndex=0&endIndex=50', 6000);
+  const games = mh && mh.games && mh.games.games;
+  if (!Array.isArray(games)) return null;
+  const ranked = games.filter(g => g.queueId === 420 || g.queueId === 440).map(g => {
+    const p = g.participants && g.participants[0];
+    return { id: g.gameId, t: g.gameCreation, q: g.queueId === 420 ? 'solo' : 'flex', win: !!(p && p.stats && p.stats.win), champ: p && p.championId };
+  });
+  return {
+    lastPlayed: games.length ? Math.max(...games.map(g => g.gameCreation || 0)) : null,
+    ranked,
+    normals: {
+      count: games.filter(g => NORMAL_SR_QUEUES.includes(g.queueId)).length,
+      hasRanked: games.some(g => RANKED_QUEUE_IDS.includes(g.queueId)),
+      sample: games.length, at: Date.now(),
+    },
+  };
+}
+
 // Ranked games (Solo/Duo 420, Flex 440) visible in the match history, with win/loss
 async function rankedGames(puuid) {
   const mh = await lcu('/lol-match-history/v1/products/lol/' + encodeURIComponent(puuid) + '/matches?begIndex=0&endIndex=50', 6000);
@@ -365,7 +386,7 @@ function autofill(username, password) {
 }
 
 module.exports = {
-  lcu, rankedGames,
+  lcu, rankedGames, historySummary,
   currentAccount, rankedFor, summonerByPuuid, gameflowPhase, lookupRiotId,
   lastPlayed, profileData, acceptReadyCheck, rankedEligibility,
   captureSession, restoreSession, clearSession, sessionPersisted, closeClients, launchLeague, lockfile,

@@ -57,11 +57,12 @@ function decayText(a) {
   return idle ? t('d.inactive', { d: idle }) : '';
 }
 async function loadDetailChart(a) {
-  if (!a || a.placeholder || detailData.id === a.puuid) return;
-  detailData = { id: a.puuid, hist: [], est: {} };
+  const key = a && a.puuid + '|' + (a.historyLen || 0) + '|' + ((a.rankedGames || []).length);
+  if (!a || a.placeholder || detailData.key === key) return;
+  detailData = { id: a.puuid, key, hist: detailData.id === a.puuid ? detailData.hist : [], est: detailData.id === a.puuid ? detailData.est : {} };
   const [hist, games] = await Promise.all([api.getHistory(a.puuid), api.rankedGames(a.puuid)]);
   if (detailData.id !== a.puuid) return;
-  detailData = { id: a.puuid, hist, est: lpEstimate(a, games, hist) };
+  detailData = { id: a.puuid, key, hist, est: lpEstimate(a, games, hist) };
   renderDetail();
 }
 function renderDetail() {
@@ -180,13 +181,19 @@ function pool() {
 }
 function savePool(p) { S.settings = { ...S.settings, champPool: p }; api.setSetting('champPool', p); }
 
-async function pollLive(now) {
+let liveRun = 0;
+async function pollLive() {
   clearTimeout(liveTimer);
+  const run = ++liveRun;              // a newer call replaces this loop
   if (view !== 'live') return;
-  if (!champs.length) champs = await api.champions();
-  liveData = await api.live();
-  renderLive();
-  liveTimer = setTimeout(() => pollLive(), 3000);
+  try {
+    if (!champs.length) champs = (await api.champions()) || [];
+    const d = await api.live();
+    if (run !== liveRun || view !== 'live') return;
+    liveData = d;
+    renderLive();
+  } catch (e) { console.warn('live', e); }
+  if (run === liveRun) liveTimer = setTimeout(pollLive, 3000);
 }
 function playerRow(p) {
   const r = p.solo;
@@ -201,7 +208,7 @@ function playerRow(p) {
 function renderLive(force) {
   if (!force && document.activeElement && document.activeElement.closest && document.activeElement.closest('#liveBody input')) return;
   const d = liveData || {};
-  $('liveSub').textContent = !d.clientUp ? t('app.closed') : t('phase.' + (d.phase || 'None'));
+  $('liveSub').textContent = !d.clientUp ? t('app.closed') : phaseName(d.phase);
   $('liveDot').hidden = !(d.clash && d.clash.opponents && d.clash.opponents.length) && !d.champSelect && !d.lobby;
   const parts = [];
   if (d.clash && d.clash.opponents && d.clash.opponents.length) {
@@ -222,8 +229,8 @@ function renderLive(force) {
     </div>`);
     // enemy laner known? (same position) -> preselect for the helper
     const opp = cs.enemies.find(e => e.championId && cs.myPosition && e.position === cs.myPosition) || (cs.enemies.filter(e => e.championId).length === 1 ? cs.enemies.find(e => e.championId) : null);
-    if (opp && !helper.enemy) helper.enemy = opp.championId;
-  }
+    if (opp && !helper.enemy) { helper.enemy = opp.championId; helper.autoEnemy = true; }
+  } else if (helper.autoEnemy) { helper.enemy = 0; helper.autoEnemy = false; helper.results = null; }
   if (!parts.length) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
   parts.push(helperHtml());
   // keep focus/scroll of the helper's inputs: only replace when something changed
@@ -249,8 +256,8 @@ function helperHtml() {
 }
 $('liveBody').addEventListener('click', async e => {
   const og = e.target.closest('[data-opgg]');
-  if (og) { const [n, tag] = og.dataset.opgg.split('#'); return openSite({ gameName: n, tagLine: tag, region: (S.live && S.live.region) || selected()?.region }, 'opgg'); }
-  if (e.target.closest('#clashAll')) return api.openMulti((selected() && selected().region) || 'euw', e.target.closest('#clashAll').dataset.ids.split('|'));
+  if (og) { const [n, tag] = og.dataset.opgg.split('#'); return openSite({ gameName: n, tagLine: tag, region: (liveData && liveData.region) || selected()?.region }, 'opgg'); }
+  if (e.target.closest('#clashAll')) return api.openMulti((liveData && liveData.region) || (selected() && selected().region) || 'euw', e.target.closest('#clashAll').dataset.ids.split('|'));
   const del = e.target.closest('[data-hdel]');
   if (del) { savePool(pool().filter(id => id !== Number(del.dataset.hdel))); helper.results = null; return renderLive(); }
   if (e.target.closest('#hRun')) {
@@ -279,6 +286,7 @@ $('liveBody').addEventListener('change', e => {
     $('hAdd') && $('hAdd').focus();
   }
   if (e.target.id === 'hEnemy') {
+    helper.autoEnemy = false;
     const c = champByName(e.target.value);
     if (e.target.value.trim() && !c) return toast(t('live.unknownChamp'), true);
     helper.enemy = c ? c.id : 0; helper.results = null; renderLive(true);

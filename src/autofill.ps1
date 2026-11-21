@@ -1,13 +1,13 @@
 # Types a Riot login into the Riot Client window and ticks "Stay signed in".
 # Reads {"u": "...", "p": "..."} from stdin (never from the command line, so other
 # programs can't read it from the process list).
-# Prints one word as the last line: ok | ok-nopersist | nowindow | nofocus | lostfocus | badinput
+# Prints one word as the last line: ok | ok-nopersist | noform | nowindow | nofocus | lostfocus | badinput
 #
 # The login form is found by scanning a picture of the window (works at any window size):
 #   light panel on the left -> two grey input fields (username, password) ->
 #   below them the social-login buttons, then the "Stay signed in" checkbox.
-# If the form isn't recognised, it falls back to plain typing (username field has focus)
-# and saves a picture of the (still empty) window to %TEMP%\rift-switch-debug for diagnosis.
+# If the form isn't recognised, NOTHING is typed (the password could land in a chat or search
+# field): it answers "noform" and saves a picture of the window to %TEMP%\rift-switch-debug.
 $ErrorActionPreference = 'Stop'
 try { $cred = [Console]::In.ReadToEnd() | ConvertFrom-Json } catch { 'badinput'; exit }
 if (-not $cred.u -or -not $cred.p) { 'badinput'; exit }
@@ -37,6 +37,11 @@ public static class RiotType {
   [DllImport("user32.dll")] static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
   [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT p);
+  [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(POINT p);
+  [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr h, uint flags);
+  // real screen pixels for window size, screenshot and clicks (matters at 125/150 % scaling)
+  public static void DpiAware() { try { SetProcessDPIAware(); } catch { } }
 
   const uint KEYUP = 2, UNICODE = 4, LDOWN = 2, LUP = 4;
   public static IntPtr Target;
@@ -188,7 +193,10 @@ public static class RiotType {
     if (!InFront()) return false;
     RECT r; if (!GetWindowRect(Target, out r)) return false;
     POINT old; GetCursorPos(out old);
-    SetCursorPos(r.L + px, r.T + py);
+    // only click if the Riot Client itself is at that spot (not an always-on-top overlay)
+    POINT at; at.X = r.L + px; at.Y = r.T + py;
+    if (GetAncestor(WindowFromPoint(at), 2) != Target) return false;
+    SetCursorPos(at.X, at.Y);
     Thread.Sleep(60);
     Send(new[] { M(LDOWN), M(LUP) });
     Thread.Sleep(150);
@@ -202,6 +210,7 @@ $target = if ($env:RS_AUTOFILL_TARGET) { $env:RS_AUTOFILL_TARGET } else { 'Riot 
 $proc = Get-Process -Name $target -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
 if (-not $proc) { 'nowindow'; exit }
 [RiotType]::Target = $proc.MainWindowHandle
+[RiotType]::DpiAware()
 
 $dbg = Join-Path $env:TEMP 'rift-switch-debug'
 New-Item -ItemType Directory -Force $dbg | Out-Null
@@ -301,16 +310,7 @@ if ($form) {
   exit
 }
 
-# fallback: form not recognised - keep a picture of the (still empty) window for diagnosis
+# form not recognised: type nothing (the password could land in a chat or search field)
 Write-Dbg ('form NOT found: ' + [RiotType]::Info)
 [RiotType]::SaveShot((Join-Path $dbg "$stamp-notfound.png"))
-[RiotType]::Ctrl(0x41)
-if (-not [RiotType]::Type([string]$cred.u)) { 'lostfocus'; exit }
-if (-not [RiotType]::InFront()) { 'lostfocus'; exit }
-[RiotType]::Key(0x09)
-Start-Sleep -Milliseconds 120
-[RiotType]::Ctrl(0x41)
-if (-not [RiotType]::Type([string]$cred.p)) { 'lostfocus'; exit }
-if (-not [RiotType]::InFront()) { 'lostfocus'; exit }
-[RiotType]::Key(0x0D)
-'ok-nopersist'
+'noform'

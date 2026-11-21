@@ -309,8 +309,8 @@ async function tickInner(myGen) {
       // profile details (wallet, champions, mastery …) of the signed-in account, every 5 minutes
       if (newPuuid || Date.now() - lastProfileAt > 300000) {
         lastProfileAt = Date.now();
-        const [p, lp, elig, normals] = await Promise.all([riot.profileData(cur), riot.lastPlayed(cur.puuid),
-          riot.rankedEligibility(), riot.normalGames(cur.puuid)]);
+        const [p, hs, elig] = await Promise.all([riot.profileData(cur), riot.historySummary(cur.puuid), riot.rankedEligibility()]);
+        const lp = hs && hs.lastPlayed, normals = hs && hs.normals;
         if (stale()) return;
         const a = state.accounts.find(x => x.puuid === cur.puuid);
         if (a) {
@@ -318,7 +318,7 @@ async function tickInner(myGen) {
           if (lp) a.lastPlayed = lp;
           if (elig) a.rankedCheck = elig;
           if (normals) a.normals = bestNormals(a.normals, normals);
-          mergeRankedGames(a, await riot.rankedGames(cur.puuid));
+          if (hs) mergeRankedGames(a, hs.ranked);
         }
       }
       pendingAdd = false;
@@ -337,22 +337,23 @@ async function tickInner(myGen) {
         if (a.placeholder) {
           if (!a.tagLine) continue;
           const hit = await riot.lookupRiotId(a.gameName, a.tagLine);
-          if (hit) { const old = a.puuid; resolvePlaceholder(old, hit.puuid); upsert(hit); }
+          if (hit && !stale() && state.accounts.some(y => y.puuid === a.puuid)) { const old = a.puuid; resolvePlaceholder(old, hit.puuid); upsert(hit); }
           continue;
         }
         if (a.puuid === cur.puuid || (a.region && a.region !== cur.region)) continue;
         const r = await riot.rankedFor(a.puuid);
         const s = await riot.summonerByPuuid(a.puuid);
+        // removed while we were waiting? then don't bring it back
+        if (stale() || !state.accounts.some(y => y.puuid === a.puuid)) continue;
         if (r || s) upsert({ puuid: a.puuid, ...(r || {}),
           ...(s ? { iconId: s.profileIconId, level: s.summonerLevel, gameName: s.gameName || a.gameName, tagLine: s.tagLine || a.tagLine } : {}) });
-        const lp = await riot.lastPlayed(a.puuid);
+        const hs = await riot.historySummary(a.puuid);
         const x = state.accounts.find(y => y.puuid === a.puuid);
-        if (x && lp) x.lastPlayed = lp;
-        if (x) mergeRankedGames(x, await riot.rankedGames(a.puuid));
-        // normal games only matter while the account has no rank yet
-        if (x && !RANK_QUEUES.some(k => x[k])) {
-          const n = await riot.normalGames(a.puuid);
-          if (n) x.normals = bestNormals(x.normals, n);
+        if (x && hs) {
+          if (hs.lastPlayed) x.lastPlayed = hs.lastPlayed;
+          mergeRankedGames(x, hs.ranked);
+          // normal games only matter while the account has no rank yet
+          if (!RANK_QUEUES.some(k => x[k])) x.normals = bestNormals(x.normals, hs.normals);
         }
       }
       save();
@@ -362,7 +363,7 @@ async function tickInner(myGen) {
 
 // ---------- auto-login ----------
 
-const AUTOFILL_ERR = ['nowindow', 'nofocus', 'lostfocus', 'badinput', 'error'];
+const AUTOFILL_ERR = ['noform', 'nowindow', 'nofocus', 'lostfocus', 'badinput', 'error'];
 
 // Waits for the Riot Client; if it shows the login screen, types the login.
 // settleMs: how long the client must stay signed out before we type
@@ -419,7 +420,7 @@ async function autoPlay() {
         signedInSince = Date.now();
       }
     } else signedInSince = null;
-    await sleep(1000);
+    await sleep(2000);
   }
 }
 
@@ -454,6 +455,8 @@ function validCred(c) {
   return c && typeof c.u === 'string' && typeof c.p === 'string' && c.u.trim() && c.p ? { u: c.u.trim(), p: c.p } : null;
 }
 
+// account ids coming from the window: a puuid or a "new-<uuid>" placeholder, nothing else
+const isId = id => typeof id === 'string' && /^(new-)?[0-9a-f-]{36}$/i.test(id);
 ipcMain.handle('get-state', () => { lastPushed = null; return snapshot(); });
 ipcMain.handle('get-history', (_e, puuid) => {
   const a = state.accounts.find(x => x.puuid === puuid);
@@ -461,6 +464,7 @@ ipcMain.handle('get-history', (_e, puuid) => {
 });
 
 ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
+  if (!isId(puuid)) return { ok: false };
   const acc = state.accounts.find(a => a.puuid === puuid);
   const json = await loadSession(puuid);
   const cred = await loadCred(puuid);
@@ -486,7 +490,7 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
       expecting = puuid;
       live = { puuid: null, phase: null, clientUp: false };
       save();
-      autoLogin(cred, acc ? acc.gameName : cred.u, 0);
+      autoLogin(cred, acc ? acc.gameName : cred.u, 1500);
       autoPlay();
       return { ok: true, fast: 'login' };
     }
@@ -522,6 +526,7 @@ ipcMain.handle('add-new', (_e, c) => withBusy(async () => {
 
 // save a login for later – nothing is closed or logged in now
 ipcMain.handle('add-saved', async (_e, c) => {
+  gen++;
   const cred = validCred(c);
   if (!cred) return { ok: false, errorKey: 'm.fill' };
   let gameName = '', tagLine = '';
@@ -580,6 +585,7 @@ ipcMain.handle('set-cred', async (_e, puuid, c) => {
   return { ok: true };
 });
 ipcMain.handle('del-cred', (_e, puuid) => {
+  if (!isId(puuid)) return;
   try { fs.unlinkSync(credFile(puuid)); } catch {}
   const a = state.accounts.find(x => x.puuid === puuid);
   if (a) a.hasCred = false;
@@ -587,6 +593,8 @@ ipcMain.handle('del-cred', (_e, puuid) => {
 });
 
 ipcMain.handle('remove', (_e, puuid) => {
+  if (!isId(puuid)) return;
+  gen++;
   state.accounts = state.accounts.filter(a => a.puuid !== puuid);
   if (state.active === puuid) state.active = null;
   for (const f of [sessionFile(puuid), credFile(puuid)]) { try { fs.unlinkSync(f); } catch {} }
@@ -627,6 +635,7 @@ ipcMain.handle('cat-del', (_e, id) => {
 // new order + category of every tile (drag & drop, "move to")
 ipcMain.handle('arrange', (_e, list) => {
   if (!Array.isArray(list)) return;
+  gen++;
   const byId = new Map(state.accounts.map(a => [a.puuid, a]));
   const next = [];
   for (const item of list) {
@@ -641,6 +650,7 @@ ipcMain.handle('arrange', (_e, list) => {
 });
 
 ipcMain.handle('reorder', (_e, order) => {
+  gen++;
   const byId = new Map(state.accounts.map(a => [a.puuid, a]));
   const next = order.map(id => byId.get(id)).filter(Boolean);
   for (const a of state.accounts) if (!next.includes(a)) next.push(a);
@@ -655,24 +665,29 @@ ipcMain.handle('ranked-games', (_e, puuid) => {
   const a = state.accounts.find(x => x.puuid === puuid);
   return (a && a.rankedGames) || [];
 });
-ipcMain.handle('tool', async (_e, what) => {
+ipcMain.handle('tool', (_e, what) => withBusy(async () => {
   const RC = path.join(process.env.LOCALAPPDATA, 'Riot Games', 'Riot Client');
-  if (what === 'closeAll') return { ok: await riot.closeClients() };
+  // closing tools keep the newest sign-in of the current account first (like a switch)
+  if (what === 'closeAll') return { ok: await saveActiveBeforeLeaving() };
   if (what === 'restart') {
-    if (!(await riot.closeClients())) return { ok: false };
+    if (!(await saveActiveBeforeLeaving())) return { ok: false };
     riot.launchLeague(); autoPlay();
     return { ok: true };
   }
   if (what === 'clearCache') {
     // only the Riot Client's web cache and logs – never its Data folder (that holds the sign-in)
-    if (!(await riot.closeClients())) return { ok: false };
+    if (!(await saveActiveBeforeLeaving())) return { ok: false };
     for (const d of ['HttpCache', 'Logs']) { try { fs.rmSync(path.join(RC, d), { recursive: true, force: true }); } catch {} }
     return { ok: true };
   }
-  if (what === 'openLogs') { shell.openPath(path.join(RC, 'Logs')); return { ok: true }; }
+  if (what === 'openLogs') {
+    const logs = path.join(RC, 'Logs');
+    if (!fs.existsSync(logs)) return { ok: false };
+    return { ok: !(await shell.openPath(logs)) };
+  }
   if (what === 'openData') { shell.openPath(DATA); return { ok: true }; }
   return { ok: false };
-});
+}));
 ipcMain.handle('open-multi', (_e, region, ids) => {
   // op.gg multisearch for up to 5 Riot IDs (Clash opponents)
   if (!Array.isArray(ids) || !ids.length) return;
@@ -681,7 +696,11 @@ ipcMain.handle('open-multi', (_e, region, ids) => {
   shell.openExternal('https://op.gg/multisearch/' + reg + '?summoners=' + encodeURIComponent(list));
 });
 
-ipcMain.handle('refresh', async () => { lastRankSweep = 0; await tick(); push(); });
+ipcMain.handle('refresh', async () => {
+  if (ticking || busy) return { ok: false, busy: true };
+  lastRankSweep = 0; await tick(); push();
+  return { ok: true };
+});
 let toTray = false;   // the window is closing because it was sent to the tray
 ipcMain.handle('win', (_e, what) => {
   if (!win) return;
