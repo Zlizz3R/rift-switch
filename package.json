@@ -1,11 +1,12 @@
 {
   "name": "rift-switch",
   "version": "1.0.0",
-  "description": "A good-looking League of Legends account switcher for Windows (English/German).",
+  "description": "A good-looking League of Legends account switcher for Windows (11 languages).",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "test": "node --test test/"
   },
   "keywords": [
     "league-of-legends",
@@ -70,6 +71,17 @@
     },
     "portable": {
       "artifactName": "RiftSwitch-Portable-${version}.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Zlizz3R",
+        "repo": "rift-switch"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "ws": "^8.23.0"
   }
 }

@@ -45,7 +45,9 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
   It only types when it recognised the login form, only while the Riot Client is the front window, and it checks
   that every click really lands on the Riot Client.
 - Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI**
-  (Electron `safeStorage`): only your Windows user on your PC can decrypt them. Nothing is ever sent anywhere.
+  (Electron `safeStorage`): only your Windows user on your PC can decrypt them. Your logins and sessions never leave your PC.
+- The only outside requests: icons/game data from CommunityDragon, and – in the champ select helper – the two
+  champion names of a matchup to counterstats.net. No account data is sent anywhere.
 - Ranks, icons etc. come from the **local League Client API** (the same one the client uses itself); icons and
   rank emblems are loaded from [CommunityDragon](https://communitydragon.org).
 
@@ -80,7 +82,7 @@ Or double-click `Rift Switch.cmd` after `npm install`. Build the installer yours
 - `src/main.js` – main process (storage, polling, switching, tray)
 - `src/riot.js` – Riot Client / League Client API, process handling
 - `src/renderer.js`, `index.html`, `style.css` – the UI
-- `src/i18n.js` – all texts (English + German)
+- `src/i18n.js` – English and German texts, `src/lang/*.js` – the other 9 languages
 - Test copy on its own data folder: `RS_DATA=<folder> npx electron .`
 
 ## Support

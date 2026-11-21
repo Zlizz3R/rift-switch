@@ -30,15 +30,19 @@ function showView(v) {
   $('viewAccounts').hidden = v !== 'accounts';
   $('viewLive').hidden = v !== 'live';
   $('viewTools').hidden = v !== 'tools';
+  $('viewMatches').hidden = v !== 'matches';
   $('detail').hidden = v !== 'accounts';
   $('navAccounts').classList.toggle('active', v === 'accounts');
   $('navLive').classList.toggle('active', v === 'live');
   $('navTools').classList.toggle('active', v === 'tools');
+  $('navMatches').classList.toggle('active', v === 'matches');
   if (v === 'live') pollLive(true);
+  if (v === 'matches') { renderMatches(); loadMatches(); }
 }
 $('navAccounts').onclick = () => showView('accounts');
 $('navLive').onclick = () => showView('live');
 $('navTools').onclick = () => showView('tools');
+$('navMatches').onclick = () => showView('matches');
 
 // ---------- right detail panel ----------
 let selectedId = null;
@@ -151,8 +155,11 @@ siteMenu.addEventListener('click', e => {
   const b = e.target.closest('[data-site]');
   const c = e.target.closest('[data-cat]');
   const a = S.accounts.find(x => x.puuid === siteMenu.dataset.id);
+  const p = siteMenu.dataset.player ? JSON.parse(siteMenu.dataset.player) : null;
   siteMenu.hidden = true;
-  if (b && a) openSite(a, b.dataset.site);
+  siteMenu.dataset.player = '';
+  if (b && p) openSite(p, b.dataset.site);
+  else if (b && a) openSite(a, b.dataset.site);
   if (c && a) moveTo(a.puuid, c.dataset.cat || '');
 });
 document.addEventListener('click', e => { if (!e.target.closest('#siteMenu')) siteMenu.hidden = true; });

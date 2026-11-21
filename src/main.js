@@ -5,6 +5,9 @@ const path = require('path');
 const riot = require('./riot');
 const i18n = require('./i18n');
 const liveData = require('./live');
+const lcuEvents = require('./lcuevents');
+const updater = require('./updater');
+const matches = require('./matches');
 
 // Data always lives in %APPDATA%\rift-switch – also for the installed app, whose product
 // name "Rift Switch" would otherwise give it a new, empty folder.
@@ -117,9 +120,13 @@ async function recoverOrphans() {
 }
 
 function snapshot() {
+  if (locked) return { locked: true, hasLock: true, accounts: [], categories: [], active: null,
+    settings: { lang: state.settings.lang, theme: state.settings.theme, uiScale: state.settings.uiScale, tile: null },
+    live: { clientUp: false }, version: app.getVersion(), update: updater.get() };
   // LP history can be long: the profile window asks for it when it opens
   const accounts = state.accounts.map(({ history, ...a }) => ({ ...a, historyLen: history ? history.length : 0 }));
-  return { ...state, accounts, live, pendingAdd, busy, login, saveError, cryptoBroken };
+  const { lock, ...rest } = state;
+  return { ...rest, hasLock: !!lock, accounts, live, pendingAdd, busy, login, saveError, cryptoBroken, version: app.getVersion(), update: updater.get() };
 }
 let lastPushed = null, pushPending = false;
 function push() {
@@ -292,6 +299,7 @@ async function tick() {
 }
 async function tickInner(myGen) {
   const stale = () => busy || myGen !== gen;
+  lcuEvents.connect(riot.lockfile(), onLcuEvent);
   const cur = await riot.currentAccount();
   const phase = cur ? await riot.gameflowPhase() : null;
   if (stale()) return;
@@ -322,7 +330,7 @@ async function tickInner(myGen) {
           if (lp) a.lastPlayed = lp;
           if (elig) a.rankedCheck = elig;
           if (normals) a.normals = bestNormals(a.normals, normals);
-          if (hs) mergeRankedGames(a, hs.ranked);
+          if (hs) { mergeRankedGames(a, hs.ranked); matches.note(cur.puuid, hs.list); }
         }
       }
       pendingAdd = false;
@@ -356,6 +364,7 @@ async function tickInner(myGen) {
         if (x && hs) {
           if (hs.lastPlayed) x.lastPlayed = hs.lastPlayed;
           mergeRankedGames(x, hs.ranked);
+          matches.note(x.puuid, hs.list);
           // normal games only matter while the account has no rank yet
           if (!RANK_QUEUES.some(k => x[k])) x.normals = bestNormals(x.normals, hs.normals);
         }
@@ -363,6 +372,10 @@ async function tickInner(myGen) {
       save();
     }
   } else if (changed) push();
+  if (cur && !stale() && matches.missing().length) {
+    const got = await matches.fill(riot.lcu, winShown() ? 8 : 3);
+    if (got && winShown()) win.webContents.send('matches-changed');
+  }
 }
 
 // ---------- auto-login ----------
@@ -372,7 +385,8 @@ const AUTOFILL_ERR = ['noform', 'nowindow', 'nofocus', 'lostfocus', 'badinput', 
 // Waits for the Riot Client; if it shows the login screen, types the login.
 // settleMs: how long the client must stay signed out before we type
 // (longer after restoring a session, which may still be signing in by itself).
-async function autoLogin(cred, name, settleMs) {
+// since: the Riot Client was restarted at that moment – only type into a window started after it
+async function autoLogin(cred, name, settleMs, since) {
   const token = ++loginToken;
   setLogin({ name, stage: 'wait' });
   const t0 = Date.now();
@@ -385,7 +399,7 @@ async function autoLogin(cred, name, settleMs) {
       if (signedOutSince === null) signedOutSince = Date.now();
       if (!typedAt && Date.now() - signedOutSince >= settleMs) {
         setLogin({ name, stage: 'typing' });
-        const r = await riot.autofill(cred.u, cred.p);
+        const r = await riot.autofill(cred.u, cred.p, since);
         if (token !== loginToken) return;
         if (r !== 'ok' && r !== 'ok-nopersist') return setLogin({ name, stage: 'failed', msgKey: 'af.' + (AUTOFILL_ERR.includes(r) ? r : 'error') });
         if (r === 'ok-nopersist') {
@@ -459,6 +473,48 @@ function validCred(c) {
   return c && typeof c.u === 'string' && typeof c.p === 'string' && c.u.trim() && c.p ? { u: c.u.trim(), p: c.p } : null;
 }
 
+// ---------- app lock ----------
+// Optional password asked on start and whenever the window comes back from the tray.
+// While locked the window gets no account data and every action except unlocking is refused.
+// (Protects against someone else at the PC switching accounts – the data files are
+// encrypted for the Windows user anyway.)
+let locked = false;
+const LOCK_FREE = new Set(['get-state', 'unlock', 'win']);
+const lockHash = (pass, salt) => crypto.scryptSync(String(pass), Buffer.from(salt, 'base64'), 32, { N: 1 << 14, r: 8, p: 1 }).toString('base64');
+function lockMatches(pass) {
+  const l = state.lock;
+  if (!l || !l.salt || !l.hash || typeof pass !== 'string') return false;
+  const a = Buffer.from(lockHash(pass, l.salt), 'base64'), b = Buffer.from(l.hash, 'base64');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function lockNow() { if (state.lock) { locked = true; lastPushed = null; push(); updateTray(); } }
+{
+  const handle = ipcMain.handle.bind(ipcMain);
+  ipcMain.handle = (ch, fn) => handle(ch, (...args) => (locked && !LOCK_FREE.has(ch) ? null : fn(...args)));
+}
+let unlockFails = 0;
+ipcMain.handle('unlock', async (_e, pass) => {
+  await sleep(Math.min(5000, 400 * unlockFails));      // slows down guessing
+  if (!lockMatches(pass)) { unlockFails++; return false; }
+  unlockFails = 0; locked = false; lastPushed = null; push(); updateTray();
+  return true;
+});
+ipcMain.handle('lock', (_e, what, pass, oldPass) => {
+  if (what === 'now') return lockNow(), true;
+  if (what === 'set') {
+    if (typeof pass !== 'string' || pass.length < 4) return false;
+    if (state.lock && !lockMatches(oldPass)) return false;
+    const salt = crypto.randomBytes(16).toString('base64');
+    state.lock = { salt, hash: lockHash(pass, salt) };
+    save(); push(); return true;
+  }
+  if (what === 'off') {
+    if (state.lock && !lockMatches(pass)) return false;
+    delete state.lock; save(); push(); return true;
+  }
+  return false;
+});
+
 // account ids coming from the window: a puuid or a "new-<uuid>" placeholder, nothing else
 const isId = id => typeof id === 'string' && /^(new-)?[0-9a-f-]{36}$/i.test(id);
 ipcMain.handle('get-state', () => { lastPushed = null; return snapshot(); });
@@ -506,8 +562,9 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
   expecting = puuid;
   live = { puuid: null, phase: null, clientUp: false };
   save();
+  const started = Date.now();
   riot.launchLeague();
-  if (cred) autoLogin(cred, acc ? acc.gameName : cred.u, json ? 4000 : 1500);
+  if (cred) autoLogin(cred, acc ? acc.gameName : cred.u, json ? 4000 : 1500, started);
   autoPlay();
   return { ok: true };
 }));
@@ -522,8 +579,9 @@ ipcMain.handle('add-new', (_e, c) => withBusy(async () => {
   pendingAdd = true;
   pendingCred = cred && c.save !== false ? cred : null;   // "save" unticked: type it once, keep nothing
   save();
+  const started = Date.now();
   riot.launchLeague();
-  if (cred) autoLogin(cred, cred.u, 1500);
+  if (cred) autoLogin(cred, cred.u, 1500, started);
   autoPlay();
   return { ok: true };
 }));
@@ -600,6 +658,7 @@ ipcMain.handle('remove', (_e, puuid) => {
   if (!isId(puuid)) return;
   gen++;
   state.accounts = state.accounts.filter(a => a.puuid !== puuid);
+  matches.forget(puuid);
   if (state.active === puuid) state.active = null;
   for (const f of [sessionFile(puuid), credFile(puuid)]) { try { fs.unlinkSync(f); } catch {} }
   save();
@@ -706,6 +765,19 @@ ipcMain.handle('refresh', async () => {
   return { ok: true };
 });
 let toTray = false;   // the window is closing because it was sent to the tray
+ipcMain.handle('matches', async (_e, filter) => {
+  const f = filter && typeof filter === 'object' ? filter : {};
+  return {
+    games: matches.list(state.accounts.map(a => a.puuid), {
+      puuid: isId(f.puuid) ? f.puuid : null, queue: Object.keys(matches.QUEUE_GROUPS).includes(f.queue) ? f.queue : null, limit: 80 }),
+    waiting: matches.missing().length,
+    assets: await liveData.gameAssets(DATA),
+    clientUp: live.clientUp,
+  };
+});
+ipcMain.handle('update', (_e, what) => {
+  if (what === 'install') { quitting = true; updater.installNow(); } else updater.check();
+});
 ipcMain.handle('win', (_e, what) => {
   if (!win) return;
   if (what === 'min') win.minimize();
@@ -754,25 +826,75 @@ function applyScale() {
 // Windows user only, so they are never part of the file.
 const EXPORT_FIELDS = ['puuid', 'gameName', 'tagLine', 'region', 'note', 'category', 'addedAt', 'iconId', 'level',
   'solo', 'flex', 'r5', 'classic', 'lastPlayed', 'history', 'rankedGames'];
-ipcMain.handle('data-export', async () => {
+// saved logins in an export: AES-256-GCM, key from the user's own password (scrypt)
+const SCRYPT = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+function sealSecrets(obj, pass) {
+  const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12);
+  const key = crypto.scryptSync(pass, salt, 32, SCRYPT);
+  const c = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const data = Buffer.concat([c.update(JSON.stringify(obj), 'utf8'), c.final()]);
+  return { kdf: 'scrypt', N: SCRYPT.N, salt: salt.toString('base64'), iv: iv.toString('base64'),
+    tag: c.getAuthTag().toString('base64'), data: data.toString('base64') };
+}
+function openSecrets(box, pass) {
+  try {
+    if (!box || box.kdf !== 'scrypt' || box.N !== SCRYPT.N) return null;
+    const key = crypto.scryptSync(String(pass), Buffer.from(box.salt, 'base64'), 32, SCRYPT);
+    const d = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
+    d.setAuthTag(Buffer.from(box.tag, 'base64'));
+    return JSON.parse(Buffer.concat([d.update(Buffer.from(box.data, 'base64')), d.final()]).toString('utf8'));
+  } catch { return null; }
+}
+let importFile = null;   // the file picked for an import that still waits for its password
+
+ipcMain.handle('data-export', async (_e, pass) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: 'rift-switch-backup.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
   if (r.canceled || !r.filePath) return { ok: false };
   const accounts = state.accounts.filter(a => !a.placeholder)
     .map(a => Object.fromEntries(EXPORT_FIELDS.filter(k => a[k] !== undefined).map(k => [k, a[k]])));
-  const { autostart, ...settings } = state.settings;
+  const { autostart, lockHash, ...settings } = state.settings;
+  let secrets;
+  if (typeof pass === 'string' && pass.length >= 8) {
+    const logins = [];
+    for (const a of state.accounts) {
+      const c = a.hasCred || a.placeholder ? await loadCred(a.puuid) : null;
+      if (c) logins.push({ puuid: a.puuid, u: c.u, p: c.p, ...(a.placeholder ? { placeholder: true, gameName: a.gameName, tagLine: a.tagLine || '' } : {}) });
+    }
+    secrets = sealSecrets({ logins }, pass);
+  }
   try {
     fs.writeFileSync(r.filePath, JSON.stringify({ app: 'rift-switch', version: 1, exportedAt: Date.now(),
-      accounts, categories: state.categories, settings }, null, 1));
+      accounts, categories: state.categories, settings, ...(secrets ? { secrets } : {}) }, null, 1));
     return { ok: true, n: accounts.length };
   } catch (e) { return { ok: false, error: e.code || e.message }; }
 });
-ipcMain.handle('data-import', async () => {
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
-  if (r.canceled || !r.filePaths[0]) return { ok: false };
-  let d;
-  try { d = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8').replace(/^\uFEFF/, '')); }
-  catch (e) { return { ok: false, error: 'format' }; }
-  if (!d || d.app !== 'rift-switch' || !Array.isArray(d.accounts)) return { ok: false, error: 'format' };
+function readImport(file) {
+  try {
+    const d = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
+    return d && d.app === 'rift-switch' && Array.isArray(d.accounts) ? d : null;
+  } catch { return null; }
+}
+ipcMain.handle('check-import-pass', (_e, pass) => {
+  const d = importFile && readImport(importFile);
+  return !!(d && d.secrets && openSecrets(d.secrets, pass));
+});
+// pass: null = pick a file; a string = the password for the file picked before; 'skip' = without logins
+ipcMain.handle('data-import', async (_e, pass) => {
+  if (pass == null) {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
+    if (r.canceled || !r.filePaths[0]) return { ok: false };
+    importFile = r.filePaths[0];
+  }
+  const d = importFile && readImport(importFile);
+  if (!d) return { ok: false, error: 'format' };
+  if (d.secrets && pass == null) return { needPass: true, logins: '' };
+  let logins = [];
+  if (d.secrets && pass !== 'skip') {
+    const s = openSecrets(d.secrets, pass);
+    if (!s) return { ok: false, error: 'pass' };
+    logins = Array.isArray(s.logins) ? s.logins : [];
+  }
+  importFile = null;
   gen++;
   const catIds = new Set(state.categories.map(c => c.id));
   for (const c of Array.isArray(d.categories) ? d.categories : []) {
@@ -807,8 +929,23 @@ ipcMain.handle('data-import', async () => {
     }
     applyScale();
   }
+  // saved logins: stored encrypted for this Windows user again; a login on this PC wins
+  let nLogins = 0;
+  for (const l of logins) {
+    const cred = l && validCred({ u: l.u, p: l.p });
+    if (!cred || !/^(new-)?[0-9a-f-]{36}$/i.test(l.puuid || '')) continue;
+    let a = state.accounts.find(x => x.puuid === l.puuid);
+    if (!a && l.placeholder) {
+      a = { puuid: l.puuid, placeholder: true, note: '', addedAt: Date.now(),
+        gameName: String(l.gameName || maskLogin(cred.u)).slice(0, 32), tagLine: String(l.tagLine || '').slice(0, 8) };
+      state.accounts.push(a);
+    }
+    if (!a || (a.hasCred && !a.credBroken)) continue;
+    await storeCred(a.puuid, cred);
+    nLogins++;
+  }
   save(); push();
-  return { ok: true, added, updated };
+  return { ok: true, added, updated, logins: nLogins };
 });
 
 function applyAutostart() {
@@ -827,7 +964,7 @@ const winShown = () => !!(win && !win.isDestroyed() && win.isVisible());
 let afterLoad = [];   // things to send once a freshly built window has loaded
 function showWindow(then) {
   if (then) afterLoad.push(then);
-  if (!win || win.isDestroyed()) { createWindow(true); return; }
+  if (!win || win.isDestroyed()) { if (state.lock) locked = true; createWindow(true); return; }
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -856,8 +993,9 @@ function updateTray() {
   const items = [];
   const catIds = new Set(state.categories.map(c => c.id));
   const loose = state.accounts.filter(a => !catIds.has(a.category));
-  if (loose.length) items.push(...loose.map(accItem), { type: 'separator' });
-  for (const c of state.categories) {
+  if (locked) items.push({ label: '🔒 ' + tr('lock.locked'), enabled: false }, { type: 'separator' });
+  else if (loose.length) items.push(...loose.map(accItem), { type: 'separator' });
+  for (const c of locked ? [] : state.categories) {
     const list = state.accounts.filter(a => a.category === c.id);
     if (!list.length) continue;
     items.push({ label: c.name, enabled: false }, ...list.map(accItem), { type: 'separator' });
@@ -874,9 +1012,36 @@ function updateTray() {
     { label: tr('tray.quit'), click: () => { quitting = true; app.quit(); } },
   );
   tray.setContextMenu(Menu.buildFromTemplate(items));
+  updateJumpList();
   const cur = state.accounts.find(a => a.puuid === state.active);
   tray.setToolTip(tr('app.name') + (cur ? ' – ' + trayName(cur) : ''));
   if (win && !win.isDestroyed()) win.setTitle(tr('app.name'));   // taskbar / Alt+Tab name
+}
+
+// Right-click on the taskbar button: "switch to <account>" for each account (up to 10).
+// Starting the app with --switch=<id> hands the id to the running copy.
+let lastJump = null;
+function updateJumpList() {
+  if (process.platform !== 'win32' || process.env.RS_DATA) return;
+  const base = app.isPackaged ? [] : [JSON.stringify(path.resolve(__dirname, '..'))];
+  const tasks = locked ? [] : state.accounts.filter(a => !a.placeholder || a.hasCred).slice(0, 10).map(a => ({
+    program: process.execPath, arguments: [...base, '--switch=' + a.puuid].join(' '),
+    title: trayName(a), description: tr('jump.switch', { name: trayName(a) }),
+    iconPath: process.execPath, iconIndex: 0,
+  }));
+  const key = JSON.stringify(tasks);
+  if (key === lastJump) return;
+  lastJump = key;
+  try { app.setUserTasks(tasks); } catch {}
+}
+function switchArg(argv) {
+  const a = (argv || []).find(x => /^--switch=/.test(x));
+  const id = a && a.slice(9);
+  return id && isId(id) && state.accounts.some(x => x.puuid === id) ? id : null;
+}
+function switchFromOutside(argv) {
+  const id = switchArg(argv);
+  showWindow(id && !locked ? () => win.webContents.send('tray-switch', id) : undefined);
 }
 
 function createTray() {
@@ -886,14 +1051,41 @@ function createTray() {
   updateTray();
 }
 
-// a queue pop only lasts ~10 s, so this checks every second while queueing
+// a queue pop only lasts ~10 s: with the client's events it is accepted the moment it pops;
+// without them (events not connected) this checks every second while queueing
 let accepting = false;
-setInterval(async () => {
-  if (!state.settings.autoAccept || accepting || !['Matchmaking', 'ReadyCheck'].includes(live.phase)) return;
+async function tryAccept() {
+  if (!state.settings.autoAccept || accepting) return;
   accepting = true;
   try { if ((await riot.acceptReadyCheck()) && winShown()) win.webContents.send('toast', 'tray.accepted'); }
   finally { accepting = false; }
+}
+setInterval(() => {
+  if (lcuEvents.connected() && live.phase !== 'ReadyCheck') return;
+  if (['Matchmaking', 'ReadyCheck'].includes(live.phase)) tryAccept();
 }, 1000);
+
+// events from the League client: react at once instead of waiting for the next poll
+let eventTick = null;
+function soonTick(ms) {
+  if (eventTick) return;
+  eventTick = setTimeout(() => { eventTick = null; scheduleTick(0); }, ms);
+}
+function onLcuEvent(uri, data) {
+  if (uri === '/lol-gameflow/v1/gameflow-phase') {
+    if (typeof data === 'string' && data !== live.phase) {
+      live = { ...live, phase: data };
+      push();
+      if (data === 'ReadyCheck') tryAccept();
+    }
+    soonTick(300);
+  } else if (uri === '/lol-matchmaking/v1/ready-check') {
+    if (data && data.state === 'InProgress' && data.playerResponse === 'None') tryAccept();
+  } else if (uri === '/lol-end-of-game/v1/eog-stats-block') {
+    lastProfileAt = 0;          // a game just ended: fresh ranks, history and LP right away
+    soonTick(3000);
+  } else soonTick(800);
+}
 
 // ---------- window ----------
 
@@ -932,6 +1124,8 @@ function createWindow(show) {
 
 app.whenReady().then(async () => {
   load();
+  matches.load(DATA);
+  locked = !!state.lock;
   // older saves don't have the flag yet
   // started with --hidden (autostart): no window at all until the tray icon is clicked
   if (process.env.RS_SHOT || !process.argv.includes('--hidden')) createWindow(true);
@@ -942,6 +1136,8 @@ app.whenReady().then(async () => {
   await checkCreds();
   save();
   scheduleTick(0);
+  updater.init(app, () => push());
+  if (switchArg(process.argv)) switchFromOutside(process.argv);
 });
 app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => {
@@ -949,7 +1145,7 @@ app.on('window-all-closed', () => {
   if (toTray && tray && !quitting && !process.env.RS_SHOT) { toTray = false; return; }
   app.quit();
 });
-app.on('second-instance', () => showWindow());
+app.on('second-instance', (_e, argv) => switchFromOutside(argv));
 
 // Polling pace: every 4 s while the window is open or something waits on League
 // (queue for auto-accept, a login, an add); every 15 s when the app sits in the tray.
@@ -960,6 +1156,7 @@ function scheduleTick(ms) {
     await tick();
     const eager = winShown() || pendingAdd || login || expecting
       || (state.settings.autoAccept && ['Lobby', 'Matchmaking', 'ReadyCheck'].includes(live.phase));
-    scheduleTick(eager ? 4000 : 15000);
+    const ev = lcuEvents.connected();
+    scheduleTick(eager ? (ev && !pendingAdd && !login && !expecting ? 10000 : 4000) : (ev ? 60000 : 15000));
   }, ms);
 }

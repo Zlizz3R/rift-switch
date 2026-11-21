@@ -30,6 +30,9 @@
       <button class="nav" id="navLive" data-i18n-title="nav.live">
         <svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span class="live-dot" id="liveDot" hidden></span>
       </button>
+      <button class="nav" id="navMatches" data-i18n-title="nav.matches">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/></svg>
+      </button>
       <button class="nav" id="navTools" data-i18n-title="nav.tools">
         <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>
       </button>
@@ -77,6 +80,18 @@
       <section id="viewLive" hidden>
         <div class="head"><h1 data-i18n="live.title"></h1><p class="sub" id="liveSub"></p></div>
         <div id="liveBody"></div>
+      </section>
+
+      <section id="viewMatches" hidden>
+        <div class="head"><h1 data-i18n="mh.title"></h1><p class="sub" id="mhSub"></p></div>
+        <div class="mh-filter">
+          <select id="mhAccount"></select>
+          <div class="seg">
+            <button data-mhq="" data-i18n="mh.allQueues"></button><button data-mhq="solo">Solo/Duo</button><button data-mhq="flex">Flex</button>
+            <button data-mhq="normal" data-i18n="mh.normal"></button><button data-mhq="aram">ARAM</button><button data-mhq="arena">Arena</button>
+          </div>
+        </div>
+        <div id="mhList"></div>
       </section>
 
       <section id="viewTools" hidden>
@@ -176,6 +191,11 @@
         <button class="expand" id="streamExpand"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
       </div>
       <div class="stream-opts" id="streamOpts" hidden></div>
+      <button class="option" id="lockBtn"><span class="opt-title" data-i18n="lock.title"></span><span class="opt-sub" id="lockSub"></span></button>
+      <div class="data-row" id="lockRow" hidden>
+        <button class="option" id="lockNow"><span class="opt-title" data-i18n="lock.now"></span></button>
+        <button class="option" id="lockOff"><span class="opt-title" data-i18n="lock.off"></span></button>
+      </div>
 
       <div class="set-g" data-i18n="set.gSystem"></div>
       <label class="toggle"><input type="checkbox" data-setting="autostart"><span class="sw"></span>
@@ -186,6 +206,7 @@
       </div>
 
       <div class="set-g" data-i18n="set.gAbout"></div>
+      <div class="lang-row upd-row"><span><span id="updVer"></span><small id="updText"></small></span><button class="btn small" id="updBtn"></button></div>
       <button class="option support" id="supportBtn">
         <span class="opt-title" data-i18n="support.title"></span>
         <span class="opt-sub" data-i18n="support.sub"></span>
@@ -266,6 +287,26 @@
   </form>
 </div>
 
+<div class="overlay" id="passBox" hidden>
+  <form class="card login-form" id="passForm" autocomplete="off">
+    <h2 id="passTitle"></h2>
+    <p class="fine center" id="passText"></p>
+    <label><span data-i18n="pw.pass"></span>
+      <span class="pw"><input id="passIn" type="password" maxlength="128"></span>
+    </label>
+    <label id="passAgainRow"><span data-i18n="pw.again"></span>
+      <span class="pw"><input id="passAgain" type="password" maxlength="128"></span>
+    </label>
+    <p class="fine err" id="passErr" hidden></p>
+    <div class="row">
+      <button type="button" class="btn" id="passSkip" hidden></button>
+      <span class="grow"></span>
+      <button type="button" class="btn" id="passCancel" data-i18n="common.cancel"></button>
+      <button type="submit" class="btn gold" id="passOk"></button>
+    </div>
+  </form>
+</div>
+
 <div class="overlay" id="confirm" hidden>
   <div class="card">
     <h2 id="confirmTitle"></h2>
@@ -320,5 +361,6 @@
 <script src="i18n.js"></script>
 <script src="renderer.js"></script>
 <script src="views.js"></script>
+<script src="matches-view.js"></script>
 </body>
 </html>

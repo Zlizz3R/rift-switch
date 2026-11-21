@@ -1,9 +1,10 @@
 # Types a Riot login into the Riot Client window and ticks "Stay signed in".
-# Reads {"u": "...", "p": "..."} from stdin (never from the command line, so other
+# Reads {"u": "...", "p": "...", "since": <ms epoch, optional>} from stdin (never from the command line, so other
 # programs can't read it from the process list).
 # Prints one word as the last line: ok | ok-nopersist | noform | nowindow | nofocus | lostfocus | badinput
 #
-# The login form is found by scanning a picture of the window (works at any window size):
+# The login fields are found through Windows UI Automation (the input fields the client itself
+# reports, the password one marked as such). Fallback: scanning a picture of the window:
 #   light panel on the left -> two grey input fields (username, password) ->
 #   below them the social-login buttons, then the "Stay signed in" checkbox.
 # If the form isn't recognised, NOTHING is typed (the password could land in a chat or search
@@ -42,6 +43,8 @@ public static class RiotType {
   [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr h, uint flags);
   // real screen pixels for window size, screenshot and clicks (matters at 125/150 % scaling)
   public static void DpiAware() { try { SetProcessDPIAware(); } catch { } }
+  public static int WinL, WinT, WinW, WinH;
+  public static bool ReadRect() { RECT r; if (!GetWindowRect(Target, out r)) return false; WinL = r.L; WinT = r.T; WinW = r.R - r.L; WinH = r.B - r.T; return true; }
 
   const uint KEYUP = 2, UNICODE = 4, LDOWN = 2, LUP = 4;
   public static IntPtr Target;
@@ -207,7 +210,13 @@ public static class RiotType {
 '@
 
 $target = if ($env:RS_AUTOFILL_TARGET) { $env:RS_AUTOFILL_TARGET } else { 'Riot Client' }   # override only for testing
-$proc = Get-Process -Name $target -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+$procs = Get-Process -Name $target -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }
+# after a restart: only a Riot Client started since then (never an older window left over)
+if ($cred.since) {
+  $since = [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$cred.since).LocalDateTime.AddSeconds(-5)
+  $procs = $procs | Where-Object { try { $_.StartTime -ge $since } catch { $false } }
+}
+$proc = $procs | Select-Object -First 1
 if (-not $proc) { 'nowindow'; exit }
 [RiotType]::Target = $proc.MainWindowHandle
 [RiotType]::DpiAware()
@@ -249,12 +258,41 @@ function Set-StaySignedInUia {
   } catch { return 'uia error: ' + $_.Exception.Message }
 }
 
+# The two input fields as the client reports them: the password field is flagged as one,
+# the username field is the input right above it. Returns $true and sets the click points.
+function Find-FieldsUia {
+  try {
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $AE = [System.Windows.Automation.AutomationElement]
+    if (-not [RiotType]::ReadRect()) { return $false }
+    $root = $AE::FromHandle([RiotType]::Target)
+    $isEdit = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)
+    $edits = @($root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $isEdit) |
+      Where-Object { -not $_.Current.IsOffscreen -and $_.Current.BoundingRectangle.Width -gt 40 })
+    $pass = @($edits | Where-Object { $_.Current.IsPassword })
+    if ($pass.Count -ne 1) { return $false }
+    $pr = $pass[0].Current.BoundingRectangle
+    $user = $edits | Where-Object { -not $_.Current.IsPassword -and $_.Current.BoundingRectangle.Bottom -le $pr.Top + 2 -and
+        [math]::Abs($_.Current.BoundingRectangle.Left - $pr.Left) -lt 40 } |
+      Sort-Object { $_.Current.BoundingRectangle.Bottom } | Select-Object -Last 1
+    if (-not $user) { return $false }
+    $ur = $user.Current.BoundingRectangle
+    [RiotType]::UserX = [int]($ur.Left + $ur.Width / 2) - [RiotType]::WinL; [RiotType]::UserY = [int]($ur.Top + $ur.Height / 2) - [RiotType]::WinT
+    [RiotType]::PassX = [int]($pr.Left + $pr.Width / 2) - [RiotType]::WinL; [RiotType]::PassY = [int]($pr.Top + $pr.Height / 2) - [RiotType]::WinT
+    # both points must lie inside the window
+    foreach ($v in @([RiotType]::UserX, [RiotType]::PassX)) { if ($v -lt 0 -or $v -gt [RiotType]::WinW) { return $false } }
+    foreach ($v in @([RiotType]::UserY, [RiotType]::PassY)) { if ($v -lt 0 -or $v -gt [RiotType]::WinH) { return $false } }
+    return $true
+  } catch { return $false }
+}
+
 # test only: report what is recognised, touch nothing
 if ($env:RS_AUTOFILL_IMAGE) { [RiotType]::TestImage = $env:RS_AUTOFILL_IMAGE }
 if ($env:RS_AUTOFILL_PROBE) {
+  $u = if ($env:RS_AUTOFILL_IMAGE) { $false } else { Find-FieldsUia }
   $f = [RiotType]::FindForm(); $t = if ($f) { [RiotType]::BoxTicked() } else { $false }
   [RiotType]::SaveShot((Join-Path $dbg "$stamp-probe.png"))
-  'form=' + $f + ' ticked=' + $t + ' ' + [RiotType]::Info; exit
+  'uia=' + $u + ' form=' + $f + ' ticked=' + $t + ' ' + [RiotType]::Info; exit
 }
 
 if (-not [RiotType]::Focus()) { 'nofocus'; exit }
@@ -263,11 +301,13 @@ Start-Sleep -Milliseconds 400
 # the login page may still be loading: look for up to ~6 s.
 # Before each look: click an empty spot so no field is focused (focused fields turn white).
 # If only the sign-in/QR switch is visible (QR view open), switch back to "Sign-in".
-$form = $false; $tabTried = $false
+$form = $false; $tabTried = $false; $via = ''
 for ($i = 0; $i -lt 12 -and -not $form; $i++) {
+  if (Find-FieldsUia) { $form = $true; $via = 'uia'; break }
   [RiotType]::Blur() | Out-Null
   Start-Sleep -Milliseconds 120
   $form = [RiotType]::FindForm()
+  if ($form) { $via = 'picture' }
   if (-not $form) {
     if (-not $tabTried -and [RiotType]::TabY -gt 0 -and $i -ge 1) {
       Write-Dbg ('switching to Sign-in tab: ' + [RiotType]::Info)
@@ -278,7 +318,7 @@ for ($i = 0; $i -lt 12 -and -not $form; $i++) {
 }
 
 if ($form) {
-  Write-Dbg ('form found: ' + [RiotType]::Info)
+  Write-Dbg ('form found via ' + $via + ': ' + [RiotType]::Info)
   # click into each field instead of trusting where the cursor is
   if (-not [RiotType]::Click([RiotType]::UserX, [RiotType]::UserY)) { 'lostfocus'; exit }
   [RiotType]::Ctrl(0x41)
@@ -292,10 +332,14 @@ if ($form) {
   $uia = Set-StaySignedInUia
   Write-Dbg ('uia: ' + $uia)
   $ticked = ($uia -eq 'ticked' -or $uia -eq 'already ticked')
-  if (-not $ticked) { $ticked = [RiotType]::BoxTicked() }
+  if (-not $ticked -and $via -eq 'uia') {
+    [RiotType]::Blur() | Out-Null; Start-Sleep -Milliseconds 120
+    if (-not [RiotType]::FindForm()) { Write-Dbg 'no picture of the checkbox' }
+  }
+  if (-not $ticked -and [RiotType]::BoxX -gt 0) { $ticked = [RiotType]::BoxTicked() }
   [RiotType]::SaveBoxCrop((Join-Path $dbg "$stamp-1-before.png"))
   # 2nd try: click the box found in the picture
-  if (-not $ticked) {
+  if (-not $ticked -and [RiotType]::BoxX -gt 0) {
     if (-not [RiotType]::Click([RiotType]::BoxX, [RiotType]::BoxY)) { 'lostfocus'; exit }
     Start-Sleep -Milliseconds 400
     $ticked = [RiotType]::BoxTicked()

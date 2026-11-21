@@ -168,4 +168,29 @@ async function matchup(mine, enemy, lane = 'top') {
   return res;
 }
 
-module.exports = { snapshot, champions, matchup };
+const GAME_DATA = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/';
+const assetUrl = p => (p ? GAME_DATA + String(p).replace(/^\/lol-game-data\/assets\//i, '').toLowerCase() : null);
+let assetCache = null;
+async function gameAssets(dataDir) {
+  if (assetCache) return assetCache;
+  const file = path.join(dataDir, 'assets.json');
+  try {
+    const c = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (Date.now() - c.at < 86400000 && Object.keys(c.items).length) return (assetCache = c);
+  } catch {}
+  const get = async f => { const r = await getJson(GAME_DATA + 'v1/' + f, 10000); try { return r && r.status === 200 ? JSON.parse(r.text) : null; } catch { return null; } };
+  const [items, spells, perks, styles] = await Promise.all([get('items.json'), get('summoner-spells.json'), get('perks.json'), get('perkstyles.json')]);
+  const map = (list, f) => Object.fromEntries((Array.isArray(list) ? list : []).filter(x => x && x.id != null && x.iconPath).map(x => [x.id, f(x)]));
+  const out = {
+    at: Date.now(),
+    items: map(items, x => [assetUrl(x.iconPath), x.name]),
+    spells: map(spells, x => [assetUrl(x.iconPath), x.name]),
+    perks: map(perks, x => [assetUrl(x.iconPath), x.name]),
+    styles: map(styles && styles.styles, x => [assetUrl(x.iconPath), x.name]),
+  };
+  if (!Object.keys(out.items).length) return { items: {}, spells: {}, perks: {}, styles: {} };   // offline: try again later
+  try { fs.writeFileSync(file, JSON.stringify(out)); } catch {}
+  return (assetCache = out);
+}
+
+module.exports = { snapshot, champions, matchup, gameAssets };

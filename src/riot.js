@@ -117,6 +117,7 @@ async function historySummary(puuid) {
   });
   return {
     lastPlayed: games.length ? Math.max(...games.map(g => g.gameCreation || 0)) : null,
+    list: games.map(g => ({ id: g.gameId, t: g.gameCreation, q: g.queueId })),
     ranked,
     normals: {
       count: games.filter(g => NORMAL_SR_QUEUES.includes(g.queueId)).length,
@@ -375,7 +376,8 @@ async function rcLoginState() {
 }
 
 // Types username + password into the Riot Client login window.
-function autofill(username, password) {
+// since: only type into a Riot Client started after this moment (ms) – set after a restart
+function autofill(username, password, since) {
   return new Promise(resolve => {
     const ps = spawn('powershell.exe',
       // in the installed app the script is unpacked next to the archive (PowerShell can't read inside app.asar)
@@ -385,7 +387,7 @@ function autofill(username, password) {
     ps.stdout.on('data', d => (out += d));
     ps.on('close', () => resolve(out.trim().split(/\r?\n/).pop() || 'error'));
     ps.on('error', () => resolve('error'));
-    ps.stdin.end(JSON.stringify({ u: username, p: password }));
+    ps.stdin.end(JSON.stringify({ u: username, p: password, since: since || null }));
   });
 }
 

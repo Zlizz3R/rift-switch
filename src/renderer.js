@@ -25,6 +25,8 @@ function applyStaticTexts() {
   if (appliedLang === lang()) return;
   appliedLang = lang();
   document.documentElement.lang = appliedLang;
+  // Arabic and Urdu: text runs right to left (the layout itself stays as it is)
+  document.body.classList.toggle('rtl', ['ar', 'ur'].includes(appliedLang));
   document.title = t('app.name');
   document.querySelectorAll('[data-i18n]').forEach(el => (el.textContent = t(el.dataset.i18n)));
   document.querySelectorAll('[data-i18n-title]').forEach(el => (el.title = t(el.dataset.i18nTitle)));
@@ -588,14 +590,66 @@ $('scaleSelect').onchange = () => {
 };
 // export / import of accounts, categories and settings (logins and sessions stay on this PC)
 $('exportBtn').onclick = async () => {
-  const r = await api.dataExport();
+  // with saved logins only when protected by a password of its own
+  const pass = await passBox({ title: t('set.export'), text: t('pw.exportText'), ok: t('pw.withLogins'),
+    confirm: true, min: 8, skip: t('pw.withoutLogins') });
+  if (pass === null) return;
+  const r = await api.dataExport(pass === 'skip' ? null : pass);
   if (r && r.ok) toast(t('set.exported', { n: r.n }));
   else if (r && r.error) toast(t('set.ioFailed', { e: r.error }), true);
 };
 $('importBtn').onclick = async () => {
-  const r = await api.dataImport();
+  let r = await api.dataImport();
+  if (r && r.needPass) {
+    const pass = await passBox({ title: t('set.import'), text: t('pw.importText'), ok: t('set.import'),
+      skip: t('pw.withoutLogins'), check: async v => ((await api.checkImportPass(v)) ? null : t('pw.wrong')) });
+    if (pass === null) return;
+    r = await api.dataImport(pass === 'skip' ? 'skip' : pass);
+  }
+  if (r && r.ok && r.logins) toast(t('pw.loginsImported', { n: r.logins }));
   if (r && r.ok) toast(t('set.imported', { n: r.added, m: r.updated }));
-  else if (r && r.error) toast(t(r.error === 'format' ? 'set.badFile' : 'set.ioFailed', { e: r.error }), true);
+  else if (r && r.error) toast(t(r.error === 'format' ? 'set.badFile' : r.error === 'pass' ? 'pw.wrong' : 'set.ioFailed', { e: r.error }), true);
+};
+
+// version + update state (Settings > About)
+function renderUpdate() {
+  const u = S.update || {};
+  $('updVer').textContent = t('upd.version', { v: S.version || '' });
+  $('updText').textContent = u.status === 'error' ? t('upd.error') : u.status === 'off' || !u.status ? t('upd.off')
+    : t('upd.' + u.status, { v: u.version || '' });
+  $('updBtn').hidden = !['ready', 'current', 'error', 'idle'].includes(u.status);
+  $('updBtn').textContent = u.status === 'ready' ? t('upd.install') : t('upd.check');
+  $('updBtn').classList.toggle('gold', u.status === 'ready');
+}
+$('updBtn').onclick = () => api.update(S.update && S.update.status === 'ready' ? 'install' : 'check');
+
+// ---------- app lock ----------
+function renderLock() {
+  $('lockSub').textContent = S.hasLock ? t('lock.onSub') : t('lock.offSub');
+  $('lockRow').hidden = !S.hasLock;
+  $('lockBtn').querySelector('.opt-title').textContent = S.hasLock ? t('lock.change') : t('lock.title');
+  document.body.classList.toggle('locked', !!S.locked);
+  if (S.locked && !unlocking) askUnlock();
+}
+let unlocking = false;
+async function askUnlock() {
+  unlocking = true;
+  $('settingsDrawer').classList.remove('open'); $('drawer').classList.remove('open');
+  await passBox({ title: t('lock.locked'), text: t('lock.enter'), ok: t('lock.unlock'), noCancel: true,
+    check: async v => ((await api.unlock(v)) ? null : t('pw.wrong')) });
+  unlocking = false;
+}
+$('lockBtn').onclick = async () => {
+  let old = null;
+  if (S.hasLock) { old = await passBox({ title: t('lock.change'), text: t('lock.current'), ok: t('common.next') }); if (old === null) return; }
+  const p = await passBox({ title: t('lock.title'), text: t('lock.setText'), ok: t('common.save'), confirm: true, min: 4 });
+  if (p === null) return;
+  toast((await api.lock('set', p, old)) ? t('lock.saved') : t('pw.wrong'), false);
+};
+$('lockNow').onclick = () => api.lock('now');
+$('lockOff').onclick = async () => {
+  const p = await passBox({ title: t('lock.off'), text: t('lock.current'), ok: t('lock.off') });
+  if (p !== null) toast((await api.lock('off', p)) ? t('lock.removed') : t('pw.wrong'));
 };
 
 function render() {
@@ -627,6 +681,8 @@ function renderMain() {
   const st = S.settings || {};
   document.querySelectorAll('[data-setting]').forEach(cb => (cb.checked = !!st[cb.dataset.setting]));
   renderStreamOptions();
+  renderUpdate();
+  renderLock();
   $('streamPill').hidden = !streaming();
   document.body.classList.toggle('streaming', streaming());
   $('sort').value = sortMode();
@@ -673,6 +729,36 @@ function confirmBox(title, text, yes = t('common.anyway')) {
     document.addEventListener('keydown', key, true);
     $('confirmYes').onclick = () => done(true);
     $('confirmNo').onclick = () => done(false);
+  });
+}
+
+// asks for a password. o: { title, text, ok, confirm (type twice), skip (label of a 3rd button),
+// min (minimum length), check (async v => error text or null) }. Resolves the password, 'skip' or null.
+function passBox(o) {
+  return new Promise(res => {
+    $('passTitle').textContent = o.title;
+    $('passText').textContent = o.text || '';
+    $('passOk').textContent = o.ok || t('common.ok');
+    $('passAgainRow').hidden = !o.confirm;
+    $('passSkip').hidden = !o.skip;
+    $('passSkip').textContent = o.skip || '';
+    $('passCancel').hidden = !!o.noCancel;
+    $('passIn').value = $('passAgain').value = '';
+    $('passErr').hidden = true;
+    $('passBox').hidden = false;
+    $('passIn').focus();
+    const err = m => { $('passErr').textContent = m; $('passErr').hidden = false; };
+    const done = v => { $('passBox').hidden = true; $('passForm').onsubmit = $('passSkip').onclick = $('passCancel').onclick = null; res(v); };
+    $('passForm').onsubmit = async e => {
+      e.preventDefault();
+      const v = $('passIn').value;
+      if (v.length < (o.min || 1)) return err(t('pw.short', { n: o.min || 1 }));
+      if (o.confirm && v !== $('passAgain').value) return err(t('pw.mismatch'));
+      if (o.check) { const m = await o.check(v); if (m) { $('passIn').select(); return err(m); } }
+      done(v);
+    };
+    $('passSkip').onclick = () => done('skip');
+    $('passCancel').onclick = () => done(null);
   });
 }
 
