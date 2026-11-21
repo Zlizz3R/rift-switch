@@ -52,7 +52,8 @@ function selected() {
 }
 // Riot's own decay counter (signed-in account only); fallback: our inactivity guess
 function decayText(a) {
-  if (a.decay && a.decay.show && a.decay.days != null) return t('d.decayIn', { d: a.decay.days });
+  const dc = decayInfo(a);
+  if (dc) return dc.days <= 0 ? t('tile.decayNow') : t(dc.est ? 'tile.decayEst' : 'tile.decayIn', { d: dc.days });
   const idle = decayWarning(a);
   return idle ? t('d.inactive', { d: idle }) : '';
 }

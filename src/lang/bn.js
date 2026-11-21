@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'set.gAppearance': "চেহারা", 'set.gSwitch': "সুইচ করা", 'set.gPrivacy': "প্রাইভেসি", 'set.gSystem': "সিস্টেম ও ডেটা", 'set.gAbout': "সম্পর্কে", 'set.colors': "রঙের থিম", 'set.uiScale': "ইন্টারফেসের আকার", 'set.moreOpts': "অপশন দেখাও", 'set.lessOpts': "অপশন লুকাও", 'set.export': "এক্সপোর্ট", 'set.exportT': "অ্যাকাউন্ট, ক্যাটাগরি, সেটিংস", 'set.import': "ইমপোর্ট", 'set.importT': "এক্সপোর্ট করা ফাইল থেকে", 'set.exported': "{n}টি অ্যাকাউন্ট এক্সপোর্ট হয়েছে।", 'set.imported': "ইমপোর্ট: {n}টি নতুন, {m}টি আগে থেকেই ছিল।", 'set.ioFailed': "ফাইল পড়া/লেখা যায়নি ({e})।", 'set.badFile': "এটি Rift Switch এক্সপোর্ট ফাইল নয়।", 'tile.decayIn': "{d} দিনে ডিকে", 'tile.decayEst': "প্রায় {d} দিনে ডিকে", 'tile.decayNow': "এখন ডিকে হচ্ছে", 'tile.decayT': "এই অ্যাকাউন্টে শেষ লগইনের সময়ের Riot ডিকে কাউন্টার, তারপর থেকে কমানো হয়েছে।", 'tile.decayEstT': "আনুমানিক: শেষ গেমের {n} দিন পর (পূর্ণ ব্যাংক ধরে)। Riot-এর সঠিক কাউন্টারের জন্য একবার লগইন করো।",
     'theme.system': "সিস্টেম",
     'theme.light': "হালকা",
     'theme.dark': "গাঢ়",

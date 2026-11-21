@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'set.gAppearance': "外观", 'set.gSwitch': "切换", 'set.gPrivacy': "隐私", 'set.gSystem': "系统与数据", 'set.gAbout': "关于", 'set.colors': "配色", 'set.uiScale': "界面大小", 'set.moreOpts': "显示选项", 'set.lessOpts': "隐藏选项", 'set.export': "导出", 'set.exportT': "账号、分类、设置", 'set.import': "导入", 'set.importT': "从导出的文件", 'set.exported': "已导出 {n} 个账号。", 'set.imported': "已导入：新增 {n} 个，已存在 {m} 个。", 'set.ioFailed': "无法读取或写入文件（{e}）。", 'set.badFile': "不是 Rift Switch 导出文件。", 'tile.decayIn': "{d} 天后掉分", 'tile.decayEst': "约 {d} 天后掉分", 'tile.decayNow': "正在掉分", 'tile.decayT': "该账号上次登录时 Riot 的掉分计数，之后按天倒数。", 'tile.decayEstT': "估算：上一局后 {n} 天（假设存满）。登录一次即可获得 Riot 的准确计数。",
     'theme.system': "跟随系统",
     'theme.light': "浅色",
     'theme.dark': "深色",

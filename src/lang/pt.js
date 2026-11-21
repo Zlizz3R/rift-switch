@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'set.gAppearance': "Aparência", 'set.gSwitch': "Troca de conta", 'set.gPrivacy': "Privacidade", 'set.gSystem': "Sistema e dados", 'set.gAbout': "Sobre", 'set.colors': "Esquema de cores", 'set.uiScale': "Tamanho da interface", 'set.moreOpts': "Mostrar opções", 'set.lessOpts': "Ocultar opções", 'set.export': "Exportar", 'set.exportT': "Contas, categorias, configurações", 'set.import': "Importar", 'set.importT': "De um arquivo exportado", 'set.exported': "{n} contas exportadas.", 'set.imported': "Importado: {n} novas, {m} já existiam.", 'set.ioFailed': "Não foi possível ler ou gravar o arquivo ({e}).", 'set.badFile': "Não é um arquivo de exportação do Rift Switch.", 'tile.decayIn': "Decai em {d} d", 'tile.decayEst': "Decai em ≈{d} d", 'tile.decayNow': "Decaindo agora", 'tile.decayT': "Contador da Riot do último login desta conta, descontado desde então.", 'tile.decayEstT': "Estimativa: {n} dias após a última partida (banco cheio presumido). Faça login uma vez para o contador exato da Riot.",
     'theme.system': "Sistema",
     'theme.light': "Claro",
     'theme.dark': "Escuro",

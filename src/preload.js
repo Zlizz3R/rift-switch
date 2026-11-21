@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('api', {
   win: what => ipcRenderer.invoke('win', what),
   openExternal: url => ipcRenderer.invoke('open-external', url),
   setSetting: (k, v) => ipcRenderer.invoke('set-setting', k, v),
+  dataExport: () => ipcRenderer.invoke('data-export'),
+  dataImport: () => ipcRenderer.invoke('data-import'),
   onTraySwitch: fn => ipcRenderer.on('tray-switch', (_e, id) => fn(id)),
   onToast: fn => ipcRenderer.on('toast', (_e, msg) => fn(msg)),
 });

@@ -135,33 +135,56 @@
         <h2 data-i18n="set.title"></h2>
         <button class="icon" id="settingsClose"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
       </div>
+      <div class="set-g" data-i18n="set.gAppearance"></div>
       <div class="lang-row">
         <span data-i18n="set.language"></span>
         <select id="langSelect"></select>
       </div>
       <div class="lang-row">
-        <span data-i18n="set.theme"></span>
+        <span data-i18n="set.colors"></span>
         <select id="themeSelect">
           <option value="system" data-i18n="theme.system"></option>
           <option value="light" data-i18n="theme.light"></option>
           <option value="dark" data-i18n="theme.dark"></option>
         </select>
       </div>
-      <label class="toggle"><input type="checkbox" data-setting="streamer"><span class="sw"></span>
-        <span><b data-i18n="set.streamer"></b><small data-i18n="set.streamerT"></small></span></label>
-      <div class="stream-opts" id="streamOpts"></div>
-      <label class="toggle"><input type="checkbox" data-setting="autostart"><span class="sw"></span>
-        <span><b data-i18n="set.autostart"></b><small data-i18n="set.autostartT"></small></span></label>
+      <div class="lang-row">
+        <span data-i18n="set.uiScale"></span>
+        <select id="scaleSelect">
+          <option value="80">80 %</option><option value="90">90 %</option><option value="100">100 %</option>
+          <option value="110">110 %</option><option value="125">125 %</option><option value="150">150 %</option>
+        </select>
+      </div>
+      <button class="option" id="openTileEditor">
+        <span class="opt-title" data-i18n="set.tiles"></span>
+        <span class="opt-sub" data-i18n="set.tilesT"></span>
+      </button>
+
+      <div class="set-g" data-i18n="set.gSwitch"></div>
       <label class="toggle"><input type="checkbox" data-setting="confirmSwitch"><span class="sw"></span>
         <span><b data-i18n="set.confirm"></b><small data-i18n="set.confirmT"></small></span></label>
       <label class="toggle"><input type="checkbox" data-setting="autoPlay"><span class="sw"></span>
         <span><b data-i18n="set.play"></b><small data-i18n="set.playT"></small></span></label>
       <label class="toggle"><input type="checkbox" data-setting="autoAccept"><span class="sw"></span>
         <span><b data-i18n="set.accept"></b><small data-i18n="set.acceptT"></small></span></label>
-      <button class="option" id="openTileEditor">
-        <span class="opt-title" data-i18n="set.tiles"></span>
-        <span class="opt-sub" data-i18n="set.tilesT"></span>
-      </button>
+
+      <div class="set-g" data-i18n="set.gPrivacy"></div>
+      <div class="toggle-wrap">
+        <label class="toggle"><input type="checkbox" data-setting="streamer"><span class="sw"></span>
+          <span><b data-i18n="set.streamer"></b><small data-i18n="set.streamerT"></small></span></label>
+        <button class="expand" id="streamExpand"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+      </div>
+      <div class="stream-opts" id="streamOpts" hidden></div>
+
+      <div class="set-g" data-i18n="set.gSystem"></div>
+      <label class="toggle"><input type="checkbox" data-setting="autostart"><span class="sw"></span>
+        <span><b data-i18n="set.autostart"></b><small data-i18n="set.autostartT"></small></span></label>
+      <div class="data-row">
+        <button class="option" id="exportBtn"><span class="opt-title" data-i18n="set.export"></span><span class="opt-sub" data-i18n="set.exportT"></span></button>
+        <button class="option" id="importBtn"><span class="opt-title" data-i18n="set.import"></span><span class="opt-sub" data-i18n="set.importT"></span></button>
+      </div>
+
+      <div class="set-g" data-i18n="set.gAbout"></div>
       <button class="option support" id="supportBtn">
         <span class="opt-title" data-i18n="support.title"></span>
         <span class="opt-sub" data-i18n="support.sub"></span>

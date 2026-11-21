@@ -127,15 +127,18 @@ function tileHtml(a, o = tileOpt(), preview = false) {
   const active = a.puuid === S.active;
   const m = mmrEstimate(a);
   const trend = m ? (m.diff > 40 ? ' ↑' : m.diff < -40 ? ' ↓' : '') : '';
-  const idle = o.inactive ? decayWarning(a) : 0;
   const p = a.profile || {};
   const extras = [];
   if (o.lastPlayed && a.lastPlayed) extras.push(`<span>${t('tile.lastPlayed', { ago: ago(a.lastPlayed) })}</span>`);
+  const dc = o.inactive && !hides('ranks') ? decayInfo(a) : null;
+  if (dc) extras.push(`<span class="decay${dc.days <= 3 ? ' bad' : dc.days <= 7 ? ' warn' : ''}" title="${esc(dc.est ? t('tile.decayEstT', { n: dc.bank }) : t('tile.decayT'))}">${
+    dc.days <= 0 ? t('tile.decayNow') : t(dc.est ? 'tile.decayEst' : 'tile.decayIn', { d: dc.days })}</span>`);
   if (o.wallet && p.be != null && !hides('wallet')) extras.push(`<span><b class="be">${num(p.be)}</b> BE</span><span><b class="rp">${num(p.rp)}</b> RP</span>`);
   const draggable = !preview;
   const showLvl = o.level && !hides('level');
+  const rk = o.ranked && !hides('ranks') ? rankedBlock(a) : '';
   return `<div class="tile ${active ? 'active' : ''}" data-id="${esc(a.puuid)}" draggable="${draggable}">
-    ${!active && o.inactive && a.decay && a.decay.show && a.decay.days != null ? `<span class="badge warn">${t('tile.decay', { d: a.decay.days })}</span>` : ''}${active ? `<span class="badge">${t('tile.active')}</span>` : idle && !(a.decay && a.decay.show) ? `<span class="badge warn" title="${esc(t('tile.idleTitle', { date: fmtDate(a.lastPlayed) }))}">${t('tile.idle', { d: idle })}</span>` : ''}
+    ${active ? `<span class="badge">${t('tile.active')}</span>` : ''}
     ${lockHtml(a, o)}
     <button class="more" data-more title="${esc(t('common.more'))}">${DOTS}</button>
     ${o.icon ? `<div class="avatar">
@@ -145,8 +148,8 @@ function tileHtml(a, o = tileOpt(), preview = false) {
     <div class="name" title="${esc(fullName(a))}">${esc(dispName(a))}${o.tag && dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}</div>
     ${!o.icon && showLvl && a.level ? `<div class="lvl-line">Level ${a.level}</div>` : ''}
     ${o.note && !hides('note') ? `<div class="note" data-note>${esc(a.note || '')}</div>` : '<div data-note></div>'}
-    ${o.ranked && !hides('ranks') ? rankedBlock(a) : ''}
-    ${hides('ranks') ? `<div class="stream-hidden">${t('stream.ranksHidden')}</div>` : QUEUES.some(([k]) => o[k]) ? `<div class="ranks">${QUEUES.filter(([k]) => o[k]).map(([k, n]) => rankRow(n, a[k], o.winrate)).join('')}</div>` : ''}
+    ${rk}
+    ${hides('ranks') ? `<div class="stream-hidden">${t('stream.ranksHidden')}</div>` : rk && !QUEUES.some(([k]) => o[k] && a[k]) ? '' : QUEUES.some(([k]) => o[k]) ? `<div class="ranks">${QUEUES.filter(([k]) => o[k]).map(([k, n]) => rankRow(n, a[k], o.winrate)).join('')}</div>` : ''}
     ${extras.length ? `<div class="tile-extra">${extras.join('')}</div>` : ''}
     ${o.mmr && !hides('ranks') ? `<div class="mmr" title="${esc(t('tile.mmrTitle', { q: m ? m.queue : '–' }))}">
       <span>${t('tile.mmr')}</span><b>${m ? '≈ ' + m.label + trend : '–'}</b>
@@ -281,6 +284,20 @@ function decayWarning(a) {
   if (!a.solo || TIERS.indexOf(a.solo.tier) < TIERS.indexOf('DIAMOND') || !a.lastPlayed) return 0;
   const d = Math.floor((Date.now() - a.lastPlayed) / DAY);
   return d >= 14 ? d : 0;
+}
+
+// Ranked decay (Solo/Duo, Diamond and up): Riot keeps a bank of days. It only tells the
+// signed-in account; we keep that number and count it down. Without it: estimate from the
+// last game, assuming the bank was full then (Diamond 28 days, Master and up 14).
+function decayInfo(a) {
+  if (!a.solo || TIERS.indexOf(a.solo.tier) < TIERS.indexOf('DIAMOND')) return null;
+  const bank = APEX.includes(a.solo.tier) ? 14 : 28;
+  if (a.decay && a.decay.days != null && a.decay.days >= 0 && a.decay.at) {
+    const gone = a.puuid === S.active ? 0 : Math.floor((Date.now() - a.decay.at) / DAY);
+    return { days: Math.max(0, a.decay.days - gone), est: false };
+  }
+  if (!a.lastPlayed) return null;
+  return { days: Math.max(0, bank - Math.floor((Date.now() - a.lastPlayed) / DAY)), est: true, bank };
 }
 
 // ---------- ranked readiness ----------
@@ -513,6 +530,9 @@ $('openTileEditor').onclick = () => { openSettings(false); openTileEditor(); };
 function renderStreamOptions() {
   const h = { ...STREAM_DEFAULTS, ...((S.settings && S.settings.streamerHide) || {}) };
   const box = $('streamOpts');
+  box.hidden = !streamOpen;
+  $('streamExpand').classList.toggle('open', streamOpen);
+  $('streamExpand').title = streamOpen ? t('set.lessOpts') : t('set.moreOpts');
   box.classList.toggle('off', !streaming());
   box.innerHTML = `<div class="te-g">${t('stream.hides')}</div>` + STREAM_KEYS.map(k =>
     `<label class="te-opt"><input type="checkbox" data-stream="${k}" ${h[k] ? 'checked' : ''}><span class="cb"></span>${t('stream.' + k)}</label>`).join('');
@@ -525,6 +545,8 @@ $('streamOpts').addEventListener('change', e => {
   render();
   api.setSetting('streamerHide', h);
 });
+let streamOpen = false;
+$('streamExpand').onclick = () => { streamOpen = !streamOpen; renderStreamOptions(); };
 $('streamPill').onclick = () => { S.settings = { ...S.settings, streamer: false }; render(); api.setSetting('streamer', false); };
 
 // ---------- settings ----------
@@ -546,6 +568,23 @@ $('langSelect').onchange = () => {
   S.settings = { ...S.settings, lang: l };
   render();
   api.setSetting('lang', l);
+};
+
+$('scaleSelect').onchange = () => {
+  const v = $('scaleSelect').value;
+  S.settings = { ...S.settings, uiScale: v };
+  api.setSetting('uiScale', v);
+};
+// export / import of accounts, categories and settings (logins and sessions stay on this PC)
+$('exportBtn').onclick = async () => {
+  const r = await api.dataExport();
+  if (r && r.ok) toast(t('set.exported', { n: r.n }));
+  else if (r && r.error) toast(t('set.ioFailed', { e: r.error }), true);
+};
+$('importBtn').onclick = async () => {
+  const r = await api.dataImport();
+  if (r && r.ok) toast(t('set.imported', { n: r.added, m: r.updated }));
+  else if (r && r.error) toast(t(r.error === 'format' ? 'set.badFile' : 'set.ioFailed', { e: r.error }), true);
 };
 
 function render() {
@@ -580,6 +619,7 @@ function renderMain() {
   $('streamPill').hidden = !streaming();
   document.body.classList.toggle('streaming', streaming());
   $('sort').value = sortMode();
+  $('scaleSelect').value = String(st.uiScale || '100');
   if (profileFor) renderProfile();
   renderTileEditor();
   if (S.saveError && S.saveError !== shownSaveError) toast(t('saveFailed', { e: S.saveError }), true);

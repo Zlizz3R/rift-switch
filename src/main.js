@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, ipcMain, safeStorage, shell, Tray, Menu, nativeImage } = require('electron');
+﻿const { app, BrowserWindow, ipcMain, safeStorage, shell, Tray, Menu, nativeImage, dialog } = require('electron');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -28,7 +28,9 @@ const CREDS = path.join(DATA, 'creds');
 
 let win = null;
 const DEFAULT_SETTINGS = { autostart: false, closeToTray: true, autoAccept: false, autoPlay: true, confirmSwitch: true,
-  sort: 'level', lang: 'en', theme: 'system', champPool: null, lane: 'top', tile: null, streamer: false, streamerHide: null };
+  sort: 'level', lang: 'en', theme: 'system', champPool: null, lane: 'top', tile: null, streamer: false, streamerHide: null,
+  uiScale: '100' };
+const UI_SCALES = ['80', '90', '100', '110', '125', '150'];
 const tr = (key, vars) => i18n.t(state.settings.lang || 'en', key, vars);
 let state = { accounts: [], categories: [], active: null, settings: { ...DEFAULT_SETTINGS } };
 let tray = null;
@@ -60,6 +62,8 @@ function load() {
   state.settings = { ...DEFAULT_SETTINGS, ...(state.settings || {}) };
   // one-time: sorting by level became the default (existing saves had "custom")
   if (!state.settings.sortLevelDefault) { state.settings.sort = 'level'; state.settings.sortLevelDefault = true; }
+  // one-time: "Start League automatically" is on by default (older saves may have it off)
+  if (!state.settings.autoPlayDefault) { state.settings.autoPlay = true; state.settings.autoPlayDefault = true; }
 }
 let saveError = null;
 function logError(where, e) {
@@ -729,6 +733,9 @@ ipcMain.handle('set-setting', (_e, key, value) => {
       ? Object.fromEntries(Object.entries(value).filter(([k, v]) => /^[a-zA-Z0-9]{1,20}$/.test(k) && typeof v === 'boolean')) : null;
   } else if (key === 'champPool') {
     state.settings.champPool = Array.isArray(value) ? value.map(Number).filter(n => n > 0 && n < 3000).slice(0, 40) : null;
+  } else if (key === 'uiScale') {
+    state.settings.uiScale = UI_SCALES.includes(String(value)) ? String(value) : '100';
+    applyScale();
   } else if (key === 'lang') {
     state.settings.lang = i18n.LANGS.some(([l]) => l === value) ? value : 'en';
   } else state.settings[key] = typeof DEFAULT_SETTINGS[key] === 'boolean' ? !!value : String(value);
@@ -737,6 +744,72 @@ ipcMain.handle('set-setting', (_e, key, value) => {
 });
 
 // ---------- autostart, tray, auto-accept ----------
+
+function applyScale() {
+  if (win && !win.isDestroyed()) win.webContents.setZoomFactor(Number(state.settings.uiScale || 100) / 100);
+}
+
+// ---------- export / import ----------
+// Accounts, categories and settings. Saved logins and sessions are encrypted for this
+// Windows user only, so they are never part of the file.
+const EXPORT_FIELDS = ['puuid', 'gameName', 'tagLine', 'region', 'note', 'category', 'addedAt', 'iconId', 'level',
+  'solo', 'flex', 'r5', 'classic', 'lastPlayed', 'history', 'rankedGames'];
+ipcMain.handle('data-export', async () => {
+  const r = await dialog.showSaveDialog(win, { defaultPath: 'rift-switch-backup.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
+  if (r.canceled || !r.filePath) return { ok: false };
+  const accounts = state.accounts.filter(a => !a.placeholder)
+    .map(a => Object.fromEntries(EXPORT_FIELDS.filter(k => a[k] !== undefined).map(k => [k, a[k]])));
+  const { autostart, ...settings } = state.settings;
+  try {
+    fs.writeFileSync(r.filePath, JSON.stringify({ app: 'rift-switch', version: 1, exportedAt: Date.now(),
+      accounts, categories: state.categories, settings }, null, 1));
+    return { ok: true, n: accounts.length };
+  } catch (e) { return { ok: false, error: e.code || e.message }; }
+});
+ipcMain.handle('data-import', async () => {
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
+  if (r.canceled || !r.filePaths[0]) return { ok: false };
+  let d;
+  try { d = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8').replace(/^\uFEFF/, '')); }
+  catch (e) { return { ok: false, error: 'format' }; }
+  if (!d || d.app !== 'rift-switch' || !Array.isArray(d.accounts)) return { ok: false, error: 'format' };
+  gen++;
+  const catIds = new Set(state.categories.map(c => c.id));
+  for (const c of Array.isArray(d.categories) ? d.categories : []) {
+    if (c && typeof c.id === 'string' && /^c[\w-]{1,40}$/.test(c.id) && !catIds.has(c.id)) {
+      state.categories.push({ id: c.id, name: String(c.name || '').slice(0, 32) || tr('cat.new'), collapsed: !!c.collapsed });
+      catIds.add(c.id);
+    }
+  }
+  let added = 0, updated = 0;
+  for (const x of d.accounts) {
+    if (!x || !/^[0-9a-f-]{36}$/i.test(x.puuid || '')) continue;
+    const acc = Object.fromEntries(EXPORT_FIELDS.filter(k => x[k] !== undefined).map(k => [k, x[k]]));
+    acc.note = String(acc.note || '').slice(0, 24);
+    if (acc.category && !catIds.has(acc.category)) delete acc.category;
+    const have = state.accounts.find(a => a.puuid === acc.puuid);
+    if (have) {   // this PC's data wins; only fill gaps
+      if (!have.note && acc.note) have.note = acc.note;
+      if (!have.category && acc.category) have.category = acc.category;
+      updated++;
+    } else { state.accounts.push({ ...acc, addedAt: acc.addedAt || Date.now() }); added++; }
+  }
+  if (d.settings && typeof d.settings === 'object') {
+    for (const [k, v] of Object.entries(d.settings)) {
+      if (!(k in DEFAULT_SETTINGS) || k === 'autostart') continue;
+      if (typeof DEFAULT_SETTINGS[k] === 'boolean') state.settings[k] = !!v;
+      else if (k === 'lang') { if (i18n.LANGS.some(([l]) => l === v)) state.settings.lang = v; }
+      else if (k === 'uiScale') { if (UI_SCALES.includes(String(v))) state.settings.uiScale = String(v); }
+      else if (k === 'champPool') state.settings.champPool = Array.isArray(v) ? v.map(Number).filter(n => n > 0 && n < 3000).slice(0, 40) : null;
+      else if (k === 'tile' || k === 'streamerHide') state.settings[k] = v && typeof v === 'object'
+        ? Object.fromEntries(Object.entries(v).filter(([kk, vv]) => /^[a-z0-9]+$/i.test(kk) && typeof vv === 'boolean')) : null;
+      else if (typeof v === 'string') state.settings[k] = v.slice(0, 20);
+    }
+    applyScale();
+  }
+  save(); push();
+  return { ok: true, added, updated };
+});
 
 function applyAutostart() {
   if (process.env.RS_DATA) return;   // test copies never touch Windows settings
@@ -838,7 +911,7 @@ function createWindow(show) {
   win.webContents.on('will-navigate', e => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.on('show', () => { lastPushed = null; push(); scheduleTick(0); });
-  win.webContents.on('did-finish-load', () => { const q = afterLoad; afterLoad = []; q.forEach(f => f()); });
+  win.webContents.on('did-finish-load', () => { applyScale(); const q = afterLoad; afterLoad = []; q.forEach(f => f()); });
   win.on('closed', () => { win = null; lastPushed = null; });
   win.once('ready-to-show', () => { if (show && !process.env.RS_SHOT) win.show(); });
   // closing: with "close to tray" the window really closes but the app keeps running in the tray

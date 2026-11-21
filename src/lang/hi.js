@@ -96,6 +96,7 @@
     'nav.live': "लाइव",
     'nav.tools': "टूल्स",
     'set.theme': "रूप",
+    'set.gAppearance': "रूप", 'set.gSwitch': "स्विच करना", 'set.gPrivacy': "प्राइवेसी", 'set.gSystem': "सिस्टम और डेटा", 'set.gAbout': "जानकारी", 'set.colors': "रंग योजना", 'set.uiScale': "इंटरफ़ेस आकार", 'set.moreOpts': "विकल्प दिखाएँ", 'set.lessOpts': "विकल्प छिपाएँ", 'set.export': "एक्सपोर्ट", 'set.exportT': "अकाउंट, कैटेगरी, सेटिंग्स", 'set.import': "इम्पोर्ट", 'set.importT': "एक्सपोर्ट की गई फ़ाइल से", 'set.exported': "{n} अकाउंट एक्सपोर्ट हुए।", 'set.imported': "इम्पोर्ट: {n} नए, {m} पहले से मौजूद।", 'set.ioFailed': "फ़ाइल पढ़ी/लिखी नहीं जा सकी ({e})।", 'set.badFile': "यह Rift Switch एक्सपोर्ट फ़ाइल नहीं है।", 'tile.decayIn': "{d} दिन में डीके", 'tile.decayEst': "लगभग {d} दिन में डीके", 'tile.decayNow': "अभी डीके हो रहा है", 'tile.decayT': "इस अकाउंट के पिछले लॉगिन पर Riot का डीके काउंटर, तब से घटाया गया।", 'tile.decayEstT': "अनुमान: आख़िरी गेम के {n} दिन बाद (पूरा बैंक माना)। Riot का सटीक काउंटर पाने के लिए एक बार लॉगिन करें।",
     'theme.system': "सिस्टम",
     'theme.light': "हल्का",
     'theme.dark': "गहरा",

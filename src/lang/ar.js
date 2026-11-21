@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'set.gAppearance': "المظهر", 'set.gSwitch': "التبديل", 'set.gPrivacy': "الخصوصية", 'set.gSystem': "النظام والبيانات", 'set.gAbout': "حول", 'set.colors': "نظام الألوان", 'set.uiScale': "حجم الواجهة", 'set.moreOpts': "إظهار الخيارات", 'set.lessOpts': "إخفاء الخيارات", 'set.export': "تصدير", 'set.exportT': "الحسابات والفئات والإعدادات", 'set.import': "استيراد", 'set.importT': "من ملف مُصدَّر", 'set.exported': "تم تصدير {n} حساب.", 'set.imported': "تم الاستيراد: {n} جديد، {m} موجود مسبقًا.", 'set.ioFailed': "تعذّر قراءة الملف أو كتابته ({e}).", 'set.badFile': "ليس ملف تصدير من Rift Switch.", 'tile.decayIn': "تراجع خلال {d} يوم", 'tile.decayEst': "تراجع خلال ≈{d} يوم", 'tile.decayNow': "يتراجع الآن", 'tile.decayT': "عدّاد Riot من آخر تسجيل دخول لهذا الحساب، مع العد التنازلي منذ ذلك الحين.", 'tile.decayEstT': "تقدير: {n} يومًا بعد آخر مباراة (بافتراض رصيد كامل). سجّل الدخول مرة للحصول على عدّاد Riot الدقيق.",
     'theme.system': "النظام",
     'theme.light': "فاتح",
     'theme.dark': "داكن",
