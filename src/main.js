@@ -5,8 +5,10 @@ const path = require('path');
 const riot = require('./riot');
 const i18n = require('./i18n');
 
+// Data always lives in %APPDATA%\rift-switch – also for the installed app, whose product
+// name "Rift Switch" would otherwise give it a new, empty folder.
 // dev: RS_DATA=<folder> runs a test copy on its own data, apart from the real one
-if (process.env.RS_DATA) app.setPath('userData', process.env.RS_DATA);
+app.setPath('userData', process.env.RS_DATA || path.join(app.getPath('appData'), 'rift-switch'));
 
 // Only one copy may work on the data folder; a second start just shows the open window.
 if (!process.env.RS_SHOT && !app.requestSingleInstanceLock()) { app.exit(0); }
@@ -364,7 +366,7 @@ async function autoLogin(cred, name, settleMs) {
     if (st.subject) { setLogin(null); return; }
     if (st.up) {
       if (signedOutSince === null) signedOutSince = Date.now();
-      if (!typedAt && Date.now() - signedOutSince > settleMs) {
+      if (!typedAt && Date.now() - signedOutSince >= settleMs) {
         setLogin({ name, stage: 'typing' });
         const r = await riot.autofill(cred.u, cred.p);
         if (token !== loginToken) return;
@@ -398,14 +400,14 @@ async function autoPlay() {
     if (st.subject) {
       if (signedInSince === null) signedInSince = Date.now();
       // give the client a moment to start League by itself; retry once if nothing happens
-      if (Date.now() - signedInSince > (presses ? 20000 : 4000)) {
+      if (Date.now() - signedInSince > (presses ? 15000 : 2000)) {
         if (presses >= 2) return;
         await riot.pressPlay();
         presses++;
         signedInSince = Date.now();
       }
     } else signedInSince = null;
-    await sleep(1500);
+    await sleep(1000);
   }
 }
 
@@ -452,6 +454,32 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
   const cred = await loadCred(puuid);
   if (!json && !cred) return { ok: false, errorKey: acc && acc.credBroken ? 'm.credBroken' : 'm.noSession' };
   loginToken++; login = null;
+
+  // First look where the Riot Client stands – a full restart is only needed when another
+  // account is signed in or League is running.
+  const rc = await riot.rcLoginState();
+  if (rc.up && !(await riot.leagueRunning())) {
+    // already signed in as this account, League just isn't open: only press Play
+    if (rc.subject === puuid) {
+      gen++;
+      state.active = puuid;
+      save();
+      await riot.pressPlay();
+      return { ok: true, fast: 'play' };
+    }
+    // login screen already open and we have the password: type it straight in
+    if (!rc.subject && cred) {
+      gen++;
+      state.active = puuid;
+      expecting = puuid;
+      live = { puuid: null, phase: null, clientUp: false };
+      save();
+      autoLogin(cred, acc ? acc.gameName : cred.u, 0);
+      autoPlay();
+      return { ok: true, fast: 'login' };
+    }
+  }
+
   if (!(await saveActiveBeforeLeaving())) return { ok: false, errorKey: 'm.closeFailed' };
   if (json) riot.restoreSession(json); else riot.clearSession();
   state.active = puuid;
@@ -459,7 +487,7 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
   live = { puuid: null, phase: null, clientUp: false };
   save();
   riot.launchLeague();
-  if (cred) autoLogin(cred, acc ? acc.gameName : cred.u, json ? 7000 : 2500);
+  if (cred) autoLogin(cred, acc ? acc.gameName : cred.u, json ? 4000 : 1500);
   autoPlay();
   return { ok: true };
 }));
@@ -475,7 +503,7 @@ ipcMain.handle('add-new', (_e, c) => withBusy(async () => {
   pendingCred = cred && c.save !== false ? cred : null;   // "save" unticked: type it once, keep nothing
   save();
   riot.launchLeague();
-  if (cred) autoLogin(cred, cred.u, 2500);
+  if (cred) autoLogin(cred, cred.u, 1500);
   autoPlay();
   return { ok: true };
 }));
@@ -638,7 +666,8 @@ function applyAutostart() {
   app.setLoginItemSettings({
     openAtLogin: !!state.settings.autostart,
     path: process.execPath,
-    args: [app.getAppPath(), '--hidden'],
+    // installed app: the .exe itself; from source: electron.exe + the project folder
+    args: app.isPackaged ? ['--hidden'] : [app.getAppPath(), '--hidden'],
   });
 }
 

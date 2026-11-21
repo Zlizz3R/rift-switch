@@ -4,7 +4,8 @@
   "description": "A good-looking League of Legends account switcher for Windows (English/German).",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win"
   },
   "keywords": [
     "league-of-legends",
@@ -16,11 +17,59 @@
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^45.4.1"
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Zlizz3R/rift-switch.git"
   },
-  "homepage": "https://github.com/Zlizz3R/rift-switch"
+  "homepage": "https://github.com/Zlizz3R/rift-switch",
+  "productName": "Rift Switch",
+  "build": {
+    "appId": "com.zlizz3r.riftswitch",
+    "productName": "Rift Switch",
+    "copyright": "Copyright © 2026 Zlizz3R",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "LICENSE"
+    ],
+    "asarUnpack": [
+      "src/autofill.ps1"
+    ],
+    "win": {
+      "icon": "src/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Rift Switch",
+      "artifactName": "RiftSwitch-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "RiftSwitch-Portable-${version}.${ext}"
+    }
+  }
 }

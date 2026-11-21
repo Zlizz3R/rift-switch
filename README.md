@@ -31,6 +31,16 @@ Click a tile, confirm, and League restarts with the other account – no typing,
 > ⚠️ The local client API is used by many community tools but is not officially supported by Riot.
 > Automatic login and auto-accept only do what you would do by hand – use them at your own discretion.
 
+## Download
+
+Grab the latest version from [Releases](https://github.com/Zlizz3R/rift-switch/releases):
+
+- **RiftSwitch-Setup-x.y.z.exe** – installer (Start menu + desktop shortcut, uninstall via Windows settings)
+- **RiftSwitch-Portable-x.y.z.exe** – no installation, just run it
+
+The app isn't code-signed (that costs a few hundred euros a year), so Windows SmartScreen may show
+*“Windows protected your PC”* – click **More info → Run anyway**. The full source is right here if you want to check it.
+
 ## Install / run (from source)
 
 Requires [Node.js](https://nodejs.org) on Windows.
@@ -42,7 +52,7 @@ npm install
 npm start
 ```
 
-Or double-click `Rift Switch.cmd` after `npm install`. A packaged installer is planned.
+Or double-click `Rift Switch.cmd` after `npm install`. Build the installer yourself with `npm run dist` (output in `dist/`).
 
 ## Development notes
 

@@ -330,7 +330,8 @@ async function rcLoginState() {
 function autofill(username, password) {
   return new Promise(resolve => {
     const ps = spawn('powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'autofill.ps1')],
+      // in the installed app the script is unpacked next to the archive (PowerShell can't read inside app.asar)
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'autofill.ps1').replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep)],
       { windowsHide: true });
     let out = '';
     ps.stdout.on('data', d => (out += d));

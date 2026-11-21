@@ -93,7 +93,7 @@ public static class RiotType {
   static bool FieldGrey(Color c) { return Grey(c, 228, 246); }    // input fields ~239
 
   // found positions (window pixels)
-  public static int UserX, UserY, PassX, PassY, BoxX, BoxY, PanelR;
+  public static int UserX, UserY, PassX, PassY, BoxX, BoxY, PanelR, PanelL, TabY;
   public static string Info = "";
 
   // light panel on the left with two grey input fields and a checkbox below the social buttons
@@ -103,7 +103,7 @@ public static class RiotType {
     while (x < W / 2 && !PanelWhite(Px(x, y0))) x++;          // skip a thin edge strip
     int start = x;
     while (x < W / 2 && PanelWhite(Px(x, y0))) x++;
-    PanelR = x;
+    PanelR = x; PanelL = start; TabY = 0;
     Info = "size=" + W + "x" + H + " panel=" + start + ".." + PanelR;
     if (PanelR - start < W * 0.1 || PanelR > W * 0.5) return false;
 
@@ -113,20 +113,25 @@ public static class RiotType {
     int cx = (start + PanelR) / 2, minRun = Math.Max(8, (int)(H * 0.025));
     var mids = new System.Collections.Generic.List<int>();
     var ends = new System.Collections.Generic.List<int>();
+    var lens = new System.Collections.Generic.List<int>();
     int runStart = -1;
     for (int y = (int)(H * 0.05); y < (int)(H * 0.85); y++) {
       Color c = Px(cx, y);
       bool g = FieldGrey(c);
       if (g && runStart < 0) runStart = y;
       if (!g && runStart >= 0) {
-        if (y - runStart >= minRun) { mids.Add((runStart + y) / 2); ends.Add(y); }
+        if (y - runStart >= minRun) { mids.Add((runStart + y) / 2); ends.Add(y); lens.Add(y - runStart); }
         runStart = -1;
       }
       if (!g && !PanelWhite(c) && !Grey(c, 200, 255) && mids.Count >= 2) break;   // social buttons reached
     }
     int found = mids.Count;
+    if (found >= 1) TabY = mids[0];
     Info += " greyBlocks=" + found;
     if (found < 2) return false;
+    // the two input fields have about the same height and sit close together
+    int h1 = lens[found - 2], h2 = lens[found - 1], gap = mids[found - 1] - mids[found - 2];
+    if (h1 * 4 < h2 * 3 || h2 * 4 < h1 * 3 || gap > 2 * Math.Max(h1, h2)) { Info += " (fields don't match: " + h1 + "/" + h2 + " gap " + gap + ")"; return false; }
     UserX = cx; UserY = mids[found - 2]; PassX = cx; PassY = mids[found - 1];
     int passEnd = ends[found - 1];
 
@@ -156,6 +161,21 @@ public static class RiotType {
     return !Grey(c, 205, 255);
   }
 
+  public static bool Blur() {
+    if (!Capture()) return false;
+    int y0 = (int)(H * 0.6), x = Math.Max(2, (int)(W * 0.01));
+    while (x < W / 2 && !PanelWhite(Px(x, y0))) x++;
+    int start = x; while (x < W / 2 && PanelWhite(Px(x, y0))) x++;
+    if (x - start < W * 0.1) return false;
+    int bx = (start + x) / 2, by = (int)(H * 0.66);
+    for (int dy = -6; dy <= 6; dy += 3) if (!PanelWhite(Px(bx, by + dy))) return false;   // only on plain background
+    return Click(bx, by);
+  }
+  // the "Sign-in" half of the sign-in / QR-code switch
+  public static bool ClickSignInTab() {
+    if (TabY <= 0) return false;
+    return Click(PanelL + (int)((PanelR - PanelL) * 0.32), TabY);
+  }
   public static void SaveShot(string file) { if (shot != null) shot.Save(file); }
   public static void SaveBoxCrop(string file) {
     if (shot == null) return;
@@ -199,9 +219,22 @@ if ($env:RS_AUTOFILL_PROBE) {
 if (-not [RiotType]::Focus()) { 'nofocus'; exit }
 Start-Sleep -Milliseconds 400
 
-# the login page may still be loading: look for up to ~6 s
-$form = $false
-for ($i = 0; $i -lt 12 -and -not $form; $i++) { $form = [RiotType]::FindForm(); if (-not $form) { Start-Sleep -Milliseconds 500 } }
+# the login page may still be loading: look for up to ~6 s.
+# Before each look: click an empty spot so no field is focused (focused fields turn white).
+# If only the sign-in/QR switch is visible (QR view open), switch back to "Sign-in".
+$form = $false; $tabTried = $false
+for ($i = 0; $i -lt 12 -and -not $form; $i++) {
+  [RiotType]::Blur() | Out-Null
+  Start-Sleep -Milliseconds 120
+  $form = [RiotType]::FindForm()
+  if (-not $form) {
+    if (-not $tabTried -and [RiotType]::TabY -gt 0 -and $i -ge 1) {
+      Write-Dbg ('switching to Sign-in tab: ' + [RiotType]::Info)
+      [RiotType]::ClickSignInTab() | Out-Null; $tabTried = $true
+    }
+    Start-Sleep -Milliseconds 450
+  }
+}
 
 if ($form) {
   Write-Dbg ('form found: ' + [RiotType]::Info)
