@@ -82,6 +82,11 @@
     'af.nowindow': 'A janela do Riot Client não foi encontrada.', 'af.nofocus': 'Não foi possível trazer a janela do Riot Client para frente.',
     'af.lostfocus': 'Cancelado: outra janela veio para frente. Por segurança, nada mais é digitado.', 'af.badinput': 'Falta usuário ou senha.', 'af.error': 'Falha ao preencher o login.',
     'support.title': '☕ Apoiar o {app}', 'support.sub': 'Gratuito e de código aberto. Se ele te poupa tempo, você pode me pagar um café – obrigado!',
+    'win.tray': "Enviar para a bandeja (continua rodando)",
+    'win.quit': "Sair",
+    'quit.title': "Fechando o {app} …",
+    'quit.text': "Aceitar fila automaticamente, o menu da bandeja e a atualização de elos param. Dica: o botão ⬇ ao lado mantém o app rodando na bandeja.",
+    'tray.balloon': "O {app} continua rodando aqui. Clique com o botão direito no ícone para trocar de conta.",
     'tray.support': '☕ Apoiar o {app}', 'tray.streamer': 'Modo streamer', 'tray.accept': 'Aceitar fila automaticamente', 'tray.open': 'Abrir {app}', 'tray.quit': 'Sair', 'tray.accepted': 'Partida aceita',
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;

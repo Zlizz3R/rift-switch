@@ -637,10 +637,21 @@ ipcMain.handle('reorder', (_e, order) => {
 });
 
 ipcMain.handle('refresh', async () => { lastRankSweep = 0; await tick(); push(); });
+let toTray = false;   // the window is closing because it was sent to the tray
 ipcMain.handle('win', (_e, what) => {
   if (!win) return;
   if (what === 'min') win.minimize();
-  if (what === 'close') win.close();
+  if (what === 'tray') {
+    toTray = true;
+    if (tray && !state.settings.trayHintShown) {
+      // once: tell the user where the app went
+      tray.displayBalloon({ iconType: 'info', title: tr('app.name'), content: tr('tray.balloon') });
+      state.settings.trayHintShown = true;
+      save();
+    }
+    win.close();
+  }
+  if (what === 'quit' || what === 'close') { quitting = true; app.quit(); }
 });
 ipcMain.handle('open-external', (_e, url) => {
   if (/^https:\/\/(www\.)?(op\.gg|u\.gg|leagueofgraphs\.com|porofessor\.gg|mobalytics\.gg|buymeacoffee\.com)\//.test(url)) shell.openExternal(url);
@@ -795,8 +806,9 @@ app.whenReady().then(async () => {
 });
 app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => {
-  // the tray keeps the app alive; without "close to tray" (or tray) closing the window quits
-  if (quitting || !state.settings.closeToTray || !tray || process.env.RS_SHOT) app.quit();
+  // sent to the tray: keep running there; anything else (quit button, Alt+F4) ends the app
+  if (toTray && tray && !quitting && !process.env.RS_SHOT) { toTray = false; return; }
+  app.quit();
 });
 app.on('second-instance', () => showWindow());
 

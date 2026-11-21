@@ -497,6 +497,12 @@ function openSettings(open) {
   $('settingsDrawer').classList.toggle('open', open);
   $('navSettings').classList.toggle('active', open);
   if (open) openDrawer(false);
+  syncPush();
+}
+// an open side panel pushes the overview to the right instead of covering it
+function syncPush() {
+  document.querySelector('.body').classList.toggle('pushed',
+    $('drawer').classList.contains('open') || $('settingsDrawer').classList.contains('open'));
 }
 document.querySelectorAll('[data-setting]').forEach(cb => cb.onchange = () => api.setSetting(cb.dataset.setting, cb.checked));
 $('langSelect').innerHTML = I18N.LANGS.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
@@ -611,6 +617,7 @@ function openDrawer(open) {
   $('drawer').classList.toggle('open', open);
   $('navAdd').classList.toggle('active', open);
   $('navAccounts').classList.toggle('active', !open && !$('settingsDrawer').classList.contains('open'));
+  syncPush();
 }
 
 function showMenu(id, x, y) {
@@ -783,7 +790,17 @@ $('board').addEventListener('drop', e => {
 });
 
 $('min').onclick = () => api.win('min');
-$('close').onclick = () => api.win('close');
+$('toTray').onclick = () => api.win('tray');
+// quitting: a short notice that closes the app by itself (nothing to click away)
+let quitting = false;
+$('close').onclick = () => {
+  if (quitting) return;
+  quitting = true;
+  $('quitBox').hidden = false;
+  void $('quitBox').offsetWidth;                       // let it lay out first, so the bar can animate
+  setTimeout(() => $('quitBox').classList.add('run'), 30);
+  setTimeout(() => api.win('quit'), 2600);
+};
 $('navAccounts').onclick = () => { openDrawer(false); openSettings(false); };
 $('navSettings').onclick = () => openSettings(!$('settingsDrawer').classList.contains('open'));
 $('settingsClose').onclick = () => openSettings(false);

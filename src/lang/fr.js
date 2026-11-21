@@ -83,6 +83,11 @@
     'af.nowindow': 'Fenêtre du Riot Client introuvable.', 'af.nofocus': 'Impossible de mettre la fenêtre du Riot Client au premier plan.',
     'af.lostfocus': 'Annulé : une autre fenêtre est passée au premier plan. Par sécurité, plus rien n’est saisi.', 'af.badinput': 'Identifiant ou mot de passe manquant.', 'af.error': 'Le remplissage de la connexion a échoué.',
     'support.title': '☕ Soutenir {app}', 'support.sub': 'Gratuit et open source. S’il te fait gagner du temps, tu peux m’offrir un café – merci !',
+    'win.tray': "Envoyer dans la zone de notification (reste actif)",
+    'win.quit': "Quitter",
+    'quit.title': "Fermeture de {app} …",
+    'quit.text': "L’acceptation auto, le menu de notification et la mise à jour des rangs s’arrêtent. Astuce : le bouton ⬇ à côté garde l’app active en arrière-plan.",
+    'tray.balloon': "{app} continue de tourner ici. Clic droit sur l’icône pour changer de compte.",
     'tray.support': '☕ Soutenir {app}', 'tray.streamer': 'Mode streamer', 'tray.accept': 'Accepter la file automatiquement', 'tray.open': 'Ouvrir {app}', 'tray.quit': 'Quitter', 'tray.accepted': 'Partie acceptée',
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;

@@ -449,3 +449,15 @@ h1 span[data-i18n] { font-size: inherit; color: inherit; font-weight: inherit; m
 #langSelect:focus { border-color: var(--gold); }
 #langSelect option { background: #141925; }
 .rk-row span:first-child { width: auto; min-width: 46px; white-space: nowrap; }
+
+/* side panels push the overview instead of covering it */
+main { transition: margin-left .22s cubic-bezier(.2,.8,.2,1); }
+.body.pushed main { margin-left: 300px; }
+.body.pushed .drawer { box-shadow: none; }
+.winbtns #toTray svg { width: 15px; height: 15px; stroke-width: 1.6; }
+/* quit notice with a bar that runs out, then the app closes */
+.quit-card { width: 340px; }
+.quit-bar { height: 4px; border-radius: 2px; background: #232b3b; overflow: hidden; }
+.quit-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--gold), #f0a35e); transform-origin: left; }
+#quitBox.run .quit-bar i { transform: scaleX(0); transition: transform 2.5s linear; }
+h1 { white-space: nowrap; }

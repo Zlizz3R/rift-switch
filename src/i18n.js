@@ -135,6 +135,11 @@
     'support.sub': 'Free and open source. If it saves you time, you can buy me a coffee – thanks!',
     'tray.support': '☕ Support {app}',
     'login.noPersist': 'Logged in – but "Stay signed in" could not be ticked. Please tick it once yourself next time.',
+    'win.tray': "Send to tray (keeps running)",
+    'win.quit': "Quit",
+    'quit.title': "Closing {app} …",
+    'quit.text': "Auto-accept, the tray menu and rank updates stop. Tip: the ⬇ button next to it keeps the app running in the tray.",
+    'tray.balloon': "{app} keeps running here. Right-click the icon to switch accounts.",
     'tray.accept': 'Auto-accept queue', 'tray.open': 'Open {app}', 'tray.quit': 'Quit', 'tray.accepted': 'Match accepted',
   };
 
@@ -254,6 +259,11 @@
     'support.sub': 'Kostenlos und Open Source. Wenn es dir Zeit spart, kannst du mir einen Kaffee ausgeben – danke!',
     'tray.support': '☕ {app} unterstützen',
     'login.noPersist': 'Eingeloggt – aber „Angemeldet bleiben“ ließ sich nicht anhaken. Bitte beim nächsten Mal einmal selbst setzen.',
+    'win.tray': "Ins Tray (läuft weiter)",
+    'win.quit': "Beenden",
+    'quit.title': "{app} wird beendet …",
+    'quit.text': "Auto-Accept, Tray-Menü und Rang-Updates sind dann aus. Tipp: Mit dem ⬇-Knopf daneben läuft die App im Tray weiter.",
+    'tray.balloon': "{app} läuft hier weiter. Rechtsklick aufs Symbol zum Wechseln.",
     'tray.accept': 'Queue automatisch annehmen', 'tray.open': '{app} öffnen', 'tray.quit': 'Beenden', 'tray.accepted': 'Match angenommen',
   };
 

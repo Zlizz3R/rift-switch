@@ -79,6 +79,11 @@
     'af.nowindow': '找不到 Riot 客户端窗口。', 'af.nofocus': '无法将 Riot 客户端窗口切到前台。', 'af.lostfocus': '已取消：另一个窗口切到了前台。为安全起见不再继续输入。',
     'af.badinput': '缺少用户名或密码。', 'af.error': '填写登录信息失败。',
     'support.title': '☕ 支持 {app}', 'support.sub': '免费且开源。如果它帮你节省了时间，可以请我喝杯咖啡 – 谢谢！',
+    'win.tray': "最小化到托盘（继续运行）",
+    'win.quit': "退出",
+    'quit.title': "{app} 正在退出 …",
+    'quit.text': "自动接受、托盘菜单和段位更新将停止。提示：旁边的 ⬇ 按钮可让应用在托盘中继续运行。",
+    'tray.balloon': "{app} 在这里继续运行。右键点击图标即可切换账号。",
     'tray.support': '☕ 支持 {app}', 'tray.streamer': '主播模式', 'tray.accept': '自动接受对局', 'tray.open': '打开 {app}', 'tray.quit': '退出', 'tray.accepted': '已接受对局',
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
