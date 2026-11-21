@@ -678,7 +678,7 @@ ipcMain.handle('open-multi', (_e, region, ids) => {
   if (!Array.isArray(ids) || !ids.length) return;
   const list = ids.slice(0, 5).map(x => String(x).replace(/[^\p{L}\p{N} #_.-]/gu, '')).join(',');
   const reg = String(region || 'euw').toLowerCase().replace(/[^a-z]/g, '');
-  shell.openExternal('https://op.gg/lol/multisearch/' + reg + '?summoners=' + encodeURIComponent(list));
+  shell.openExternal('https://op.gg/multisearch/' + reg + '?summoners=' + encodeURIComponent(list));
 });
 
 ipcMain.handle('refresh', async () => { lastRankSweep = 0; await tick(); push(); });

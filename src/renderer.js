@@ -129,7 +129,7 @@ function tileHtml(a, o = tileOpt(), preview = false) {
   const draggable = !preview;
   const showLvl = o.level && !hides('level');
   return `<div class="tile ${active ? 'active' : ''}" data-id="${esc(a.puuid)}" draggable="${draggable}">
-    ${active ? `<span class="badge">${t('tile.active')}</span>` : idle ? `<span class="badge warn" title="${esc(t('tile.idleTitle', { date: fmtDate(a.lastPlayed) }))}">${t('tile.idle', { d: idle })}</span>` : ''}
+    ${!active && o.inactive && a.decay && a.decay.show && a.decay.days != null ? `<span class="badge warn">${t('tile.decay', { d: a.decay.days })}</span>` : ''}${active ? `<span class="badge">${t('tile.active')}</span>` : idle && !(a.decay && a.decay.show) ? `<span class="badge warn" title="${esc(t('tile.idleTitle', { date: fmtDate(a.lastPlayed) }))}">${t('tile.idle', { d: idle })}</span>` : ''}
     ${lockHtml(a, o)}
     <button class="more" data-more title="${esc(t('common.more'))}">${DOTS}</button>
     ${o.icon ? `<div class="avatar">
@@ -370,29 +370,50 @@ const CHAMP_ICON = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/cham
 const SITES = [['opgg', 'op.gg'], ['poro', 'Porofessor'], ['log', 'League of Graphs'], ['moba', 'Mobalytics'], ['ugg', 'u.gg']];
 let profileFor = null;
 let profileHistory = [];
+let profileEst = {};
 
-function historyChart(h) {
+// LP estimate: from the oldest real data point (or the current rank) walk back through
+// the ranked games we have seen: every win was about +20 LP, every loss about -20 LP.
+function lpEstimate(a, games, history) {
+  const est = {};
+  for (const key of ['solo', 'flex']) {
+    const first = (history || []).find(e => e[key]);
+    const anchor = first ? { t: first.t, v: rankScore(first[key]) } : a[key] ? { t: Date.now(), v: rankScore(a[key]) } : null;
+    if (!anchor) continue;
+    const older = (games || []).filter(g => g.q === key && g.t < anchor.t).sort((x, y) => y.t - x.t);
+    if (!older.length) continue;
+    const pts = [anchor];
+    let v = anchor.v;
+    for (const g of older) { v -= g.win ? 20 : -20; pts.push({ t: g.t, v }); }
+    est[key] = pts.reverse();
+  }
+  return est;
+}
+
+function historyChart(h, est = {}, small = false) {
   const pts = (h || []).filter(e => e.solo || e.flex);
-  if (pts.length < 2) return `<div class="chart-empty">${t('p.historyEmpty')}</div>`;
-  const W = 520, H = 150, P = 8;
-  const t0 = pts[0].t, t1 = pts[pts.length - 1].t || t0 + 1;
-  const vals = pts.flatMap(e => [e.solo, e.flex].filter(Boolean).map(rankScore));
-  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const series = {};
+  for (const key of ['solo', 'flex']) {
+    series[key] = { rec: pts.filter(e => e[key]).map(e => ({ t: e.t, v: rankScore(e[key]) })), est: est[key] || [] };
+  }
+  const all = [...series.solo.rec, ...series.solo.est, ...series.flex.rec, ...series.flex.est];
+  if (all.length < 2) return `<div class="chart-empty">${t('p.historyEmpty')}</div>`;
+  const W = small ? 300 : 520, H = small ? 110 : 150, P = 8;
+  const t0 = Math.min(...all.map(p => p.t)), t1 = Math.max(Math.max(...all.map(p => p.t)), t0 + 1);
+  let lo = Math.min(...all.map(p => p.v)), hi = Math.max(...all.map(p => p.v));
   lo = Math.floor((lo - 30) / 100) * 100; hi = Math.ceil((hi + 30) / 100) * 100;
   const x = ts => P + (W - 2 * P) * ((ts - t0) / Math.max(1, t1 - t0));
   const y = v => H - P - (H - 2 * P) * ((v - lo) / Math.max(1, hi - lo));
-  const line = key => {
-    const p = pts.filter(e => e[key]).map(e => `${x(e.t).toFixed(1)},${y(rankScore(e[key])).toFixed(1)}`);
-    return p.length > 1 ? `<polyline class="l-${key}" points="${p.join(' ')}"/>` : '';
-  };
-  // a guide line + label for every division in view
+  const poly = (list, cls) => list.length > 1 ? `<polyline class="${cls}" points="${list.map(p => x(p.t).toFixed(1) + ',' + y(p.v).toFixed(1)).join(' ')}"/>` : '';
   let grid = '';
-  for (let v = lo; v <= hi; v += 100) {
+  const step = hi - lo > 1200 ? 400 : 100;
+  for (let v = lo; v <= hi; v += step) {
     if (v < 0 || v >= 2800) continue;
     grid += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}"/><text x="${W - P}" y="${y(v) - 3}">${scoreToLabel(v)}</text>`;
   }
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${grid}${line('flex')}${line('solo')}</svg>
-    <div class="chart-legend"><span class="k solo"></span>Solo/Duo <span class="k flex"></span>Flex <i>${fmtDate(t0)} – ${fmtDate(t1)}</i></div>`;
+  const hasEst = series.solo.est.length || series.flex.est.length;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${grid}${poly(series.flex.est, 'l-flex est')}${poly(series.solo.est, 'l-solo est')}${poly(series.flex.rec, 'l-flex')}${poly(series.solo.rec, 'l-solo')}</svg>
+    <div class="chart-legend"><span class="k solo"></span>Solo/Duo <span class="k flex"></span>Flex${hasEst ? ` <span class="k est"></span>${t('p.estimated')}` : ''} <i>${fmtDate(t0)} – ${fmtDate(t1)}</i></div>`;
 }
 
 function renderProfile() {
@@ -414,7 +435,7 @@ function renderProfile() {
     ${hides('ranks') ? `<div class="chart-empty">${t('stream.ranksHidden')}</div>` : `<div class="ranks two">${QUEUES.map(([k, n]) => rankRow(n, a[k])).join('')}</div>
     ${rankedChecklist(a)}
     <h3>${t('p.history')}</h3>
-    ${historyChart(profileHistory)}`}
+    ${historyChart(profileHistory, profileEst)}`}
     <h3>${t('p.account')} ${p.at ? '<i>' + t('p.asOf', { date: fmtDate(p.at) }) + '</i>' : ''}</h3>
     ${p.at ? `<div class="stats">
       ${stat(t('p.be'), hides('wallet') ? '•••' : num(p.be))}${stat(t('p.rp'), hides('wallet') ? '•••' : num(p.rp))}
@@ -432,9 +453,11 @@ function renderProfile() {
 }
 async function openProfile(id) {
   profileFor = id;
-  profileHistory = [];
+  profileHistory = []; profileEst = {};
   renderProfile();
   profileHistory = await api.getHistory(id);
+  const acc = S.accounts.find(x => x.puuid === id);
+  profileEst = acc ? lpEstimate(acc, await api.rankedGames(id), profileHistory) : {};
   if (profileFor === id) renderProfile();
 }
 function closeProfile() { profileFor = null; $('profileBox').hidden = true; }
@@ -520,6 +543,9 @@ $('langSelect').onchange = () => {
 };
 
 function render() {
+  try { renderMain(); } finally { if (window.afterRender) window.afterRender(); }
+}
+function renderMain() {
   applyStaticTexts();
   $('cryptoWarn').hidden = !S.cryptoBroken;
   const accs = S.accounts;
@@ -622,7 +648,7 @@ function openDrawer(open) {
   if (open) openSettings(false);
   $('drawer').classList.toggle('open', open);
   $('navAdd').classList.toggle('active', open);
-  $('navAccounts').classList.toggle('active', !open && !$('settingsDrawer').classList.contains('open'));
+  $('navAccounts').classList.toggle('active', !open && !$('settingsDrawer').classList.contains('open') && (typeof view === 'undefined' || view === 'accounts'));
   syncPush();
 }
 
@@ -675,9 +701,11 @@ $('board').addEventListener('click', e => {
   }
   if (e.target.closest('input')) return;
   if (e.target.closest('[data-reveal]')) return toggleReveal(tile.dataset.id);
-  switchTo(tile.dataset.id);
+  selectAccount(tile.dataset.id);
 });
 $('board').addEventListener('dblclick', e => {
+  const tile = e.target.closest('.tile');
+  if (tile && !e.target.closest('input, [data-more], [data-reveal]')) { switchTo(tile.dataset.id); return; }
   const sec = e.target.closest('section.cat');
   if (sec && sec.dataset.cat && e.target.closest('[data-cat-name]')) { renameCat = sec.dataset.cat; render(); }
 });
