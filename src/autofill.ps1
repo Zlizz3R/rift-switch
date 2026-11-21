@@ -1,12 +1,13 @@
 # Types a Riot login into the Riot Client window and ticks "Stay signed in".
 # Reads {"u": "...", "p": "..."} from stdin (never from the command line, so other
 # programs can't read it from the process list).
-# Prints one word: ok | ok-nopersist | nowindow | nofocus | lostfocus | badinput
+# Prints one word as the last line: ok | ok-nopersist | nowindow | nofocus | lostfocus | badinput
 #
-# The login form is found by its colours (light panel, grey input fields) at fixed
-# relative positions of the Riot Client window (measured on client v143, 1552x872):
-#   username field 0.193/0.300, password 0.193/0.374, "Stay signed in" box 0.0464/0.4977.
-# If the form isn't recognised, it falls back to plain typing (username field has focus).
+# The login form is found by scanning a picture of the window (works at any window size):
+#   light panel on the left -> two grey input fields (username, password) ->
+#   below them the social-login buttons, then the "Stay signed in" checkbox.
+# If the form isn't recognised, it falls back to plain typing (username field has focus)
+# and saves a picture of the (still empty) window to %TEMP%\rift-switch-debug for diagnosis.
 $ErrorActionPreference = 'Stop'
 try { $cred = [Console]::In.ReadToEnd() | ConvertFrom-Json } catch { 'badinput'; exit }
 if (-not $cred.u -or -not $cred.p) { 'badinput'; exit }
@@ -69,45 +70,105 @@ public static class RiotType {
     return true;
   }
 
-  // ---- reading the window: picture of it, colour at a relative position ----
+  // ---- reading the window ----
   static Bitmap shot;
+  public static int W, H;
+  public static string TestImage = null;   // test only: read a saved picture instead of the window
   public static bool Capture() {
+    if (TestImage != null) { if (shot != null) shot.Dispose(); shot = new Bitmap(TestImage); W = shot.Width; H = shot.Height; return true; }
     RECT r; if (!GetWindowRect(Target, out r)) return false;
     int w = r.R - r.L, h = r.B - r.T; if (w < 200 || h < 200) return false;
     if (shot != null) shot.Dispose();
     shot = new Bitmap(w, h);
     using (var g = Graphics.FromImage(shot)) { IntPtr dc = g.GetHdc(); PrintWindow(Target, dc, 2); g.ReleaseHdc(dc); }
+    W = w; H = h;
     return true;
   }
-  // debug: a small picture of the "Stay signed in" area (box + label, nothing else)
-  public static void SaveBoxCrop(string file) {
-    if (shot == null) return;
-    int cx = (int)(0.0464 * shot.Width), cy = (int)(0.4977 * shot.Height);
-    var r = new Rectangle(Math.Max(0, cx - 30), Math.Max(0, cy - 25), Math.Min(220, shot.Width - Math.Max(0, cx - 30)), 50);
-    using (var crop = shot.Clone(r, shot.PixelFormat)) crop.Save(file);
-  }
-  public static Color At(double fx, double fy) { return shot.GetPixel((int)(fx * shot.Width), (int)(fy * shot.Height)); }
+  static Color Px(int x, int y) { return shot.GetPixel(Math.Max(0, Math.Min(W - 1, x)), Math.Max(0, Math.Min(H - 1, y))); }
   static bool Grey(Color c, int lo, int hi) {
     int mx = Math.Max(c.R, Math.Max(c.G, c.B)), mn = Math.Min(c.R, Math.Min(c.G, c.B));
     return mn >= lo && mx <= hi && mx - mn <= 12;
   }
-  // light login panel + grey username and password fields where we expect them
-  public static bool LoginFormVisible() {
-    if (!Capture()) return false;
-    return Grey(At(0.019, 0.688), 240, 255) && Grey(At(0.193, 0.300), 220, 250) && Grey(At(0.193, 0.374), 220, 250);
+  static bool PanelWhite(Color c) { return Grey(c, 245, 255); }   // panel background ~252
+  static bool FieldGrey(Color c) { return Grey(c, 228, 246); }    // input fields ~239
+
+  // found positions (window pixels)
+  public static int UserX, UserY, PassX, PassY, BoxX, BoxY, PanelR;
+  public static string Info = "";
+
+  // light panel on the left with two grey input fields and a checkbox below the social buttons
+  public static bool FindForm() {
+    if (!Capture()) { Info = "capture failed"; return false; }
+    int y0 = (int)(H * 0.6), x = Math.Max(2, (int)(W * 0.01));
+    while (x < W / 2 && !PanelWhite(Px(x, y0))) x++;          // skip a thin edge strip
+    int start = x;
+    while (x < W / 2 && PanelWhite(Px(x, y0))) x++;
+    PanelR = x;
+    Info = "size=" + W + "x" + H + " panel=" + start + ".." + PanelR;
+    if (PanelR - start < W * 0.1 || PanelR > W * 0.5) return false;
+
+    // walk down the middle of the panel: grey blocks are the sign-in tabs and the two input
+    // fields; the first dark/coloured block is the row of social-login buttons.
+    // The username/password fields are the last two grey blocks above that row.
+    int cx = (start + PanelR) / 2, minRun = Math.Max(8, (int)(H * 0.025));
+    var mids = new System.Collections.Generic.List<int>();
+    var ends = new System.Collections.Generic.List<int>();
+    int runStart = -1;
+    for (int y = (int)(H * 0.05); y < (int)(H * 0.85); y++) {
+      Color c = Px(cx, y);
+      bool g = FieldGrey(c);
+      if (g && runStart < 0) runStart = y;
+      if (!g && runStart >= 0) {
+        if (y - runStart >= minRun) { mids.Add((runStart + y) / 2); ends.Add(y); }
+        runStart = -1;
+      }
+      if (!g && !PanelWhite(c) && !Grey(c, 200, 255) && mids.Count >= 2) break;   // social buttons reached
+    }
+    int found = mids.Count;
+    Info += " greyBlocks=" + found;
+    if (found < 2) return false;
+    UserX = cx; UserY = mids[found - 2]; PassX = cx; PassY = mids[found - 1];
+    int passEnd = ends[found - 1];
+
+    // left edge of the fields, measured near the field's bottom (no label text there)
+    int ly = passEnd - 3, left = cx;
+    while (left > start && FieldGrey(Px(left - 1, ly))) left--;
+    // below the password field: 1st non-white block = social buttons, 2nd = the checkbox
+    int bx = left + Math.Max(4, (int)(W * 0.005)), blocks = 0; runStart = -1;
+    for (int y = passEnd + 3; y < (int)(H * 0.9); y++) {
+      bool solid = !PanelWhite(Px(bx, y));
+      if (solid && runStart < 0) runStart = y;
+      if (!solid && runStart >= 0) {
+        int len = y - runStart;
+        if (len >= 6) { blocks++; if (blocks == 2) { BoxX = bx; BoxY = (runStart + y) / 2; break; } }
+        runStart = -1;
+      }
+    }
+    Info += " fieldsAt=" + UserY + "/" + PassY + " left=" + left + " box=" + (blocks == 2 ? BoxX + "," + BoxY : "none");
+    return blocks == 2;
   }
+
   // an unticked box is light grey; ticked looks clearly different
   public static bool BoxTicked() {
     if (!Capture()) return false;
-    return !Grey(At(0.0464, 0.4977), 205, 255);
+    Color c = Px(BoxX, BoxY);
+    Info += " boxColor=" + c.R + "," + c.G + "," + c.B;
+    return !Grey(c, 205, 255);
   }
 
-  // left click at a relative window position (cursor is put back afterwards)
-  public static bool Click(double fx, double fy) {
+  public static void SaveShot(string file) { if (shot != null) shot.Save(file); }
+  public static void SaveBoxCrop(string file) {
+    if (shot == null) return;
+    var r = new Rectangle(Math.Max(0, BoxX - 25), Math.Max(0, BoxY - 25), Math.Min(220, W - Math.Max(0, BoxX - 25)), Math.Min(50, H - Math.Max(0, BoxY - 25)));
+    using (var crop = shot.Clone(r, shot.PixelFormat)) crop.Save(file);
+  }
+
+  // left click at a window pixel (cursor is put back afterwards)
+  public static bool Click(int px, int py) {
     if (!InFront()) return false;
     RECT r; if (!GetWindowRect(Target, out r)) return false;
     POINT old; GetCursorPos(out old);
-    SetCursorPos(r.L + (int)(fx * (r.R - r.L)), r.T + (int)(fy * (r.B - r.T)));
+    SetCursorPos(r.L + px, r.T + py);
     Thread.Sleep(60);
     Send(new[] { M(LDOWN), M(LUP) });
     Thread.Sleep(150);
@@ -122,44 +183,56 @@ $proc = Get-Process -Name $target -ErrorAction SilentlyContinue | Where-Object {
 if (-not $proc) { 'nowindow'; exit }
 [RiotType]::Target = $proc.MainWindowHandle
 
+$dbg = Join-Path $env:TEMP 'rift-switch-debug'
+New-Item -ItemType Directory -Force $dbg | Out-Null
+$stamp = Get-Date -Format 'HHmmss'
+function Write-Dbg([string]$line) { Add-Content -Path (Join-Path $dbg 'autofill.log') -Value ("$stamp " + $line) -Encoding ascii }
+
 # test only: report what is recognised, touch nothing
-if ($env:RS_AUTOFILL_PROBE) { 'form=' + [RiotType]::LoginFormVisible() + ' ticked=' + [RiotType]::BoxTicked(); exit }
+if ($env:RS_AUTOFILL_IMAGE) { [RiotType]::TestImage = $env:RS_AUTOFILL_IMAGE }
+if ($env:RS_AUTOFILL_PROBE) {
+  $f = [RiotType]::FindForm(); $t = if ($f) { [RiotType]::BoxTicked() } else { $false }
+  [RiotType]::SaveShot((Join-Path $dbg "$stamp-probe.png"))
+  'form=' + $f + ' ticked=' + $t + ' ' + [RiotType]::Info; exit
+}
 
 if (-not [RiotType]::Focus()) { 'nofocus'; exit }
 Start-Sleep -Milliseconds 400
 
+# the login page may still be loading: look for up to ~6 s
 $form = $false
-for ($i = 0; $i -lt 6 -and -not $form; $i++) { $form = [RiotType]::LoginFormVisible(); if (-not $form) { Start-Sleep -Milliseconds 500 } }
+for ($i = 0; $i -lt 12 -and -not $form; $i++) { $form = [RiotType]::FindForm(); if (-not $form) { Start-Sleep -Milliseconds 500 } }
 
 if ($form) {
+  Write-Dbg ('form found: ' + [RiotType]::Info)
   # click into each field instead of trusting where the cursor is
-  if (-not [RiotType]::Click(0.193, 0.300)) { 'lostfocus'; exit }
+  if (-not [RiotType]::Click([RiotType]::UserX, [RiotType]::UserY)) { 'lostfocus'; exit }
   [RiotType]::Ctrl(0x41)
   if (-not [RiotType]::Type([string]$cred.u)) { 'lostfocus'; exit }
-  if (-not [RiotType]::Click(0.193, 0.374)) { 'lostfocus'; exit }
+  if (-not [RiotType]::Click([RiotType]::PassX, [RiotType]::PassY)) { 'lostfocus'; exit }
   [RiotType]::Ctrl(0x41)
   if (-not [RiotType]::Type([string]$cred.p)) { 'lostfocus'; exit }
   # "Stay signed in": without it the Riot Client forgets the login and switching can't restore it
-  $dbg = Join-Path $env:TEMP 'rift-switch-debug'
-  New-Item -ItemType Directory -Force $dbg | Out-Null
-  $stamp = Get-Date -Format 'HHmmss'
   $ticked = [RiotType]::BoxTicked()
   [RiotType]::SaveBoxCrop((Join-Path $dbg "$stamp-1-before.png"))
   if (-not $ticked) {
-    if (-not [RiotType]::Click(0.0464, 0.4977)) { 'lostfocus'; exit }
+    if (-not [RiotType]::Click([RiotType]::BoxX, [RiotType]::BoxY)) { 'lostfocus'; exit }
     Start-Sleep -Milliseconds 400
     $ticked = [RiotType]::BoxTicked()
     [RiotType]::SaveBoxCrop((Join-Path $dbg "$stamp-2-after.png"))
   }
+  Write-Dbg ('ticked=' + $ticked + ' ' + [RiotType]::Info)
   # back into the password field and submit
-  if (-not [RiotType]::Click(0.193, 0.374)) { 'lostfocus'; exit }
+  if (-not [RiotType]::Click([RiotType]::PassX, [RiotType]::PassY)) { 'lostfocus'; exit }
   if (-not [RiotType]::InFront()) { 'lostfocus'; exit }
   [RiotType]::Key(0x0D)
   if ($ticked) { 'ok' } else { 'ok-nopersist' }
   exit
 }
 
-# fallback: form not recognised (other client version / layout) - plain typing as before
+# fallback: form not recognised - keep a picture of the (still empty) window for diagnosis
+Write-Dbg ('form NOT found: ' + [RiotType]::Info)
+[RiotType]::SaveShot((Join-Path $dbg "$stamp-notfound.png"))
 [RiotType]::Ctrl(0x41)
 if (-not [RiotType]::Type([string]$cred.u)) { 'lostfocus'; exit }
 if (-not [RiotType]::InFront()) { 'lostfocus'; exit }
