@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const riot = require('./riot');
 const i18n = require('./i18n');
+const liveData = require('./live');
 
 // Data always lives in %APPDATA%\rift-switch – also for the installed app, whose product
 // name "Rift Switch" would otherwise give it a new, empty folder.
@@ -27,7 +28,7 @@ const CREDS = path.join(DATA, 'creds');
 
 let win = null;
 const DEFAULT_SETTINGS = { autostart: false, closeToTray: true, autoAccept: false, autoPlay: true, confirmSwitch: true,
-  sort: 'level', lang: 'en', tile: null, streamer: false, streamerHide: null };
+  sort: 'level', lang: 'en', theme: 'system', champPool: null, lane: 'top', tile: null, streamer: false, streamerHide: null };
 const tr = (key, vars) => i18n.t(state.settings.lang || 'en', key, vars);
 let state = { accounts: [], categories: [], active: null, settings: { ...DEFAULT_SETTINGS } };
 let tray = null;
@@ -198,6 +199,15 @@ function bestNormals(prev, n) {
   return { ...prev, hasRanked, at: n.at };
 }
 
+// Ranked games seen in match histories, kept per account (newest first, max 300).
+// The client only shows a few recent games at a time, so the list grows over time.
+function mergeRankedGames(a, games) {
+  if (!a || !Array.isArray(games) || !games.length) return;
+  const byId = new Map((a.rankedGames || []).map(g => [g.id, g]));
+  for (const g of games) byId.set(g.id, g);
+  a.rankedGames = [...byId.values()].sort((x, y) => y.t - x.t).slice(0, 300);
+}
+
 // unknown win/loss (other account) -> keep the last real numbers from its own login
 function keepWL(q, prevQ) {
   if (!q || q.wl !== false || !prevQ || prevQ.wl !== true) return q;
@@ -308,6 +318,7 @@ async function tickInner(myGen) {
           if (lp) a.lastPlayed = lp;
           if (elig) a.rankedCheck = elig;
           if (normals) a.normals = bestNormals(a.normals, normals);
+          mergeRankedGames(a, await riot.rankedGames(cur.puuid));
         }
       }
       pendingAdd = false;
@@ -337,6 +348,7 @@ async function tickInner(myGen) {
         const lp = await riot.lastPlayed(a.puuid);
         const x = state.accounts.find(y => y.puuid === a.puuid);
         if (x && lp) x.lastPlayed = lp;
+        if (x) mergeRankedGames(x, await riot.rankedGames(a.puuid));
         // normal games only matter while the account has no rank yet
         if (x && !RANK_QUEUES.some(k => x[k])) {
           const n = await riot.normalGames(a.puuid);
@@ -636,6 +648,39 @@ ipcMain.handle('reorder', (_e, order) => {
   save();
 });
 
+ipcMain.handle('live', () => liveData.snapshot());
+ipcMain.handle('champions', () => liveData.champions(DATA));
+ipcMain.handle('matchup', (_e, mine, enemy, lane) => liveData.matchup(String(mine), String(enemy), String(lane || 'top')));
+ipcMain.handle('ranked-games', (_e, puuid) => {
+  const a = state.accounts.find(x => x.puuid === puuid);
+  return (a && a.rankedGames) || [];
+});
+ipcMain.handle('tool', async (_e, what) => {
+  const RC = path.join(process.env.LOCALAPPDATA, 'Riot Games', 'Riot Client');
+  if (what === 'closeAll') return { ok: await riot.closeClients() };
+  if (what === 'restart') {
+    if (!(await riot.closeClients())) return { ok: false };
+    riot.launchLeague(); autoPlay();
+    return { ok: true };
+  }
+  if (what === 'clearCache') {
+    // only the Riot Client's web cache and logs – never its Data folder (that holds the sign-in)
+    if (!(await riot.closeClients())) return { ok: false };
+    for (const d of ['HttpCache', 'Logs']) { try { fs.rmSync(path.join(RC, d), { recursive: true, force: true }); } catch {} }
+    return { ok: true };
+  }
+  if (what === 'openLogs') { shell.openPath(path.join(RC, 'Logs')); return { ok: true }; }
+  if (what === 'openData') { shell.openPath(DATA); return { ok: true }; }
+  return { ok: false };
+});
+ipcMain.handle('open-multi', (_e, region, ids) => {
+  // op.gg multisearch for up to 5 Riot IDs (Clash opponents)
+  if (!Array.isArray(ids) || !ids.length) return;
+  const list = ids.slice(0, 5).map(x => String(x).replace(/[^\p{L}\p{N} #_.-]/gu, '')).join(',');
+  const reg = String(region || 'euw').toLowerCase().replace(/[^a-z]/g, '');
+  shell.openExternal('https://op.gg/lol/multisearch/' + reg + '?summoners=' + encodeURIComponent(list));
+});
+
 ipcMain.handle('refresh', async () => { lastRankSweep = 0; await tick(); push(); });
 let toTray = false;   // the window is closing because it was sent to the tray
 ipcMain.handle('win', (_e, what) => {
@@ -663,6 +708,8 @@ ipcMain.handle('set-setting', (_e, key, value) => {
     // only known on/off switches
     state.settings[key] = value && typeof value === 'object'
       ? Object.fromEntries(Object.entries(value).filter(([k, v]) => /^[a-zA-Z0-9]{1,20}$/.test(k) && typeof v === 'boolean')) : null;
+  } else if (key === 'champPool') {
+    state.settings.champPool = Array.isArray(value) ? value.map(Number).filter(n => n > 0 && n < 3000).slice(0, 40) : null;
   } else if (key === 'lang') {
     state.settings.lang = i18n.LANGS.some(([l]) => l === value) ? value : 'en';
   } else state.settings[key] = typeof DEFAULT_SETTINGS[key] === 'boolean' ? !!value : String(value);

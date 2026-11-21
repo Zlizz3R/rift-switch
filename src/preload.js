@@ -3,6 +3,12 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   getState: () => ipcRenderer.invoke('get-state'),
   getHistory: puuid => ipcRenderer.invoke('get-history', puuid),
+  live: () => ipcRenderer.invoke('live'),
+  champions: () => ipcRenderer.invoke('champions'),
+  matchup: (mine, enemy, lane) => ipcRenderer.invoke('matchup', mine, enemy, lane),
+  rankedGames: puuid => ipcRenderer.invoke('ranked-games', puuid),
+  tool: what => ipcRenderer.invoke('tool', what),
+  openMulti: (region, ids) => ipcRenderer.invoke('open-multi', region, ids),
   onState: fn => ipcRenderer.on('state', (_e, s) => fn(s)),
   switchTo: puuid => ipcRenderer.invoke('switch', puuid),
   addSaved: data => ipcRenderer.invoke('add-saved', data),

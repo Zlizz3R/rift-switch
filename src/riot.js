@@ -93,10 +93,30 @@ function pickQueue(stats, q, own) {
   return { tier: x.tier, division: x.division, lp: x.leaguePoints, wins: x.wins, losses: x.losses, wl };
 }
 
+// Riot's own decay info – only reported for the signed-in account
+function decayOf(stats) {
+  const w = stats && stats.queueMap && stats.queueMap.RANKED_SOLO_5x5 && stats.queueMap.RANKED_SOLO_5x5.warnings;
+  if (!w) return null;
+  const days = Number(w.daysUntilDecay);
+  return { show: !!w.displayDecayWarning, days: Number.isFinite(days) ? days : null, at: Date.now() };
+}
+
+// Ranked games (Solo/Duo 420, Flex 440) visible in the match history, with win/loss
+async function rankedGames(puuid) {
+  const mh = await lcu('/lol-match-history/v1/products/lol/' + encodeURIComponent(puuid) + '/matches?begIndex=0&endIndex=50', 6000);
+  const games = mh && mh.games && mh.games.games;
+  if (!Array.isArray(games)) return null;
+  return games.filter(g => g.queueId === 420 || g.queueId === 440).map(g => {
+    const p = g.participants && g.participants[0];
+    return { id: g.gameId, t: g.gameCreation, q: g.queueId === 420 ? 'solo' : 'flex', win: !!(p && p.stats && p.stats.win), champ: p && p.championId };
+  });
+}
+
 async function rankedFor(puuid, own = false) {
   const s = await lcu('/lol-ranked/v1/ranked-stats/' + encodeURIComponent(puuid));
   if (!s) return null;
   return {
+    ...(own ? { decay: decayOf(s) } : {}),
     solo: pickQueue(s, 'RANKED_SOLO_5x5', own), flex: pickQueue(s, 'RANKED_FLEX_SR', own),
     r5: pickQueue(s, 'RANKED_PREMADE_5x5', own),          // "Ranked 5s" (ranked 5v5)
     classic: pickQueue(s, 'JADE_RANKED_SOLO_5x5', own),   // "Classic 5v5"
@@ -345,6 +365,7 @@ function autofill(username, password) {
 }
 
 module.exports = {
+  lcu, rankedGames,
   currentAccount, rankedFor, summonerByPuuid, gameflowPhase, lookupRiotId,
   lastPlayed, profileData, acceptReadyCheck, rankedEligibility,
   captureSession, restoreSession, clearSession, sessionPersisted, closeClients, launchLeague, lockfile,
