@@ -17,7 +17,7 @@ let shownSaveError = null;
 // ---------- language ----------
 const lang = () => (S.settings && S.settings.lang) || 'en';
 const t = (key, vars) => I18N.t(lang(), key, vars);
-const locale = () => (lang() === 'de' ? 'de-DE' : 'en-GB');
+const locale = () => I18N.LOCALES[lang()] || 'en-GB';
 const tierName = tier => t('tier.' + tier);
 let appliedLang = null;
 // fills every data-i18n / data-i18n-title / data-i18n-ph element of the static page
@@ -29,7 +29,7 @@ function applyStaticTexts() {
   document.querySelectorAll('[data-i18n]').forEach(el => (el.textContent = t(el.dataset.i18n)));
   document.querySelectorAll('[data-i18n-title]').forEach(el => (el.title = t(el.dataset.i18nTitle)));
   document.querySelectorAll('[data-i18n-ph]').forEach(el => (el.placeholder = t(el.dataset.i18nPh)));
-  document.querySelectorAll('#langSeg [data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === appliedLang));
+  $('langSelect').value = appliedLang;
 }
 
 // ---------- what a tile shows (Customise tiles) ----------
@@ -499,11 +499,13 @@ function openSettings(open) {
   if (open) openDrawer(false);
 }
 document.querySelectorAll('[data-setting]').forEach(cb => cb.onchange = () => api.setSetting(cb.dataset.setting, cb.checked));
-document.querySelectorAll('#langSeg [data-lang]').forEach(b => b.onclick = () => {
-  S.settings = { ...S.settings, lang: b.dataset.lang };
+$('langSelect').innerHTML = I18N.LANGS.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
+$('langSelect').onchange = () => {
+  const l = $('langSelect').value;
+  S.settings = { ...S.settings, lang: l };
   render();
-  api.setSetting('lang', b.dataset.lang);
-});
+  api.setSetting('lang', l);
+};
 
 function render() {
   applyStaticTexts();

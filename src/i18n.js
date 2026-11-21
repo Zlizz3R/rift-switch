@@ -257,14 +257,24 @@
     'tray.accept': 'Queue automatisch annehmen', 'tray.open': '{app} öffnen', 'tray.quit': 'Beenden', 'tray.accepted': 'Match angenommen',
   };
 
+  // further languages: one file each in src/lang/ (missing keys fall back to English)
+  const LANGS = [['en', 'English'], ['de', 'Deutsch'], ['zh', '中文'], ['hi', 'हिन्दी'], ['es', 'Español'],
+    ['fr', 'Français'], ['ar', 'العربية'], ['bn', 'বাংলা'], ['pt', 'Português'], ['ru', 'Русский'], ['ur', 'اردو']];
+  const LOCALES = { en: 'en-GB', de: 'de-DE', zh: 'zh-CN', hi: 'hi-IN', es: 'es-ES', fr: 'fr-FR', ar: 'ar-EG',
+    bn: 'bn-BD', pt: 'pt-BR', ru: 'ru-RU', ur: 'ur-PK' };
   const STRINGS = { en, de };
+  for (const [code] of LANGS) {
+    if (STRINGS[code]) continue;
+    if (typeof module !== 'undefined' && module.exports) { try { STRINGS[code] = require('./lang/' + code + '.js'); } catch {} }
+    else if (typeof window !== 'undefined' && window.RS_LANG && window.RS_LANG[code]) STRINGS[code] = window.RS_LANG[code];
+  }
   function t(lang, key, vars) {
     let s = (STRINGS[lang] && STRINGS[lang][key]) ?? en[key] ?? key;
     // {app}: the app's name in that language (Rift Switch / Kluft Wechsler)
     if (s.includes('{app}')) s = s.split('{app}').join(((STRINGS[lang] || en)['app.name']) || en['app.name']);
     return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)) : s;
   }
-  const api = { t, STRINGS, LANGS: [['en', 'English'], ['de', 'Deutsch']] };
+  const api = { t, STRINGS, LANGS, LOCALES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.I18N = api;
 })();
