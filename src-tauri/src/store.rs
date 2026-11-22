@@ -74,6 +74,13 @@ pub fn normalize(raw: Value) -> State {
             .collect()
     };
     let mut accounts = objs(o.remove("accounts"));
+    // an id becomes a file name (sessions/<id>.bin): nothing that could leave that folder
+    // (the file functions in main.rs only take real ids anyway)
+    accounts.retain(|a| {
+        a.get("puuid").and_then(Value::as_str).is_some_and(|id| {
+            !id.is_empty() && id.len() <= 80 && !id.contains("..") && !id.contains(['/', '\\', ':'])
+        })
+    });
     for a in &mut accounts {
         for k in ["gameName", "tagLine"] {
             if let Some(Value::String(s)) = a.get(k) {
@@ -380,7 +387,7 @@ mod tests {
                 ["sort"],
             "name"
         );
-        assert_eq!(normalize(json!({ "accounts": [{ "gameName": "\u{2066}A\u{2069}", "tagLine": "\u{2066}187\u{2069}" }] })).accounts[0]["tagLine"], "187");
+        assert_eq!(normalize(json!({ "accounts": [{ "puuid": "a", "gameName": "\u{2066}A\u{2069}", "tagLine": "\u{2066}187\u{2069}" }] })).accounts[0]["tagLine"], "187");
 
         let dir = std::env::temp_dir().join(format!("rs-store-test-{}", std::process::id()));
         let file = dir.join("accounts.json");
@@ -460,5 +467,13 @@ mod tests {
             .accounts
             .iter()
             .any(|a| a["puuid"] == format!("new-{P1}") && a["placeholder"] == true));
+    }
+    #[test]
+    fn ids_that_could_leave_the_folder_are_dropped() {
+        let s = normalize(json!({ "accounts": [
+            { "puuid": "../../evil" }, { "puuid": "C:\\x" }, { "puuid": "a/b" }, { "puuid": "" },
+            { "puuid": "00000001-1111-1111-1111-111111111111" }
+        ] }));
+        assert_eq!(s.accounts.len(), 1);
     }
 }

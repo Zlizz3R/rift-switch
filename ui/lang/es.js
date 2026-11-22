@@ -98,6 +98,7 @@
     'nav.live': "En vivo",
     'nav.tools': "Herramientas",
     'set.theme': "Apariencia",
+    'm.credSaveFailed': "No se pudieron guardar los datos de acceso (cifrado o disco). No se cambió nada.",
     'set.overlay': "Ventaja de oro en partida", 'set.overlayT': "Una barra pequeña arriba en la partida: tu equipo contra el rival según el valor de los objetos comprados, y línea contra línea en la Grieta. También en ARAM y otros modos. Requiere modo sin bordes o ventana.",
     'sw.title': "Iniciando sesión", 'sw.close': "Guardando la sesión, cerrando League", 'sw.client': "Iniciando el cliente de Riot", 'sw.signin': "Iniciando sesión", 'sw.signin_typing': "Escribiendo los datos", 'sw.signin_verify': "Confirmando el inicio de sesión", 'sw.play': "Pulsando Jugar", 'sw.launch': "League se está iniciando",
     'live.likelyLaner': "probablemente en tu línea ({n} % de sus partidas) – Riot oculta las posiciones rivales",

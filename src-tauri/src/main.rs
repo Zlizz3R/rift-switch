@@ -364,11 +364,38 @@ fn save() {
 
 // ---------- encrypted files ----------
 
+/// sessions/<id>.bin – an id that isn't one can't point anywhere else (no "..", no folders)
+/// autofill.ps1 saves a picture of the Riot Client window when it can't find the login form
+/// (for an issue report). They may show a Riot ID: gone after 3 days.
+fn clean_debug_pictures() {
+    let dir = std::env::temp_dir().join("rift-switch-debug");
+    let Ok(list) = std::fs::read_dir(&dir) else {
+        return;
+    };
+    for e in list.flatten() {
+        let old = e
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.elapsed().ok())
+            .is_some_and(|age| age.as_secs() > 3 * 86_400);
+        if old {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
+}
 fn session_file(id: &str) -> PathBuf {
-    data().join("sessions").join(format!("{id}.bin"))
+    data().join("sessions").join(format!("{}.bin", safe_id(id)))
 }
 fn cred_file(id: &str) -> PathBuf {
-    data().join("creds").join(format!("{id}.bin"))
+    data().join("creds").join(format!("{}.bin", safe_id(id)))
+}
+fn safe_id(id: &str) -> &str {
+    if is_id(id) {
+        id
+    } else {
+        "invalid"
+    }
 }
 fn write_secret(file: &Path, text: &str) -> bool {
     let Some(b) = secrets::encrypt_local(text.as_bytes()) else {
@@ -511,14 +538,20 @@ fn all_creds() -> Vec<(String, String, String)> {
         .collect()
 }
 
-fn store_cred(id: &str, u: &str, p: &str) {
-    write_cred_file(id, &json!({ "u": u, "p": p }).to_string());
+/// false: the file couldn't be written (encryption or disk) – the account keeps its old state
+#[must_use]
+fn store_cred(id: &str, u: &str, p: &str) -> bool {
+    if !is_id(id) || !write_cred_file(id, &json!({ "u": u, "p": p }).to_string()) {
+        log_error("cred", "a login could not be saved");
+        return false;
+    }
     with(|c| {
         if let Some(a) = c.st.account_mut(id) {
             a.insert("hasCred".into(), json!(true));
             a.insert("credBroken".into(), json!(false));
         }
     });
+    true
 }
 fn load_cred(id: &str) -> Option<(String, String)> {
     match cred_state(id) {
@@ -783,7 +816,9 @@ async fn tick_inner(my_gen: u64) {
                 None
             }
         }) {
-            store_cred(&id, &u, &p);
+            if !store_cred(&id, &u, &p) {
+                emit("toast", json!("m.credSaveFailed"));
+            }
         }
         // profile details of the signed-in account, every 5 minutes
         if new_puuid || with(|c| now - c.last_profile_at > 300_000) {
@@ -1508,10 +1543,11 @@ async fn do_add_saved(c_in: Value) -> Value {
             id
         }
     };
-    if let Some((u, p)) = &cred {
-        store_cred(&id, u, p);
-    }
+    let saved = cred.as_ref().is_none_or(|(u, p)| store_cred(&id, u, p));
     save();
+    if !saved {
+        return err_key("m.credSaveFailed");
+    }
     json!({ "ok": true, "found": hit.is_some(), "riotId": !gn.is_empty(), "noLogin": cred.is_none(), "puuid": id })
 }
 
@@ -1563,7 +1599,9 @@ async fn do_set_cred(id: String, c_in: Value) -> Value {
     if !rid.is_empty() && m.is_none() {
         return err_key("m.riotIdFormat");
     }
-    store_cred(&id, &u, &p);
+    if !store_cred(&id, &u, &p) {
+        return err_key("m.credSaveFailed");
+    }
     let mut found = false;
     if let Some((gn, tl)) = m {
         with(|c| c.gen += 1);
@@ -1758,11 +1796,12 @@ async fn do_import(pass: Value) -> Value {
         (a, u, r)
     });
     apply_scale();
-    for (id, u, p) in &restore {
-        store_cred(id, u, p);
-    }
+    let stored = restore
+        .iter()
+        .filter(|(id, u, p)| store_cred(id, u, p))
+        .count();
     save();
-    json!({ "ok": true, "added": added, "updated": updated, "logins": restore.len() })
+    json!({ "ok": true, "added": added, "updated": updated, "logins": stored })
 }
 
 // ---------- the one command the window calls ----------
@@ -2881,6 +2920,7 @@ fn main() {
             }
             apply_autostart();
             migrate_secrets();
+            clean_debug_pictures();
             check_crypto();
             recover_orphans();
             check_creds();
@@ -2952,7 +2992,7 @@ mod tests {
         )));
 
         // a login file: plain DPAPI, then readable
-        store_cred(P1, "user", "Müller€");
+        assert!(store_cred(P1, "user", "Müller€"));
         assert!(matches!(cred_state(P1), Cred::Ok(ref u, ref p) if u == "user" && p == "Müller€"));
         assert!(matches!(cred_state(P2), Cred::Missing));
         std::fs::write(cred_file(P2), b"garbage").unwrap();
@@ -3003,7 +3043,7 @@ mod tests {
 
         // a saved login turns out to be an account: tile, login and note move over
         let old = format!("new-{P2}");
-        store_cred(&old, "u2", "p2");
+        assert!(store_cred(&old, "u2", "p2"));
         with(|c| {
             c.st.active = Some(old.clone());
             resolve_placeholder(c, &old, P2);
@@ -3037,7 +3077,7 @@ mod tests {
                 .insert("hasCred".into(), json!(false))
         });
         let _ = std::fs::remove_file(cred_file(P1));
-        store_cred(&old2, "u3", "p3");
+        assert!(store_cred(&old2, "u3", "p3"));
         with(|c| {
             c.st.account_mut(P1)
                 .unwrap()
@@ -3058,5 +3098,12 @@ mod tests {
             "a key this start can't read is reported"
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+    #[test]
+    fn file_names_only_from_real_ids() {
+        for bad in ["../../evil", "a\\b", "C:\\x", "", "new-..\\..\\x"] {
+            assert_eq!(safe_id(bad), "invalid", "{bad}");
+        }
+        assert_eq!(safe_id(P1), P1);
     }
 }
