@@ -30,7 +30,14 @@ pub struct Entry {
     q: i64,
     off: u64,
     len: u32,
+    /// format of the stored game (2 = with positions)
+    v: u8,
 }
+
+/// Format of games stored now: 2 = players carry their position ("pos").
+pub const GAME_VERSION: u8 = 2;
+/// Summoner's Rift queues (only there positions mean something)
+const SR_QUEUES: [i64; 7] = [400, 420, 430, 440, 480, 490, 700];
 
 pub struct Matches {
     dir: PathBuf,
@@ -135,6 +142,8 @@ impl Matches {
             t: f64,
             #[serde(default)]
             q: f64,
+            #[serde(default)]
+            v: u8,
         }
         loop {
             line.clear();
@@ -150,6 +159,7 @@ impl Matches {
                         q: h.q as i64,
                         off,
                         len: line.trim_end().len() as u32,
+                        v: h.v,
                     },
                 );
             }
@@ -217,9 +227,11 @@ impl Matches {
     }
 
     /// Stores one compacted game (appended to games.jsonl).
+    /// A newer format of a game already stored replaces it (the old line stays unused in the file).
     pub fn insert(&mut self, g: &Value) -> bool {
         let id = id_str(&g["id"]);
-        if id.is_empty() || self.index.contains_key(&id) {
+        let v = g["v"].as_u64().unwrap_or(0) as u8;
+        if id.is_empty() || self.index.get(&id).is_some_and(|e| e.v >= v) {
             return false;
         }
         let _ = fs::create_dir_all(&self.dir);
@@ -242,6 +254,7 @@ impl Matches {
                 q: num_of(g.get("q")) as i64,
                 off,
                 len: line.len() as u32,
+                v,
             },
         );
         true
@@ -376,6 +389,20 @@ impl Matches {
             .collect()
     }
 
+    /// Summoner's Rift games stored before positions were kept, newest first.
+    pub fn outdated(&self, max: usize) -> Vec<String> {
+        let mut out: Vec<(&String, &Entry)> = self
+            .index
+            .iter()
+            .filter(|(_, e)| e.v < GAME_VERSION && SR_QUEUES.contains(&e.q))
+            .collect();
+        out.sort_by_key(|(_, e)| std::cmp::Reverse(e.t));
+        out.into_iter()
+            .take(max)
+            .map(|(id, _)| id.clone())
+            .collect()
+    }
+
     pub fn known(&self, puuid: &str) -> usize {
         self.by
             .iter()
@@ -487,6 +514,22 @@ pub fn read_entries(file: &Path, entries: &[Entry]) -> Vec<Value> {
     out
 }
 
+/// The client's lane + role of a player -> top | jungle | mid | bot | support | "" (unknown).
+/// Riot guesses these from the game; the page only uses them when each team has all five.
+pub fn position(tl: &Value) -> &'static str {
+    match (
+        tl["lane"].as_str().unwrap_or(""),
+        tl["role"].as_str().unwrap_or(""),
+    ) {
+        ("TOP", _) => "top",
+        ("JUNGLE", _) => "jungle",
+        ("MIDDLE" | "MID", _) => "mid",
+        ("BOTTOM" | "BOT", "DUO_SUPPORT" | "SUPPORT") => "support",
+        ("BOTTOM" | "BOT", _) => "bot",
+        _ => "",
+    }
+}
+
 fn num(v: &Value) -> Value {
     json!(v.as_f64().map_or(0, |f| f as i64))
 }
@@ -513,7 +556,7 @@ pub fn compact(g: &Value) -> Option<Value> {
                 "gold": num(&s["goldEarned"]), "dmg": num(&s["totalDamageDealtToChampions"]), "vis": num(&s["visionScore"]),
                 "items": (0..7).map(|i| num(&s[format!("item{i}").as_str()])).collect::<Vec<_>>(),
                 "spells": [num(&p["spell1Id"]), num(&p["spell2Id"])], "keystone": num(&s["perk0"]), "sub": num(&s["perkSubStyle"]),
-                "win": s["win"] == true, "multi": num(&s["largestMultiKill"]),
+                "win": s["win"] == true, "multi": num(&s["largestMultiKill"]), "pos": position(&p["timeline"]),
             })
         })
         .collect();
@@ -523,7 +566,7 @@ pub fn compact(g: &Value) -> Option<Value> {
     let dur = num_of(g.get("gameDuration")) as i64;
     Some(
         json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
-        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players }),
+        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": GAME_VERSION }),
     )
 }
 
@@ -548,6 +591,25 @@ mod tests {
         assert_eq!(g["players"][3]["cs"], 105);
         assert_eq!(g["players"][3]["name"], "N3");
         assert!(compact(&json!({})).is_none());
+        assert_eq!(g["v"], GAME_VERSION);
+        assert_eq!(
+            position(&json!({ "lane": "BOTTOM", "role": "DUO_SUPPORT" })),
+            "support"
+        );
+        assert_eq!(
+            position(&json!({ "lane": "BOTTOM", "role": "DUO_CARRY" })),
+            "bot"
+        );
+        assert_eq!(position(&json!({ "lane": "NONE" })), "");
+        // an old game (no positions) is replaced by its newer format once, not twice
+        let mut old = g.clone();
+        old["v"] = json!(0);
+        let mut m0 = Matches::load(&dir.join("v"));
+        assert!(m0.insert(&old));
+        assert_eq!(m0.outdated(5), vec!["5"]);
+        assert!(m0.insert(&g));
+        assert!(!m0.insert(&g));
+        assert!(m0.outdated(5).is_empty());
 
         m.note("p0", &[json!({ "id": 5 }), json!({ "id": 4 })]);
         m.note("p1", &[json!({ "id": 5 })]);

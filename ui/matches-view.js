@@ -14,12 +14,58 @@ function rankChip(r, kind) {
   const short = TIER_SHORT[tier] ? TIER_SHORT[tier] + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ROMAN[div] || '') : '?';
   return `<i class="rk-c ${kind} t-${String(tier).toLowerCase()}">${short}</i>`;
 }
-// wide windows: "[crest] Emerald I  33 LP" per queue, labelled
-function rankCell(r, label) {
-  if (!r) return `<i class="rk-cell none"><em>${label}</em>–</i>`;
+// wide windows: "[crest] Emerald I  33 LP" (the column header says Solo/Duo or Flex)
+function rankCell(r) {
+  if (!r) return '<i class="rk-cell none">–</i>';
   const [tier, div, lp] = r;
   const apex = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier);
-  return `<i class="rk-cell t-${String(tier).toLowerCase()}"><em>${label}</em><img src="${crestUrl(tier)}" alt=""><b>${esc(tierName(tier) + (apex ? '' : ' ' + div))}</b><small>${lp} LP</small></i>`;
+  return `<i class="rk-cell t-${String(tier).toLowerCase()}"><img src="${crestUrl(tier)}" alt=""><b>${esc(tierName(tier) + (apex ? '' : ' ' + div))}</b><small>${lp} LP</small></i>`;
+}
+
+// ---------- the ten players ----------
+const POSITIONS = ['top', 'jungle', 'mid', 'bot', 'support'];
+const POS_FILE = { top: 'top', jungle: 'jungle', mid: 'middle', bot: 'bottom', support: 'utility' };
+const posIcon = p => 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-' + POS_FILE[p] + '.png';
+// own team on the left. Positions (and the icons in the middle) only when both teams have all five –
+// they are Riot's guess from the game, so anything less is shown in the client's order.
+function lineUp(g, mine) {
+  const ids = [...new Set(g.players.map(p => p.team))];
+  let a, b;
+  if (ids.length === 2) {
+    const own = g.players.find(p => mine.has(p.puuid));
+    const left = own ? own.team : ids[0];
+    a = g.players.filter(p => p.team === left); b = g.players.filter(p => p.team !== left);
+  } else { const h = Math.ceil(g.players.length / 2); a = g.players.slice(0, h); b = g.players.slice(h); }
+  const full = t => t.length === 5 && POSITIONS.every(p => t.some(x => x.pos === p));
+  if (full(a) && full(b)) return { a: POSITIONS.map(p => a.find(x => x.pos === p)), b: POSITIONS.map(p => b.find(x => x.pos === p)), roles: POSITIONS };
+  return { a, b, roles: null };
+}
+function teamsTable(g, mine) {
+  const { a, b, roles } = lineUp(g, mine);
+  const shownName = p => (hides('name') && mine.has(p.puuid) ? dispName(S.accounts.find(x => x.puuid === p.puuid) || {}) : p.name || '?');
+  // one player = 5 cells: Solo, Flex (wide), chips (narrow), name, champion – mirrored on the right
+  const player = (p, side) => {
+    const r = side === 'r';
+    if (!p) return ['w', 'w', 'n', 'nm', 'im'].map(c => `<span class="mh-c ${c} ${side}"></span>`)[r ? 'reverse' : 'slice']().join('');
+    const rk = mh.ranks[p.puuid];
+    const tip = p.name + (p.tag ? '#' + p.tag : '') + (rk ? `\nSolo/Duo: ${rankTip(rk.s)}\nFlex: ${rankTip(rk.f)}\n(${t('mh.rankNow')})` : '');
+    const at = `data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(tip)}"`;
+    const cells = [
+      `<span class="mh-c w rk ${side}" ${at}>${rankCell(rk && rk.s)}</span>`,
+      `<span class="mh-c w rk ${side}" ${at}>${rankCell(rk && rk.f)}</span>`,
+      `<span class="mh-c n ${side}" ${at}>${rk ? (r ? rankChip(rk.f, 'flex') + rankChip(rk.s, 'solo') : rankChip(rk.s, 'solo') + rankChip(rk.f, 'flex')) : ''}</span>`,
+      `<span class="mh-c nm ${side}${mine.has(p.puuid) ? ' me' : ''}" ${at}>${esc(shownName(p))}</span>`,
+      `<span class="mh-c im ${side}" ${at}><img src="${CHAMP_ICON(p.champ)}" alt=""></span>`,
+    ];
+    return (r ? cells.reverse() : cells).join('');
+  };
+  const head = ['Solo/Duo', 'Flex', '', '', '', '', '', 'Flex', 'Solo/Duo'].map((x, i) => `<span class="mh-h w${i > 4 ? ' r' : ''}">${x}</span>`).join('');
+  let html = head;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const role = roles ? `<img src="${posIcon(roles[i])}" alt="" title="${esc(t('pos.' + roles[i]))}">` : '';
+    html += player(a[i], 'l') + `<span class="mh-c role">${role}</span>` + player(b[i], 'r');
+  }
+  return html;
 }
 function rankTip(r) {
   if (!r) return t('tile.unranked');
@@ -236,17 +282,6 @@ function gameRow(g, as) {
   const owner = S.accounts.find(a => a.puuid === ownerId);
   const others = g.owners.slice(1).map(id => S.accounts.find(a => a.puuid === id)).filter(Boolean);
   const mine = new Set(g.owners);
-  const side = teamId => g.players.filter(p => p.team === teamId).map(p => {
-    const rk = mh.ranks[p.puuid];
-    const tip = p.name + (p.tag ? '#' + p.tag : '') + (rk ? `\nSolo/Duo: ${rankTip(rk.s)}\nFlex: ${rankTip(rk.f)}\n(${t('mh.rankNow')})` : '');
-    return `
-      <button class="mh-p${mine.has(p.puuid) ? ' me' : ''}" data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(tip)}">
-        ${rk ? `<span class="rk-cs">${rankChip(rk.s, 'solo')}${rankChip(rk.f, 'flex')}</span>` : '<span class="rk-cs"></span>'}
-        <img src="${CHAMP_ICON(p.champ)}" alt=""><span>${esc(hides('name') && mine.has(p.puuid) ? dispName(S.accounts.find(a => a.puuid === p.puuid) || {}) : p.name || '?')}</span>
-        <span class="rk-wide">${rankCell(rk && rk.s, 'Solo')}${rankCell(rk && rk.f, 'Flex')}</span>
-      </button>`;
-  }).join('');
-  const teams = [...new Set(g.players.map(p => p.team))];
   return `<div class="mh-row ${res}" data-owner="${esc(ownerId)}" data-gid="${esc(g.id)}">
     <div class="mh-meta">
       <b class="mh-q">${esc(queueLabel(g))}</b>
@@ -278,7 +313,7 @@ function gameRow(g, as) {
       <div class="mh-items">${me.items.map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}
         ${MULTI[me.multi] ? `<span class="mh-badge">${t(MULTI[me.multi])}</span>` : ''}</div>
     </div>
-    <div class="mh-teams">${teams.map(tid => `<div class="mh-team">${side(tid)}</div>`).join('')}</div>
+    <div class="mh-teams">${teamsTable(g, mine)}</div>
   </div>`;
 }
 

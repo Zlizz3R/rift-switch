@@ -738,6 +738,20 @@ async fn tick_inner(my_gen: u64) {
             emit("matches-changed", Value::Null);
         }
     }
+    // older Summoner's Rift games get their positions – only while the window is open
+    if !stale() && win_shown() {
+        let ids: Vec<String> = with(|c| {
+            let failed = &c.failed_games;
+            c.mh.outdated(64)
+                .into_iter()
+                .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
+                .take(4)
+                .collect()
+        });
+        if !ids.is_empty() && fetch_games(ids).await > 0 {
+            emit("matches-changed", Value::Null);
+        }
+    }
 }
 
 /// Fetches up to `max` missing game details from the client. Games the client can't give
@@ -751,6 +765,9 @@ async fn fill_games(max: usize) -> usize {
             .take(max)
             .collect()
     });
+    fetch_games(ids).await
+}
+async fn fetch_games(ids: Vec<String>) -> usize {
     let mut got = 0;
     for id in ids {
         let g = riot::lcu(&format!("/lol-match-history/v1/games/{id}"), 6000, "GET").await;

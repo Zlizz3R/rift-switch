@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'pos.top': "Haut", 'pos.jungle': "Jungle", 'pos.mid': "Milieu", 'pos.bot': "Bas", 'pos.support': "Support",
     'pen.title': "Sanctions et attentes", 'pen.left': "encore {t}", 'pen.until': "jusqu'au {date}", 'pen.noEnd': "aucune fin indiquée", 'pen.asOf': "au {date}", 'pen.wait': "Attente {t}", 'pen.note': "Depuis la dernière connexion de chaque compte – les autres sont vérifiés quand tu te connectes dessus.", 'restrict.LowPriorityQueue': "File basse priorité (attente avant la file)", 'restrict.QUEUE_DODGER': "Pénalité de dodge", 'restrict.LEAVER_BUSTED': "Blocage LeaverBuster",
     'mh.storeTitle': "Espace utilisé par l'historique enregistré", 'mh.storeGames': "{n} parties", 'mh.clear': "Supprimer l'historique enregistré", 'mh.clearTitle': "Supprimer tout l'historique ?", 'mh.clearText': "Les {n} parties enregistrées ({size}) de tous tes comptes sont supprimées de ce PC. Celles encore dans le client League reviennent au prochain lancement ; les plus anciennes sont perdues pour toujours.", 'mh.clearYes': "Tout supprimer", 'mh.clearWarn': "Impossible à annuler !", 'mh.cleared': "Historique supprimé.",
     'mh.otherGames': "Autres parties", 'mh.unpin': "Affichage normal",

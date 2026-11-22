@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'pos.top': "টপ", 'pos.jungle': "জাঙ্গল", 'pos.mid': "মিড", 'pos.bot': "বট", 'pos.support': "সাপোর্ট",
     'pen.title': "শাস্তি ও অপেক্ষার সময়", 'pen.left': "আর {t}", 'pen.until': "{date} পর্যন্ত", 'pen.noEnd': "শেষ সময় দেওয়া নেই", 'pen.asOf': "{date} অনুযায়ী", 'pen.wait': "অপেক্ষা {t}", 'pen.note': "প্রতিটি অ্যাকাউন্টের নিজের শেষ লগইন থেকে – অন্যগুলো লগইন করলে যাচাই হয়।", 'restrict.LowPriorityQueue': "লো প্রায়োরিটি কিউ (কিউর আগে অপেক্ষা)", 'restrict.QUEUE_DODGER': "ডজ টাইমার", 'restrict.LEAVER_BUSTED': "LeaverBuster লক",
     'mh.storeTitle': "সংরক্ষিত ম্যাচ ইতিহাসের জায়গা", 'mh.storeGames': "{n}টি ম্যাচ", 'mh.clear': "সংরক্ষিত ম্যাচ ইতিহাস মুছুন", 'mh.clearTitle': "পুরো ম্যাচ ইতিহাস মুছবেন?", 'mh.clearText': "আপনার সব অ্যাকাউন্টের {n}টি সংরক্ষিত ম্যাচ ({size}) এই পিসি থেকে মুছে যাবে। যেগুলো এখনও League ক্লায়েন্টে আছে সেগুলো পরের বার ফিরে আসবে; পুরোনোগুলো চিরতরে হারিয়ে যাবে।", 'mh.clearYes': "সব মুছুন", 'mh.clearWarn': "এটি ফেরানো যাবে না!", 'mh.cleared': "ম্যাচ ইতিহাস মুছে ফেলা হয়েছে।",
     'mh.otherGames': "অন্যান্য ম্যাচ", 'mh.unpin': "আবার স্বাভাবিকভাবে দেখাও",

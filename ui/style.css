@@ -614,7 +614,7 @@ body.locked #passBox { background: var(--bg); }
 .seg button.on { background: var(--panel2); color: var(--gold2); }
 #mhList { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
 .mh-empty { color: var(--muted); padding: 30px 0; text-align: center; }
-.mh-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 300px); gap: 14px; align-items: center;
+.mh-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 380px); gap: 14px; align-items: center;
   padding: 10px 12px 10px 14px; border-radius: 10px; border-left: 4px solid #5383e8; background: rgba(83,131,232,.10); }
 .mh-row.loss { border-left-color: #e84057; background: rgba(232,64,87,.10); }
 .mh-row.remake { border-left-color: #6b7489; background: rgba(107,116,137,.10); }
@@ -641,13 +641,6 @@ body.locked #passBox { background: var(--bg); }
 .mh-it { width: 22px; height: 22px; border-radius: 5px; background: rgba(0,0,0,.35); }
 .mh-it.trinket { border-radius: 50%; margin-left: 4px; }
 .mh-badge { margin-left: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #e84057; color: #fff; }
-.mh-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; min-width: 0; }
-.mh-team { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.mh-p { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); text-align: left; min-width: 0; padding: 0; }
-.mh-p img { width: 16px; height: 16px; border-radius: 3px; flex: none; }
-.mh-p span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mh-p:hover span { color: var(--text); text-decoration: underline; }
-.mh-p.me span { color: var(--text); font-weight: 600; }
 @media (max-width: 900px) { .mh-row { grid-template-columns: 86px minmax(0, 1fr); } .mh-teams { grid-column: 1 / -1; } }
 
 /* server of the account, small in the top left corner */
@@ -726,7 +719,6 @@ body.locked #passBox { background: var(--bg); }
 .rk-c.t-grandmaster { --c: #e65c62; } .rk-c.t-challenger { --c: #f4c874; }
 .rk-c.solo[class*="t-"] { background: var(--c); }
 .rk-c.flex[class*="t-"] { color: var(--c); }
-.mh-teams { grid-template-columns: 1fr 1fr; }
 
 /* match history: multikill chips (click = those games on top) */
 .mh-multis { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -766,32 +758,41 @@ body.locked #passBox { background: var(--bg); }
 .pen-left.none { color: var(--muted); font-weight: 500; }
 .live .wait { color: #ff8a8e; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-/* match history, wide window: the teams get more room and every player shows Solo/Duo and Flex
-   written out next to the name (narrow windows keep the two small chips) */
+
+/* match history: the ten players as one table – ranks outside, | name, champion, the position in
+   the middle, champion, name |, ranks outside. Fixed columns: everything lines up in every game. */
 #mhList { container-type: inline-size; }
-.rk-wide { display: none; }
-@container (min-width: 1250px) {
-  .mh-row { grid-template-columns: 96px minmax(0, 1fr) minmax(0, 860px); }
-  .mh-teams { gap: 0 18px; }
-  .mh-team { gap: 2px; }
-  .mh-p { display: grid; grid-template-columns: 16px minmax(0, 1fr) 150px 150px; gap: 6px; font-size: 12px; }
-  .mh-p > .rk-cs { display: none; }
-  .mh-p .rk-wide { display: contents; }
-}
+.mh-teams { display: grid; align-items: center; column-gap: 6px; row-gap: 2px; min-width: 0; font-size: 11px;
+  grid-template-columns: 38px minmax(0, 1fr) 18px 18px 18px minmax(0, 1fr) 38px; }
+.mh-c { min-width: 0; display: flex; align-items: center; color: var(--muted); white-space: nowrap; height: 18px; }
+.mh-c.w, .mh-h { display: none; }
+.mh-c.nm { display: block; overflow: hidden; text-overflow: ellipsis; line-height: 18px; cursor: pointer; }
+.mh-c.nm.l { text-align: right; border-left: 1px solid var(--line); padding-left: 6px; }
+.mh-c.nm.r { border-right: 1px solid var(--line); padding-right: 6px; }
+.mh-c.nm:hover { color: var(--text); text-decoration: underline; }
+.mh-c.nm.me { color: var(--text); font-weight: 600; }
+.mh-c.im { cursor: pointer; }
+.mh-c.im img { width: 18px; height: 18px; border-radius: 3px; }
+.mh-c.n.r { justify-content: flex-end; }
+.mh-c.role { justify-content: center; }
+.mh-c.role img { width: 16px; height: 16px; opacity: .6; }
+.mh-c.rk { cursor: pointer; }
+.mh-c.rk.r { justify-content: flex-end; }
 .rk-cell { display: flex; align-items: center; gap: 4px; font-style: normal; min-width: 0; white-space: nowrap; }
-.rk-cell em { font-style: normal; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; color: #5d6780; width: 26px; flex: none; }
 .rk-cell img { width: 16px; height: 16px; flex: none; }
 .rk-cell b { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
 .rk-cell small { color: var(--muted); font-size: 10.5px; }
 .rk-cell.none { color: #4a5468; }
-.mh-p:hover .rk-cell b, .mh-p:hover .rk-cell small { text-decoration: none; }
-
-/* the second team mirrored: its players read from the right (ranks | name | champion) */
-.mh-team + .mh-team .mh-p { direction: rtl; }
-.mh-team + .mh-team .mh-p > * { direction: ltr; }
-.mh-team + .mh-team .mh-p > span:not(.rk-cs):not(.rk-wide) { text-align: right; }
-.mh-team + .mh-team .rk-cell { justify-content: flex-end; }
-/* names on the outside, ranks towards the middle (narrow windows: the two chips after the name) */
-.mh-p > .rk-cs { order: 3; margin-left: auto; padding-left: 4px; }
-.mh-team + .mh-team .mh-p > .rk-cs { margin-left: 0; padding-left: 0; margin-right: auto; padding-right: 4px; }
-.mh-p > span:not(.rk-cs):not(.rk-wide) { flex: 0 1 auto; min-width: 0; }
+.mh-h { font-size: 9px; letter-spacing: .05em; text-transform: uppercase; color: #5d6780; height: 14px; }
+.mh-h.r { text-align: right; }
+/* wide: both queues written out, and the table takes all the room the row has */
+@container (min-width: 1250px) {
+  /* the table keeps its natural width; the game itself (champion, KDA, stats, items) spreads over the rest */
+  .mh-row { grid-template-columns: 96px minmax(0, 1fr) auto; }
+  .mh-main { flex-direction: row; align-items: center; justify-content: space-evenly; gap: 18px; }
+  .mh-teams { font-size: 12px; column-gap: 8px;
+    grid-template-columns: 124px 124px minmax(0, 150px) 20px 22px 20px minmax(0, 150px) 124px 124px; }
+  .mh-c.w { display: flex; }
+  .mh-h.w { display: block; }
+  .mh-c.n { display: none; }
+}
