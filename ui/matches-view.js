@@ -14,6 +14,13 @@ function rankChip(r, kind) {
   const short = TIER_SHORT[tier] ? TIER_SHORT[tier] + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ROMAN[div] || '') : '?';
   return `<i class="rk-c ${kind} t-${String(tier).toLowerCase()}">${short}</i>`;
 }
+// wide windows: "[crest] Emerald I  33 LP" per queue, labelled
+function rankCell(r, label) {
+  if (!r) return `<i class="rk-cell none"><em>${label}</em>–</i>`;
+  const [tier, div, lp] = r;
+  const apex = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier);
+  return `<i class="rk-cell t-${String(tier).toLowerCase()}"><em>${label}</em><img src="${crestUrl(tier)}" alt=""><b>${esc(tierName(tier) + (apex ? '' : ' ' + div))}</b><small>${lp} LP</small></i>`;
+}
 function rankTip(r) {
   if (!r) return t('tile.unranked');
   const [tier, div, lp] = r;
@@ -113,13 +120,22 @@ function renderMatches() {
 // ---------- ranks of the players ----------
 let ranksBusy = false;
 async function loadRanks(games) {
-  const ids = [...new Set(games.flatMap(g => g.players.map(p => p.puuid)).filter(Boolean))];
+  // players grouped by the server of the game (= the server of the own account that played it)
+  const byReg = new Map();
+  for (const g of games) {
+    const owner = S.accounts.find(a => a.puuid === g.owners[0]);
+    const reg = (owner && owner.region) || '';
+    const set = byReg.get(reg) || new Set();
+    for (const p of g.players) if (p.puuid) set.add(p.puuid);
+    byReg.set(reg, set);
+  }
+  const ids = [...byReg.values()].flatMap(s => [...s]);
   if (ranksBusy || !ids.length) return;
   const missing = ids.filter(p => !mh.ranks[p]);
   if (!missing.length && mh.ranksChecked) return;
   ranksBusy = true;
   try {
-    const r = await api.playerRanks(ids);
+    const r = await api.playerRanks([...byReg].map(([region, set]) => ({ region, ids: [...set] })));
     mh.ranksChecked = true;
     const before = Object.keys(mh.ranks).length;
     Object.assign(mh.ranks, (r && r.ranks) || {});
@@ -225,8 +241,9 @@ function gameRow(g, as) {
     const tip = p.name + (p.tag ? '#' + p.tag : '') + (rk ? `\nSolo/Duo: ${rankTip(rk.s)}\nFlex: ${rankTip(rk.f)}\n(${t('mh.rankNow')})` : '');
     return `
       <button class="mh-p${mine.has(p.puuid) ? ' me' : ''}" data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(tip)}">
-        ${rk ? `<span class="rk-cs">${rankChip(rk.s, 'solo')}${rankChip(rk.f, 'flex')}</span>` : ''}
+        ${rk ? `<span class="rk-cs">${rankChip(rk.s, 'solo')}${rankChip(rk.f, 'flex')}</span>` : '<span class="rk-cs"></span>'}
         <img src="${CHAMP_ICON(p.champ)}" alt=""><span>${esc(hides('name') && mine.has(p.puuid) ? dispName(S.accounts.find(a => a.puuid === p.puuid) || {}) : p.name || '?')}</span>
+        <span class="rk-wide">${rankCell(rk && rk.s, 'Solo')}${rankCell(rk && rk.f, 'Flex')}</span>
       </button>`;
   }).join('');
   const teams = [...new Set(g.players.map(p => p.team))];

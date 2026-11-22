@@ -765,3 +765,23 @@ body.locked #passBox { background: var(--bg); }
 .pen-left { font-variant-numeric: tabular-nums; font-weight: 700; color: #ff8a8e; white-space: nowrap; }
 .pen-left.none { color: var(--muted); font-weight: 500; }
 .live .wait { color: #ff8a8e; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* match history, wide window: the teams get more room and every player shows Solo/Duo and Flex
+   written out next to the name (narrow windows keep the two small chips) */
+#mhList { container-type: inline-size; }
+.rk-wide { display: none; }
+@container (min-width: 1250px) {
+  .mh-row { grid-template-columns: 96px minmax(0, 1fr) minmax(0, 860px); }
+  .mh-teams { gap: 0 18px; }
+  .mh-team { gap: 2px; }
+  .mh-p { display: grid; grid-template-columns: 16px minmax(0, 1fr) 150px 150px; gap: 6px; font-size: 12px; }
+  .mh-p > .rk-cs { display: none; }
+  .mh-p .rk-wide { display: contents; }
+}
+.rk-cell { display: flex; align-items: center; gap: 4px; font-style: normal; min-width: 0; white-space: nowrap; }
+.rk-cell em { font-style: normal; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; color: #5d6780; width: 26px; flex: none; }
+.rk-cell img { width: 16px; height: 16px; flex: none; }
+.rk-cell b { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+.rk-cell small { color: var(--muted); font-size: 10.5px; }
+.rk-cell.none { color: #4a5468; }
+.mh-p:hover .rk-cell b, .mh-p:hover .rk-cell small { text-decoration: none; }

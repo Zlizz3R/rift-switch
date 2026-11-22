@@ -413,27 +413,35 @@ impl Matches {
 
     // ---------- ranks of the players ----------
 
+    /// Cached ranks; only ones that know their server (older entries could come from the wrong one).
     pub fn ranks_for(&self, puuids: &[String]) -> Obj {
         puuids
             .iter()
-            .filter_map(|p| self.ranks.get(p).map(|r| (p.clone(), r.clone())))
+            .filter_map(|p| {
+                self.ranks
+                    .get(p)
+                    .filter(|r| r.get("reg").is_some())
+                    .map(|r| (p.clone(), r.clone()))
+            })
             .collect()
     }
-    pub fn stale_ranks(&self, puuids: &[String], now: i64) -> Vec<String> {
+    /// Players whose rank is missing, too old or from another server than `reg`.
+    pub fn stale_ranks(&self, puuids: &[String], now: i64, reg: &str) -> Vec<String> {
         let mut seen = HashSet::new();
         puuids
             .iter()
             .filter(|p| !p.is_empty() && seen.insert(p.as_str()))
             .filter(|p| {
-                self.ranks
-                    .get(*p)
-                    .is_none_or(|r| now - num_of(r.get("at")) as i64 > RANK_TTL)
+                self.ranks.get(*p).is_none_or(|r| {
+                    now - num_of(r.get("at")) as i64 > RANK_TTL
+                        || r.get("reg").and_then(Value::as_str) != Some(reg)
+                })
             })
             .cloned()
             .collect()
     }
-    /// r = { solo, flex } of one player
-    pub fn set_rank(&mut self, puuid: &str, r: &Obj, now: i64) {
+    /// r = { solo, flex } of one player, as the client of server `reg` reported it
+    pub fn set_rank(&mut self, puuid: &str, r: &Obj, now: i64, reg: &str) {
         let pack = |q: Option<&Value>| match q {
             Some(q) if q.is_object() => json!([
                 q["tier"],
@@ -450,7 +458,7 @@ impl Matches {
         };
         self.ranks.insert(
             puuid.into(),
-            json!({ "s": pack(r.get("solo")), "f": pack(r.get("flex")), "at": now }),
+            json!({ "s": pack(r.get("solo")), "f": pack(r.get("flex")), "at": now, "reg": reg }),
         );
     }
     pub fn ranks_done(&mut self, now: i64) {
@@ -571,6 +579,27 @@ mod tests {
         assert_eq!(Matches::load(&dir).count(), 1);
         m3.clear();
         assert_eq!(Matches::load(&dir).count(), 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ranks_know_their_server() {
+        let dir = std::env::temp_dir().join(format!("rs-mh-ranks-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let mut m = Matches::load(&dir);
+        let ids = vec!["p1".to_string()];
+        let r = json!({ "solo": { "tier": "GOLD", "division": "II", "lp": 5 }, "flex": null })
+            .as_object()
+            .unwrap()
+            .clone();
+        m.set_rank("p1", &r, 1, "PBE"); // asked from the PBE client: worthless for EUW games
+        assert_eq!(m.stale_ranks(&ids, 2, "EUW"), ids);
+        m.set_rank("p1", &r, 2, "EUW");
+        assert!(m.stale_ranks(&ids, 3, "EUW").is_empty());
+        assert_eq!(m.ranks_for(&ids)["p1"]["s"], json!(["GOLD", "II", 5]));
+        m.ranks
+            .insert("p2".into(), json!({ "s": null, "f": null, "at": 3 })); // old entry without server
+        assert!(m.ranks_for(&["p2".to_string()]).is_empty());
         let _ = fs::remove_dir_all(&dir);
     }
 

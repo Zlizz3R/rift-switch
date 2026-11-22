@@ -1868,24 +1868,46 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         // ranks of the players in the shown games: cached ones right away, missing ones fetched
         "player-ranks" => {
-            let ids: Vec<String> = a(0)
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .filter(|p| p.len() == 36 && p.chars().all(|c| c.is_ascii_hexdigit() || c == '-'))
-                .take(500)
-                .map(String::from)
-                .collect();
-            let up = with(|c| c.live.client_up);
-            let mut pending = 0;
+            // [{ region, ids }]: the players of games on each server. The running client can only
+            // tell ranks of its own server – asking it about others gives empty answers.
+            let is_puuid =
+                |p: &&str| p.len() == 36 && p.chars().all(|c| c.is_ascii_hexdigit() || c == '-');
+            let (up, reg) = with(|c| {
+                let reg = c
+                    .live
+                    .puuid
+                    .as_deref()
+                    .and_then(|p| c.st.account(p))
+                    .map(|a| str_of(a, "region").to_uppercase())
+                    .unwrap_or_default();
+                (c.live.client_up, reg)
+            });
+            let mut all: Vec<String> = vec![];
+            let mut here: Vec<String> = vec![];
+            for g in a(0).as_array().into_iter().flatten() {
+                let greg = g["region"].as_str().unwrap_or("").to_uppercase();
+                let ids: Vec<String> = g["ids"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .filter(is_puuid)
+                    .take(500)
+                    .map(String::from)
+                    .collect();
+                if !reg.is_empty() && (greg.is_empty() || greg == reg) {
+                    here.extend(ids.iter().cloned());
+                }
+                all.extend(ids);
+            }
             let todo = with(|c| {
-                if up && !c.fetching_ranks {
-                    c.mh.stale_ranks(&ids, now_ms())
+                if up && !reg.is_empty() && !c.fetching_ranks {
+                    c.mh.stale_ranks(&here, now_ms(), &reg)
                 } else {
                     vec![]
                 }
             });
+            let mut pending = 0;
             if !todo.is_empty() {
                 with(|c| c.fetching_ranks = true);
                 for part in todo.chunks(4).take(8) {
@@ -1896,7 +1918,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     with(|c| {
                         for (p, r) in part.iter().zip(res) {
                             if let Some(r) = r {
-                                c.mh.set_rank(p, &r, now_ms());
+                                c.mh.set_rank(p, &r, now_ms(), &reg);
                             }
                         }
                     });
@@ -1904,12 +1926,10 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 pending = with(|c| {
                     c.mh.ranks_done(now_ms());
                     c.fetching_ranks = false;
-                    c.mh.stale_ranks(&ids, now_ms()).len()
+                    c.mh.stale_ranks(&here, now_ms(), &reg).len()
                 });
             }
-            with(
-                |c| json!({ "ranks": c.mh.ranks_for(&ids), "pending": if up { pending } else { 0 } }),
-            )
+            with(|c| json!({ "ranks": c.mh.ranks_for(&all), "pending": pending }))
         }
         // "Load older games": the next 20 games of every account the running client can see
         "matches-more" => {
