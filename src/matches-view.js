@@ -73,7 +73,10 @@ function gameRow(g, as) {
       <hr>
       <b class="mh-res">${t('mh.' + res)}</b>
       <span>${dur(g.dur)}</span>
-      ${owner ? `<span class="mh-owner" title="${esc(fullName(owner))}">${esc(dispName(owner))}${others.length ? ' +' + others.length : ''}</span>` : ''}
+      ${owner ? `<div class="mh-acc" title="${esc(fullName(owner))}">
+        <span class="mh-av">${owner.iconId != null && !hides('icon') ? `<img src="${iconUrl(owner.iconId)}" alt="">` : ''}${owner.level && !hides('level') ? `<i>${owner.level}</i>` : ''}</span>
+        <span class="mh-an">${esc(dispName(owner))}${others.length ? ` <small>+${others.length}</small>` : ''}</span>
+      </div>` : ''}
     </div>
     <div class="mh-main">
       <div class="mh-top">

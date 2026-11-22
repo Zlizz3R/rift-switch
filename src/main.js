@@ -374,7 +374,11 @@ async function autoPlay(pl) {
             // the same as picking "League of Legends PBE" next to Play
             playLine = 'pbe';
             if (await riot.leagueRunning() && riot.patchline() !== 'pbe') await riot.closeLeagueOnly();
-            riot.launchLeague('pbe');
+            // the client already tried live League and shows "can't play with your PBE account": close it first
+            const d = await riot.dismissPbeDialog();
+            if (d !== 'closed') await sleep(800);
+            await riot.pressPlay('pbe');   // = picking 'League of Legends PBE' next to Play
+            setTimeout(() => riot.dismissPbeDialog(), 2500);   // in case the dialog popped up only now
             presses++;
             signedInSince = Date.now();
           }
@@ -383,14 +387,14 @@ async function autoPlay(pl) {
       if (await riot.leagueRunning()) return;
       if (!state.settings.autoPlay) { if (checked) return; }
       // give the client a moment to start League by itself; retry once if nothing happens
-      else if (Date.now() - signedInSince > (presses ? 15000 : 2000)) {
+      else if (!presses || Date.now() - signedInSince > 12000) {
         if (presses >= 2) return;
-        if (playLine === 'pbe') riot.launchLeague('pbe'); else await riot.pressPlay('live');
+        await riot.pressPlay(playLine === 'pbe' ? 'pbe' : 'live');
         presses++;
         signedInSince = Date.now();
       }
     } else signedInSince = null;
-    await sleep(2000);
+    await sleep(presses ? 1500 : 600);
   }
 }
 
@@ -480,7 +484,7 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
       state.active = puuid;
       save();
       const rcA = await riot.rcAccount();
-      if ((rcA && rcA.region === 'PBE') || plOf(acc) === 'pbe') riot.launchLeague('pbe'); else await riot.pressPlay('live');
+      await riot.pressPlay((rcA && rcA.region === 'PBE') || plOf(acc) === 'pbe' ? 'pbe' : 'live');
       return { ok: true, fast: 'play' };
     }
     // login screen already open and we have the password: type it straight in
@@ -993,6 +997,7 @@ function createWindow(show) {
         try { await win.webContents.executeJavaScript(js + ';0'); } catch (e) { console.log('RS_JS step failed:', e.message); }
         await sleep(1500);
       }
+      win.webContents.invalidate(); await sleep(400);   // the hidden test window may not have repainted
       fs.writeFileSync(process.env.RS_SHOT, (await win.webContents.capturePage()).toPNG());
       app.quit();
     });

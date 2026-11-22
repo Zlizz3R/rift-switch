@@ -673,3 +673,12 @@ body.locked #passBox { background: var(--bg); }
 .q-rank > span:last-child { line-height: 1.5; padding-right: 2px; }
 .mh-filter .grow { flex: 1; }
 #mhMore:disabled { opacity: .5; cursor: default; }
+
+/* match history: which own account played */
+.mh-acc { display: flex; align-items: center; gap: 6px; margin-top: 6px; min-width: 0; }
+.mh-av { position: relative; width: 30px; height: 30px; flex: none; border-radius: 50%; background: #1b2130; }
+.mh-av img { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--gold); }
+.mh-av i { position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 8.5px; font-weight: 600;
+  padding: 0 3px; border-radius: 6px; background: #0b0e14; border: 1px solid var(--gold); color: var(--gold2); line-height: 1.3; }
+.mh-an { font-size: 11.5px; font-weight: 600; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mh-an small { color: var(--muted); font-weight: 400; }

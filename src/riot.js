@@ -364,6 +364,15 @@ async function rcAccount() {
 
 // patchline 'live' or 'pbe'; with the Riot Client already open this hands the launch to it
 // (the same as a desktop shortcut or picking the version next to Play)
+// closes the Riot Client's "can't play with your PBE account" dialog (src/rcmodal.ps1)
+function dismissPbeDialog() {
+  return new Promise(resolve => {
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+      path.join(__dirname, 'rcmodal.ps1').replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep)],
+    { windowsHide: true, timeout: 15000 }, (_e, out) => resolve(String(out || '').trim().split(/\r?\n/).pop() || 'error'));
+  });
+}
+
 // ends only League (LeagueClient*), the Riot Client and its sign-in stay
 async function closeLeagueOnly() {
   await new Promise(res => execFile('taskkill', ['/F', '/T', '/IM', 'LeagueClient.exe', '/IM', 'LeagueClientUx.exe'], { windowsHide: true }, () => res()));
@@ -422,5 +431,5 @@ module.exports = {
   currentAccount, rankedFor, summonerByPuuid, gameflowPhase, lookupRiotId,
   profileData, acceptReadyCheck, rankedEligibility,
   captureSession, restoreSession, clearSession, sessionPersisted, closeClients, launchLeague, lockfile,
-  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby, patchline, rcAccount, platformRegion, closeLeagueOnly,
+  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby, patchline, rcAccount, platformRegion, closeLeagueOnly, dismissPbeDialog,
 };

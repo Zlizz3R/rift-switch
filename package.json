@@ -40,7 +40,8 @@
       "LICENSE"
     ],
     "asarUnpack": [
-      "src/autofill.ps1"
+      "src/autofill.ps1",
+      "src/rcmodal.ps1"
     ],
     "win": {
       "icon": "src/icon.png",
