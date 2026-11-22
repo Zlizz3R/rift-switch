@@ -1055,3 +1055,21 @@ li.now .sw-dot { border-color: var(--gold); border-top-color: transparent; anima
 .dg select { font: inherit; font-size: 11.5px; color: var(--muted); background: transparent; border: 0; padding: 0; cursor: pointer; outline: none; }
 .dg select.set { color: var(--text); }
 .dg select option { background: var(--panel); color: var(--text); }
+
+/* ---------- adding many accounts ---------- */
+.bulk-card { width: min(760px, 92vw); text-align: left; }
+.bulk-card textarea { width: 100%; height: 140px; resize: vertical; margin: 8px 0 10px; padding: 10px; border-radius: 10px; font: 12.5px/1.5 Consolas, monospace;
+  color: var(--text); background: #0d1119; border: 1px solid var(--line); outline: none; white-space: pre; }
+.bulk-card textarea:focus { border-color: var(--gold); }
+.bk-head, .bk-row { display: grid; grid-template-columns: 34px 1.2fr .8fr 1.3fr 1fr 110px; gap: 8px; align-items: center; font-size: 12px; }
+.bk-head { color: var(--muted); font-size: 11px; padding: 0 8px 4px; }
+.bk-list { max-height: 210px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; }
+.bk-row { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.bk-row:last-child { border-bottom: 0; }
+.bk-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-n { color: var(--muted); }
+.bk-st { color: #4cc38a; text-align: right; }
+.bk-row.bad { background: rgba(229,72,77,.06); }
+.bk-row.bad .bk-st { color: #e5737a; }
+.bk-empty { padding: 14px; color: var(--muted); font-size: 12px; text-align: center; }
+.bulk-card select { height: 32px; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 12.5px; color: var(--text); background: #0d1119; border: 1px solid var(--line); }

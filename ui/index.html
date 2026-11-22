@@ -184,6 +184,10 @@
         <span class="opt-title" data-i18n="add.current"></span>
         <span class="opt-sub" id="optCurrentSub"></span>
       </button>
+      <button class="option" id="optBulk">
+        <span class="opt-title" data-i18n="add.bulk"></span>
+        <span class="opt-sub" data-i18n="add.bulkSub"></span>
+      </button>
       <button class="option" id="optManual">
         <span class="opt-title" data-i18n="add.manual"></span>
         <span class="opt-sub" data-i18n="add.manualSub"></span>
@@ -326,6 +330,19 @@
   </div>
 </div>
 
+<div class="overlay" id="bulkBox" hidden>
+  <div class="card bulk-card">
+    <h2 data-i18n="bulk.title"></h2>
+    <p class="fine" data-i18n="bulk.hint"></p>
+    <textarea id="bulkText" spellcheck="false" autocomplete="off" data-i18n-ph="bulk.ph"></textarea>
+    <div class="bk-head"><span>#</span><span data-i18n="add.user"></span><span data-i18n="add.pass"></span><span data-i18n="add.riotId"></span><span data-i18n="bulk.note"></span><span></span></div>
+    <div class="bk-list" id="bulkList"></div>
+    <div class="row"><select id="bulkCat"></select><span class="grow"></span>
+      <button type="button" class="btn" id="bulkCancel" data-i18n="common.cancel"></button>
+      <button type="button" class="btn gold" id="bulkGo"></button></div>
+  </div>
+</div>
+
 <div class="overlay" id="textBox" hidden>
   <form class="card login-form" id="textForm" autocomplete="off">
     <h2 id="textTitle"></h2>
@@ -441,10 +458,12 @@
 <script src="lang/ur.js"></script>
 <script src="i18n.js"></script>
 <script src="rankmath.js"></script>
+<script src="bulkparse.js"></script>
 <script src="renderer.js"></script>
 <script src="views.js"></script>
 <script src="matchfilter.js"></script>
 <script src="matches-view.js"></script>
 <script src="dashboard.js"></script>
+<script src="bulk.js"></script>
 </body>
 </html>

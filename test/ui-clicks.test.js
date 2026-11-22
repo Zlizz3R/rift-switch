@@ -525,6 +525,31 @@ test('match history: progress on the button while everything loads', () => withA
   assert.ok(app.$('#mhMore').disabled);
 }));
 
+// ---------- adding many accounts ----------
+test('bulk add: paste a list, see what was understood, add everything into a category', () => {
+  let n = 0;
+  const state = sampleState();
+  const added = () => { const id = 'new-' + (++n); state.accounts.push({ puuid: id, placeholder: true, gameName: 'x' + n, tagLine: '', note: '' }); return { ok: true, puuid: id }; };
+  return withApp({ state, replies: { 'add-saved': added } }, async (app) => {
+    await app.click('#addAcc');
+    await app.click('#optBulk');
+    assert.ok(!app.$('#bulkBox').hidden);
+    await app.type('#bulkText', 'one:pw1\ntwo--Two#EUW--pw2\nthree;pw3;;main\nfour\none:dup');
+    assert.equal(app.$$('.bk-row').length, 5);
+    assert.equal(app.$$('.bk-row.bad').length, 2);
+    assert.equal(app.$('#bulkGo').textContent, 'Add 3');
+    await app.type('#bulkCat', 'c1');
+    await app.click('#bulkGo');
+    assert.deepEqual(app.called('add-saved').map(c => c.args[0]), [
+      { riotId: '', u: 'one', p: 'pw1' }, { riotId: 'Two#EUW', u: 'two', p: 'pw2' }, { riotId: '', u: 'three', p: 'pw3' }]);
+    assert.deepEqual(app.called('note').map(c => c.args), [['new-3', 'main']]);
+    const moved = app.called('arrange').pop().args[0].filter(x => x.category === 'c1').map(x => x.puuid);
+    assert.ok(['new-1', 'new-2', 'new-3'].every(id => moved.includes(id)));
+    assert.ok(app.$('#bulkBox').hidden);
+    assert.match(app.$('#toast').textContent, /3 accounts added, 2 lines skipped/);
+  });
+});
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;

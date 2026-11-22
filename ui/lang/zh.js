@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'add.bulk': "批量添加账号", 'add.bulkSub': "粘贴列表——每行一个账号", 'bulk.title': "批量添加账号", 'bulk.hint': "每行一个账号：user:password、user--Name#TAG--password、user;password;Name#TAG;备注——或使用 \"Username: …\"、\"Password: …\"、\"Riot ID: …\" 这样的块，账号之间空一行。只有 Riot ID 则不带登录信息添加。现在不会登录任何账号。", 'bulk.ph': "smurf1:password1\nsmurf2--Name#EUW--password2\nName#EUW", 'bulk.note': "备注", 'bulk.noCat': "无分类", 'bulk.btn': "添加 {n} 个", 'bulk.progress': "正在添加 {i} / {n} …", 'bulk.done': "已添加 {n} 个账号。", 'bulk.doneSkip': "已添加 {n} 个账号，跳过 {k} 行。", 'bulk.none': "在上方粘贴或输入列表。", 'bulk.idOnly': "仅 Riot ID", 'bulk.err.pass': "缺少密码", 'bulk.err.user': "用户名？", 'bulk.err.empty': "无法识别", 'bulk.err.twice': "列表中重复",
     'nav.dash': "总览", 'dash.title': "总览", 'dash.sub': "所有账号在一张图中——以及每个账号的近况", 'dash.d7': "7 天", 'dash.d30': "30 天", 'dash.d90': "90 天", 'dash.all': "全部", 'dash.games': "排位场次", 'dash.wl': "胜 – 负", 'dash.wr': "胜率", 'dash.lp': "LP", 'dash.climber': "最佳上分", 'dash.account': "账号", 'dash.rank': "当前段位", 'dash.goal': "目标", 'dash.noGoal': "设定目标 …", 'dash.goalLeft': "还差 {n} LP", 'dash.goalDone': "已达成 ✓", 'dash.active': "上次游戏", 'dash.empty': "还没有排位数据。League 打开时会保存每个账号的段位和 LP——每个账号登录一次即可。", 'dash.chartEmpty': "此期间没有 LP 变化——选择更长的时间或显示更多账号。",
     'm.credSaveFailed': "无法保存登录信息（加密或磁盘问题），未做任何更改。",
     'sw.title': "正在登录", 'sw.close': "保存登录状态，关闭英雄联盟", 'sw.client': "启动 Riot 客户端", 'sw.signin': "登录中", 'sw.signin_typing': "正在输入登录信息", 'sw.signin_verify': "正在确认登录", 'sw.play': "点击“开始”", 'sw.launch': "英雄联盟启动中",
