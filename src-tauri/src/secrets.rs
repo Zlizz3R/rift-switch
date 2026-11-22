@@ -134,6 +134,73 @@ pub fn make_lock(pass: &str) -> Value {
     let salt = random::<16>();
     json!({ "salt": B64.encode(salt), "hash": B64.encode(scrypt_key(pass, &salt, LOCK_LOG_N)) })
 }
+
+// ---------- logins sealed with the app password (optional) ----------
+// The key comes from the app password with its own salt ("ksalt"), so the stored lock hash says
+// nothing about it. It only lives in memory while the app is unlocked.
+
+pub type Key = [u8; 32];
+const SEALED: &[u8] = b"RSK1";
+
+pub fn new_key_salt() -> String {
+    B64.encode(random::<16>())
+}
+pub fn login_key(pass: &str, ksalt: &str) -> Option<Key> {
+    let salt = B64.decode(ksalt).ok()?;
+    Some(scrypt_key(pass, &salt, LOCK_LOG_N))
+}
+pub fn is_sealed(b: &[u8]) -> bool {
+    b.starts_with(SEALED)
+}
+pub fn seal_bytes(key: &Key, plain: &[u8]) -> Vec<u8> {
+    let nonce = random::<12>();
+    let ct = Aes256Gcm::new(key.into())
+        .encrypt(Nonce::from_slice(&nonce), plain)
+        .expect("encrypt");
+    [SEALED, &nonce[..], &ct].concat()
+}
+pub fn open_bytes(key: &Key, b: &[u8]) -> Option<Vec<u8>> {
+    let rest = b.strip_prefix(SEALED)?;
+    if rest.len() < 12 + 16 {
+        return None;
+    }
+    Aes256Gcm::new(key.into())
+        .decrypt(Nonce::from_slice(&rest[..12]), &rest[12..])
+        .ok()
+}
+
+// ---------- Windows Hello: "is it really you?" before a saved password is shown ----------
+
+/// Ok(true) = confirmed (PIN, fingerprint, face or Windows password), Ok(false) = cancelled,
+/// Err = Windows Hello isn't set up on this PC.
+#[cfg(windows)]
+pub fn windows_confirm(hwnd: isize, message: &str) -> Result<bool, String> {
+    use windows::core::HSTRING;
+    use windows::Foundation::IAsyncOperation;
+    use windows::Security::Credentials::UI::{
+        UserConsentVerificationResult, UserConsentVerifier, UserConsentVerifierAvailability,
+    };
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::System::WinRT::{
+        IUserConsentVerifierInterop, RoInitialize, RO_INIT_MULTITHREADED,
+    };
+    unsafe {
+        let _ = RoInitialize(RO_INIT_MULTITHREADED);
+    }
+    let avail = UserConsentVerifier::CheckAvailabilityAsync()
+        .and_then(|op| op.get())
+        .map_err(|e| e.to_string())?;
+    if avail != UserConsentVerifierAvailability::Available {
+        return Err("unavailable".into());
+    }
+    let interop = windows::core::factory::<UserConsentVerifier, IUserConsentVerifierInterop>()
+        .map_err(|e| e.to_string())?;
+    let op: IAsyncOperation<UserConsentVerificationResult> = unsafe {
+        interop.RequestVerificationForWindowAsync(HWND(hwnd as _), &HSTRING::from(message))
+    }
+    .map_err(|e| e.to_string())?;
+    Ok(op.get().map_err(|e| e.to_string())? == UserConsentVerificationResult::Verified)
+}
 pub fn lock_matches(lock: Option<&Value>, pass: Option<&str>) -> bool {
     let (Some(lock), Some(pass)) = (lock, pass) else {
         return false;
@@ -180,6 +247,19 @@ mod tests {
         assert!(!lock_matches(Some(&l), None));
         assert!(!lock_matches(None, Some("1234")));
         assert_ne!(make_lock("1234")["salt"], l["salt"]);
+    }
+    #[test]
+    fn sealed_logins_need_the_key() {
+        let ks = new_key_salt();
+        let k = login_key("1234", &ks).unwrap();
+        let b = seal_bytes(&k, b"{\"u\":\"a\",\"p\":\"b\"}");
+        assert!(is_sealed(&b));
+        assert_eq!(open_bytes(&k, &b).unwrap(), b"{\"u\":\"a\",\"p\":\"b\"}");
+        assert!(open_bytes(&login_key("12345", &ks).unwrap(), &b).is_none());
+        assert!(open_bytes(&login_key("1234", &new_key_salt()).unwrap(), &b).is_none());
+        // the key is not the stored lock hash
+        let lock = make_lock("1234");
+        assert_ne!(B64.encode(k), lock["hash"].as_str().unwrap());
     }
     #[test]
     fn node_compatible_box() {

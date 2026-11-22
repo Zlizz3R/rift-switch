@@ -40,6 +40,9 @@ windows = { version = "0.58", features = [
   "Win32_UI_Shell_PropertiesSystem",
   "Win32_Storage_EnhancedStorage",
   "Win32_UI_WindowsAndMessaging",
+  "Win32_System_WinRT",
+  "Foundation",
+  "Security_Credentials_UI",
 ] }
 sha2 = "0.11.1"
 

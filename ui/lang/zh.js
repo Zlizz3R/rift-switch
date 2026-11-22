@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'reveal.why': "Rift Switch 想显示一个已保存的密码。", 'reveal.noHello': "此电脑未设置 Windows Hello（PIN、指纹或面部）——请在 Windows 设置中设置，或开启应用锁以用其密码显示密码。", 'reveal.askApp': "输入应用密码以显示已保存的密码。", 'reveal.show': "显示", 'seal.title': "用应用密码保护登录信息", 'seal.onSub': "开——解锁应用后才能读取已保存的登录信息", 'seal.offSub': "关——已保存的登录信息由 Windows（你的用户账户）保护", 'seal.askOn': "输入应用密码，用它额外保护已保存的登录信息。", 'seal.askOff': "输入应用密码以移除额外保护。", 'seal.done': "登录信息现在也受应用密码保护。", 'seal.undone': "已移除额外保护。",
     'add.existed': "已经保存。", 'add.idFound': "已添加——段位已显示。要切换到它，请先手动登录一次。", 'add.idLater': "已添加——在该服务器运行英雄联盟后显示段位。要切换到它，请先手动登录一次。", 'add.idHint': "Name#Tag 或个人主页链接（op.gg、u.gg…）。只填 Riot ID 也可以：卡片显示段位，手动登录一次后即可切换。",
     'multi.title': "已选择 {n} 个账号", 'multi.hint': "Ctrl+点击添加或移除卡片，Shift+点击选择范围，Esc 取消。", 'multi.clear': "取消选择", 'multi.opgg': "op.gg 多人查询", 'multi.removeTitle': "移除 {n} 个账号？", 'multi.first5': "op.gg 一次最多 5 个——将打开前 5 个。",
     'pos.top': "上单", 'pos.jungle': "打野", 'pos.mid': "中单", 'pos.bot': "下路", 'pos.support': "辅助",

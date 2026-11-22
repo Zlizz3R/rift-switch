@@ -78,6 +78,8 @@ struct Core {
     read_only: bool,
     /// signed in without "Stay signed in": nothing to save until the next login
     no_persist: Option<String>,
+    /// logins sealed with the app password: their key, only while unlocked
+    login_key: Option<secrets::Key>,
 }
 
 static CORE: OnceLock<Mutex<Core>> = OnceLock::new();
@@ -175,6 +177,7 @@ fn snapshot(c: &Core) -> Value {
     m.remove("lock");
     m.insert("accounts".into(), Value::Array(accounts));
     m.insert("hasLock".into(), json!(c.st.lock.is_some()));
+    m.insert("sealLogins".into(), json!(sealed_on(c)));
     m.insert("live".into(), json!({ "puuid": c.live.puuid, "phase": c.live.phase, "clientUp": c.live.client_up, "waits": c.live.waits }));
     m.insert("pendingAdd".into(), json!(c.pending_add));
     m.insert("busy".into(), json!(c.busy));
@@ -325,8 +328,75 @@ async fn store_session(id: &str, verified: bool) -> bool {
     }
     write_secret(&session_file(id), &json)
 }
+fn sealed_on(c: &Core) -> bool {
+    c.st.lock.as_ref().is_some_and(|l| l["sealLogins"] == true)
+}
+/// A login file: Windows DPAPI, and inside it (if turned on) sealed with the app password.
+fn write_cred_file(id: &str, text: &str) -> bool {
+    let (on, key) = with(|c| (sealed_on(c), c.login_key));
+    let inner = match (on, key) {
+        (false, _) => text.as_bytes().to_vec(),
+        (true, Some(k)) => secrets::seal_bytes(&k, text.as_bytes()),
+        (true, None) => return false, // can't happen while unlocked
+    };
+    secrets::encrypt_local(&inner).is_some_and(|b| store::write_atomic(&cred_file(id), &b).is_ok())
+}
+enum Cred {
+    Missing,
+    /// sealed with the app password and the app is locked
+    Locked,
+    Broken,
+    Ok(String, String),
+}
+fn cred_state(id: &str) -> Cred {
+    let Ok(b) = std::fs::read(cred_file(id)) else {
+        return Cred::Missing;
+    };
+    let Some(inner) = secrets::decrypt_local(data(), &b) else {
+        return Cred::Broken;
+    };
+    let plain = if secrets::is_sealed(&inner) {
+        match with(|c| c.login_key) {
+            Some(k) => match secrets::open_bytes(&k, &inner) {
+                Some(p) => p,
+                None => return Cred::Broken,
+            },
+            None => return Cred::Locked,
+        }
+    } else {
+        inner
+    };
+    let Ok(v) = serde_json::from_slice::<Value>(&plain) else {
+        return Cred::Broken;
+    };
+    match (v["u"].as_str(), v["p"].as_str()) {
+        (Some(u), Some(p)) => Cred::Ok(u.into(), p.into()),
+        _ => Cred::Broken,
+    }
+}
+/// Every login file again, with the current setting and key (turning the seal on/off, new password).
+fn rewrite_creds(logins: &[(String, String, String)]) -> bool {
+    logins
+        .iter()
+        .all(|(id, u, p)| write_cred_file(id, &json!({ "u": u, "p": p }).to_string()))
+}
+fn all_creds() -> Vec<(String, String, String)> {
+    let ids: Vec<String> = with(|c| {
+        c.st.accounts
+            .iter()
+            .map(|a| str_of(a, "puuid").to_string())
+            .collect()
+    });
+    ids.into_iter()
+        .filter_map(|id| match cred_state(&id) {
+            Cred::Ok(u, p) => Some((id, u, p)),
+            _ => None,
+        })
+        .collect()
+}
+
 fn store_cred(id: &str, u: &str, p: &str) {
-    write_secret(&cred_file(id), &json!({ "u": u, "p": p }).to_string());
+    write_cred_file(id, &json!({ "u": u, "p": p }).to_string());
     with(|c| {
         if let Some(a) = c.st.account_mut(id) {
             a.insert("hasCred".into(), json!(true));
@@ -335,8 +405,10 @@ fn store_cred(id: &str, u: &str, p: &str) {
     });
 }
 fn load_cred(id: &str) -> Option<(String, String)> {
-    let v: Value = serde_json::from_str(&read_secret(&cred_file(id))?).ok()?;
-    Some((v["u"].as_str()?.to_string(), v["p"].as_str()?.to_string()))
+    match cred_state(id) {
+        Cred::Ok(u, p) => Some((u, p)),
+        _ => None,
+    }
 }
 fn check_creds() {
     let ids: Vec<String> = with(|c| {
@@ -346,8 +418,9 @@ fn check_creds() {
             .collect()
     });
     for id in ids {
-        let has = cred_file(&id).exists();
-        let broken = has && load_cred(&id).is_none();
+        let state = cred_state(&id);
+        let has = !matches!(state, Cred::Missing);
+        let broken = matches!(state, Cred::Broken);
         if broken {
             log_error("cred", &format!("cannot decrypt login for {id}"));
         }
@@ -1492,20 +1565,31 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             sleep((400 * fails as u64).min(5000)).await; // slows down guessing
             let (lock, pass) = (with(|c| c.st.lock.clone()), s(0));
             let ok = tokio::task::spawn_blocking(move || {
-                secrets::lock_matches(lock.as_ref(), Some(&pass))
+                let ok = secrets::lock_matches(lock.as_ref(), Some(&pass));
+                let key = lock
+                    .as_ref()
+                    .filter(|_| ok)
+                    .and_then(|l| l["ksalt"].as_str())
+                    .and_then(|ks| secrets::login_key(&pass, ks));
+                (ok, key)
             })
             .await
-            .unwrap_or(false);
+            .unwrap_or((false, None));
+            let (ok, key) = ok;
             with(|c| {
                 if ok {
                     c.unlock_fails = 0;
                     c.locked = false;
                     c.last_pushed.clear();
+                    if key.is_some() {
+                        c.login_key = key;
+                    }
                 } else {
                     c.unlock_fails += 1;
                 }
             });
             if ok {
+                check_creds(); // sealed logins are readable again
                 push();
                 update_tray();
             }
@@ -1527,19 +1611,37 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         return json!(false);
                     };
                     let lock = with(|c| c.st.lock.clone());
+                    let sealed = with(|c| sealed_on(c));
                     let made = tokio::task::spawn_blocking(move || {
                         if lock.is_some() && !secrets::lock_matches(lock.as_ref(), old.as_str()) {
                             None
                         } else {
-                            Some(secrets::make_lock(&p))
+                            let mut l = secrets::make_lock(&p);
+                            let ks = secrets::new_key_salt();
+                            let key = secrets::login_key(&p, &ks);
+                            l["ksalt"] = json!(ks);
+                            if sealed {
+                                l["sealLogins"] = json!(true);
+                            }
+                            Some((l, key))
                         }
                     })
                     .await
                     .ok()
                     .flatten();
                     match made {
-                        Some(l) => {
-                            with(|c| c.st.lock = Some(l));
+                        Some((l, key)) => {
+                            let logins = all_creds(); // read with the old key
+                            with(|c| {
+                                c.st.lock = Some(l);
+                                c.login_key = key;
+                            });
+                            if sealed && !rewrite_creds(&logins) {
+                                log_error(
+                                    "seal",
+                                    "could not re-seal every login with the new password",
+                                );
+                            }
                             save();
                             json!(true)
                         }
@@ -1555,12 +1657,89 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         .await
                         .unwrap_or(false);
                     if ok {
+                        let logins = all_creds();
                         with(|c| c.st.lock = None);
+                        rewrite_creds(&logins);
+                        with(|c| c.login_key = None);
                         save();
                     }
                     json!(ok)
                 }
+                // logins additionally sealed with the app password: on / off (asks the password)
+                "seal" | "unseal" => {
+                    let Some(l) = with(|c| c.st.lock.clone()) else {
+                        return json!(false);
+                    };
+                    let p = pass.as_str().unwrap_or("").to_string();
+                    let l2 = l.clone();
+                    let key = tokio::task::spawn_blocking(move || {
+                        if !secrets::lock_matches(Some(&l2), Some(&p)) {
+                            return None;
+                        }
+                        let ks = l2["ksalt"]
+                            .as_str()
+                            .map(String::from)
+                            .unwrap_or_else(secrets::new_key_salt);
+                        secrets::login_key(&p, &ks).map(|k| (k, ks))
+                    })
+                    .await
+                    .ok()
+                    .flatten();
+                    let Some((key, ks)) = key else {
+                        return json!(false);
+                    };
+                    let logins = all_creds();
+                    with(|c| {
+                        c.login_key = Some(key);
+                        if let Some(lock) = c.st.lock.as_mut() {
+                            lock["ksalt"] = json!(ks);
+                            lock["sealLogins"] = json!(what == "seal");
+                        }
+                    });
+                    let ok = rewrite_creds(&logins);
+                    save();
+                    json!(ok)
+                }
                 _ => json!(false),
+            }
+        }
+        // a saved password, shown in the login details: only after Windows confirms it's you
+        // (or with the app password where Windows Hello isn't set up)
+        "reveal-pass" => {
+            let id = s(0);
+            if !is_id(&id) {
+                return json!({ "ok": false });
+            }
+            let pass = a(1);
+            let confirmed = if let Some(p) = pass.as_str() {
+                let lock = with(|c| c.st.lock.clone());
+                let p = p.to_string();
+                lock.is_some()
+                    && tokio::task::spawn_blocking(move || {
+                        secrets::lock_matches(lock.as_ref(), Some(&p))
+                    })
+                    .await
+                    .unwrap_or(false)
+            } else {
+                let hwnd = window()
+                    .and_then(|w| w.hwnd().ok())
+                    .map(|h| h.0 as isize)
+                    .unwrap_or(0);
+                let msg = tr("reveal.why", &[]);
+                match tokio::task::spawn_blocking(move || secrets::windows_confirm(hwnd, &msg))
+                    .await
+                {
+                    Ok(Ok(v)) => v,
+                    Ok(Err(_)) => return json!({ "ok": false, "noHello": true }),
+                    Err(_) => false,
+                }
+            };
+            if !confirmed {
+                return json!({ "ok": false });
+            }
+            match load_cred(&id) {
+                Some((_, p)) => json!({ "ok": true, "p": p }),
+                None => json!({ "ok": false }),
             }
         }
         "get-history" => with(|c| {
@@ -2608,6 +2787,7 @@ fn main() {
         expecting_since: 0,
         read_only,
         no_persist: None,
+        login_key: None,
     }));
 
     let mut builder = tauri::Builder::default();

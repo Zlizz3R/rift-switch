@@ -595,6 +595,8 @@ $('updBtn').onclick = () => api.update(S.update && S.update.status === 'ready' ?
 function renderLock() {
   $('lockSub').textContent = S.hasLock ? t('lock.onSub') : t('lock.offSub');
   $('lockRow').hidden = !S.hasLock;
+  $('sealBtn').hidden = !S.hasLock;
+  $('sealSub').textContent = t(S.sealLogins ? 'seal.onSub' : 'seal.offSub');
   $('lockBtn').querySelector('.opt-title').textContent = S.hasLock ? t('lock.change') : t('lock.title');
   document.body.classList.toggle('locked', !!S.locked);
   if (S.locked && !unlocking) askUnlock();
@@ -615,6 +617,12 @@ $('lockBtn').onclick = async () => {
   toast((await api.lock('set', p, old)) ? t('lock.saved') : t('pw.wrong'), false);
 };
 $('lockNow').onclick = () => api.lock('now');
+$('sealBtn').onclick = async () => {
+  const on = !S.sealLogins;
+  const p = await passBox({ title: t('seal.title'), text: t(on ? 'seal.askOn' : 'seal.askOff'), ok: t('common.ok') });
+  if (p === null) return;
+  toast((await api.lock(on ? 'seal' : 'unseal', p)) ? t(on ? 'seal.done' : 'seal.undone') : t('pw.wrong'), false);
+};
 $('lockOff').onclick = async () => {
   const p = await passBox({ title: t('lock.off'), text: t('lock.current'), ok: t('lock.off') });
   if (p !== null) toast((await api.lock('off', p)) ? t('lock.removed') : t('pw.wrong'));
@@ -1025,8 +1033,25 @@ $('optManual').onclick = async () => {
   if (!r.ok) toast(errText(r), true);
 };
 
+// the saved password of the login details: shown after Windows Hello (PIN, fingerprint …)
+// confirms it's you – or the app password where Windows Hello isn't set up
+async function revealSaved() {
+  const a = S.accounts.find(x => x.puuid === credFor);
+  if (!a || !a.hasCred) return false;
+  let r = await api.revealPass(credFor);
+  if (r && r.noHello) {
+    if (!S.hasLock) { toast(t('reveal.noHello'), true); return true; }
+    const p = await passBox({ title: t('cred.title'), text: t('reveal.askApp'), ok: t('reveal.show') });
+    if (p === null) return true;
+    r = await api.revealPass(credFor, p);
+    if (!(r && r.ok)) { toast(t('pw.wrong'), true); return true; }
+  }
+  if (r && r.ok) { $('credPass').value = r.p; $('credPass').type = 'text'; }
+  return true;
+}
 // show / hide password
-document.querySelectorAll('[data-eye]').forEach(b => b.onclick = () => {
+document.querySelectorAll('[data-eye]').forEach(b => b.onclick = async () => {
+  if (b.dataset.eye === 'credPass' && !$('credPass').value && $('credPass').type === 'password' && await revealSaved()) return;
   const inp = $(b.dataset.eye);
   inp.type = inp.type === 'password' ? 'text' : 'password';
   b.classList.toggle('on', inp.type === 'text');

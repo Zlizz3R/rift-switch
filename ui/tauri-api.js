@@ -48,6 +48,7 @@
     matchesClear: () => call('mh-clear'),
     playerRanks: puuids => call('player-ranks', puuids),
     unlock: pass => call('unlock', pass),
+    revealPass: (puuid, pass) => call('reveal-pass', puuid, pass == null ? null : pass),
     lock: (what, pass, oldPass) => call('lock', what, pass, oldPass),
     onState: on('state'),
     onMatchesChanged: fn => T.event.listen('matches-changed', () => fn()),
