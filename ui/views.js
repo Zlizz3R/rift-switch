@@ -62,6 +62,59 @@ function pickTile(id, range) {
 function pickedAccounts() { return S.accounts.filter(a => picked.has(a.puuid)); }
 function clearPicks() { if (picked.size) { picked.clear(); lastPick = null; render(); } }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && picked.size && !document.querySelector('.overlay:not([hidden])')) clearPicks(); });
+// a short text (note) – resolves to the text, or null when cancelled
+function askText(title, placeholder, max) {
+  return new Promise(res => {
+    $('textTitle').textContent = title;
+    $('textIn').value = '';
+    $('textIn').placeholder = placeholder || '';
+    $('textIn').maxLength = max || 64;
+    $('textBox').hidden = false;
+    $('textIn').focus();
+    const done = v => { $('textBox').hidden = true; $('textForm').onsubmit = $('textCancel').onclick = null; res(v); };
+    $('textForm').onsubmit = e => { e.preventDefault(); done($('textIn').value.trim()); };
+    $('textCancel').onclick = () => done(null);
+  });
+}
+
+// drawing a box over the board (mouse held on an empty spot) picks every tile it covers by more
+// than half; Ctrl/Shift keep the tiles picked before
+let box = null;
+$('board').addEventListener('mousedown', e => {
+  if (e.button !== 0 || e.target.closest('.tile, button, input, select, a, [data-cat-name], [data-cat-toggle], [data-cat-more]')) return;
+  e.preventDefault();
+  const el = document.createElement('div');
+  el.className = 'select-box';
+  document.body.appendChild(el);
+  box = { x: e.clientX, y: e.clientY, el, keep: e.ctrlKey || e.metaKey || e.shiftKey, hits: [] };
+});
+document.addEventListener('mousemove', e => {
+  if (!box) return;
+  const r = { l: Math.min(box.x, e.clientX), t: Math.min(box.y, e.clientY), r: Math.max(box.x, e.clientX), b: Math.max(box.y, e.clientY) };
+  Object.assign(box.el.style, { left: r.l + 'px', top: r.t + 'px', width: r.r - r.l + 'px', height: r.b - r.t + 'px' });
+  box.hits = [];
+  for (const tl of document.querySelectorAll('#board .tile[data-id]')) {
+    const q = tl.getBoundingClientRect();
+    const w = Math.max(0, Math.min(r.r, q.right) - Math.max(r.l, q.left)), h = Math.max(0, Math.min(r.b, q.bottom) - Math.max(r.t, q.top));
+    const hit = q.width > 0 && q.height > 0 && w * h > 0.5 * q.width * q.height;
+    tl.classList.toggle('box-hit', hit);
+    if (hit) box.hits.push(tl.dataset.id);
+  }
+});
+document.addEventListener('mouseup', () => {
+  if (!box) return;
+  const { el, hits, keep } = box;
+  box = null;
+  el.remove();
+  document.querySelectorAll('.box-hit').forEach(x => x.classList.remove('box-hit'));
+  if (!hits.length) return;
+  if (!keep) picked.clear();
+  hits.forEach(id => picked.add(id));
+  lastPick = hits[hits.length - 1];
+  if (picked.size === 1) { selectedId = [...picked][0]; picked.clear(); }
+  render();
+});
+
 // all picked tiles into one category (one save)
 function moveMany(ids, cat) {
   const set = new Set(ids);
@@ -76,7 +129,8 @@ function renderMulti() {
   $('detail').innerHTML = `
     <div class="m-head"><h2>${t('multi.title', { n: list.length })}</h2><span class="info" title="${esc(t('multi.hint'))}">?</span></div>
     <div class="m-list">${list.map(a => `<div class="m-acc"><span class="m-av">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}</span><span>${esc(dispName(a))}</span></div>`).join('')}</div>
-    <div class="d-actions">
+    <div class="d-actions m-actions">
+      <button data-m="note">${ic('<path d="M4 20h4L19 9l-4-4L4 16z"/>')}<span>${t('d.edit')}</span></button>
       <button data-m="move">${ic('<path d="M3 7h7l2 2h9v10H3z"/><path d="M12 13h5M15 11l2 2-2 2"/>')}<span>${t('d.move')}</span></button>
       <button data-m="opgg">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('multi.opgg')}</span></button>
       <button data-m="remove" class="danger">${ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}<span>${t('menu.remove')}</span></button>
@@ -161,6 +215,13 @@ $('detail').addEventListener('click', async e => {
     const list = pickedAccounts();
     const what = m.dataset.m;
     if (what === 'clear') return clearPicks();
+    if (what === 'note') {
+      // one note for all of them (empty = remove)
+      const n = await askText(t('multi.noteTitle', { n: list.length }), t('menu.notePh'), 24);
+      if (n === null) return;
+      for (const x of list) await api.setNote(x.puuid, n);
+      return toast(t('multi.noteDone', { n: list.length }));
+    }
     if (what === 'opgg') {
       // op.gg multi-search: up to 5 Riot IDs of one server
       const named = list.filter(x => x.gameName && x.tagLine);

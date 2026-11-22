@@ -894,3 +894,9 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .det-h2h th:first-child, .det-h2h th:last-child { width: 24%; }
 .det-mins { position: relative; height: 13px; font-size: 9.5px; color: #5d6780; }
 .det-mins span { position: absolute; transform: translateX(-50%); }
+
+/* several picked: two buttons per row; the selection box */
+#detail .m-actions { grid-template-columns: 1fr 1fr; }
+.select-box { position: fixed; z-index: 30; pointer-events: none; border: 1px solid var(--gold); background: rgba(200,170,110,.12); border-radius: 4px; }
+.tile.box-hit { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+#board { user-select: none; }

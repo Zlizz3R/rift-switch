@@ -58,7 +58,7 @@ test('Ctrl+click picks several tiles; the panel offers move / op.gg / remove; Es
   await app.click(tile(app, 3), { ctrlKey: true });
   assert.match(app.$('#detail').textContent, /2 accounts selected/);
   assert.ok(tile(app, 1).classList.contains('picked') && tile(app, 3).classList.contains('picked'));
-  assert.deepEqual(app.$$('#detail [data-m]').map((b) => b.dataset.m), ['move', 'opgg', 'remove', 'clear']);
+  assert.deepEqual(app.$$('#detail [data-m]').map((b) => b.dataset.m), ['note', 'move', 'opgg', 'remove', 'clear']);
   await app.key('Escape');
   assert.doesNotMatch(app.$('#detail').textContent, /accounts selected/);
 }));
@@ -94,6 +94,32 @@ test('picked tiles: op.gg multi-search with their Riot IDs', () => withApp({}, a
   await app.click(tile(app, 2), { ctrlKey: true });
   await app.click('#detail [data-m="opgg"]');
   assert.deepEqual(lastCall(app, 'open-multi').args[1], ['Player1#EUW', 'Player2#EUW']);
+}));
+
+test('picked tiles: one note for all of them', () => withApp({}, async (app) => {
+  await app.click(tile(app, 1));
+  await app.click(tile(app, 3), { ctrlKey: true });
+  await app.click('#detail [data-m="note"]');
+  assert.ok(app.visible('#textBox'));
+  app.$('#textIn').value = 'Main';
+  await app.submit('#textForm');
+  assert.deepEqual(app.called('note').map((c) => c.args).sort(), [[P(1), 'Main'], [P(3), 'Main']]);
+}));
+
+test('a box drawn over the board picks every tile it covers by more than half', () => withApp({}, async (app) => {
+  const { w } = app;
+  // tiles 1-3 side by side, 200 px wide
+  app.$$('#board .tile[data-id]').forEach((t, i) => (t.getBoundingClientRect = () => ({ left: i * 220, right: i * 220 + 200, top: 0, bottom: 200, width: 200, height: 200 })));
+  const m = (type, x, y, target) => (target || w.document).dispatchEvent(new w.MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y }));
+  m('mousedown', 5, 5, app.$('#board'));
+  m('mousemove', 330, 190);   // all of tile 1, 110 of 200 px of tile 2, nothing of tile 3
+  const hits = app.$$('.tile.box-hit').map((t) => t.dataset.id);
+  assert.equal(hits.length, 2, 'shown while dragging');
+  assert.ok(app.$('.select-box'));
+  m('mouseup', 330, 190);
+  await app.settle();
+  assert.equal(app.$('.select-box'), null);
+  assert.match(app.$('#detail').textContent, /2 accounts selected/);
 }));
 
 // ---------- drag & drop ----------
