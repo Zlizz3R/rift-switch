@@ -785,3 +785,13 @@ body.locked #passBox { background: var(--bg); }
 .rk-cell small { color: var(--muted); font-size: 10.5px; }
 .rk-cell.none { color: #4a5468; }
 .mh-p:hover .rk-cell b, .mh-p:hover .rk-cell small { text-decoration: none; }
+
+/* the second team mirrored: its players read from the right (ranks | name | champion) */
+.mh-team + .mh-team .mh-p { direction: rtl; }
+.mh-team + .mh-team .mh-p > * { direction: ltr; }
+.mh-team + .mh-team .mh-p > span:not(.rk-cs):not(.rk-wide) { text-align: right; }
+.mh-team + .mh-team .rk-cell { justify-content: flex-end; }
+/* names on the outside, ranks towards the middle (narrow windows: the two chips after the name) */
+.mh-p > .rk-cs { order: 3; margin-left: auto; padding-left: 4px; }
+.mh-team + .mh-team .mh-p > .rk-cs { margin-left: 0; padding-left: 0; margin-right: auto; padding-right: 4px; }
+.mh-p > span:not(.rk-cs):not(.rk-wide) { flex: 0 1 auto; min-width: 0; }

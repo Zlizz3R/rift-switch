@@ -301,7 +301,8 @@ function rankedStatus(a) {
   // older saved checks may still hold lobby ("Team…") reasons: they don't concern the account
   const clean = x => {
     if (!x) return x;
-    const reasons = (x.reasons || []).filter(r => !/^Team/.test(r.code || ''));
+    // ("Unknown", "GameVersion…", "in a game": the client couldn't check – says nothing about the account)
+    const reasons = (x.reasons || []).filter(r => !/^Team|^Unknown$|^GameVersion|^PlayerInGameRestriction$/.test(r.code || ''));
     return { ...x, reasons, ok: x.ok || reasons.length === 0 };
   };
   const rc = a.rankedCheck && Object.fromEntries(Object.entries(a.rankedCheck).map(([k, v]) => [k, k === 'at' ? v : clean(v)]));

@@ -228,13 +228,15 @@ function leftText(until) {
   if (s < 86400) return Math.floor(s / 3600) + ' h ' + String(Math.floor(s % 3600 / 60)).padStart(2, '0') + ' min';
   return t('pen.until', { date: new Date(until).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) });
 }
+// only real penalties (same rule as riot.rs is_penalty)
+const isPenalty = code => /leaver|ban|suspension|lockout|dodge|penalty|timed|lowpriority|ranked_restricted/i.test(code || '');
 // every account's known penalties (from its own last login) that haven't run out
 function activePenalties() {
   const now = Date.now();
   const out = [];
   for (const a of S.accounts || []) {
     const list = (a.penalties && a.penalties.list) || [];
-    for (const p of list) if (!p.until || p.until > now) out.push({ a, p, asOf: a.penalties.at });
+    for (const p of list) if (isPenalty(p.code) && (!p.until || p.until > now)) out.push({ a, p, asOf: a.penalties.at });
   }
   return out.sort((x, y) => (x.p.until || Infinity) - (y.p.until || Infinity));
 }

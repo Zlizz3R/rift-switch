@@ -427,18 +427,28 @@ pub async fn profile_data(me: &Obj) -> Obj {
     p
 }
 
-/// Reasons that aren't a penalty: level, champions, lobby, Riot switched the queue off, in a game.
-fn is_penalty(code: &str) -> bool {
-    !code.is_empty()
-        && !code.starts_with("Team")
-        && ![
-            "PlayerMinLevelRestriction",
-            "PlayerAvailableChampionRestriction",
-            "QueueDisabled",
-            "PlayerInGameRestriction",
-            "PlayerMinorRestriction",
-        ]
-        .contains(&code)
+/// Only real penalties: LeaverBuster, bans, suspensions, lockouts, dodge timers, the low
+/// priority queue. Everything else Riot puts in the same list (level, champions, lobby, a game
+/// running, "Unknown", "GameVersionMissing" …) is not one.
+pub fn is_penalty(code: &str) -> bool {
+    const WORDS: [&str; 9] = [
+        "leaver",
+        "ban",
+        "suspension",
+        "lockout",
+        "dodge",
+        "penalty",
+        "timed",
+        "lowpriority",
+        "ranked_restricted",
+    ];
+    let c = code.to_lowercase();
+    WORDS.iter().any(|w| c.contains(w))
+}
+/// Answers the client gives while it can't really check (a game running, client still loading):
+/// such a check says nothing about the account and must not replace the last good one.
+pub fn is_transient(code: &str) -> bool {
+    matches!(code, "Unknown" | "PlayerInGameRestriction") || code.starts_with("GameVersion")
 }
 /// Every penalty in Riot's queue check, across all queues, once per kind:
 /// [{ code, until (ms, 0 = no end given), args }]
@@ -494,6 +504,13 @@ pub async fn queue_wait_now() -> Vec<Value> {
 pub async fn ranked_eligibility() -> Option<(Value, Vec<Value>)> {
     let list = lcu("/lol-lobby/v2/eligibility/self", 5000, "POST").await?;
     let list = list.as_array()?;
+    let codes = list
+        .iter()
+        .flat_map(|q| q["restrictions"].as_array().into_iter().flatten())
+        .filter_map(|r| r["restrictionCode"].as_str());
+    if codes.clone().any(is_transient) {
+        return None;
+    }
     let one = |id: i64| -> Value {
         let Some(q) = list.iter().find(|x| x["queueId"].as_i64() == Some(id)) else {
             return Value::Null;
@@ -985,6 +1002,32 @@ mod tests {
             1
         )
         .is_empty());
+        // not penalties: what the client says while a game runs or it can't check
+        for c in [
+            "Unknown",
+            "GameVersionMissing",
+            "PlayerInGameRestriction",
+            "PlayerMinLevelRestriction",
+            "TeamSizeRestriction",
+            "QueueDisabled",
+        ] {
+            assert!(!is_penalty(c), "{c}");
+        }
+        for c in [
+            "PlayerTimedRestriction",
+            "PlayerLeaverBustedRestriction",
+            "PlayerBannedRestriction",
+            "PlayerRankedSuspensionRestriction",
+            "QUEUE_DODGER",
+            "LowPriorityQueue",
+        ] {
+            assert!(is_penalty(c), "{c}");
+        }
+        assert!(
+            is_transient("GameVersionMissing")
+                && is_transient("Unknown")
+                && !is_transient("PlayerTimedRestriction")
+        );
     }
     #[test]
     fn regions() {
