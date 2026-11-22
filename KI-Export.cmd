@@ -1,10 +1,42 @@
 @echo off
-rem Writes Rift Switch as two text files for AI chats (ChatGPT, Gemini ...) into the folder ki-export
-rem and opens that folder. Drag the files into the chat window.
+setlocal
 cd /d "%~dp0"
-node tools\ai-export.js
-if errorlevel 1 (
-  pause
-  exit /b 1
+
+title Rift Switch - KI Export
+
+echo ==========================================
+echo         Rift Switch KI-Export
+echo ==========================================
+echo.
+
+if not exist "tools\ai-export.js" (
+    echo FEHLER: tools\ai-export.js wurde nicht gefunden.
+    pause
+    exit /b 1
 )
-start "" "%~dp0ki-export"
+
+where node >nul 2>&1
+if errorlevel 1 (
+    echo FEHLER: Node.js wurde nicht gefunden.
+    pause
+    exit /b 1
+)
+
+node tools\ai-export.js
+
+if errorlevel 1 (
+    echo.
+    echo FEHLER: Der KI-Export ist fehlgeschlagen.
+    pause
+    exit /b 1
+)
+
+if not exist "ki-export" (
+    echo FEHLER: Der Exportordner wurde nicht erstellt.
+    pause
+    exit /b 1
+)
+
+explorer "%~dp0ki-export"
+
+exit /b 0

@@ -1130,14 +1130,17 @@ async fn auto_play(pl: &'static str) {
                 if presses >= 2 {
                     return;
                 }
-                riot::press_play(with(|c| c.play_line)).await;
-                presses += 1;
-                signed_in_since = Some(now_ms());
+                // right after a login the client often answers "not ready" for a few seconds:
+                // only a press it accepted counts (a refused one is tried again within a second)
+                if riot::press_play(with(|c| c.play_line)).await {
+                    presses += 1;
+                    signed_in_since = Some(now_ms());
+                }
             }
         } else {
             signed_in_since = None;
         }
-        sleep(if presses > 0 { 1500 } else { 600 }).await;
+        sleep(if presses > 0 { 1500 } else { 700 }).await;
     }
 }
 
@@ -1225,12 +1228,20 @@ async fn do_switch(id: String) -> Value {
             });
             save();
             let rca = riot::rc_account().await;
-            riot::press_play(if rca.is_some_and(|r| r.region == "PBE") || pl == "pbe" {
+            let line = if rca.is_some_and(|r| r.region == "PBE") || pl == "pbe" {
                 "pbe"
             } else {
                 "live"
-            })
-            .await;
+            };
+            // the client may still be busy for a moment: try again until it takes the press
+            tauri::async_runtime::spawn(async move {
+                for _ in 0..20 {
+                    if riot::press_play(line).await || riot::league_running() {
+                        return;
+                    }
+                    sleep(700).await;
+                }
+            });
             return json!({ "ok": true, "fast": "play" });
         }
         if rc.subject.is_none() {
