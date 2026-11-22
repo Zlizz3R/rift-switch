@@ -28,7 +28,7 @@ function stepTile(dir) {
     || tiles[dir === 'down' ? Math.min(tiles.length - 1, i + 1) : Math.max(0, i - 1)];
 }
 
-const VIEWS = ['accounts', 'dash', 'live', 'matches', 'tools'];
+const VIEWS = ['accounts', 'dash', 'coll', 'live', 'matches', 'tools'];
 document.addEventListener('keydown', async e => {
   if (e.defaultPrevented || e.altKey) return;
   const ctrl = e.ctrlKey || e.metaKey, k = e.key;
@@ -40,7 +40,7 @@ document.addEventListener('keydown', async e => {
     return;
   }
   if (typing(e.target) || anyOverlay()) return;
-  if (ctrl && k >= '1' && k <= '5') { e.preventDefault(); return showView(VIEWS[+k - 1]); }
+  if (ctrl && k >= '1' && k <= '6') { e.preventDefault(); return showView(VIEWS[+k - 1]); }
   if (ctrl && k.toLowerCase() === 'n') { e.preventDefault(); showView('accounts'); return e.shiftKey ? openBulk(true) : openDrawer(true); }
   if (ctrl && k === ',') { e.preventDefault(); return openSettings(true); }
   if (k === 'F5') { e.preventDefault(); return $('toolRefresh').click(); }

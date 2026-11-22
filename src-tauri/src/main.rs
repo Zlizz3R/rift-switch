@@ -216,6 +216,10 @@ fn snapshot(c: &Core) -> Value {
                     .remove("history")
                     .and_then(|h| h.as_array().map(Vec::len))
                     .unwrap_or(0);
+                // the collection page asks for owned champions / skins / shards itself
+                if let Some(at) = a.remove("coll").and_then(|c| c.get("at").cloned()) {
+                    a.insert("collAt".into(), at);
+                }
                 a.insert("historyLen".into(), json!(n));
                 Value::Object(a)
             })
@@ -823,6 +827,10 @@ async fn tick_inner(my_gen: u64) {
                         .and_then(Value::as_object)
                         .cloned()
                         .unwrap_or_default();
+                    let mut p = p;
+                    if let Some(coll) = p.remove("_coll") {
+                        a.insert("coll".into(), coll);
+                    }
                     prof.extend(p);
                     a.insert("profile".into(), Value::Object(prof));
                     let games = notices.iter().find_map(|n| n["games"].as_i64());
@@ -2021,6 +2029,20 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         json!({ "puuid": str_of(a, "puuid"),
                         "history": a.get("history").cloned().unwrap_or(json!([])),
                         "games": a.get("rankedGames").cloned().unwrap_or(json!([])) })
+                    })
+                    .collect();
+            Value::Array(list)
+        }),
+        // the collection page: what every account owns (as of its last login)
+        "collections" => with(|c| {
+            let list: Vec<Value> =
+                c.st.accounts
+                    .iter()
+                    .filter(|a| a.get("coll").is_some_and(Value::is_object))
+                    .map(|a| {
+                        let mut x = a["coll"].clone();
+                        x["puuid"] = json!(str_of(a, "puuid"));
+                        x
                     })
                     .collect();
             Value::Array(list)

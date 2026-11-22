@@ -28,6 +28,9 @@
       <button class="nav" id="navDash" data-i18n-title="nav.dash">
         <svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M4 16l5-5 4 3 7-8"/><path d="M16 6h4v4"/></svg>
       </button>
+      <button class="nav" id="navColl" data-i18n-title="nav.coll">
+        <svg viewBox="0 0 24 24"><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 9l2-5h14l2 5"/><path d="M10 13h4"/></svg>
+      </button>
       <button class="nav" id="navLive" data-i18n-title="nav.live">
         <svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span class="live-dot" id="liveDot" hidden></span>
       </button>
@@ -93,6 +96,16 @@
           <div class="seg"><button data-dd="7" data-i18n="dash.d7"></button><button data-dd="30" data-i18n="dash.d30"></button><button data-dd="90" data-i18n="dash.d90"></button><button data-dd="0" data-i18n="dash.all"></button></div>
         </div>
         <div id="dashBody"></div>
+      </section>
+
+      <section id="viewColl" hidden>
+        <div class="head"><h1><span data-i18n="coll.title"></span></h1><p class="sub" data-i18n="coll.sub"></p></div>
+        <div class="mh-filter">
+          <label class="search coll-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="collSearch" data-i18n-ph="coll.search" spellcheck="false"></label>
+          <div class="seg"><button data-ck="all" data-i18n="mh.allQueues"></button><button data-ck="champ" data-i18n="coll.champs"></button><button data-ck="skin" data-i18n="coll.skins"></button><button data-ck="shard" data-i18n="coll.shards"></button></div>
+        </div>
+        <div id="collBody"></div>
       </section>
 
       <section id="viewLive" hidden>
@@ -470,6 +483,7 @@
 <script src="matchfilter.js"></script>
 <script src="matches-view.js"></script>
 <script src="dashboard.js"></script>
+<script src="collection.js"></script>
 <script src="bulk.js"></script>
 <script src="keys.js"></script>
 </body>

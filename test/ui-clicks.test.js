@@ -585,6 +585,30 @@ test('keyboard: pages, search, arrow keys, Enter logs in, ? lists the shortcuts'
   assert.match(app.$('#helpBody').textContent, /Ctrl\+Shift\+N/);
 }));
 
+// ---------- collection ----------
+test('collection: numbers per account, a search finds champions, skins and shards on every account', () => withApp({ replies: {
+  champions: [{ id: 103, name: 'Ahri' }, { id: 22, name: 'Ashe' }, { id: 1, name: 'Annie' }],
+  collections: [
+    { puuid: P(1), at: 1, champs: [103, 22], skins: [[103001, 'Dynasty Ahri']], shards: [['c', 1, 2, 'Annie'], ['s', 103015, 1, 'Arcade Ahri']] },
+    { puuid: P(2), at: 1, champs: [1], skins: [], shards: [] },
+  ] } }, async (app) => {
+  await app.click('#navColl');
+  assert.ok(!app.$('#viewColl').hidden);
+  const row = app.$(`.coll-table tr[data-cacc="${P(1)}"]`);
+  assert.deepEqual([...row.querySelectorAll('td')].slice(1, 5).map(td => td.textContent), ['2', '1', '2', '1']);
+  assert.match(app.$('#collBody').textContent, /1 accounts not read yet/);
+  await app.type('#collSearch', 'ahri');
+  assert.equal(app.$$('.coll-acc').length, 1);
+  assert.deepEqual(app.$$('.coll-acc .ch').map(x => x.className.split(' ')[1]).sort(), ['champ', 'skin', 'skinShard']);
+  await app.type('#collSearch', 'annie');
+  assert.equal(app.$$('.coll-acc').length, 2);   // P1 has a shard, P2 owns her
+  await app.click('[data-ck="shard"]');
+  assert.equal(app.$$('.coll-acc').length, 1);
+  assert.match(app.$('.coll-acc').textContent, /×2/);
+  await app.type('#collSearch', 'zed');
+  assert.match(app.$('#collBody').textContent, /None of your accounts/);
+}));
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;

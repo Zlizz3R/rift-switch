@@ -1115,3 +1115,21 @@ li.now .sw-dot { border-color: var(--gold); border-top-color: transparent; anima
 .tile.row.ins-before::before { top: -4px; } .tile.row.ins-after::after { bottom: -4px; }
 @media (max-width: 900px) { .tile.row .c-rank { width: 150px; } .tile.row .c-wallet, .tile.row .c-last { display: none; } }
 .help-card kbd { font: 600 11px Consolas, monospace; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel2); }
+
+/* ---------- collection page ---------- */
+.coll-search { width: 300px; }
+.coll-table tr[data-cacc] { cursor: pointer; }
+.coll-table tr[data-cacc]:hover td { background: rgba(255,255,255,.025); }
+.coll-foot { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.coll-hits { display: grid; gap: 10px; }
+.coll-acc { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
+.coll-acc:hover { border-color: #3a4560; }
+.ca-head { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+.ca-head span { color: var(--muted); font-size: 12px; }
+.ca-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.ch { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; }
+.ch img { width: 22px; height: 22px; border-radius: 50%; }
+.ch i { color: var(--muted); font-style: normal; }
+.ch em { font-style: normal; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.ch.skin { border-color: rgba(200,170,110,.45); }
+.ch.champShard, .ch.skinShard { border-style: dashed; }

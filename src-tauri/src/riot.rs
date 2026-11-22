@@ -362,8 +362,62 @@ pub async fn lookup_riot_id(game_name: &str, tag: &str) -> Option<Obj> {
     Some(o)
 }
 
-/// Everything only the signed-in account can see about itself.
+/// Owned champions (ids), owned skins ([id, name]) and the shards / permanents in the loot
+/// ([kind, id, count, name]: "c" champion shard, "C" champion permanent, "s" skin shard, "S" skin permanent).
+pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
+    let owned = |x: &&Value| x["ownership"]["owned"] == true;
+    let champs: Vec<Value> = champs
+        .as_array()
+        .map(|c| {
+            c.iter()
+                .filter(owned)
+                .filter(|x| num_of(x.get("id")) > 0.0)
+                .map(|x| x["id"].clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    let skins: Vec<Value> = skins
+        .as_array()
+        .map(|s| {
+            s.iter()
+                .filter(owned)
+                .filter(|x| x["isBase"] != true)
+                .map(|x| json!([x["id"], x["name"]]))
+                .collect()
+        })
+        .unwrap_or_default();
+    let shards: Vec<Value> = loot
+        .as_array()
+        .map(|l| {
+            l.iter()
+                .filter_map(|x| {
+                    let kind = match x["type"].as_str()? {
+                        "CHAMPION_RENTAL" => "c",
+                        "CHAMPION" => "C",
+                        "SKIN_RENTAL" => "s",
+                        "SKIN" => "S",
+                        _ => return None,
+                    };
+                    let n = x["count"].as_i64().unwrap_or(0);
+                    if n <= 0 {
+                        return None;
+                    }
+                    let name = [&x["itemDesc"], &x["localizedName"]]
+                        .into_iter()
+                        .find_map(|v| v.as_str().filter(|s| !s.is_empty()))
+                        .unwrap_or("");
+                    Some(json!([kind, x["storeItemId"], n, name]))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    json!({ "at": now_ms(), "champs": champs, "skins": skins, "shards": shards })
+}
+
+/// Everything only the signed-in account can see about itself ("_coll": the collection, which
+/// main.rs keeps outside the profile).
 pub async fn profile_data(me: &Obj) -> Obj {
+    let mut p_coll: Option<Value> = None;
     let sid = me
         .get("summonerId")
         .map(|v| v.to_string())
@@ -372,7 +426,7 @@ pub async fn profile_data(me: &Obj) -> Obj {
         format!("/lol-champions/v1/inventories/{sid}/champions-minimal"),
         format!("/lol-champions/v1/inventories/{sid}/skins-minimal"),
     );
-    let (wallet, honor, mastery, score, champs, skins) = tokio::join!(
+    let (wallet, honor, mastery, score, champs, skins, loot) = tokio::join!(
         get("/lol-inventory/v1/wallet?currencyTypes=%5B%22RP%22,%22lol_blue_essence%22%5D"),
         get("/lol-honor-v2/v1/profile"),
         lcu(
@@ -383,7 +437,16 @@ pub async fn profile_data(me: &Obj) -> Obj {
         get("/lol-champion-mastery/v1/local-player/champion-mastery-score"),
         lcu(&u_champs, 6000, "GET"),
         lcu(&u_skins, 6000, "GET"),
+        lcu("/lol-loot/v1/player-loot", 6000, "GET"),
     );
+    // what the account owns, for the collection page (kept apart from the profile: it's long)
+    if champs.is_some() || skins.is_some() || loot.is_some() {
+        p_coll = Some(collection_of(
+            champs.as_ref().unwrap_or(&Value::Null),
+            skins.as_ref().unwrap_or(&Value::Null),
+            loot.as_ref().unwrap_or(&Value::Null),
+        ));
+    }
     let mut p = Obj::new();
     p.insert("at".into(), json!(now_ms()));
     if let Some(w) = wallet.filter(Value::is_object) {
@@ -423,6 +486,9 @@ pub async fn profile_data(me: &Obj) -> Obj {
                 .filter(|x| x["isBase"] != true && x["ownership"]["owned"] == true)
                 .count()),
         );
+    }
+    if let Some(c) = p_coll {
+        p.insert("_coll".into(), c);
     }
     p
 }
@@ -1099,5 +1165,25 @@ mod tests {
         assert_eq!(platform_region("PBE1"), "PBE");
         assert_eq!(platform_region("euw1"), "EUW");
         assert_eq!(platform_region(""), "");
+    }
+
+    #[test]
+    fn collection_owned_and_loot() {
+        let c = collection_of(
+            &json!([{ "id": 103, "ownership": { "owned": true } }, { "id": 1, "ownership": { "owned": false } }, { "id": -1, "ownership": { "owned": true } }]),
+            &json!([{ "id": 103000, "isBase": true, "name": "Ahri", "ownership": { "owned": true } },
+                    { "id": 103001, "isBase": false, "name": "Dynasty Ahri", "ownership": { "owned": true } },
+                    { "id": 103002, "isBase": false, "name": "Midnight Ahri", "ownership": { "owned": false } }]),
+            &json!([{ "type": "CHAMPION_RENTAL", "storeItemId": 22, "count": 2, "itemDesc": "Ashe" },
+                    { "type": "SKIN_RENTAL", "storeItemId": 103015, "count": 1, "itemDesc": "Arcade Ahri" },
+                    { "type": "CURRENCY", "storeItemId": 0, "count": 500 },
+                    { "type": "CHAMPION", "storeItemId": 1, "count": 0, "itemDesc": "Annie" }]),
+        );
+        assert_eq!(c["champs"], json!([103]));
+        assert_eq!(c["skins"], json!([[103001, "Dynasty Ahri"]]));
+        assert_eq!(
+            c["shards"],
+            json!([["c", 22, 2, "Ashe"], ["s", 103015, 1, "Arcade Ahri"]])
+        );
     }
 }
