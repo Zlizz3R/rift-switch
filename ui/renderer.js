@@ -115,6 +115,15 @@ function lockHtml(a, o) {
   return a.hasCred || a.placeholder ? `<span class="lock ready" title="${esc(t('tile.lockTitle'))}">${CHECK}</span>` : '';
 }
 
+// only real penalties (same rule as riot.rs is_penalty)
+const isPenalty = code => /leaver|ban|suspension|lockout|dodge|penalty|timed|lowpriority|ranked_restricted/i.test(code || '');
+// "4:32", "2 h 05 min", or a date for long ones
+function leftText(until) {
+  const s = Math.max(0, Math.round((until - Date.now()) / 1000));
+  if (s < 3600) return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  if (s < 86400) return Math.floor(s / 3600) + ' h ' + String(Math.floor(s % 3600 / 60)).padStart(2, '0') + ' min';
+  return t('pen.until', { date: new Date(until).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) });
+}
 // the penalty or queue wait of an account that runs out last (low priority queue, leaver lock, …)
 function tilePenalty(a) {
   const now = Date.now();

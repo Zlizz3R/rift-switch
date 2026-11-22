@@ -540,7 +540,7 @@ h1 { white-space: nowrap; }
 .h-chip button:hover { color: #ef6b70; background: rgba(229,72,77,.12); }
 .h-enemy { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12.5px; color: var(--muted); }
 .h-results { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
-.h-res { display: grid; grid-template-columns: 28px 120px 1fr 56px; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; background: rgba(0,0,0,.2); font-size: 12.5px; }
+.h-res { display: grid; grid-template-columns: 28px 120px 1fr 30px 48px; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; background: rgba(0,0,0,.2); font-size: 12.5px; }
 .h-res.best { box-shadow: inset 0 0 0 1px rgba(200,170,110,.5); }
 .h-res img { width: 28px; height: 28px; border-radius: 6px; }
 .h-res .bar { height: 6px; border-radius: 3px; background: #232b3b; overflow: hidden; }
@@ -951,7 +951,8 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .cmp-pick.r { flex-direction: row-reverse; }
 .cmp-pick img { width: 30px; height: 30px; border-radius: 6px; flex: none; }
 .cmp-pick.l img { box-shadow: 0 0 0 2px var(--gold); } .cmp-pick.r img { box-shadow: 0 0 0 2px #7fc8ff; }
-.cmp-pick select { flex: 1; min-width: 0; }
+.cmp-pick select { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 8px; font: inherit; font-size: 12.5px; color: var(--text); background: #0d1119; border: 1px solid var(--line); }
+.cmp-pick select option { background: #0d1119; }
 .cmp-vs { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .1em; }
 .cmp-rows { display: flex; flex-direction: column; gap: 3px; }
 .cmp-row { display: grid; grid-template-columns: 70px 1fr 130px 1fr 70px; align-items: center; gap: 8px; font-size: 12px; }

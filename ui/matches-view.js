@@ -139,7 +139,7 @@ function compareHtml(g, a, b, roles, mine) {
   }
   const [P, Q] = [ps[pair[0]] || ps[0], ps[pair[1]] || ps[1]];
   const pick = (which, sel) => `<label class="cmp-pick ${which}"><img src="${CHAMP_ICON(sel.champ)}" alt=""><select data-cmp="${which === 'l' ? 0 : 1}">${ps.map((p, i) => `<option value="${i}" ${p === sel ? 'selected' : ''}>${esc((p.name || '?') + (champName(p.champ) ? ' – ' + champName(p.champ) : ''))}</option>`).join('')}</select></label>`;
-  const fmtN = v => (Math.abs(v) >= 10000 ? k1(v) : Math.round(v).toLocaleString(locale()));
+  const fmtN = v => Math.round(v).toLocaleString(locale());
   const rows = CMP_ROWS.map(([key, f, lowBetter, fmt]) => {
     const x = f(P, g), y = f(Q, g);
     if (x == null && y == null) return '';
