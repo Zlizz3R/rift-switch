@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'sw.title': "Connexion", 'sw.close': "Sauvegarde de la connexion, fermeture de League", 'sw.client': "Démarrage du client Riot", 'sw.signin': "Connexion au compte", 'sw.signin_typing': "Saisie des identifiants", 'sw.signin_verify': "Confirmation de la connexion", 'sw.play': "Clic sur Jouer", 'sw.launch': "League démarre",
     'live.likelyLaner': "probablement sur ta voie ({n} % de ses parties) – Riot cache les positions adverses",
     'pen.games': "{n} parties", 'pen.perGame': "{m} min chacune",
     'det.goldLead': "Avance en or – en haut : {a} devant, en bas : {b} devant",

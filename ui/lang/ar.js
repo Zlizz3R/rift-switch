@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'sw.title': "جارٍ تسجيل الدخول", 'sw.close': "حفظ تسجيل الدخول وإغلاق League", 'sw.client': "تشغيل عميل Riot", 'sw.signin': "تسجيل الدخول", 'sw.signin_typing': "إدخال بيانات الدخول", 'sw.signin_verify': "تأكيد تسجيل الدخول", 'sw.play': "الضغط على «لعب»", 'sw.launch': "League يبدأ",
     'live.likelyLaner': "غالبًا في مسارك ({n}% من مبارياته هناك) – Riot تخفي مراكز الخصوم",
     'pen.games': "{n} مباريات", 'pen.perGame': "{m} دقيقة لكل مباراة",
     'det.goldLead': "تفوق الذهب – في الأعلى: {a} متقدم، في الأسفل: {b} متقدم",

@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'sw.title': "لاگ اِن ہو رہا ہے", 'sw.close': "سائن اِن محفوظ، League بند", 'sw.client': "Riot Client شروع ہو رہا ہے", 'sw.signin': "سائن اِن", 'sw.signin_typing': "لاگ اِن درج ہو رہا ہے", 'sw.signin_verify': "سائن اِن کی تصدیق", 'sw.play': "“Play” دبانا", 'sw.launch': "League شروع ہو رہا ہے",
     'live.likelyLaner': "شاید آپ کی لین میں ({n}% گیمز وہیں) – Riot مخالف پوزیشنز چھپاتا ہے",
     'pen.games': "{n} گیمز", 'pen.perGame': "ہر ایک {m} منٹ",
     'det.goldLead': "گولڈ برتری – اوپر: {a} آگے، نیچے: {b} آگے",

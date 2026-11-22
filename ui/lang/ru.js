@@ -97,6 +97,7 @@
     'nav.live': "Live",
     'nav.tools': "Инструменты",
     'set.theme': "Оформление",
+    'sw.title': "Вход", 'sw.close': "Сохранение входа, закрытие League", 'sw.client': "Запуск Riot Client", 'sw.signin': "Вход в аккаунт", 'sw.signin_typing': "Ввод данных входа", 'sw.signin_verify': "Подтверждение входа", 'sw.play': "Нажатие «Играть»", 'sw.launch': "League запускается",
     'live.likelyLaner': "скорее всего на вашей линии ({n} % его игр) – Riot скрывает позиции соперников",
     'pen.games': "игр: {n}", 'pen.perGame': "по {m} мин",
     'det.goldLead': "Преимущество в золоте – выше: впереди {a}, ниже: впереди {b}",

@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'sw.title': "Entrando", 'sw.close': "Salvando o login, fechando o League", 'sw.client': "Iniciando o Riot Client", 'sw.signin': "Entrando na conta", 'sw.signin_typing': "Digitando o login", 'sw.signin_verify': "Confirmando o login", 'sw.play': "Clicando em Jogar", 'sw.launch': "O League está iniciando",
     'live.likelyLaner': "provavelmente na sua rota ({n} % das partidas dele) – a Riot esconde as posições inimigas",
     'pen.games': "{n} partidas", 'pen.perGame': "{m} min cada",
     'det.goldLead': "Vantagem de ouro – em cima: {a} na frente, embaixo: {b} na frente",

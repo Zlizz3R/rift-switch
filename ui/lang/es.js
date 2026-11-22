@@ -98,6 +98,7 @@
     'nav.live': "En vivo",
     'nav.tools': "Herramientas",
     'set.theme': "Apariencia",
+    'sw.title': "Iniciando sesión", 'sw.close': "Guardando la sesión, cerrando League", 'sw.client': "Iniciando el cliente de Riot", 'sw.signin': "Iniciando sesión", 'sw.signin_typing': "Escribiendo los datos", 'sw.signin_verify': "Confirmando el inicio de sesión", 'sw.play': "Pulsando Jugar", 'sw.launch': "League se está iniciando",
     'live.likelyLaner': "probablemente en tu línea ({n} % de sus partidas) – Riot oculta las posiciones rivales",
     'pen.games': "{n} partidas", 'pen.perGame': "{m} min cada una",
     'det.goldLead': "Ventaja de oro: arriba va por delante {a}, abajo {b}",

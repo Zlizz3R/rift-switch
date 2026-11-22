@@ -96,6 +96,7 @@
     'nav.live': "लाइव",
     'nav.tools': "टूल्स",
     'set.theme': "रूप",
+    'sw.title': "लॉग इन हो रहा है", 'sw.close': "साइन-इन सहेजना, League बंद करना", 'sw.client': "Riot Client शुरू हो रहा है", 'sw.signin': "साइन इन", 'sw.signin_typing': "लॉगिन डाला जा रहा है", 'sw.signin_verify': "साइन-इन की पुष्टि", 'sw.play': "“Play” दबाना", 'sw.launch': "League शुरू हो रहा है",
     'live.likelyLaner': "शायद आपकी लेन में ({n}% गेम वहीं) – Riot दुश्मन की पोज़िशन छिपाता है",
     'pen.games': "{n} गेम", 'pen.perGame': "हर बार {m} मिनट",
     'det.goldLead': "गोल्ड बढ़त – ऊपर: {a} आगे, नीचे: {b} आगे",

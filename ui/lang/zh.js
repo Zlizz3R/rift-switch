@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'sw.title': "正在登录", 'sw.close': "保存登录状态，关闭英雄联盟", 'sw.client': "启动 Riot 客户端", 'sw.signin': "登录中", 'sw.signin_typing': "正在输入登录信息", 'sw.signin_verify': "正在确认登录", 'sw.play': "点击“开始”", 'sw.launch': "英雄联盟启动中",
     'live.likelyLaner': "可能在你这条线（他 {n}% 的对局在这里）——Riot 隐藏了敌方位置",
     'pen.games': "{n} 局", 'pen.perGame': "每局 {m} 分钟",
     'det.goldLead': "金币领先——上方：{a} 领先，下方：{b} 领先",

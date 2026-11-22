@@ -50,6 +50,7 @@ struct Core {
     pending_add: bool,
     pending_cred: Option<(String, String)>, // login typed in the "add" form, kept until League says whose it is
     login: Value,                           // auto-login progress shown in the overlay
+    sw: Value, // steps of the login in progress { id, n, steps, step, detail }
     login_token: u64,
     busy: bool,
     expecting: Option<String>, // account we just switched to
@@ -95,6 +96,7 @@ impl Core {
             pending_add: false,
             pending_cred: None,
             login: Value::Null,
+            sw: Value::Null,
             login_token: 0,
             busy: false,
             expecting: None,
@@ -228,6 +230,7 @@ fn snapshot(c: &Core) -> Value {
     m.insert("pendingAdd".into(), json!(c.pending_add));
     m.insert("busy".into(), json!(c.busy));
     m.insert("login".into(), c.login.clone());
+    m.insert("switching".into(), c.sw.clone());
     m.insert("saveError".into(), json!(c.save_error));
     m.insert("cryptoBroken".into(), json!(c.crypto_broken));
     m.insert("version".into(), json!(version));
@@ -254,8 +257,74 @@ fn push() {
     }
 }
 fn set_login(l: Value) {
-    with(|c| c.login = l);
+    with(|c| {
+        // a failed typed login ends the steps screen (the failure box takes over)
+        if l["stage"] == "failed" {
+            c.sw = Value::Null;
+        }
+        c.login = l
+    });
     push();
+}
+
+// ---------- the steps screen of a login ----------
+// close (save the sign-in, close League) -> client (Riot Client starts) -> signin -> play -> launch
+fn sw_start(id: &str, steps: &[&str]) {
+    with(|c| {
+        let n = c.sw["n"].as_u64().unwrap_or(0) + 1;
+        c.sw = json!({ "id": id, "n": n, "steps": steps, "step": steps[0], "detail": "" });
+    });
+    push();
+}
+/// Moves on to `step` (never back); detail = a finer word for the step ("typing", "verify").
+fn sw_step(step: &str, detail: &str) {
+    let changed = with(|c| {
+        let Some(steps) = c.sw["steps"].as_array() else {
+            return false;
+        };
+        let pos = |s: &str| steps.iter().position(|x| x == s);
+        let (Some(new), Some(cur)) = (pos(step), c.sw["step"].as_str().and_then(pos)) else {
+            return false;
+        };
+        if new < cur || (new == cur && c.sw["detail"] == detail) {
+            return false;
+        }
+        c.sw["step"] = json!(step);
+        c.sw["detail"] = json!(detail);
+        true
+    });
+    if changed {
+        push();
+    }
+}
+/// League is up: show everything ticked for a moment, then close the screen.
+fn sw_done() {
+    let n = with(|c| {
+        if c.sw.is_null() {
+            return None;
+        }
+        c.sw["step"] = json!("done");
+        c.sw["n"].as_u64()
+    });
+    let Some(n) = n else { return };
+    push();
+    tauri::async_runtime::spawn(async move {
+        sleep(1800).await;
+        if with(|c| {
+            let same = c.sw["n"].as_u64() == Some(n) && c.sw["step"] == "done";
+            if same {
+                c.sw = Value::Null;
+            }
+            same
+        }) {
+            push();
+        }
+    });
+}
+fn sw_clear() {
+    if with(|c| std::mem::replace(&mut c.sw, Value::Null) != Value::Null) {
+        push();
+    }
 }
 
 /// Writes accounts.json only when something really changed, and refreshes the tray then.
@@ -1018,9 +1087,11 @@ async fn auto_login(u: String, p: String, name: String, settle_ms: i64, since: O
             return;
         }
         if st.up {
+            sw_step("signin", "");
             let since_out = *signed_out_since.get_or_insert(now_ms());
             if typed_at.is_none() && now_ms() - since_out >= settle_ms {
                 set_login(json!({ "name": name, "stage": "typing" }));
+                sw_step("signin", "typing");
                 let r = riot::autofill(&u, &p, since).await;
                 if !alive() {
                     return;
@@ -1041,6 +1112,7 @@ async fn auto_login(u: String, p: String, name: String, settle_ms: i64, since: O
                 }
                 typed_at = Some(now_ms());
                 set_login(json!({ "name": name, "stage": "verify" }));
+                sw_step("signin", "verify");
             }
             if let Some(t) = typed_at {
                 if with(|c| c.login["stage"] == "verify") && now_ms() - t > 10_000 {
@@ -1078,8 +1150,12 @@ async fn auto_play(pl: &'static str) {
         (None, 0, false);
     while alive() && now_ms() - t0 < 180_000 {
         let st = riot::rc_login_state().await;
+        if st.up && st.subject.is_none() {
+            sw_step("signin", "");
+        }
         if let Some(subject) = st.subject {
             signed_in_since.get_or_insert(now_ms());
+            sw_step("play", "");
             // once per login: which platform is this account on? (PBE1 = PBE account)
             if !checked {
                 let rc = riot::rc_account().await;
@@ -1125,15 +1201,18 @@ async fn auto_play(pl: &'static str) {
                 }
             }
             if riot::league_running() {
+                sw_done();
                 return;
             }
             if !with(|c| c.st.set_bool("autoPlay")) {
                 if checked {
+                    sw_clear();
                     return;
                 }
             } else if presses == 0 || now_ms() - signed_in_since.unwrap_or(0) > 12_000 {
                 // give the client a moment to start League by itself; retry once
                 if presses >= 2 {
+                    sw_clear();
                     return;
                 }
                 // right after a login the client often answers "not ready" for a few seconds:
@@ -1141,6 +1220,7 @@ async fn auto_play(pl: &'static str) {
                 if riot::press_play(with(|c| c.play_line)).await {
                     presses += 1;
                     signed_in_since = Some(now_ms());
+                    sw_step("launch", "");
                 }
             }
         } else {
@@ -1228,6 +1308,7 @@ async fn do_switch(id: String) -> Value {
     if rc.up && !riot::league_running() {
         if rc.subject.as_deref() == Some(id.as_str()) {
             // already signed in as this account, League just isn't open: only press Play
+            sw_start(&id, &["play", "launch"]);
             with(|c| {
                 c.gen += 1;
                 c.st.active = Some(id.clone());
@@ -1242,17 +1323,30 @@ async fn do_switch(id: String) -> Value {
             // the client may still be busy for a moment: try again until it takes the press
             tauri::async_runtime::spawn(async move {
                 for _ in 0..20 {
-                    if riot::press_play(line).await || riot::league_running() {
-                        return;
+                    if riot::league_running() {
+                        return sw_done();
+                    }
+                    if riot::press_play(line).await {
+                        sw_step("launch", "");
+                        // League's window shows up a few seconds later
+                        for _ in 0..60 {
+                            if riot::league_running() {
+                                return sw_done();
+                            }
+                            sleep(1000).await;
+                        }
+                        return sw_clear();
                     }
                     sleep(700).await;
                 }
+                sw_clear();
             });
             return json!({ "ok": true, "fast": "play" });
         }
         if rc.subject.is_none() {
             if let Some(cr) = &cred {
                 // login screen already open and we have the password: type it straight in
+                sw_start(&id, &["signin", "play", "launch"]);
                 with(|c| {
                     c.gen += 1;
                     c.st.active = Some(id.clone());
@@ -1273,7 +1367,9 @@ async fn do_switch(id: String) -> Value {
             }
         }
     }
+    sw_start(&id, &["close", "client", "signin", "play", "launch"]);
     if !save_active_before_leaving().await {
+        sw_clear();
         return err_key("m.closeFailed");
     }
     match &session {
@@ -1289,6 +1385,7 @@ async fn do_switch(id: String) -> Value {
     save();
     let started = now_ms();
     riot::launch_league(pl);
+    sw_step("client", "");
     if let Some(cr) = &cred {
         tauri::async_runtime::spawn(auto_login(
             cr.0.clone(),
@@ -1915,6 +2012,15 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         "dismiss-login" => {
             with(|c| c.login_token += 1);
             set_login(Value::Null);
+            Value::Null
+        }
+        "cancel-switch" => {
+            with(|c| {
+                c.login_token += 1;
+                c.play_token += 1;
+                c.login = Value::Null;
+            });
+            sw_clear();
             Value::Null
         }
         // the password never goes back to the window – only the username, for the edit form

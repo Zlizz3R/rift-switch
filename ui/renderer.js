@@ -688,6 +688,7 @@ function renderMain() {
     : cur ? t('add.already', { name: dispName(cur) }) : t('add.takeOver');
 
   $('pending').hidden = !S.pendingAdd || !!S.login;
+  renderSwitching(S.switching);
   renderLogin(S.login);
   const st = S.settings || {};
   document.querySelectorAll('[data-setting]').forEach(cb => (cb.checked = !!st[cb.dataset.setting]));
@@ -704,7 +705,30 @@ function renderMain() {
   shownSaveError = S.saveError;
 }
 
+// the steps of a login in progress (hidden by the user: until the next one)
+let swHidden = 0;
+const SW_KEYS = { close: 'sw.close', client: 'sw.client', signin: 'sw.signin', play: 'sw.play', launch: 'sw.launch' };
+function renderSwitching(sw) {
+  const show = !!sw && sw.n !== swHidden;
+  $('swBox').hidden = !show;
+  if (!show) return;
+  const a = S.accounts.find(x => x.puuid === sw.id);
+  $('swName').textContent = a ? fullName(a) : '';
+  $('swAv').innerHTML = a && a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : '';
+  const cur = sw.step === 'done' ? sw.steps.length : sw.steps.indexOf(sw.step);
+  $('swBar').style.width = Math.round(100 * (cur + (sw.step === 'done' ? 0 : 0.5)) / sw.steps.length) + '%';
+  $('swSteps').innerHTML = sw.steps.map((k, i) => {
+    const st = i < cur ? 'done' : i === cur ? 'now' : '';
+    const label = k === 'signin' && sw.detail && i === cur ? t('sw.signin_' + sw.detail) : t(SW_KEYS[k] || k);
+    return `<li class="${st}"><span class="sw-dot">${st === 'done' ? '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</span>${esc(label)}</li>`;
+  }).join('');
+}
+$('swHide').onclick = () => { swHidden = S.switching ? S.switching.n : 0; renderSwitching(S.switching); };
+$('swCancel').onclick = () => api.cancelSwitch();
+
 function renderLogin(l) {
+  // while the steps screen runs, only a failure needs its own box
+  if (l && l.stage !== 'failed' && S.switching && S.switching.n !== swHidden) l = null;
   $('loginBox').hidden = !l;
   if (!l) return;
   const failed = l.stage === 'failed';

@@ -160,6 +160,23 @@ test('the board draws before views.js has loaded (the first state can come that 
   } finally { app.close(); }
 });
 
+test('logging in shows every step; hide keeps it away, cancel stops it', () => withApp({}, async (app) => {
+  const st = app.S.state;
+  await app.push({ ...st, switching: { id: P(2), n: 1, steps: ['close', 'client', 'signin', 'play', 'launch'], step: 'signin', detail: 'typing' } });
+  assert.ok(app.visible('#swBox'));
+  const li = app.$$('#swSteps li');
+  assert.equal(li.length, 5);
+  assert.deepEqual(li.map((x) => x.className), ['done', 'done', 'now', '', '']);
+  assert.match(li[2].textContent, /Entering the login/);
+  assert.match(app.$('#swName').textContent, /Player2/);
+  await app.click('#swHide');
+  assert.ok(!app.visible('#swBox'), 'hidden for this login');
+  await app.push({ ...st, switching: { id: P(2), n: 2, steps: ['play', 'launch'], step: 'play', detail: '' } });
+  assert.ok(app.visible('#swBox'), 'the next login shows again');
+  await app.click('#swCancel');
+  assert.equal(app.called('cancel-switch').length, 1);
+}));
+
 // ---------- drag & drop ----------
 test('dragging shows a line before/after the tile and slides the tile in there', () => withApp({}, async (app) => {
   const { w } = app;
