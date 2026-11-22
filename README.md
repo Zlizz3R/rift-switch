@@ -13,6 +13,12 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
   screen open → signs in without a restart), otherwise leaves your lobby/queue, closes League, swaps the session and
   presses *Play* for you. A progress screen shows every step (saving the sign-in, Riot Client, signing in, Play,
   League starting) and can cancel it.
+- **Safe logins** – an account with a leaver lock, low priority queue or dodge timer asks before logging in; after the
+  login the app checks that the account you picked is the one signed in; a code or captcha gets clear steps and an
+  *Open Riot Client* button, and the app goes on by itself afterwards.
+- **Add many at once** – paste a list: `user:password`, `user--Name#TAG--password` (LeagueAccounts),
+  `;`/tab/`|` separated with Riot ID and note, a Riot ID alone, or blocks of `Username: …` / `Password: …` lines –
+  with a preview of what was understood and a category for all of them.
 - **Tiles + detail panel** – every account shows Riot ID, icon, level and ranks (Solo/Duo, Flex, Ranked 5v5,
   Classic 5v5), win rate. The panel on the right has *Log in* (greyed out when already signed
   in), profile, login details, *Open with* (op.gg, Porofessor, League of Graphs, Mobalytics, u.gg), note, move and remove.
@@ -27,6 +33,12 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
 - **Profile & LP history** – Blue Essence, RP, champions, skins, honor, mastery, last played and an LP chart; before
   the first recorded point the chart estimates your past LP from the ranked games it has seen (±20 LP per game, dashed).
 - **Categories**, search, sorting (level, rank, last played, name, custom), drag & drop, customisable tiles.
+- **Three layouts** – tiles, small tiles or a list (the list shows what the tile options switch on).
+- **Several at once** – Ctrl+click, Shift+click or draw a box: note, category, *Open with* and remove for all picked accounts.
+- **Keyboard** – Ctrl+F search, Ctrl+1…6 pages, Ctrl+N add (Ctrl+Shift+N many), arrow keys + Enter to log in,
+  E note, P profile, Del remove, Ctrl+A pick all; `?` lists them all.
+- **Collection** – owned champions, skins and loot shards of every account (read while you're logged in to it) and one
+  search across all of them: who has Ahri, a Star Guardian skin or an Ashe shard?
 - **Streamer mode** – hides names, tags, icons, ranks … (you choose what).
 
 ### While you play (Live page)
@@ -40,7 +52,11 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
 
 ### Tools & comfort
 - **Tools** – refresh ranks, close all Riot processes, restart League, clear the Riot Client cache (sign-ins stay),
-  open the logs or the app's data folder.
+  open the logs or the app's data folder, save a diagnostics file for a bug report (names, ids and your user folder
+  are taken out).
+- **Export / import** – without logins (safe backup), or with logins encrypted by a password of their own
+  (scrypt + AES-256). Riot Client sign-ins, the app password and the match history are never in the file.
+- **What's new** – after an update the app shows once what changed (Settings → About; also the release text on GitHub).
 - **Auto-accept** switch in the title bar, **System / Light / Dark** appearance.
 - **Tray app** – the ⬇ button keeps it running in the tray (switch from the tray menu), ✕ quits; can start with Windows.
 - **Light on resources** – in the tray one process with about 8 MB RAM and almost no CPU (measured: 0.03 % of one core); about 90 MB while the window is open, all of it freed again when it goes back to the tray.
@@ -55,7 +71,7 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
   that every click really lands on the Riot Client.
 - Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI**
   : only your Windows user on your PC can decrypt them. Your logins and sessions never leave your PC.
-- Outside requests – no account data is sent anywhere:
+- Outside requests – no account data is sent anywhere (the same list is in the app: Settings → About → *Data sources*):
   - **CommunityDragon** – icons, rank emblems, champion and item data.
   - **counterstats.net** – champion names only, for the champ select helper.
   - **GitHub** – every 6 hours: is there a newer release? A new installer is downloaded in the background and checked
@@ -79,7 +95,9 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
 | "Log in once by hand" | The account has no saved sign-in yet (or it expired and no password is saved): log in once in the Riot Client with *Stay signed in*. |
 | Ranks or the match history stay empty | They come from the League client: open League on that account once. Accounts of another server are filled in when League runs on that server. |
 | The Riot Client window is blank or broken | Tools → *Clear Riot Client cache* (sign-ins stay), then restart League. |
-| Anything else | Attach the newest file from Tools → *Open app data folder* (`error.log`) to an [issue](https://github.com/Zlizz3R/rift-switch/issues). |
+| A code or captcha while signing in | Click *Open Riot Client* in the box, enter the code or solve the captcha – the app notices the sign-in and goes on. |
+| Signed in as another account than picked | The saved login of that account belongs to another Riot ID: open *Login* on the tile and fix it. |
+| Anything else | Tools → *Save diagnostics* and attach the file to an [issue](https://github.com/Zlizz3R/rift-switch/issues). |
 
 ## Download
 
@@ -117,11 +135,12 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
   `updater.rs` GitHub releases; `winsys.rs` autostart and jump list
 - `src-tauri/scripts/` – typing a login into the Riot Client (UI Automation, picture scan as fallback), closing the PBE dialog
 - `ui/` – the window: `tauri-api.js` (its link to the background part), `renderer.js`, `views.js`,
-  `matches-view.js`, `dashboard.js`, `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
+  `matches-view.js`, `dashboard.js`, `collection.js`, `bulk.js` + `bulkparse.js`, `keys.js`, `changelog.js`, `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
 - Tray and jump-list texts are copied from the window's texts: `npm run strings` after changing one
 - Tests: `npm test` (window logic with Node's test runner + `cargo test` for the background part); they run on every push
-- Releases: push a tag `vX.Y.Z` matching the version in `src-tauri/tauri.conf.json` – GitHub Actions builds and
-  publishes the installer, installed copies update themselves
+- Releases: add the version's notes to `ui/changelog.js` (the app's *What's new* and the release text,
+  `node tools/release-notes.js vX.Y.Z`), then push a tag `vX.Y.Z` matching the version in `src-tauri/tauri.conf.json` –
+  GitHub Actions builds and publishes the installer, installed copies update themselves
 - Test copy on its own data folder: `$env:RS_DATA='<folder>'; .\src-tauri\target\debug\rift-switch.exe`
   (never touches autostart, the jump list or the real data)
 

@@ -171,6 +171,7 @@
           <button class="tool-card" data-tool="clearCache"><b data-i18n="tools.clearCache"></b><span data-i18n="tools.clearCacheT"></span></button>
           <button class="tool-card" data-tool="openLogs"><b data-i18n="tools.openLogs"></b><span data-i18n="tools.openLogsT"></span></button>
           <button class="tool-card" data-tool="openData"><b data-i18n="tools.openData"></b><span data-i18n="tools.openDataT"></span></button>
+          <button class="tool-card" id="toolDiag"><b data-i18n="tools.diag"></b><span data-i18n="tools.diagT"></span></button>
         </div>
       </section>
     </main>
@@ -275,7 +276,9 @@
       </div>
 
       <div class="set-g" data-i18n="set.gAbout"></div>
-      <div class="lang-row upd-row"><span><span id="updVer"></span><small id="updText"></small></span><button class="btn small" id="updBtn"></button></div>
+      <div class="lang-row upd-row"><span><button class="link" id="updVer" data-i18n-title="notes.open"></button><small id="updText"></small></span><button class="btn small" id="updBtn"></button></div>
+      <button class="option" id="notesBtn"><span class="opt-title" data-i18n="notes.title"></span><span class="opt-sub" data-i18n="notes.sub"></span></button>
+      <button class="option" id="sourcesBtn"><span class="opt-title" data-i18n="src.title"></span><span class="opt-sub" data-i18n="src.sub"></span></button>
       <button class="option support" id="supportBtn">
         <span class="opt-title" data-i18n="support.title"></span>
         <span class="opt-sub" data-i18n="support.sub"></span>
@@ -406,6 +409,24 @@
   </form>
 </div>
 
+<div class="overlay" id="expBox" hidden>
+  <div class="card exp-card">
+    <h2 data-i18n="set.export"></h2>
+    <button class="option" data-exp="plain"><span class="opt-title" data-i18n="exp.plain"></span><span class="opt-sub" data-i18n="exp.plainT"></span></button>
+    <button class="option" data-exp="logins"><span class="opt-title" data-i18n="exp.logins"></span><span class="opt-sub" data-i18n="exp.loginsT"></span></button>
+    <p class="fine" data-i18n="exp.never"></p>
+    <div class="row"><span class="grow"></span><button class="btn" data-exp="cancel" data-i18n="common.cancel"></button></div>
+  </div>
+</div>
+
+<div class="overlay" id="notesBox" hidden>
+  <div class="card help-card">
+    <h2 data-i18n="notes.title"></h2>
+    <div class="help-body" id="notesBody"></div>
+    <div class="row"><span class="grow"></span><button class="btn gold" id="notesClose" data-i18n="common.close"></button></div>
+  </div>
+</div>
+
 <div class="overlay" id="passBox" hidden>
   <form class="card login-form" id="passForm" autocomplete="off">
     <h2 id="passTitle"></h2>
@@ -481,6 +502,7 @@
 <script src="lang/ur.js"></script>
 <script src="i18n.js"></script>
 <script src="rankmath.js"></script>
+<script src="changelog.js"></script>
 <script src="bulkparse.js"></script>
 <script src="renderer.js"></script>
 <script src="views.js"></script>

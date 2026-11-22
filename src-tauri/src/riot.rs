@@ -56,6 +56,21 @@ fn installs() -> Value {
     *c = Some((Instant::now(), v.clone()));
     v
 }
+/// For the diagnostics file: where the Riot Client and League are and whether they exist.
+pub fn install_report() -> Vec<(String, String, bool)> {
+    let exe = riot_client_exe();
+    let (live, pbe) = league_dirs();
+    let mut v = vec![(
+        "Riot Client".to_string(),
+        exe.clone(),
+        Path::new(&exe).exists(),
+    )];
+    v.push(("League".into(), live.clone(), Path::new(&live).exists()));
+    if let Some(p) = pbe {
+        v.push(("League PBE".into(), p.clone(), Path::new(&p).exists()));
+    }
+    v
+}
 fn riot_client_exe() -> String {
     let j = installs();
     let exe = j

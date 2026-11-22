@@ -622,12 +622,28 @@ $('scaleSelect').onchange = () => {
   api.setSetting('uiScale', v);
 };
 // export / import of accounts, categories and settings (logins and sessions stay on this PC)
+// first the choice: without logins, or with logins under a password of their own
+function exportChoice() {
+  return new Promise(res => {
+    $('expBox').hidden = false;
+    $('expBox').onclick = e => {
+      const b = e.target.closest('[data-exp]');
+      if (!b && e.target !== $('expBox')) return;
+      $('expBox').hidden = true;
+      $('expBox').onclick = null;
+      res(b && b.dataset.exp !== 'cancel' ? b.dataset.exp : null);
+    };
+  });
+}
 $('exportBtn').onclick = async () => {
-  // with saved logins only when protected by a password of its own
-  const pass = await passBox({ title: t('set.export'), text: t('pw.exportText'), ok: t('pw.withLogins'),
-    confirm: true, min: 8, skip: t('pw.withoutLogins') });
-  if (pass === null) return;
-  const r = await api.dataExport(pass === 'skip' ? null : pass);
+  const how = await exportChoice();
+  if (!how) return;
+  let pass = null;
+  if (how === 'logins') {
+    pass = await passBox({ title: t('exp.logins'), text: t('pw.exportText'), ok: t('pw.withLogins'), confirm: true, min: 8 });
+    if (pass === null) return;
+  }
+  const r = await api.dataExport(pass);
   if (r && r.ok) toast(t('set.exported', { n: r.n }));
   else if (r && r.error) toast(t('set.ioFailed', { e: r.error }), true);
 };
@@ -655,6 +671,36 @@ function renderUpdate() {
   $('updBtn').classList.toggle('gold', u.status === 'ready');
 }
 $('updBtn').onclick = () => api.update(S.update && S.update.status === 'ready' ? 'install' : 'check');
+
+// ---------- what's new: the changelog of this version (shown once after an update) ----------
+function openNotes() {
+  const list = Changelog.CHANGELOG;
+  $('notesBody').innerHTML = list.map(e => `<h3>${esc(t('upd.version', { v: e.v }))}${e.v === S.version ? ' · ' + esc(t('notes.this')) : ''}</h3>
+    <ul>${(e[lang()] || e.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('');
+  $('notesBox').hidden = false;
+  if (S.version && S.settings && S.settings.seenVersion !== S.version) {
+    S.settings = { ...S.settings, seenVersion: S.version };
+    api.setSetting('seenVersion', S.version);
+  }
+}
+$('notesClose').onclick = () => ($('notesBox').hidden = true);
+$('notesBox').addEventListener('click', e => { if (e.target === $('notesBox')) $('notesBox').hidden = true; });
+$('updVer').onclick = openNotes;
+$('notesBtn').onclick = openNotes;
+$('sourcesBtn').onclick = () => openHelp('sources');
+// after an update: once; a fresh install (no accounts yet) just notes the version
+function notesOnce() {
+  if (!S.version || !S.settings || S.locked || S.settings.seenVersion === S.version) return;
+  if (!S.accounts.length) { S.settings.seenVersion = S.version; return api.setSetting('seenVersion', S.version); }
+  if (Changelog.CHANGELOG.some(e => e.v === S.version)) openNotes();
+}
+
+// a text file for a bug report (names, ids and the user folder taken out)
+$('toolDiag').onclick = async () => {
+  const r = await api.diagnostics();
+  if (r && r.ok) toast(t('tools.diagSaved'));
+  else if (r && r.error) toast(t('set.ioFailed', { e: r.error }), true);
+};
 
 // ---------- app lock ----------
 function renderLock() {
@@ -1238,7 +1284,7 @@ const stateReady = api.getState().then(s => { S = s; render(); });
 })();
 
 // ---------- help pages ("?"): "## " heading, "- " list item, other lines paragraphs ----------
-const HELP_TITLES = { keys: 'keys.title', helper: 'live.helper', tools: 'tools.title', live: 'live.title', mh: 'mh.title' };
+const HELP_TITLES = { sources: 'src.title', keys: 'keys.title', helper: 'live.helper', tools: 'tools.title', live: 'live.title', mh: 'mh.title' };
 function openHelp(topic) {
   const lines = t('help.' + topic).split('\n');
   let html = '', list = false;

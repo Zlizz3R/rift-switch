@@ -36,4 +36,5 @@ jobs:
         run: |
           cd src-tauri/target/release/bundle/nsis
           for f in *-setup.exe; do sha256sum "$f" | cut -d' ' -f1 > "$f.sha256"; done
-          gh release create "${GITHUB_REF_NAME}" *-setup.exe *-setup.exe.sha256 --title "Rift Switch ${GITHUB_REF_NAME}" --generate-notes
+          node ../../../../../tools/release-notes.js "${GITHUB_REF_NAME}" > notes.md
+          gh release create "${GITHUB_REF_NAME}" *-setup.exe *-setup.exe.sha256 --title "Rift Switch ${GITHUB_REF_NAME}" --notes-file notes.md

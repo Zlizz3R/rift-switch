@@ -647,6 +647,38 @@ test('signed in as another account than picked: a red note with both names', () 
   assert.ok(app.$('#toast').classList.contains('err'));
 }));
 
+// ---------- export, diagnostics, what's new, data sources ----------
+test('export: a clear choice – without logins, or with logins under their own password', () => withApp({ replies: { 'data-export': { ok: true, n: 3 } } }, async (app) => {
+  await app.click('#exportBtn');
+  assert.ok(app.visible('#expBox'));
+  assert.match(app.$('#expBox').textContent, /Never in the file/);
+  await app.click('[data-exp="plain"]');
+  assert.deepEqual(lastCall(app, 'data-export').args, [null]);
+  await app.click('#exportBtn');
+  await app.click('[data-exp="logins"]');
+  assert.ok(app.visible('#passBox'));
+  app.$('#passIn').value = app.$('#passAgain').value = 'longpassword';
+  await app.submit('#passForm');
+  assert.deepEqual(lastCall(app, 'data-export').args, ['longpassword']);
+  await app.click('#exportBtn');
+  await app.click('[data-exp="cancel"]');
+  assert.equal(app.called('data-export').length, 2);
+}));
+
+test('diagnostics, what\'s new and the data sources', () => withApp({ state: sampleState({ version: '1.2.0' }), replies: { diagnostics: { ok: true } } }, async (app) => {
+  await app.click('#navTools');
+  await app.click('#toolDiag');
+  assert.equal(app.called('diagnostics').length, 1);
+  assert.match(app.$('#toast').textContent, /Diagnostics saved/);
+  await app.click('#notesBtn');
+  assert.ok(app.visible('#notesBox'));
+  assert.match(app.$('#notesBody').textContent, /Version 1\.2\.0 · installed/);
+  assert.deepEqual(lastCall(app, 'set-setting').args, ['seenVersion', '1.2.0']);
+  await app.click('#notesClose');
+  await app.click('#sourcesBtn');
+  assert.match(app.$('#helpBody').textContent, /CommunityDragon/);
+}));
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;

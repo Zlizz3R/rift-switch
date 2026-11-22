@@ -1697,23 +1697,94 @@ const SUPPORT_URL: &str = "https://buymeacoffee.com/zlizz3r";
 // ---------- export / import ----------
 
 async fn pick_file(save: bool) -> Option<PathBuf> {
+    pick_file_as(save, "rift-switch-backup.json", "JSON", "json").await
+}
+async fn pick_file_as(save: bool, name: &str, kind: &str, ext: &str) -> Option<PathBuf> {
     use tauri_plugin_dialog::DialogExt;
     let (tx, rx) = tokio::sync::oneshot::channel();
-    let mut d = app().dialog().file().add_filter("JSON", &["json"]);
+    let mut d = app().dialog().file().add_filter(kind, &[ext]);
     if let Some(w) = window() {
         d = d.set_parent(&w);
     }
     if save {
-        d.set_file_name("rift-switch-backup.json")
-            .save_file(move |p| {
-                let _ = tx.send(p);
-            });
+        d.set_file_name(name).save_file(move |p| {
+            let _ = tx.send(p);
+        });
     } else {
         d.pick_file(move |p| {
             let _ = tx.send(p);
         });
     }
     rx.await.ok().flatten().and_then(|p| p.into_path().ok())
+}
+
+/// A text file for a bug report: versions, what was found where, the state of League and the
+/// Riot Client, counts (no names) and the end of the error log – personal bits replaced.
+async fn do_diagnostics() -> Value {
+    let Some(file) = pick_file_as(true, "rift-switch-diagnostics.txt", "Text", "txt").await else {
+        return json!({ "ok": false });
+    };
+    let home = std::env::var("USERPROFILE").unwrap_or_default();
+    let (st, ver) = (riot::rc_login_state().await, env!("CARGO_PKG_VERSION"));
+    let mut out = format!(
+        "Rift Switch {ver}\nWindows: {} {}\nTime: {}\nData folder: {}\n\n## Installs\n",
+        std::env::var("OS").unwrap_or_default(),
+        std::env::var("PROCESSOR_ARCHITECTURE").unwrap_or_default(),
+        now_ms(),
+        data().display()
+    );
+    for (what, path, ok) in riot::install_report() {
+        out += &format!(
+            "{what}: {path} ({})\n",
+            if ok { "found" } else { "MISSING" }
+        );
+    }
+    let (n, creds, saved, regions, live, settings) = with(|c| {
+        let mut regions: std::collections::BTreeMap<String, usize> = Default::default();
+        for a in &c.st.accounts {
+            *regions.entry(str_of(a, "region").to_string()).or_default() += 1;
+        }
+        (
+            c.st.accounts.len(),
+            c.st.accounts
+                .iter()
+                .filter(|a| truthy(a.get("hasCred")))
+                .count(),
+            c.st.accounts
+                .iter()
+                .filter(|a| truthy(a.get("placeholder")))
+                .count(),
+            regions,
+            json!({ "clientUp": c.live.client_up, "phase": c.live.phase, "busy": c.busy, "switching": !c.sw.is_null() }),
+            Value::Object(c.st.settings.clone()),
+        )
+    });
+    out += &format!(
+        "\n## Now\nRiot Client: {}\nLeague: {live}\n\n## Accounts\n{n} accounts, {creds} with a saved login, {saved} not logged in yet\nServers: {regions:?}\n\n## Settings\n{settings}\n\n## error.log (last 200 lines)\n",
+        if !st.up { "not running" } else if st.subject.is_some() { "signed in" } else { "login screen" }
+    );
+    let log = std::fs::read_to_string(data().join("error.log")).unwrap_or_default();
+    let lines: Vec<&str> = log.lines().collect();
+    for l in &lines[lines.len().saturating_sub(200)..] {
+        out += &ops::redact(l, &home);
+        out.push('\n');
+    }
+    let out = ops::redact(&out, &home);
+    // the names of the saved accounts too (a Riot ID with spaces would otherwise keep its first words)
+    let names: Vec<String> = with(|c| {
+        c.st.accounts
+            .iter()
+            .map(|a| str_of(a, "gameName").to_string())
+            .filter(|n| n.chars().count() >= 3)
+            .collect()
+    });
+    let out = names
+        .iter()
+        .fold(out, |o, n| o.replace(n.as_str(), "<name>"));
+    match std::fs::write(&file, out) {
+        Ok(()) => json!({ "ok": true }),
+        Err(e) => json!({ "ok": false, "error": e.kind().to_string() }),
+    }
 }
 
 async fn do_export(pass: Value) -> Value {
@@ -2461,6 +2532,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             Value::Null
         }
         "data-export" => do_export(a(0)).await,
+        "diagnostics" => do_diagnostics().await,
         "data-import" => do_import(a(0)).await,
         "check-import-pass" => {
             let Some(d) = with(|c| c.import_file.clone()).and_then(|f| read_import(&f)) else {

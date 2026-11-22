@@ -262,6 +262,63 @@ pub fn allowed_url(u: &str) -> bool {
     .any(|d| u.starts_with(&format!("https://{d}")) || u.starts_with(&format!("https://www.{d}")))
 }
 
+// ---------- diagnostics ----------
+
+/// One line of the error log made safe to share: the user folder, account ids (UUIDs),
+/// Riot IDs (Name#TAG) and e-mail addresses are replaced.
+pub fn redact(line: &str, home: &str) -> String {
+    let mut s = line.to_string();
+    if home.len() > 3 {
+        let low = s.to_lowercase();
+        let h = home.to_lowercase();
+        let mut out = String::new();
+        let mut i = 0;
+        while let Some(p) = low[i..].find(&h) {
+            out.push_str(&s[i..i + p]);
+            out.push_str("%USERPROFILE%");
+            i += p + h.len();
+        }
+        out.push_str(&s[i..]);
+        s = out;
+    }
+    s.split_inclusive(|c: char| c.is_whitespace() || "()[]{}\",'".contains(c))
+        .map(|tok| {
+            let end = tok
+                .rfind(|c: char| !(c.is_whitespace() || "()[]{}\",'".contains(c)))
+                .map_or(0, |i| i + tok[i..].chars().next().map_or(1, char::len_utf8));
+            let (w, rest) = tok.split_at(end);
+            let w2 = if is_uuid(w) {
+                "<id>".to_string()
+            } else if w.contains('@') && w.contains('.') {
+                "<e-mail>".to_string()
+            } else if let Some((n, t)) = w.split_once('#') {
+                if !n.is_empty()
+                    && (2..=5).contains(&t.chars().count())
+                    && t.chars().all(char::is_alphanumeric)
+                {
+                    "<riot-id>".to_string()
+                } else {
+                    w.to_string()
+                }
+            } else {
+                w.to_string()
+            };
+            w2 + rest
+        })
+        .collect()
+}
+fn is_uuid(w: &str) -> bool {
+    let w = w.strip_prefix("new-").unwrap_or(w);
+    w.len() == 36
+        && w.chars().enumerate().all(|(i, c)| {
+            if [8, 13, 18, 23].contains(&i) {
+                c == '-'
+            } else {
+                c.is_ascii_hexdigit()
+            }
+        })
+}
+
 // ---------- rank goal ----------
 
 /// A rank goal from the window: { tier, division } up to Master (Grandmaster and Challenger have
@@ -470,5 +527,15 @@ mod tests {
         assert_eq!(goal_of(&json!({ "tier": "CHALLENGER" })), None);
         assert_eq!(goal_of(&json!({ "tier": "GOLD", "division": "V" })), None);
         assert_eq!(goal_of(&Value::Null), None);
+    }
+
+    #[test]
+    fn diagnostics_hide_personal_bits() {
+        let l = r"1 login: signed in as another account than picked (Foo Bar#EUW / Baz#1234) C:\Users\Max\AppData x@y.de 00000001-1111-1111-1111-111111111111";
+        assert_eq!(
+            redact(l, r"C:\Users\Max"),
+            r"1 login: signed in as another account than picked (Foo <riot-id> / <riot-id>) %USERPROFILE%\AppData <e-mail> <id>"
+        );
+        assert_eq!(redact("level#2 fine", ""), "level#2 fine");
     }
 }

@@ -42,6 +42,7 @@
     openExternal: url => call('open-external', url),
     setSetting: (k, v) => call('set-setting', k, v),
     dataExport: pass => call('data-export', pass || null),
+    diagnostics: () => call('diagnostics'),
     dataImport: pass => call('data-import', pass || null),
     checkImportPass: pass => call('check-import-pass', pass),
     update: what => call('update', what),

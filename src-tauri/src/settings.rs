@@ -12,7 +12,7 @@ pub fn defaults() -> Obj {
     json!({
         "autostart": false, "closeToTray": true, "autoAccept": false, "autoPlay": true, "confirmSwitch": true,
         "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "tile": null,
-        "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles"
+        "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": ""
     })
     .as_object()
     .unwrap()
@@ -75,6 +75,11 @@ pub fn clean_setting(key: &str, value: &Value) -> Option<Value> {
         "uiScale" => pick(&["80", "90", "100", "110", "125", "150"], "100"),
         "theme" => pick(&["system", "light", "dark"], "system"),
         "layout" => pick(&["tiles", "compact", "list"], "tiles"),
+        "seenVersion" => json!(s
+            .chars()
+            .filter(|c| c.is_ascii_digit() || *c == '.')
+            .take(16)
+            .collect::<String>()),
         "sort" => pick(
             &["level", "rank", "flex", "played", "name", "custom"],
             "level",
