@@ -134,3 +134,29 @@ test('platform of the Riot Client account -> server (PBE accounts start the PBE 
   assert.equal(riot.platformRegion('EUW1'), 'EUW');
   assert.equal(riot.platformRegion(''), '');
 });
+
+test('match history filters, sorting and summary', () => {
+  const MF = require('../src/matchfilter');
+  const now = 100 * DAY;
+  const game = (id, daysAgo, k, d, a, win, extra = {}) => ({ id: String(id), t: now - daysAgo * DAY, dur: 1800, owners: ['me'],
+    players: [{ puuid: 'me', champ: extra.champ || 1, k, d, a, cs: 180, dmg: 20000 + k * 1000, win, multi: extra.multi || 1 }, { puuid: 'x', k: 0, d: 0, a: 0 }],
+    remake: !!extra.remake });
+  const games = [game(1, 0.1, 10, 2, 5, true), game(2, 3, 2, 9, 1, false, { champ: 7 }), game(3, 20, 15, 0, 3, true, { multi: 5 }),
+    game(4, 40, 4, 4, 4, false), game(5, 1, 0, 0, 0, false, { remake: true })];
+  assert.deepEqual(MF.filterGames(games, { range: '7' }, now).map(g => g.id), ['1', '5', '2']);
+  assert.deepEqual(MF.filterGames(games, { result: 'win' }, now).map(g => g.id), ['1', '3']);
+  assert.deepEqual(MF.filterGames(games, { result: 'loss' }, now).map(g => g.id), ['2', '4']);   // remake is neither
+  assert.deepEqual(MF.filterGames(games, { champ: 7 }, now).map(g => g.id), ['2']);
+  assert.deepEqual(MF.filterGames(games, { minKills: 10 }, now).map(g => g.id), ['1', '3']);
+  assert.deepEqual(MF.filterGames(games, { maxDeaths: '2', minKda: '' }, now).map(g => g.id), ['1', '5', '3']);
+  assert.deepEqual(MF.filterGames(games, { minMulti: 5 }, now).map(g => g.id), ['3']);
+  assert.equal(MF.filterGames(games, { sort: 'kda' }, now)[0].id, '3');        // 0 deaths = perfect, first
+  assert.equal(MF.filterGames(games, { sort: 'deaths' }, now)[0].id, '2');
+  const s = MF.summarize(games);
+  assert.equal(s.games, 4);                                                   // remake left out
+  assert.equal(s.winrate, 50);
+  assert.equal(s.records.kills.p.k, 15);
+  assert.equal(s.pentas, 1);
+  assert.deepEqual(s.streak, { win: true, n: 1 });
+  assert.equal(MF.summarize([]), null);
+});

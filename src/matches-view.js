@@ -4,7 +4,8 @@
 const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
 const NORMAL_QUEUES = [400, 430, 480, 490];
 const MULTI = { 2: 'mh.double', 3: 'mh.triple', 4: 'mh.quadra', 5: 'mh.penta' };
-let mh = { filter: { puuid: '', queue: '' }, data: null, loading: false };
+const MH_DEFAULT = { range: 'all', result: '', champ: 0, sort: 'new', minKills: '', maxDeaths: '', minKda: '', minMulti: '' };
+let mh = { filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440].includes(g.q) ? ' ' + t('mh.ranked') : '');
@@ -18,7 +19,8 @@ async function loadMatches() {
   if (mh.loading) return;
   mh.loading = true;
   try {
-    mh.data = await api.matches({ puuid: mh.filter.puuid || null, queue: mh.filter.queue || null, limit: mh.limit || 80 });
+    if (!champs.length) champs = (await api.champions()) || [];   // names for the champion filter
+    mh.data = await api.matches({ puuid: mh.filter.puuid || null, queue: mh.filter.queue || null, limit: 2000 });
   } catch (e) { console.warn('matches', e); }
   mh.loading = false;
   renderMatches();
@@ -40,8 +42,73 @@ function renderMatches() {
   more.title = '';
   if (!d) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.loading')}</div>`; return; }
   $('mhSub').textContent = d.waiting && d.clientUp ? t('mh.fetching', { n: d.waiting }) : !d.clientUp ? t('mh.offline') : t('mh.sub');
-  if (!d.games.length) { $('mhList').innerHTML = `<div class="mh-empty">${t(d.clientUp ? 'mh.empty' : 'mh.emptyOffline')}</div>`; return; }
-  $('mhList').innerHTML = d.games.map(g => gameRow(g, d.assets || {})).join('');
+  syncFilterInputs();
+  if (!d.games.length) { $('mhSummary').innerHTML = ''; $('mhList').innerHTML = `<div class="mh-empty">${t(d.clientUp ? 'mh.empty' : 'mh.emptyOffline')}</div>`; return; }
+  const list = MatchFilter.filterGames(d.games, mh.f);
+  $('mhSummary').innerHTML = summaryHtml(list);
+  if (!list.length) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.noMatch')}</div>`; return; }
+  const shown = list.slice(0, mh.show);
+  $('mhList').innerHTML = shown.map(g => gameRow(g, d.assets || {})).join('')
+    + (list.length > shown.length ? `<div class="mh-more"><button class="btn" id="mhShowMore">${t('mh.showMore', { n: list.length - shown.length })}</button></div>` : '');
+}
+
+// ---------- filters ----------
+const champName = id => ((typeof champById === 'function' && champById(id)) || {}).name || '';
+function syncFilterInputs() {
+  const f = mh.f;
+  $('mhRange').value = f.range; $('mhSort').value = f.sort; $('mhMulti').value = String(f.minMulti || '');
+  document.querySelectorAll('[data-mhr]').forEach(b => b.classList.toggle('on', b.dataset.mhr === f.result));
+  if (document.activeElement !== $('mhChamp')) $('mhChamp').value = f.champ ? champName(f.champ) : '';
+  for (const [id, k] of [['mhMinK', 'minKills'], ['mhMaxD', 'maxDeaths'], ['mhMinKda', 'minKda']]) if (document.activeElement !== $(id)) $(id).value = f[k];
+  $('mhAdv').hidden = !mh.adv;
+  $('mhAdvBtn').classList.toggle('open', mh.adv);
+  const advOn = ['minKills', 'maxDeaths', 'minKda', 'minMulti'].some(k => f[k] !== '' && f[k] != null);
+  $('mhAdvBtn').classList.toggle('active', advOn);
+  // champions you actually played, for the suggestions
+  if (mh.data && !$('mhChampList').childElementCount) {
+    const ids = [...new Set(mh.data.games.map(g => MatchFilter.me(g).champ))];
+    $('mhChampList').innerHTML = ids.map(champName).filter(Boolean).sort().map(n => `<option value="${esc(n)}">`).join('');
+  }
+}
+function setFilter(patch) { Object.assign(mh.f, patch); mh.show = 40; renderMatches(); }
+$('mhRange').onchange = () => setFilter({ range: $('mhRange').value });
+$('mhSort').onchange = () => setFilter({ sort: $('mhSort').value });
+$('mhMulti').onchange = () => setFilter({ minMulti: $('mhMulti').value });
+document.querySelectorAll('[data-mhr]').forEach(b => (b.onclick = () => setFilter({ result: b.dataset.mhr })));
+$('mhChamp').oninput = () => {
+  const v = $('mhChamp').value.trim();
+  const c = v && typeof champByName === 'function' ? champByName(v) : null;
+  if (!v) setFilter({ champ: 0 }); else if (c && c.id !== mh.f.champ) setFilter({ champ: c.id });
+};
+for (const [id, k] of [['mhMinK', 'minKills'], ['mhMaxD', 'maxDeaths'], ['mhMinKda', 'minKda']]) $(id).oninput = () => setFilter({ [k]: $(id).value });
+$('mhAdvBtn').onclick = () => { mh.adv = !mh.adv; renderMatches(); };
+$('mhReset').onclick = () => { mh.f = { ...MH_DEFAULT }; $('mhChamp').value = ''; renderMatches(); };
+
+// totals of what the filters show, plus a few records (click one to jump to that game)
+function summaryHtml(list) {
+  const s = MatchFilter.summarize(list);
+  if (!s) return '';
+  const f1 = x => x.toFixed(1);
+  const rec = (key, label, x, val) => x ? `<button class="mh-rec" data-goto="${esc(x.g.id)}" title="${esc(new Date(x.g.t).toLocaleString(locale()))}">
+      <img src="${CHAMP_ICON(x.p.champ)}" alt=""><span>${label}</span><b>${val}</b></button>` : '';
+  const r = s.records;
+  return `<div class="mh-sum">
+    <div class="mh-tot">
+      <span><b>${s.games}</b> ${t('mh.sumGames')}</span>
+      <span class="${s.winrate >= 50 ? 'good' : 'bad'}"><b>${s.winrate}%</b> ${t('mh.sumWins', { w: s.wins, l: s.games - s.wins })}</span>
+      <span>Ø <b>${f1(s.avg.k)} / <i>${f1(s.avg.d)}</i> / ${f1(s.avg.a)}</b> (${s.avg.kda == null ? t('mh.perfect') : s.avg.kda.toFixed(2) + ' KDA'})</span>
+      <span>Ø <b>${f1(s.avg.csMin)}</b> CS/min</span>
+      <span>Ø <b>${short(Math.round(s.avg.dmg))}</b> ${t('mh.dmg')}</span>
+      ${s.streak && s.streak.n >= 2 ? `<span class="${s.streak.win ? 'good' : 'bad'}">${t(s.streak.win ? 'mh.streakW' : 'mh.streakL', { n: s.streak.n })}</span>` : ''}
+      ${s.pentas ? `<span class="good">${t('mh.pentas', { n: s.pentas })}</span>` : ''}
+    </div>
+    <div class="mh-recs">
+      ${rec('kills', t('mh.recKills'), r.kills, r.kills && r.kills.p.k)}
+      ${rec('deaths', t('mh.recDeaths'), r.deaths, r.deaths && r.deaths.p.d)}
+      ${rec('kda', t('mh.recKda'), r.kda, r.kda && (r.kda.p.d ? ((r.kda.p.k + r.kda.p.a) / r.kda.p.d).toFixed(1) : t('mh.perfect')))}
+      ${rec('dmg', t('mh.recDmg'), r.dmg, r.dmg && short(r.dmg.p.dmg))}
+    </div>
+  </div>`;
 }
 
 function icon(map, id, cls) {
@@ -66,7 +133,7 @@ function gameRow(g, as) {
         <img src="${CHAMP_ICON(p.champ)}" alt=""><span>${esc(hides('name') && mine.has(p.puuid) ? dispName(S.accounts.find(a => a.puuid === p.puuid) || {}) : p.name || '?')}</span>
       </button>`).join('');
   const teams = [...new Set(g.players.map(p => p.team))];
-  return `<div class="mh-row ${res}" data-owner="${esc(ownerId)}">
+  return `<div class="mh-row ${res}" data-owner="${esc(ownerId)}" data-gid="${esc(g.id)}">
     <div class="mh-meta">
       <b class="mh-q">${esc(queueLabel(g))}</b>
       <span title="${esc(new Date(g.t).toLocaleString(locale()))}">${esc(ago(g.t))}</span>
@@ -104,6 +171,16 @@ function gameRow(g, as) {
 // filters
 $('mhAccount').onchange = () => { mh.filter.puuid = $('mhAccount').value; loadMatches(); };
 document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => { mh.filter.queue = b.dataset.mhq; loadMatches(); }));
+// "show more" and jumping to a record's game
+$('viewMatches').addEventListener('click', e => {
+  if (e.target.closest('#mhShowMore')) { mh.show += 40; renderMatches(); return; }
+  const go = e.target.closest('[data-goto]');
+  if (!go) return;
+  const find = () => document.querySelector(`.mh-row[data-gid="${CSS.escape(go.dataset.goto)}"]`);
+  if (!find()) { mh.show = 2000; renderMatches(); }
+  const row = find();
+  if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1200); }
+});
 // older games: every account, one timeline
 $('viewMatches').addEventListener('click', async e => {
   if (!e.target.closest('#mhMore')) return;

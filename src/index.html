@@ -96,6 +96,35 @@
           <span class="grow"></span>
           <button class="btn gold small" id="mhMore"></button>
         </div>
+        <div class="mh-filter">
+          <select id="mhRange">
+            <option value="all" data-i18n="mh.rAll"></option><option value="today" data-i18n="mh.rToday"></option>
+            <option value="7" data-i18n="mh.r7"></option><option value="30" data-i18n="mh.r30"></option><option value="90" data-i18n="mh.r90"></option>
+          </select>
+          <div class="seg">
+            <button data-mhr="" data-i18n="mh.resAll"></button><button data-mhr="win" data-i18n="mh.wins"></button><button data-mhr="loss" data-i18n="mh.losses"></button>
+          </div>
+          <input class="mh-input" id="mhChamp" list="mhChampList" data-i18n-ph="mh.champPh" spellcheck="false">
+          <datalist id="mhChampList"></datalist>
+          <select id="mhSort">
+            <option value="new" data-i18n="mh.sNew"></option><option value="kda" data-i18n="mh.sKda"></option>
+            <option value="kills" data-i18n="mh.sKills"></option><option value="deaths" data-i18n="mh.sDeaths"></option>
+            <option value="dmg" data-i18n="mh.sDmg"></option><option value="cs" data-i18n="mh.sCs"></option><option value="long" data-i18n="mh.sLong"></option>
+          </select>
+          <button class="btn small mh-adv-btn" id="mhAdvBtn"><span data-i18n="mh.moreFilters"></span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+        </div>
+        <div class="mh-filter mh-adv" id="mhAdv" hidden>
+          <label><span data-i18n="mh.minKills"></span><input class="mh-input num" id="mhMinK" type="number" min="0" max="60"></label>
+          <label><span data-i18n="mh.maxDeaths"></span><input class="mh-input num" id="mhMaxD" type="number" min="0" max="60"></label>
+          <label><span data-i18n="mh.minKda"></span><input class="mh-input num" id="mhMinKda" type="number" min="0" max="50" step="0.5"></label>
+          <select id="mhMulti">
+            <option value="" data-i18n="mh.multiAny"></option><option value="2" data-i18n="mh.m2"></option><option value="3" data-i18n="mh.m3"></option>
+            <option value="4" data-i18n="mh.m4"></option><option value="5" data-i18n="mh.m5"></option>
+          </select>
+          <span class="grow"></span>
+          <button class="btn small" id="mhReset" data-i18n="mh.reset"></button>
+        </div>
+        <div id="mhSummary"></div>
         <div id="mhList"></div>
       </section>
 
@@ -370,6 +399,7 @@
 <script src="rankmath.js"></script>
 <script src="renderer.js"></script>
 <script src="views.js"></script>
+<script src="matchfilter.js"></script>
 <script src="matches-view.js"></script>
 </body>
 </html>

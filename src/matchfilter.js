@@ -1,0 +1,77 @@
+// Filters, sorting and the little statistics of the match history page.
+// Shared by the window and the tests (no DOM).
+(function (root) {
+  const DAY = 86400000;
+
+  // the player row of the own account that played the game
+  const me = g => g.players.find(p => p.puuid === g.owners[0]) || g.players[0];
+  const kda = p => (p.d ? (p.k + p.a) / p.d : p.k + p.a + 1000);   // no deaths = "perfect", ranked above all
+  const csMin = (p, g) => p.cs / Math.max(1, g.dur / 60);
+
+  // f: { range: 'all'|'today'|'7'|'30'|'90', result: ''|'win'|'loss', champ: id, minKills, maxDeaths,
+  //      minKda, minMulti, sort: 'new'|'kda'|'kills'|'deaths'|'dmg'|'cs'|'long' }
+  function filterGames(games, f = {}, now = Date.now()) {
+    const num = v => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
+    let from = 0;
+    if (f.range === 'today') { const d = new Date(now); d.setHours(0, 0, 0, 0); from = d.getTime(); }
+    else if (['7', '30', '90'].includes(String(f.range))) from = now - Number(f.range) * DAY;
+    const minK = num(f.minKills), maxD = num(f.maxDeaths), minKda = num(f.minKda), minMulti = num(f.minMulti), champ = num(f.champ);
+    const out = games.filter(g => {
+      const p = me(g);
+      if (!p || g.t < from) return false;
+      if (f.result === 'win' && (!p.win || g.remake)) return false;
+      if (f.result === 'loss' && (p.win || g.remake)) return false;
+      if (champ && p.champ !== champ) return false;
+      if (minK != null && p.k < minK) return false;
+      if (maxD != null && p.d > maxD) return false;
+      if (minKda != null && kda(p) < minKda) return false;
+      if (minMulti && (p.multi || 0) < minMulti) return false;
+      return true;
+    });
+    const by = {
+      kda: (a, b) => kda(me(b)) - kda(me(a)),
+      kills: (a, b) => me(b).k - me(a).k,
+      deaths: (a, b) => me(b).d - me(a).d,
+      dmg: (a, b) => me(b).dmg - me(a).dmg,
+      cs: (a, b) => csMin(me(b), b) - csMin(me(a), a),
+      long: (a, b) => b.dur - a.dur,
+    }[f.sort];
+    return out.sort((a, b) => (by && by(a, b)) || b.t - a.t);
+  }
+
+  // totals and records of a list of games (remakes left out)
+  function summarize(games) {
+    const real = games.filter(g => !g.remake);
+    if (!real.length) return null;
+    const ps = real.map(g => ({ g, p: me(g) }));
+    const sum = k => ps.reduce((s, x) => s + x.p[k], 0);
+    const wins = ps.filter(x => x.p.win).length;
+    const n = ps.length;
+    const best = (score) => ps.reduce((b, x) => (!b || score(x) > score(b) ? x : b), null);
+    const k = sum('k'), d = sum('d'), a = sum('a');
+    return {
+      games: n, wins, winrate: Math.round(100 * wins / n),
+      avg: { k: k / n, d: d / n, a: a / n, kda: d ? (k + a) / d : null,
+        csMin: ps.reduce((s, x) => s + csMin(x.p, x.g), 0) / n, dmg: sum('dmg') / n },
+      records: {
+        kills: best(x => x.p.k), deaths: best(x => x.p.d), kda: best(x => kda(x.p)),
+        dmg: best(x => x.p.dmg), multi: best(x => (x.p.multi || 0) * 100 + x.p.k),
+      },
+      pentas: ps.filter(x => x.p.multi >= 5).length,
+      streak: streakOf(games),
+    };
+  }
+  // current win/loss streak, newest first (by time, remakes skipped)
+  function streakOf(games) {
+    const list = games.filter(g => !g.remake).slice().sort((a, b) => b.t - a.t);
+    if (!list.length) return null;
+    const first = me(list[0]).win;
+    let n = 0;
+    for (const g of list) { if (me(g).win !== first) break; n++; }
+    return { win: first, n };
+  }
+
+  const api = { filterGames, summarize, streakOf, kda, me };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.MatchFilter = api;
+})(typeof window !== 'undefined' ? window : this);
