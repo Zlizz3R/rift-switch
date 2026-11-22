@@ -128,3 +128,9 @@ test('every language has every text with the same placeholders', () => {
     for (const k of Object.keys(L)) if (k in en) assert.equal(ph(L[k]), ph(en[k]), `${code} ${k}`);
   }
 });
+
+test('platform of the Riot Client account -> server (PBE accounts start the PBE client)', () => {
+  assert.equal(riot.platformRegion('PBE1'), 'PBE');
+  assert.equal(riot.platformRegion('EUW1'), 'EUW');
+  assert.equal(riot.platformRegion(''), '');
+});

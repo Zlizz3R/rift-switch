@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { DEFAULT_SETTINGS } = require('./settings');
+const { cleanText } = require('./accounts');
 
 const EMPTY = () => ({ accounts: [], categories: [], active: null, settings: { ...DEFAULT_SETTINGS } });
 
@@ -10,6 +11,11 @@ function normalizeState(raw) {
   const state = { ...EMPTY(), ...(raw && typeof raw === 'object' ? raw : {}) };
   if (!Array.isArray(state.accounts)) state.accounts = [];
   if (!Array.isArray(state.categories)) state.categories = [];
+  // names saved with invisible direction marks (copied from the client)
+  for (const a of state.accounts) {
+    if (a && typeof a.gameName === 'string') a.gameName = cleanText(a.gameName);
+    if (a && typeof a.tagLine === 'string') a.tagLine = cleanText(a.tagLine);
+  }
   state.settings = { ...DEFAULT_SETTINGS, ...(state.settings || {}) };
   // one-time: sorting by level became the default (existing saves had "custom")
   if (!state.settings.sortLevelDefault) { state.settings.sort = 'level'; state.settings.sortLevelDefault = true; }

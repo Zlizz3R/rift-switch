@@ -2,6 +2,14 @@
 
 const RANK_QUEUES = ['solo', 'flex', 'r5', 'classic'];
 
+// Riot IDs copied from the client can carry invisible direction marks (U+2066…) – remove them
+const cleanText = s => String(s == null ? '' : s).replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '').trim();
+// "Name#Tag" -> { gameName, tagLine } or null
+function parseRiotId(s) {
+  const m = /^(.{2,16})#([^#\s]{2,5})$/.exec(cleanText(s));
+  return m ? { gameName: m[1].trim(), tagLine: m[2] } : null;
+}
+
 // account ids from the window: a puuid or a "new-<uuid>" placeholder, nothing else
 const isId = id => typeof id === 'string' && /^(new-)?[0-9a-f-]{36}$/i.test(id);
 // saved-but-never-logged-in accounts live under "new-…" until their real puuid is known
@@ -67,4 +75,4 @@ function upsertInto(list, acc, now = Date.now()) {
   return merged;
 }
 
-module.exports = { RANK_QUEUES, isId, isPlaceholder, validCred, maskLogin, bestNormals, mergeRankedGames, keepWL, rankKey, recordHistory, upsertInto };
+module.exports = { cleanText, parseRiotId, RANK_QUEUES, isId, isPlaceholder, validCred, maskLogin, bestNormals, mergeRankedGames, keepWL, rankKey, recordHistory, upsertInto };

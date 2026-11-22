@@ -350,10 +350,22 @@ async function closeClients() {
   return false;
 }
 
-// patchline: 'live' or 'pbe'
+// platform id of the Riot Client's signed-in account ("EUW1", "PBE1" …) -> short region
+const platformRegion = p => (p ? String(p).replace(/\d+$/, '').toUpperCase() : '');
+// The account signed in to the Riot Client: puuid, Riot ID and League platform (PBE1 = PBE account).
+async function rcAccount() {
+  const lf = readLock(path.join(LOCAL, 'Riot Games', 'Riot Client', 'Config', 'lockfile'));
+  if (!lf) return null;
+  const u = await apiRequest(lf, '/riot-client-auth/v1/userinfo', 3000, 'GET', false);
+  if (!u || !u.lol) return null;
+  return { gameName: (u.acct && u.acct.game_name) || '', tagLine: (u.acct && u.acct.tag_line) || '',
+    platform: u.lol.cpid || u.lol.pid || '', region: platformRegion(u.lol.cpid || u.lol.pid) };
+}
+
+// patchline: 'live', 'pbe', or 'none' (Riot Client only – Play is pressed once we know the account)
 function launchLeague(pl = 'live') {
-  const child = spawn(riotClientExe(),
-    ['--launch-product=league_of_legends', '--launch-patchline=' + (pl === 'pbe' ? 'pbe' : 'live')],
+  const args = pl === 'none' ? [] : ['--launch-product=league_of_legends', '--launch-patchline=' + (pl === 'pbe' ? 'pbe' : 'live')];
+  const child = spawn(riotClientExe(), args,
     { detached: true, stdio: 'ignore', windowsHide: false });
   child.unref();
 }
@@ -404,5 +416,5 @@ module.exports = {
   currentAccount, rankedFor, summonerByPuuid, gameflowPhase, lookupRiotId,
   profileData, acceptReadyCheck, rankedEligibility,
   captureSession, restoreSession, clearSession, sessionPersisted, closeClients, launchLeague, lockfile,
-  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby, patchline,
+  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby, patchline, rcAccount, platformRegion,
 };

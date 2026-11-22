@@ -160,3 +160,10 @@ test('store: migrations, damaged file kept, atomic write', () => {
   assert.ok(fs.readdirSync(dir).some(f => f.startsWith('accounts.damaged-')));
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('Riot IDs: invisible direction marks from copying are removed', () => {
+  assert.deepEqual(acc.parseRiotId('\u2066Zlizz3Rnotpbe\u2069#\u2066187\u2069'), { gameName: 'Zlizz3Rnotpbe', tagLine: '187' });
+  assert.deepEqual(acc.parseRiotId(' Name With Space#EUW '), { gameName: 'Name With Space', tagLine: 'EUW' });
+  assert.equal(acc.parseRiotId('NoTag'), null);
+  assert.equal(store.normalizeState({ accounts: [{ gameName: '\u2066A\u2069', tagLine: '\u2066187\u2069' }] }).accounts[0].tagLine, '187');
+});

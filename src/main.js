@@ -8,7 +8,7 @@ const liveData = require('./live');
 const lcuEvents = require('./lcuevents');
 const updater = require('./updater');
 const matches = require('./matches');
-const { RANK_QUEUES, isId, isPlaceholder, validCred, maskLogin, bestNormals, mergeRankedGames, upsertInto } = require('./core/accounts');
+const { parseRiotId, RANK_QUEUES, isId, isPlaceholder, validCred, maskLogin, bestNormals, mergeRankedGames, upsertInto } = require('./core/accounts');
 const { DEFAULT_SETTINGS, cleanSetting } = require('./core/settings');
 const { sealSecrets, openSecrets, makeLock, lockMatches } = require('./core/secrets');
 const backup = require('./core/backup');
@@ -349,11 +349,11 @@ async function autoLogin(cred, name, settleMs, since) {
 // typed login). Once it is signed in and League hasn't started, press Play for the user.
 let playToken = 0;
 // League product line of an account: PBE accounts start the PBE client
-const plOf = acc => (acc && acc.region === 'PBE' ? 'pbe' : 'live');
+const plOf = acc => (acc && acc.region === 'PBE' ? 'pbe' : acc && !acc.region ? 'none' : 'live');
 let playLine = 'live';
 async function autoPlay(pl) {
   if (pl) playLine = pl;
-  if (!state.settings.autoPlay) return;
+  if (!state.settings.autoPlay && playLine !== 'none') return;
   const token = ++playToken;
   const t0 = Date.now();
   let signedInSince = null, presses = 0;
@@ -365,7 +365,12 @@ async function autoPlay(pl) {
       // give the client a moment to start League by itself; retry once if nothing happens
       if (Date.now() - signedInSince > (presses ? 15000 : 2000)) {
         if (presses >= 2) return;
-        await riot.pressPlay(playLine);
+        // the Riot Client knows the signed-in account's platform: PBE accounts get the PBE client
+        const rc = await riot.rcAccount();
+        const line = rc && rc.region ? (rc.region === 'PBE' ? 'pbe' : 'live') : (playLine === 'none' ? 'live' : playLine);
+        const a = rc && state.accounts.find(x => x.puuid === st.subject);
+        if (a && rc.region && a.region !== rc.region) { a.region = rc.region; save(); }
+        await riot.pressPlay(line);
         presses++;
         signedInSince = Date.now();
       }
@@ -459,7 +464,8 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
       gen++;
       state.active = puuid;
       save();
-      await riot.pressPlay(plOf(acc));
+      const rcA = await riot.rcAccount();
+      await riot.pressPlay(rcA && rcA.region === 'PBE' ? 'pbe' : plOf(acc) === 'pbe' ? 'pbe' : 'live');
       return { ok: true, fast: 'play' };
     }
     // login screen already open and we have the password: type it straight in
@@ -513,9 +519,9 @@ ipcMain.handle('add-saved', async (_e, c) => {
   let gameName = '', tagLine = '';
   const rid = typeof c.riotId === 'string' ? c.riotId.trim() : '';
   if (rid) {
-    const m = /^(.{2,16})#([^#\s]{2,5})$/.exec(rid);
+    const m = parseRiotId(rid);
     if (!m) return { ok: false, errorKey: 'm.riotIdFormat' };
-    gameName = m[1].trim(); tagLine = m[2];
+    ({ gameName, tagLine } = m);
   }
   const hit = gameName ? await riot.lookupRiotId(gameName, tagLine) : null;
   let id;
@@ -563,15 +569,15 @@ ipcMain.handle('set-cred', async (_e, puuid, c) => {
   if (!p) return { ok: false, errorKey: 'm.passMissing' };
   // Riot ID for a saved account that had none yet
   const rid = a.placeholder && !a.tagLine && typeof c.riotId === 'string' ? c.riotId.trim() : '';
-  let m = null;
-  if (rid && !(m = /^(.{2,16})#([^#\s]{2,5})$/.exec(rid))) return { ok: false, errorKey: 'm.riotIdFormat' };
+  const m = rid ? parseRiotId(rid) : null;
+  if (rid && !m) return { ok: false, errorKey: 'm.riotIdFormat' };
   await storeCred(puuid, { u: c.u.trim(), p });
   let found = false;
   if (m) {
     gen++;
-    const hit = await riot.lookupRiotId(m[1].trim(), m[2]);
+    const hit = await riot.lookupRiotId(m.gameName, m.tagLine);
     if (hit && state.accounts.some(x => x.puuid === puuid)) { resolvePlaceholder(puuid, hit.puuid); upsert(hit); found = true; }
-    else { a.gameName = m[1].trim(); a.tagLine = m[2]; }   // looked up later, once League runs
+    else { a.gameName = m.gameName; a.tagLine = m.tagLine; }   // looked up later, once League runs
   }
   save();
   return { ok: true, found };
