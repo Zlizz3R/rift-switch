@@ -35,8 +35,9 @@ function renderMatches() {
   // "Load older games": always at the top; greyed out (with the reason) while League is closed
   const more = $('mhMore');
   more.textContent = d && d.loadingOlder ? t('mh.loadingOlder') : t('mh.more');
-  more.disabled = !d || !d.clientUp || !!d.loadingOlder;
-  more.title = d && !d.clientUp ? t('mh.moreOffline') : '';
+  // only blocked while it is already loading; without League a click explains why
+  more.disabled = !!(d && d.loadingOlder);
+  more.title = '';
   if (!d) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.loading')}</div>`; return; }
   $('mhSub').textContent = d.waiting && d.clientUp ? t('mh.fetching', { n: d.waiting }) : !d.clientUp ? t('mh.offline') : t('mh.sub');
   if (!d.games.length) { $('mhList').innerHTML = `<div class="mh-empty">${t(d.clientUp ? 'mh.empty' : 'mh.emptyOffline')}</div>`; return; }
@@ -103,9 +104,12 @@ document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => { mh.fil
 // older games: every account, one timeline
 $('viewMatches').addEventListener('click', async e => {
   if (!e.target.closest('#mhMore')) return;
+  // games come from the League client: without it, say so instead of doing nothing
+  if (!(mh.data && mh.data.clientUp) && !(S.live && S.live.clientUp)) return toast(t('mh.moreOffline'), true);
   e.target.closest('#mhMore').disabled = true;
   e.target.closest('#mhMore').textContent = t('mh.loadingOlder');
   const r = await api.matchesMore();
+  if (r && r.offline) toast(t('mh.moreOffline'), true);
   if (r && r.ok) mh.limit = (mh.limit || 80) + 80;
   if (r && r.ok && !r.added) toast(t('mh.noOlder'));
   loadMatches();
