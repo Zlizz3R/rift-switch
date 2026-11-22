@@ -362,9 +362,15 @@ async function rcAccount() {
     platform: u.lol.cpid || u.lol.pid || '', region: platformRegion(u.lol.cpid || u.lol.pid) };
 }
 
-// patchline: 'live', 'pbe', or 'none' (Riot Client only – Play is pressed once we know the account)
+// patchline 'live' or 'pbe'; with the Riot Client already open this hands the launch to it
+// (the same as a desktop shortcut or picking the version next to Play)
+// ends only League (LeagueClient*), the Riot Client and its sign-in stay
+async function closeLeagueOnly() {
+  await new Promise(res => execFile('taskkill', ['/F', '/T', '/IM', 'LeagueClient.exe', '/IM', 'LeagueClientUx.exe'], { windowsHide: true }, () => res()));
+  await sleep(1500);
+}
 function launchLeague(pl = 'live') {
-  const args = pl === 'none' ? [] : ['--launch-product=league_of_legends', '--launch-patchline=' + (pl === 'pbe' ? 'pbe' : 'live')];
+  const args = ['--launch-product=league_of_legends', '--launch-patchline=' + (pl === 'pbe' ? 'pbe' : 'live')];
   const child = spawn(riotClientExe(), args,
     { detached: true, stdio: 'ignore', windowsHide: false });
   child.unref();
@@ -416,5 +422,5 @@ module.exports = {
   currentAccount, rankedFor, summonerByPuuid, gameflowPhase, lookupRiotId,
   profileData, acceptReadyCheck, rankedEligibility,
   captureSession, restoreSession, clearSession, sessionPersisted, closeClients, launchLeague, lockfile,
-  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby, patchline, rcAccount, platformRegion,
+  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby, patchline, rcAccount, platformRegion, closeLeagueOnly,
 };

@@ -348,29 +348,44 @@ async function autoLogin(cred, name, settleMs, since) {
 // After a switch the Riot Client sometimes stops on its home screen (always after a
 // typed login). Once it is signed in and League hasn't started, press Play for the user.
 let playToken = 0;
-// League product line of an account: PBE accounts start the PBE client
-const plOf = acc => (acc && acc.region === 'PBE' ? 'pbe' : acc && !acc.region ? 'none' : 'live');
+// League product line of an account: PBE accounts start the PBE client. An account whose
+// server isn't known yet starts normally; after the login the Riot Client tells its platform.
+const plOf = acc => (acc && acc.region === 'PBE' ? 'pbe' : 'live');
 let playLine = 'live';
 async function autoPlay(pl) {
   if (pl) playLine = pl;
-  if (!state.settings.autoPlay && playLine !== 'none') return;
   const token = ++playToken;
   const t0 = Date.now();
-  let signedInSince = null, presses = 0;
+  let signedInSince = null, presses = 0, checked = false;
   while (token === playToken && Date.now() - t0 < 180000) {
-    if (await riot.leagueRunning()) return;
     const st = await riot.rcLoginState();
     if (st.subject) {
       if (signedInSince === null) signedInSince = Date.now();
-      // give the client a moment to start League by itself; retry once if nothing happens
-      if (Date.now() - signedInSince > (presses ? 15000 : 2000)) {
-        if (presses >= 2) return;
-        // the Riot Client knows the signed-in account's platform: PBE accounts get the PBE client
+      // once per login: which platform is this account on? (PBE1 = PBE account)
+      if (!checked) {
         const rc = await riot.rcAccount();
-        const line = rc && rc.region ? (rc.region === 'PBE' ? 'pbe' : 'live') : (playLine === 'none' ? 'live' : playLine);
-        const a = rc && state.accounts.find(x => x.puuid === st.subject);
-        if (a && rc.region && a.region !== rc.region) { a.region = rc.region; save(); }
-        await riot.pressPlay(line);
+        if (token !== playToken) return;
+        if (rc && rc.region) {
+          checked = true;
+          const acc = state.accounts.find(x => x.puuid === st.subject) || state.accounts.find(x => x.puuid === expecting);
+          if (acc && acc.region !== rc.region) { acc.region = rc.region; save(); }
+          if (rc.region === 'PBE' && playLine !== 'pbe') {
+            // the client may have started (or tried to start) live League: close that, start PBE –
+            // the same as picking "League of Legends PBE" next to Play
+            playLine = 'pbe';
+            if (await riot.leagueRunning() && riot.patchline() !== 'pbe') await riot.closeLeagueOnly();
+            riot.launchLeague('pbe');
+            presses++;
+            signedInSince = Date.now();
+          }
+        }
+      }
+      if (await riot.leagueRunning()) return;
+      if (!state.settings.autoPlay) { if (checked) return; }
+      // give the client a moment to start League by itself; retry once if nothing happens
+      else if (Date.now() - signedInSince > (presses ? 15000 : 2000)) {
+        if (presses >= 2) return;
+        if (playLine === 'pbe') riot.launchLeague('pbe'); else await riot.pressPlay('live');
         presses++;
         signedInSince = Date.now();
       }
@@ -465,7 +480,7 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
       state.active = puuid;
       save();
       const rcA = await riot.rcAccount();
-      await riot.pressPlay(rcA && rcA.region === 'PBE' ? 'pbe' : plOf(acc) === 'pbe' ? 'pbe' : 'live');
+      if ((rcA && rcA.region === 'PBE') || plOf(acc) === 'pbe') riot.launchLeague('pbe'); else await riot.pressPlay('live');
       return { ok: true, fast: 'play' };
     }
     // login screen already open and we have the password: type it straight in
