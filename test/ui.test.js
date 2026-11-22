@@ -96,3 +96,23 @@ test('every call of the window exists in the background part', () => {
   // every channel the shim calls -> handled in main.rs dispatch
   for (const m of shim.matchAll(/call\('([\w-]+)'/g)) assert.ok(main.includes('"' + m[1] + '"'), m[1] + ' not handled in main.rs');
 });
+
+test('in-game overlay: team lead and lanes from the numbers the app sends', () => {
+  const { JSDOM } = require('jsdom');
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '..', 'ui');
+  const html = fs.readFileSync(path.join(dir, 'overlay.html'), 'utf8').replace(/<script src="overlay.js"><\/script>/, '');
+  const dom = new JSDOM(html, { runScripts: 'outside-only' });
+  dom.window.eval(fs.readFileSync(path.join(dir, 'overlay.js'), 'utf8'));
+  const d = dom.window.document;
+  assert.equal(d.getElementById('ov').hidden, true, 'nothing before the first numbers');
+  dom.window.update({ mine: 14725, theirs: 12435, lanes: [{ pos: 'top', diff: 965 }, { pos: 'sup', diff: 0 }, { pos: 'mid', diff: -550 }] });
+  assert.equal(d.getElementById('ov').hidden, false);
+  assert.equal(d.getElementById('ovDiff').textContent, '▲ 2.3k');
+  assert.ok(d.getElementById('ovDiff').classList.contains('up'));
+  assert.deepEqual([...d.querySelectorAll('.ov-lane')].map((x) => x.textContent), ['TOP +965', 'SUP ±0', 'MID −550']);
+  dom.window.update({ mine: 1000, theirs: 1500, lanes: [] });
+  assert.ok(d.getElementById('ovDiff').classList.contains('down'));
+  assert.equal(d.querySelectorAll('.ov-lane').length, 0, 'ARAM: team only');
+});

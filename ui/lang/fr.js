@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'set.overlay': "Avance en or en jeu", 'set.overlayT': "Une petite barre en haut de la partie : ton équipe contre l'adversaire selon la valeur des objets achetés, et voie contre voie sur la Faille. Aussi en ARAM et autres modes. Nécessite le mode sans bordure ou fenêtré.",
     'sw.title': "Connexion", 'sw.close': "Sauvegarde de la connexion, fermeture de League", 'sw.client': "Démarrage du client Riot", 'sw.signin': "Connexion au compte", 'sw.signin_typing': "Saisie des identifiants", 'sw.signin_verify': "Confirmation de la connexion", 'sw.play': "Clic sur Jouer", 'sw.launch': "League démarre",
     'live.likelyLaner': "probablement sur ta voie ({n} % de ses parties) – Riot cache les positions adverses",
     'pen.games': "{n} parties", 'pen.perGame': "{m} min chacune",

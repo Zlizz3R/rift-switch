@@ -10,6 +10,7 @@ mod live;
 mod matches;
 mod menu;
 mod ops;
+mod overlay;
 mod riot;
 mod secrets;
 mod settings;
@@ -677,6 +678,17 @@ fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
 
 const IN_GAME: [&str; 3] = ["GameStart", "InProgress", "Reconnect"];
 
+/// The in-game overlay runs while a game is on and the setting is switched on.
+pub(crate) fn overlay_wanted() -> bool {
+    with(|c| {
+        c.st.set_bool("overlay")
+            && c.live
+                .phase
+                .as_deref()
+                .is_some_and(|p| IN_GAME.contains(&p))
+    })
+}
+
 async fn tick_inner(my_gen: u64) {
     let stale = || with(|c| c.busy || c.gen != my_gen);
     if let Some(tx) = EVENTS.get() {
@@ -686,6 +698,10 @@ async fn tick_inner(my_gen: u64) {
     // could cost a frame. Ranks, history and the other accounts follow when the game is over.
     let first = riot::gameflow_phase().await;
     if let Some(p) = first.as_deref().filter(|p| IN_GAME.contains(p)) {
+        if p == "InProgress" && with(|c| c.st.set_bool("overlay")) && !riot::offline_test() {
+            let lang = with(|c| c.st.lang());
+            overlay::start(app().clone(), data().to_path_buf(), lang);
+        }
         let changed = with(|c| {
             if c.live.puuid.is_none() || stale_in(c, my_gen) {
                 return None;
@@ -2420,7 +2436,7 @@ fn show_window() {
 }
 /// WebView2 switches: flat tiles need no GPU process, no extensions, no Edge background traffic
 /// (measured: one process less, about half the CPU) (RS_WV_ARGS replaces them in test copies).
-fn browser_args() -> String {
+pub(crate) fn browser_args() -> String {
     let def = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-gpu --disable-gpu-compositing --in-process-gpu --disable-extensions --disable-component-update --disable-background-networking";
     if test_mode() {
         std::env::var("RS_WV_ARGS").unwrap_or_else(|_| def.into())

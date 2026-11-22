@@ -1,0 +1,14 @@
+/* the in-game overlay: small, see-through, readable over any map */
+html, body { margin: 0; background: transparent; overflow: hidden; font-family: "Segoe UI", system-ui, sans-serif; user-select: none; }
+#ov { display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 2px; }
+[hidden] { display: none !important; }
+.ov-team { display: flex; align-items: center; gap: 8px; padding: 3px 10px; border-radius: 999px;
+  background: rgba(8, 11, 18, .78); border: 1px solid rgba(200, 170, 110, .45); box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+.ov-side { font-size: 12px; font-weight: 600; color: #c9ced8; font-variant-numeric: tabular-nums; }
+.ov-side.me { color: #8fb4ff; } .ov-side.them { color: #ff8f97; }
+.ov-diff { min-width: 64px; text-align: center; font-size: 14px; font-weight: 700; color: #e8e2d0; font-variant-numeric: tabular-nums; }
+.ov-diff.up { color: #5fd79c; } .ov-diff.down { color: #ff7b83; }
+.ov-lanes { display: flex; gap: 4px; }
+.ov-lane { font-size: 10.5px; padding: 1px 6px; border-radius: 6px; background: rgba(8, 11, 18, .7); color: #aab1bf; font-variant-numeric: tabular-nums; }
+.ov-lane b { font-weight: 700; color: #e8e2d0; }
+.ov-lane b.up { color: #5fd79c; } .ov-lane b.down { color: #ff7b83; }
