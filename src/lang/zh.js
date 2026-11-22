@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'mh.otherGames': "其他对局", 'mh.unpin': "恢复正常显示",
     'mh.rCustom': "自定义时间 …", 'mh.rankNow': "当前段位 – Riot 不保存对局时的段位",
     'mh.rAll': "全部时间", 'mh.rToday': "今天", 'mh.r7': "最近 7 天", 'mh.r30': "最近 30 天", 'mh.r90': "最近 90 天", 'mh.resAll': "全部", 'mh.wins': "胜场", 'mh.losses': "败场", 'mh.champPh': "英雄 …", 'mh.sNew': "最新优先", 'mh.sKda': "最佳 KDA", 'mh.sKills': "最多击杀", 'mh.sDeaths': "最多死亡", 'mh.sDmg': "最高伤害", 'mh.sCs': "最佳每分钟补刀", 'mh.sLong': "最长对局", 'mh.moreFilters': "更多筛选", 'mh.minKills': "击杀 ≥", 'mh.maxDeaths': "死亡 ≤", 'mh.minKda': "KDA ≥", 'mh.multiAny': "任意多杀", 'mh.m2': "双杀及以上", 'mh.m3': "三杀及以上", 'mh.m4': "四杀及以上", 'mh.m5': "五杀", 'mh.reset': "重置", 'mh.sumGames': "场", 'mh.sumWins': "胜率（{w}胜 {l}负）", 'mh.streakW': "{n} 连胜", 'mh.streakL': "{n} 连败", 'mh.pentas': "{n} 次五杀", 'mh.recKills': "最多击杀", 'mh.recDeaths': "最多死亡", 'mh.recKda': "最佳 KDA", 'mh.recDmg': "最高伤害", 'mh.showMore': "显示更多（{n}）", 'mh.noMatch': "没有符合筛选条件的对局。",
     'mh.more': "加载更早的对局", 'mh.loadingOlder': "正在加载更早的对局 …", 'mh.moreOffline': "League 运行时才能加载更早的对局。", 'mh.noOlder': "没有更早的对局。", 'live.enemies': "敌方队伍", 'live.allies': "我方队伍", 'live.ranksNote': "单双排和灵活组排段位在开局时直接来自 Riot – 仅在 Riot 提供胜负时显示胜率。",

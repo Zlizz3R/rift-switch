@@ -19,7 +19,7 @@ function rankTip(r) {
   const [tier, div, lp] = r;
   return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
 }
-let mh = { ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+let mh = { pin: 0, ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440].includes(g.q) ? ' ' + t('mh.ranked') : '');
@@ -61,10 +61,18 @@ function renderMatches() {
   const list = MatchFilter.filterGames(d.games, mh.f);
   $('mhSummary').innerHTML = summaryHtml(list);
   if (!list.length) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.noMatch')}</div>`; return; }
-  const shown = list.slice(0, mh.show);
-  loadRanks(shown);
-  $('mhList').innerHTML = shown.map(g => gameRow(g, d.assets || {})).join('')
-    + (list.length > shown.length ? `<div class="mh-more"><button class="btn" id="mhShowMore">${t('mh.showMore', { n: list.length - shown.length })}</button></div>` : '');
+  const isPinned = g => mh.pin && !g.remake && Math.min(5, MatchFilter.me(g).multi || 0) === mh.pin;
+  const pinned = mh.pin ? list.filter(isPinned) : [];
+  const rest = pinned.length ? list.filter(g => !isPinned(g)) : list;
+  const shown = rest.slice(0, mh.show);
+  loadRanks(pinned.concat(shown));
+  const rows = gs => gs.map(g => gameRow(g, d.assets || {})).join('');
+  $('mhList').innerHTML = (pinned.length
+      ? `<div class="mh-sec pin"><span>${esc(t(MULTI[mh.pin]))} · ${pinned.length}</span><button class="mh-unpin" data-pin="${mh.pin}" title="${esc(t('mh.unpin'))}">✕</button></div>`
+        + rows(pinned) + (rest.length ? `<div class="mh-sec">${esc(t('mh.otherGames'))}</div>` : '')
+      : '')
+    + rows(shown)
+    + (rest.length > shown.length ? `<div class="mh-more"><button class="btn" id="mhShowMore">${t('mh.showMore', { n: rest.length - shown.length })}</button></div>` : '');
 }
 
 // ---------- ranks of the players ----------
@@ -130,7 +138,7 @@ $('mhChamp').oninput = () => {
 };
 for (const [id, k] of [['mhMinK', 'minKills'], ['mhMaxD', 'maxDeaths'], ['mhMinKda', 'minKda']]) $(id).oninput = () => setFilter({ [k]: $(id).value });
 $('mhAdvBtn').onclick = () => { mh.adv = !mh.adv; renderMatches(); };
-$('mhReset').onclick = () => { mh.f = { ...MH_DEFAULT }; $('mhChamp').value = ''; renderMatches(); };
+$('mhReset').onclick = () => { mh.pin = 0; mh.f = { ...MH_DEFAULT }; $('mhChamp').value = ''; renderMatches(); };
 
 // totals of what the filters show, plus a few records (click one to jump to that game)
 function summaryHtml(list) {
@@ -148,8 +156,9 @@ function summaryHtml(list) {
       <span>Ø <b>${f1(s.avg.csMin)}</b> CS/min</span>
       <span>Ø <b>${short(Math.round(s.avg.dmg))}</b> ${t('mh.dmg')}</span>
       ${s.streak && s.streak.n >= 2 ? `<span class="${s.streak.win ? 'good' : 'bad'}">${t(s.streak.win ? 'mh.streakW' : 'mh.streakL', { n: s.streak.n })}</span>` : ''}
-      ${s.pentas ? `<span class="good">${t('mh.pentas', { n: s.pentas })}</span>` : ''}
     </div>
+    ${[5, 4, 3, 2].some(m => s.multis[m]) ? `<div class="mh-multis">${[5, 4, 3, 2].filter(m => s.multis[m]).map(m =>
+      `<button class="mh-multi m${m}${mh.pin === m ? ' on' : ''}" data-pin="${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</button>`).join('')}</div>` : ''}
     <div class="mh-recs">
       ${rec('kills', t('mh.recKills'), r.kills, r.kills && r.kills.p.k)}
       ${rec('deaths', t('mh.recDeaths'), r.deaths, r.deaths && r.deaths.p.d)}
@@ -227,6 +236,13 @@ document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => { mh.fil
 // "show more" and jumping to a record's game
 $('viewMatches').addEventListener('click', e => {
   if (e.target.closest('#mhShowMore')) { mh.show += 40; renderMatches(); return; }
+  const pin = e.target.closest('[data-pin]');
+  if (pin) {
+    mh.pin = mh.pin === Number(pin.dataset.pin) ? 0 : Number(pin.dataset.pin);
+    renderMatches();
+    if (mh.pin) $('mhList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   const go = e.target.closest('[data-goto]');
   if (!go) return;
   const find = () => document.querySelector(`.mh-row[data-gid="${CSS.escape(go.dataset.goto)}"]`);

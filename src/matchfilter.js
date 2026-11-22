@@ -68,6 +68,8 @@
         dmg: best(x => x.p.dmg), multi: best(x => (x.p.multi || 0) * 100 + x.p.k),
       },
       pentas: ps.filter(x => x.p.multi >= 5).length,
+      // games by their biggest multikill: { 2: doubles, 3: triples, 4: quadras, 5: pentas }
+      multis: Object.fromEntries([2, 3, 4, 5].map(m => [m, ps.filter(x => Math.min(5, x.p.multi || 0) === m).length])),
       streak: streakOf(games),
     };
   }

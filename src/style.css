@@ -727,3 +727,15 @@ body.locked #passBox { background: var(--bg); }
 .rk-c.solo[class*="t-"] { background: var(--c); }
 .rk-c.flex[class*="t-"] { color: var(--c); }
 .mh-teams { grid-template-columns: 1fr 1fr; }
+
+/* match history: multikill chips (click = those games on top) */
+.mh-multis { display: flex; flex-wrap: wrap; gap: 6px; }
+.mh-multi { padding: 3px 10px; border-radius: 20px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.mh-multi:hover { color: var(--text); border-color: var(--gold); }
+.mh-multi.m5 { color: #f4c874; } .mh-multi.m4 { color: #bf6be6; } .mh-multi.m3 { color: #7b96ff; }
+.mh-multi.on { background: rgba(200, 170, 110, .16); border-color: var(--gold); color: var(--text); }
+.mh-sec { display: flex; align-items: center; justify-content: space-between; margin: 10px 2px 4px; font-size: 11px; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.mh-sec.pin { color: var(--gold); margin-top: 0; }
+.mh-unpin { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 6px; }
+.mh-unpin:hover { color: var(--text); }
