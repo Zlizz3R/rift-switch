@@ -4,8 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const KEEP_PER_ACCOUNT = 30;     // newest games remembered per account
-const KEEP_GAMES = 400;          // details kept at most
+const KEEP_PER_ACCOUNT = 200;    // newest games remembered per account
+const KEEP_GAMES = 1500;         // details kept at most (~2 KB each)
 let file = null, db = { games: {}, by: {} }, dirty = false, saveTimer = null;
 
 function load(dataDir) {
@@ -101,8 +101,10 @@ function list(accountIds, filter = {}) {
     }
   }
   return [...rows.values()].sort((a, b) => b.t - a.t).slice(0, filter.limit || 60);
+  // (all accounts mixed, newest first: one timeline)
 }
 const QUEUE_GROUPS = { solo: [420], flex: [440], normal: [400, 430, 490, 480], aram: [450, 2400], arena: [1700, 1710] };
 function queueMatch(q, group) { return (QUEUE_GROUPS[group] || []).includes(q); }
 
-module.exports = { load, note, fill, list, forget, compact, missing, QUEUE_GROUPS, _db: () => db };
+const known = puuid => (db.by[puuid] || []).length;
+module.exports = { load, note, fill, list, forget, compact, missing, known, QUEUE_GROUPS, _db: () => db };

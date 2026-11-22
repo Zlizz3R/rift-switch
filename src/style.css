@@ -655,3 +655,19 @@ body.locked #passBox { background: var(--bg); }
   color: var(--muted); opacity: .75; }
 .srv.low { top: 33px; }
 .srv.pbe { color: #b98cff; opacity: 1; }
+
+/* live: Solo/Duo and Flex side by side, always labelled */
+.p-ranks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-left: auto; min-width: 0; flex: 1 1 340px; max-width: 460px; }
+.q-rank { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); min-width: 0; white-space: nowrap; }
+.q-rank img { width: 22px; height: 22px; flex: none; }
+.q-rank b { color: var(--text); font-weight: 600; }
+.q-rank i { font-style: normal; }
+.q-rank > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.q-l { font-size: 9.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); width: 52px; flex: none; }
+.q-rank.none > span:last-child { font-style: italic; }
+.p-row.me .p-name b { color: var(--gold2); }
+
+.mh-more { display: flex; justify-content: center; padding: 10px 0 4px; }
+
+.nav.coffee:hover { color: #ffdd00; background: rgba(255,221,0,.08); }
+.q-rank > span:last-child { line-height: 1.5; padding-right: 2px; }

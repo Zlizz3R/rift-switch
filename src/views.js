@@ -204,13 +204,20 @@ async function pollLive() {
   } catch (e) { console.warn('live', e); }
   if (run === liveRun) liveTimer = setTimeout(pollLive, 3000);
 }
+// one queue's rank, labelled: "SOLO/DUO  Gold II · 45 LP  · 54% (120)"
+function queueRank(label, r) {
+  if (!r) return `<div class="q-rank none"><span class="q-l">${label}</span><span>${t('tile.unranked')}</span></div>`;
+  const games = r.wins + r.losses;
+  const wr = r.wl !== false && games ? ` · ${Math.round(100 * r.wins / games)}%` : r.wins ? ` · ${t('tile.wins', { n: r.wins })}` : '';
+  const tip = r.wl !== false && games ? t('tile.wlTitle', { w: r.wins, l: r.losses }) : t('tile.wlUnknown');
+  return `<div class="q-rank" title="${esc(tip)}"><span class="q-l">${label}</span><img src="${crestUrl(r.tier)}" alt="">
+    <span><b>${tierName(r.tier)}${APEX.includes(r.tier) ? '' : ' ' + r.division}</b> · ${r.lp} LP<i>${wr}</i></span></div>`;
+}
 function playerRow(p) {
-  const r = p.solo;
-  const rank = r ? `${tierName(r.tier)}${APEX.includes(r.tier) ? '' : ' ' + r.division} · ${r.lp} LP` : t('tile.unranked');
-  return `<div class="p-row">
+  return `<div class="p-row${p.puuid && liveData && p.puuid === liveData.me ? ' me' : ''}">
     ${p.championId ? `<img class="ch" src="${champIcon(p.championId)}" alt="">` : p.iconId != null ? `<img class="ch round" src="${iconUrl(p.iconId)}" alt="">` : '<span class="ch"></span>'}
     <div class="p-name"><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.position ? ' · ' + esc(p.position) : ''}</small></div>
-    <div class="p-rank">${r ? `<img src="${crestUrl(r.tier)}" alt="">` : ''}${rank}</div>
+    <div class="p-ranks">${queueRank('Solo/Duo', p.solo)}${queueRank('Flex', p.flex)}</div>
     ${p.gameName ? `<button class="chip" data-opgg="${esc(p.gameName + '#' + p.tagLine)}">op.gg</button>` : ''}
   </div>`;
 }
@@ -218,13 +225,22 @@ function renderLive(force) {
   if (!force && document.activeElement && document.activeElement.closest && document.activeElement.closest('#liveBody input')) return;
   const d = liveData || {};
   $('liveSub').textContent = !d.clientUp ? t('app.closed') : phaseName(d.phase);
-  $('liveDot').hidden = !(d.clash && d.clash.opponents && d.clash.opponents.length) && !d.champSelect && !d.lobby;
+  $('liveDot').hidden = !(d.clash && d.clash.opponents && d.clash.opponents.length) && !d.champSelect && !d.lobby && !d.inGame;
   const parts = [];
   if (d.clash && d.clash.opponents && d.clash.opponents.length) {
     const ids = d.clash.opponents.filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
     parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.clash')} – ${esc(d.clash.teamName || '')} ${d.clash.teamTag ? '[' + esc(d.clash.teamTag) + ']' : ''}</h3>
       <button class="btn gold ext-btn" id="clashAll" data-ids="${esc(ids.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button></div>
       ${d.clash.opponents.map(playerRow).join('')}</div>`);
+  }
+  if (d.inGame && (d.inGame.teamOne.length || d.inGame.teamTwo.length)) {
+    const mine = d.inGame.teamTwo.some(p => p.puuid === d.me) ? 'teamTwo' : 'teamOne';
+    const theirs = mine === 'teamOne' ? 'teamTwo' : 'teamOne';
+    const ids = d.inGame[theirs].filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
+    parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.enemies')}</h3>
+      ${ids.length ? `<button class="btn gold ext-btn multi-btn" data-ids="${esc(ids.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button>` : ''}</div>
+      <p class="fine">${t('live.ranksNote')}</p>${d.inGame[theirs].map(playerRow).join('')}</div>`);
+    parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.allies')}</h3></div>${d.inGame[mine].map(playerRow).join('')}</div>`);
   }
   if (d.lobby && d.lobby.members.length) {
     parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.lobby')}</h3></div>${d.lobby.members.map(playerRow).join('')}</div>`);
@@ -266,7 +282,8 @@ function helperHtml() {
 $('liveBody').addEventListener('click', async e => {
   const og = e.target.closest('[data-opgg]');
   if (og) { const [n, tag] = og.dataset.opgg.split('#'); return openSite({ gameName: n, tagLine: tag, region: (liveData && liveData.region) || selected()?.region }, 'opgg'); }
-  if (e.target.closest('#clashAll')) return api.openMulti((liveData && liveData.region) || (selected() && selected().region) || 'euw', e.target.closest('#clashAll').dataset.ids.split('|'));
+  const mb = e.target.closest('#clashAll, .multi-btn');
+  if (mb) return api.openMulti((liveData && liveData.region) || (selected() && selected().region) || 'euw', mb.dataset.ids.split('|'));
   const del = e.target.closest('[data-hdel]');
   if (del) { savePool(pool().filter(id => id !== Number(del.dataset.hdel))); helper.results = null; return renderLive(); }
   if (e.target.closest('#hRun')) {

@@ -497,6 +497,7 @@ $('tileEditor').addEventListener('click', e => { if (e.target === $('tileEditor'
 $('editTiles').onclick = openTileEditor;
 const SUPPORT_URL = 'https://buymeacoffee.com/zlizz3r';
 $('supportBtn').onclick = () => api.openExternal(SUPPORT_URL);
+$('navCoffee').onclick = () => api.openExternal(SUPPORT_URL);
 $('openTileEditor').onclick = () => { openSettings(false); openTileEditor(); };
 
 // ---------- streamer mode settings ----------

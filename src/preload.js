@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('api', {
   checkImportPass: pass => ipcRenderer.invoke('check-import-pass', pass),
   update: what => ipcRenderer.invoke('update', what),
   matches: filter => ipcRenderer.invoke('matches', filter),
+  matchesMore: () => ipcRenderer.invoke('matches-more'),
   onMatchesChanged: fn => ipcRenderer.on('matches-changed', () => fn()),
   unlock: pass => ipcRenderer.invoke('unlock', pass),
   lock: (what, pass, oldPass) => ipcRenderer.invoke('lock', what, pass, oldPass),

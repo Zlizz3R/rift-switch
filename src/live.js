@@ -60,6 +60,17 @@ async function champSelect() {
   };
 }
 
+// ---------- in game ----------
+// Both teams of the running game (names are visible once the game has started).
+async function inGame() {
+  const s = await lcu('/lol-gameflow/v1/session', 3000);
+  const gd = s && s.gameData;
+  if (!gd || !Array.isArray(gd.teamOne) || !Array.isArray(gd.teamTwo)) return null;
+  const ref = p => ({ puuid: p.puuid, summonerId: p.summonerId, championId: p.championId, position: p.selectedPosition || '' });
+  const [one, two] = await Promise.all([gd.teamOne, gd.teamTwo].map(team => players(team.filter(p => p.puuid || p.summonerId).map(ref))));
+  return { queueId: gd.queue && gd.queue.id, teamOne: one, teamTwo: two };
+}
+
 // ---------- Clash ----------
 
 // the Clash bracket changes rarely: ask at most once a minute
@@ -95,12 +106,13 @@ async function snapshot() {
   const phase = await riot.gameflowPhase();
   if (!phase) return { clientUp: false };
   const reg = await lcu('/riotclient/region-locale', 2000);
-  const [lb, cs, cl] = await Promise.all([
+  const [lb, cs, cl, ig] = await Promise.all([
     ['Lobby', 'Matchmaking', 'ReadyCheck'].includes(phase) ? lobby() : null,
     phase === 'ChampSelect' ? champSelect() : null,
     clash(),
+    ['GameStart', 'InProgress', 'Reconnect'].includes(phase) ? inGame() : null,
   ]);
-  return { clientUp: true, phase, region: reg ? reg.region : '', lobby: lb, champSelect: cs, clash: cl };
+  return { clientUp: true, phase, region: reg ? reg.region : '', lobby: lb, champSelect: cs, clash: cl, inGame: ig, me: (await riot.currentAccount() || {}).puuid };
 }
 
 // ---------- champion list (CommunityDragon, cached for a day) ----------

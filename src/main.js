@@ -700,11 +700,41 @@ ipcMain.handle('matches', async (_e, filter) => {
   const f = filter && typeof filter === 'object' ? filter : {};
   return {
     games: matches.list(state.accounts.map(a => a.puuid), {
-      puuid: isId(f.puuid) ? f.puuid : null, queue: Object.keys(matches.QUEUE_GROUPS).includes(f.queue) ? f.queue : null, limit: 80 }),
-    waiting: matches.missing().length,
+      puuid: isId(f.puuid) ? f.puuid : null, queue: Object.keys(matches.QUEUE_GROUPS).includes(f.queue) ? f.queue : null,
+      limit: Math.min(2000, Math.max(20, Number(f.limit) || 80)) }),
+    waiting: matches.missing().length, loadingOlder,
     assets: await liveData.gameAssets(DATA),
     clientUp: live.clientUp,
   };
+});
+// "Load older games": the next 20 games of every account the running client can see
+// (same server), then their details in the background.
+let loadingOlder = false;
+ipcMain.handle('matches-more', async () => {
+  if (loadingOlder || !live.clientUp) return { ok: false, offline: !live.clientUp };
+  loadingOlder = true;
+  try {
+    const cur = state.accounts.find(a => a.puuid === live.puuid);
+    const region = cur && cur.region;
+    let added = 0;
+    for (const a of state.accounts) {
+      if (a.placeholder || (region && a.region && a.region !== region)) continue;
+      const beg = matches.known(a.puuid);
+      const list = await riot.matchList(a.puuid, beg, beg + 20);
+      if (list && list.length) { const before = matches.known(a.puuid); matches.note(a.puuid, list); added += matches.known(a.puuid) - before; }
+    }
+    // details: a few at a time so the client isn't flooded; the page refreshes as they come
+    (async () => {
+      for (let i = 0; i < 40 && matches.missing().length && live.clientUp; i++) {
+        const got = await matches.fill(riot.lcu, 4);
+        if (got && winShown()) win.webContents.send('matches-changed');
+        if (!got) break;
+      }
+      loadingOlder = false;
+      if (winShown()) win.webContents.send('matches-changed');
+    })();
+    return { ok: true, added };
+  } catch (e) { loadingOlder = false; logError('matches-more', e); return { ok: false }; }
 });
 ipcMain.handle('update', (_e, what) => {
   if (what === 'install') { quitting = true; updater.installNow(); } else updater.check();

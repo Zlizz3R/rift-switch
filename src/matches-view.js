@@ -18,7 +18,7 @@ async function loadMatches() {
   if (mh.loading) return;
   mh.loading = true;
   try {
-    mh.data = await api.matches({ puuid: mh.filter.puuid || null, queue: mh.filter.queue || null });
+    mh.data = await api.matches({ puuid: mh.filter.puuid || null, queue: mh.filter.queue || null, limit: mh.limit || 80 });
   } catch (e) { console.warn('matches', e); }
   mh.loading = false;
   renderMatches();
@@ -34,8 +34,12 @@ function renderMatches() {
   document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq === mh.filter.queue));
   if (!d) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.loading')}</div>`; return; }
   $('mhSub').textContent = d.waiting && d.clientUp ? t('mh.fetching', { n: d.waiting }) : !d.clientUp ? t('mh.offline') : t('mh.sub');
-  if (!d.games.length) { $('mhList').innerHTML = `<div class="mh-empty">${t(d.clientUp ? 'mh.empty' : 'mh.emptyOffline')}</div>`; return; }
-  $('mhList').innerHTML = d.games.map(g => gameRow(g, d.assets || {})).join('');
+  if (!d.games.length) { $('mhList').innerHTML = `<div class="mh-empty">${t(d.clientUp ? 'mh.empty' : 'mh.emptyOffline')}</div>` + (d.clientUp ? moreButton(d) : ''); return; }
+  $('mhList').innerHTML = d.games.map(g => gameRow(g, d.assets || {})).join('') + moreButton(d);
+}
+function moreButton(d) {
+  if (!d.clientUp) return `<div class="mh-more"><span class="fine">${t('mh.moreOffline')}</span></div>`;
+  return `<div class="mh-more"><button class="btn" id="mhMore" ${d.loadingOlder ? 'disabled' : ''}>${d.loadingOlder ? t('mh.loadingOlder') : t('mh.more')}</button></div>`;
 }
 
 function icon(map, id, cls) {
@@ -95,6 +99,15 @@ function gameRow(g, as) {
 // filters
 $('mhAccount').onchange = () => { mh.filter.puuid = $('mhAccount').value; loadMatches(); };
 document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => { mh.filter.queue = b.dataset.mhq; loadMatches(); }));
+// older games: every account, one timeline
+$('mhList').addEventListener('click', async e => {
+  if (!e.target.closest('#mhMore')) return;
+  e.target.closest('#mhMore').disabled = true;
+  const r = await api.matchesMore();
+  if (r && r.ok) mh.limit = (mh.limit || 80) + 80;
+  if (r && r.ok && !r.added) toast(t('mh.noOlder'));
+  loadMatches();
+});
 // a player's name: "open with" menu (op.gg, Porofessor …), region of the owning account
 $('mhList').addEventListener('click', e => {
   const b = e.target.closest('[data-player]');

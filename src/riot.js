@@ -134,6 +134,13 @@ async function historySummary(puuid) {
   const mh = await lcu('/lol-match-history/v1/products/lol/' + encodeURIComponent(puuid) + '/matches?begIndex=0&endIndex=50', 6000);
   return summarizeGames(mh && mh.games && mh.games.games);
 }
+// one page of an account's match list (older games: higher begIndex) -> [{ id, t, q }] or null
+async function matchList(puuid, beg, end) {
+  const mh = await lcu('/lol-match-history/v1/products/lol/' + encodeURIComponent(puuid) + '/matches?begIndex=' + beg + '&endIndex=' + end, 8000);
+  const games = mh && mh.games && mh.games.games;
+  return Array.isArray(games) ? games.map(g => ({ id: g.gameId, t: g.gameCreation, q: g.queueId })) : null;
+}
+
 // the match list -> last played, ranked games, normal-games count (pure, tested)
 function summarizeGames(games, now = Date.now()) {
   if (!Array.isArray(games)) return null;
@@ -392,7 +399,7 @@ function autofill(username, password, since) {
 }
 
 module.exports = {
-  pickQueue, decayOf, summarizeGames,
+  pickQueue, decayOf, summarizeGames, matchList,
   lcu, historySummary,
   currentAccount, rankedFor, summonerByPuuid, gameflowPhase, lookupRiotId,
   profileData, acceptReadyCheck, rankedEligibility,
