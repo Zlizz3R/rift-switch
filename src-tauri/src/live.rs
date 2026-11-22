@@ -161,15 +161,21 @@ async fn in_game() -> Option<Value> {
 }
 
 static CLASH: Mutex<Option<(i64, Value)>> = Mutex::new(None);
+static CLASH_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Clash never holds the page up: the last answer right away (nothing the first time), a fresh
+/// one is fetched in the background once a minute – the next poll shows it.
 async fn clash() -> Value {
-    if let Some((at, v)) = CLASH.lock().unwrap().clone() {
-        if now_ms() - at < 60_000 {
-            return v;
-        }
+    use std::sync::atomic::Ordering;
+    let last = CLASH.lock().unwrap().clone();
+    let fresh = last.as_ref().is_some_and(|(at, _)| now_ms() - at < 60_000);
+    if !fresh && !CLASH_BUSY.swap(true, Ordering::SeqCst) {
+        tauri::async_runtime::spawn(async {
+            let v = clash_fresh().await.unwrap_or(Value::Null);
+            *CLASH.lock().unwrap() = Some((now_ms(), v));
+            CLASH_BUSY.store(false, Ordering::SeqCst);
+        });
     }
-    let v = clash_fresh().await.unwrap_or(Value::Null);
-    *CLASH.lock().unwrap() = Some((now_ms(), v.clone()));
-    v
+    last.map(|(_, v)| v).unwrap_or(Value::Null)
 }
 async fn clash_fresh() -> Option<Value> {
     let sum = lcu("/lol-clash/v1/tournament-summary", 3000, "GET").await?;
@@ -227,9 +233,10 @@ pub async fn snapshot() -> Value {
     let Some(phase) = riot::gameflow_phase().await else {
         return json!({ "clientUp": false });
     };
-    let reg = lcu("/riotclient/region-locale", 2000, "GET").await;
     let p = phase.as_str();
-    let (lb, cs, cl, ig) = tokio::join!(
+    let (reg, me, lb, cs, cl, ig) = tokio::join!(
+        lcu("/riotclient/region-locale", 2000, "GET"),
+        get("/lol-summoner/v1/current-summoner"),
         async {
             if ["Lobby", "Matchmaking", "ReadyCheck"].contains(&p) {
                 lobby().await
@@ -253,10 +260,7 @@ pub async fn snapshot() -> Value {
             }
         },
     );
-    let me = get("/lol-summoner/v1/current-summoner")
-        .await
-        .map(|m| m["puuid"].clone())
-        .unwrap_or(Value::Null);
+    let me = me.map(|m| m["puuid"].clone()).unwrap_or(Value::Null);
     json!({ "clientUp": true, "phase": phase, "region": reg.map(|r| r["region"].clone()).unwrap_or(json!("")),
         "lobby": lb, "champSelect": cs, "clash": cl, "inGame": ig, "me": me })
 }
@@ -298,6 +302,26 @@ pub async fn champions(data_dir: &Path) -> Value {
         *CHAMPS.lock().unwrap() = Some(c["list"].clone());
         return c["list"].clone();
     }
+    // older than a day: use it now, fetch the new one in the background (new champions appear
+    // a few seconds later instead of the page waiting for the download)
+    let old = std::fs::read_to_string(&file)
+        .ok()
+        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+        .map(|c| c["list"].clone())
+        .filter(|l| l.as_array().is_some_and(|l| !l.is_empty()));
+    if let Some(old) = old {
+        *CHAMPS.lock().unwrap() = Some(old.clone());
+        let dir = data_dir.to_path_buf();
+        // a good download replaces the list (memory + file); a failed one keeps the old list
+        tauri::async_runtime::spawn(async move {
+            fetch_champions(&dir).await;
+        });
+        return old;
+    }
+    fetch_champions(data_dir).await
+}
+async fn fetch_champions(data_dir: &Path) -> Value {
+    let file = data_dir.join("champions.json");
     let url = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-summary.json";
     let mut list: Vec<Value> = vec![];
     if let Some(Value::Array(all)) = web_json(url, 6).await {

@@ -679,6 +679,14 @@ test('diagnostics, what\'s new and the data sources', () => withApp({ state: sam
   assert.match(app.$('#helpBody').textContent, /CommunityDragon/);
 }));
 
+// ---------- live page ----------
+test('live page: stands at once, even while the client and the champion list still answer', () => withApp({ replies: { live: () => new Promise(() => {}), champions: () => new Promise(() => {}) } }, async (app) => {
+  await app.click('#navLive');
+  assert.ok(!app.$('#viewLive').hidden);
+  assert.match(app.$('#liveBody').textContent, /Loading/);
+  assert.ok(app.$('#liveBody .helper'), 'the champ select helper is there right away');
+}));
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;

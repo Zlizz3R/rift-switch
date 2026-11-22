@@ -366,12 +366,18 @@ function pool() {
 function savePool(p) { S.settings = { ...S.settings, champPool: p }; api.setSetting('champPool', p); }
 
 let liveRun = 0;
+let champsLoading = false;
 async function pollLive() {
   clearTimeout(liveTimer);
   const run = ++liveRun;              // a newer call replaces this loop
   if (view !== 'live') return;
+  // the page stands at once; the champion list never holds up the live data
+  if (!liveData) renderLive();
+  if (!champs.length && !champsLoading) {
+    champsLoading = true;
+    api.champions().then(c => { champsLoading = false; if (Array.isArray(c) && c.length) { champs = c; if (view === 'live') renderLive(); } });
+  }
   try {
-    if (!champs.length) champs = (await api.champions()) || [];
     const d = await api.live();
     if (run !== liveRun || view !== 'live') return;
     liveData = d;
@@ -468,7 +474,8 @@ function renderLive(force) {
     // every enemy pick, ahead of time (the laner first)
     want(cs.enemies.map(e => e.championId).filter(Boolean));
   } else if (helper.autoEnemy && !d.inGame) { helper.enemy = 0; helper.autoEnemy = false; }
-  if (!parts.length || (parts.length === 1 && pens)) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
+  if (!liveData) parts.push(`<div class="live-card"><p class="fine">${t('live.loading')}</p></div>`);
+  else if (!parts.length || (parts.length === 1 && pens)) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
   parts.push(helperHtml());
   // keep focus/scroll of the helper's inputs: only replace when something changed
   const html = parts.join('');
