@@ -348,7 +348,11 @@ async function autoLogin(cred, name, settleMs, since) {
 // After a switch the Riot Client sometimes stops on its home screen (always after a
 // typed login). Once it is signed in and League hasn't started, press Play for the user.
 let playToken = 0;
-async function autoPlay() {
+// League product line of an account: PBE accounts start the PBE client
+const plOf = acc => (acc && acc.region === 'PBE' ? 'pbe' : 'live');
+let playLine = 'live';
+async function autoPlay(pl) {
+  if (pl) playLine = pl;
   if (!state.settings.autoPlay) return;
   const token = ++playToken;
   const t0 = Date.now();
@@ -361,7 +365,7 @@ async function autoPlay() {
       // give the client a moment to start League by itself; retry once if nothing happens
       if (Date.now() - signedInSince > (presses ? 15000 : 2000)) {
         if (presses >= 2) return;
-        await riot.pressPlay();
+        await riot.pressPlay(playLine);
         presses++;
         signedInSince = Date.now();
       }
@@ -455,7 +459,7 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
       gen++;
       state.active = puuid;
       save();
-      await riot.pressPlay();
+      await riot.pressPlay(plOf(acc));
       return { ok: true, fast: 'play' };
     }
     // login screen already open and we have the password: type it straight in
@@ -466,7 +470,7 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
       live = { puuid: null, phase: null, clientUp: false };
       save();
       autoLogin(cred, acc ? acc.gameName : cred.u, 1500);
-      autoPlay();
+      autoPlay(plOf(acc));
       return { ok: true, fast: 'login' };
     }
   }
@@ -478,9 +482,9 @@ ipcMain.handle('switch', (_e, puuid) => withBusy(async () => {
   live = { puuid: null, phase: null, clientUp: false };
   save();
   const started = Date.now();
-  riot.launchLeague();
+  riot.launchLeague(plOf(acc));
   if (cred) autoLogin(cred, acc ? acc.gameName : cred.u, json ? 4000 : 1500, started);
-  autoPlay();
+  autoPlay(plOf(acc));
   return { ok: true };
 }));
 
@@ -497,7 +501,7 @@ ipcMain.handle('add-new', (_e, c) => withBusy(async () => {
   const started = Date.now();
   riot.launchLeague();
   if (cred) autoLogin(cred, cred.u, 1500, started);
-  autoPlay();
+  autoPlay('live');
   return { ok: true };
 }));
 
@@ -557,9 +561,20 @@ ipcMain.handle('set-cred', async (_e, puuid, c) => {
   let p = typeof c.p === 'string' ? c.p : '';
   if (!p) { const old = await loadCred(puuid); if (old) p = old.p; }
   if (!p) return { ok: false, errorKey: 'm.passMissing' };
+  // Riot ID for a saved account that had none yet
+  const rid = a.placeholder && !a.tagLine && typeof c.riotId === 'string' ? c.riotId.trim() : '';
+  let m = null;
+  if (rid && !(m = /^(.{2,16})#([^#\s]{2,5})$/.exec(rid))) return { ok: false, errorKey: 'm.riotIdFormat' };
   await storeCred(puuid, { u: c.u.trim(), p });
+  let found = false;
+  if (m) {
+    gen++;
+    const hit = await riot.lookupRiotId(m[1].trim(), m[2]);
+    if (hit && state.accounts.some(x => x.puuid === puuid)) { resolvePlaceholder(puuid, hit.puuid); upsert(hit); found = true; }
+    else { a.gameName = m[1].trim(); a.tagLine = m[2]; }   // looked up later, once League runs
+  }
   save();
-  return { ok: true };
+  return { ok: true, found };
 });
 ipcMain.handle('del-cred', (_e, puuid) => {
   if (!isId(puuid)) return;
@@ -649,7 +664,8 @@ ipcMain.handle('tool', (_e, what) => withBusy(async () => {
   if (what === 'closeAll') return { ok: await saveActiveBeforeLeaving() };
   if (what === 'restart') {
     if (!(await saveActiveBeforeLeaving())) return { ok: false };
-    riot.launchLeague(); autoPlay();
+    const pl = plOf(state.accounts.find(x => x.puuid === state.active));
+    riot.launchLeague(pl); autoPlay(pl);
     return { ok: true };
   }
   if (what === 'clearCache') {

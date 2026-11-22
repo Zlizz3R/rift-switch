@@ -45,7 +45,7 @@
     'add.title': 'अकाउंट जोड़ें', 'add.save': 'अकाउंट सेव करें', 'add.saveHint': 'सिर्फ़ सेव होगा – लॉगिन तब होगा जब आप बाद में टाइल पर क्लिक करेंगे।',
     'add.riotId': 'Riot ID', 'add.optional': 'वैकल्पिक', 'add.user': 'Riot यूज़रनेम', 'add.pass': 'पासवर्ड', 'add.btn': 'सेव करें',
     'add.riotIdHint': 'Riot ID देने पर पहले लॉगिन से पहले ही टाइल आइकन और रैंक दिखाती है (League खुला होना चाहिए)।',
-    'add.or': 'या', 'add.current': 'मौजूदा अकाउंट लें', 'add.manual': 'अभी ख़ुद लॉगिन करें', 'add.manualSub': 'League बंद करके खाली Riot Client खोलता है – कोई पासवर्ड सेव नहीं होता।',
+    'add.or': 'या', 'add.current': "मौजूदा अकाउंट सेव करें", 'te.server': "सर्वर", 'tile.server': "इस अकाउंट का सर्वर", 'add.manual': "मैन्युअल लॉगिन", 'add.manualSub': 'League बंद करके खाली Riot Client खोलता है – कोई पासवर्ड सेव नहीं होता।',
     'add.lockHint': 'पासवर्ड Windows से एन्क्रिप्ट होते हैं और सिर्फ़ इस PC पर आपका Windows यूज़र ही उन्हें पढ़ सकता है। वे कभी दिखाए या कहीं भेजे नहीं जाते।',
     'add.notOpen': 'League खुला नहीं है।', 'add.already': '{name} पहले से सेव है।', 'add.takeOver': 'अभी लॉग-इन अकाउंट सेव करता है।', 'add.fill': 'कृपया यूज़रनेम और पासवर्ड भरें।',
     'add.saved': 'सेव हो गया', 'add.savedFound': 'सेव हो गया – रैंक लोड हुए', 'add.savedLater': 'सेव हो गया – League खुलने पर रैंक आएँगे', 'add.currentSaved': 'अकाउंट सेव हो गया', 'show': 'दिखाएँ',

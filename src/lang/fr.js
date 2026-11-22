@@ -45,7 +45,7 @@
     'add.title': 'Ajouter un compte', 'add.save': 'Enregistrer le compte', 'add.saveHint': 'Seulement enregistré – la connexion se fait quand tu cliques plus tard sur la tuile.',
     'add.riotId': 'Riot ID', 'add.optional': 'facultatif', 'add.user': 'Identifiant Riot', 'add.pass': 'Mot de passe', 'add.btn': 'Enregistrer',
     'add.riotIdHint': 'Avec un Riot ID, la tuile affiche l’icône et les rangs avant la première connexion (si League est ouvert).',
-    'add.or': 'ou', 'add.current': 'Reprendre le compte actuel', 'add.manual': 'Me connecter moi-même', 'add.manualSub': 'Ferme League et ouvre le Riot Client vide – aucun mot de passe n’est enregistré.',
+    'add.or': 'ou', 'add.current': "Enregistrer le compte actuel", 'te.server': "Serveur", 'tile.server': "Serveur de ce compte", 'add.manual': "Se connecter manuellement", 'add.manualSub': 'Ferme League et ouvre le Riot Client vide – aucun mot de passe n’est enregistré.',
     'add.lockHint': 'Les mots de passe sont chiffrés par Windows et seul ton utilisateur Windows sur ce PC peut les déchiffrer. Ils ne sont jamais affichés ni envoyés.',
     'add.notOpen': 'League n’est pas ouvert.', 'add.already': '{name} est déjà enregistré.', 'add.takeOver': 'Enregistre le compte actuellement connecté.',
     'add.fill': 'Renseigne l’identifiant et le mot de passe.', 'add.saved': 'Enregistré', 'add.savedFound': 'Enregistré – rangs chargés', 'add.savedLater': 'Enregistré – les rangs suivent dès que League est ouvert',

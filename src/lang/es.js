@@ -45,7 +45,7 @@
     'add.title': 'Añadir cuenta', 'add.save': 'Guardar cuenta', 'add.saveHint': 'Solo se guarda – el inicio de sesión ocurre cuando hagas clic en la tarjeta.',
     'add.riotId': 'Riot ID', 'add.optional': 'opcional', 'add.user': 'Usuario de Riot', 'add.pass': 'Contraseña', 'add.btn': 'Guardar',
     'add.riotIdHint': 'Con Riot ID la tarjeta muestra icono y rangos antes del primer inicio (si League está abierto).',
-    'add.or': 'o', 'add.current': 'Usar la cuenta actual', 'add.manual': 'Iniciar sesión yo mismo', 'add.manualSub': 'Cierra League y abre el Riot Client vacío – no se guarda ninguna contraseña.',
+    'add.or': 'o', 'add.current': "Guardar cuenta actual", 'te.server': "Servidor", 'tile.server': "Servidor de esta cuenta", 'add.manual': "Iniciar sesión manualmente", 'add.manualSub': 'Cierra League y abre el Riot Client vacío – no se guarda ninguna contraseña.',
     'add.lockHint': 'Las contraseñas se cifran con Windows y solo tu usuario de Windows en este PC puede descifrarlas. Nunca se muestran ni se envían.',
     'add.notOpen': 'League no está abierto.', 'add.already': '{name} ya está guardada.', 'add.takeOver': 'Guarda la cuenta que tiene la sesión iniciada ahora.',
     'add.fill': 'Rellena usuario y contraseña.', 'add.saved': 'Guardada', 'add.savedFound': 'Guardada – rangos cargados', 'add.savedLater': 'Guardada – los rangos llegan cuando League esté abierto',

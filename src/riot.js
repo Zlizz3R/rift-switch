@@ -35,12 +35,17 @@ function riotClientExe() {
   return exe.replace(/\//g, '\\');
 }
 
-function leagueDir() {
-  const j = installs();
-  const dirs = Object.keys(j.associated_client || {})
-    .filter(d => /League of Legends\/?$/i.test(d) && !/PBE/i.test(d));
-  return (dirs[0] || 'C:/Riot Games/League of Legends/').replace(/\//g, '\\');
+// League install folders: live and (if installed) PBE
+function leagueDirs() {
+  const keys = Object.keys(installs().associated_client || {});
+  const find = re => keys.find(d => re.test(d));
+  const win = d => d && d.replace(/\//g, '\\');
+  return {
+    live: win(find(/League of Legends\/?$/i) || 'C:/Riot Games/League of Legends/'),
+    pbe: win(find(/League of Legends \(PBE\)\/?$/i)),
+  };
 }
+const leagueDir = () => leagueDirs().live;
 
 // ---------- League Client API (LCU) ----------
 
@@ -50,7 +55,25 @@ function readLock(file) {
     return port && password ? { port, password } : null;
   } catch { return null; }
 }
-const lockfile = () => readLock(path.join(leagueDir(), 'lockfile'));
+// The running League client: live or PBE (both can't run at once). A lockfile can be left
+// behind by a crash, so the newer one wins; patchline() says which one it was.
+let currentPatchline = 'live';
+function lockfile() {
+  const d = leagueDirs();
+  let best = null;
+  for (const pl of ['live', 'pbe']) {
+    if (!d[pl]) continue;
+    const f = path.join(d[pl], 'lockfile');
+    let t = 0;
+    try { t = fs.statSync(f).mtimeMs; } catch { continue; }
+    const lf = readLock(f);
+    if (lf && (!best || t > best.t)) best = { ...lf, t, pl };
+  }
+  if (!best) return null;
+  currentPatchline = best.pl;
+  return { port: best.port, password: best.password };
+}
+const patchline = () => currentPatchline;
 
 // one request to a local Riot API; always resolves (null on any error or non-2xx)
 function apiRequest(lf, p, timeout, method, raw) {
@@ -320,9 +343,10 @@ async function closeClients() {
   return false;
 }
 
-function launchLeague() {
+// patchline: 'live' or 'pbe'
+function launchLeague(pl = 'live') {
   const child = spawn(riotClientExe(),
-    ['--launch-product=league_of_legends', '--launch-patchline=live'],
+    ['--launch-product=league_of_legends', '--launch-patchline=' + (pl === 'pbe' ? 'pbe' : 'live')],
     { detached: true, stdio: 'ignore', windowsHide: false });
   child.unref();
 }
@@ -335,8 +359,8 @@ function rcApi(p, method = 'GET') {
 }
 
 // the "Play" button of the Riot Client
-async function pressPlay() {
-  const r = await rcApi('/product-launcher/v1/products/league_of_legends/patchlines/live', 'POST');
+async function pressPlay(pl = 'live') {
+  const r = await rcApi('/product-launcher/v1/products/league_of_legends/patchlines/' + (pl === 'pbe' ? 'pbe' : 'live'), 'POST');
   return r.up && r.status >= 200 && r.status < 300;
 }
 
@@ -373,5 +397,5 @@ module.exports = {
   currentAccount, rankedFor, summonerByPuuid, gameflowPhase, lookupRiotId,
   profileData, acceptReadyCheck, rankedEligibility,
   captureSession, restoreSession, clearSession, sessionPersisted, closeClients, launchLeague, lockfile,
-  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby,
+  rcLoginState, autofill, pressPlay, leagueRunning, leaveLobby, patchline,
 };

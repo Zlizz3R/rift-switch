@@ -44,7 +44,7 @@
     'p.openWith': '打开方式', 'p.switch': '切换',
     'add.title': '添加账号', 'add.save': '保存账号', 'add.saveHint': '仅保存 – 之后点击卡片时才会登录。', 'add.riotId': 'Riot ID', 'add.optional': '可选',
     'add.user': 'Riot 用户名', 'add.pass': '密码', 'add.btn': '保存', 'add.riotIdHint': '填写 Riot ID 后，首次登录前卡片就能显示头像和段位（需英雄联盟运行）。',
-    'add.or': '或', 'add.current': '保存当前账号', 'add.manual': '现在自己登录', 'add.manualSub': '关闭英雄联盟并打开空白的 Riot 客户端 – 不保存密码。',
+    'add.or': '或', 'add.current': "保存当前账号", 'te.server': "服务器", 'tile.server': "该账号所在服务器", 'add.manual': "手动登录", 'add.manualSub': '关闭英雄联盟并打开空白的 Riot 客户端 – 不保存密码。',
     'add.lockHint': '密码由 Windows 加密，只有这台电脑上的你的 Windows 用户才能解密。密码不会显示或发送到任何地方。',
     'add.notOpen': '英雄联盟未运行。', 'add.already': '{name} 已经保存。', 'add.takeOver': '保存当前登录的账号。', 'add.fill': '请填写用户名和密码。',
     'add.saved': '已保存', 'add.savedFound': '已保存 – 段位已加载', 'add.savedLater': '已保存 – 英雄联盟运行后加载段位', 'add.currentSaved': '账号已保存', 'show': '显示',

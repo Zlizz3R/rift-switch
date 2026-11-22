@@ -45,7 +45,7 @@
     'add.title': 'إضافة حساب', 'add.save': 'حفظ الحساب', 'add.saveHint': 'يُحفظ فقط – يتم تسجيل الدخول عند النقر على البطاقة لاحقاً.',
     'add.riotId': 'Riot ID', 'add.optional': 'اختياري', 'add.user': 'اسم مستخدم Riot', 'add.pass': 'كلمة المرور', 'add.btn': 'حفظ',
     'add.riotIdHint': 'مع Riot ID تعرض البطاقة الأيقونة والرتب قبل أول تسجيل دخول (عندما تكون League مفتوحة).',
-    'add.or': 'أو', 'add.current': 'اعتماد الحساب الحالي', 'add.manual': 'تسجيل الدخول بنفسي الآن', 'add.manualSub': 'يغلق League ويفتح Riot Client فارغاً – لا تُحفظ أي كلمة مرور.',
+    'add.or': 'أو', 'add.current': "حفظ الحساب الحالي", 'te.server': "الخادم", 'tile.server': "خادم هذا الحساب", 'add.manual': "تسجيل الدخول يدويًا", 'add.manualSub': 'يغلق League ويفتح Riot Client فارغاً – لا تُحفظ أي كلمة مرور.',
     'add.lockHint': 'تُشفَّر كلمات المرور بواسطة Windows ولا يستطيع فكّها إلا مستخدم Windows الخاص بك على هذا الجهاز. لا تُعرض ولا تُرسل إلى أي مكان.',
     'add.notOpen': 'League غير مفتوحة.', 'add.already': '{name} محفوظ مسبقاً.', 'add.takeOver': 'يحفظ الحساب المسجّل حالياً.', 'add.fill': 'يرجى إدخال اسم المستخدم وكلمة المرور.',
     'add.saved': 'تم الحفظ', 'add.savedFound': 'تم الحفظ – تم تحميل الرتب', 'add.savedLater': 'تم الحفظ – ستظهر الرتب عند فتح League', 'add.currentSaved': 'تم حفظ الحساب', 'show': 'إظهار',

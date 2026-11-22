@@ -45,7 +45,7 @@
     'add.title': 'اکاؤنٹ شامل کریں', 'add.save': 'اکاؤنٹ محفوظ کریں', 'add.saveHint': 'صرف محفوظ ہوگا – لاگ اِن تب ہوگا جب آپ بعد میں ٹائل پر کلک کریں گے۔',
     'add.riotId': 'Riot ID', 'add.optional': 'اختیاری', 'add.user': 'Riot صارف نام', 'add.pass': 'پاس ورڈ', 'add.btn': 'محفوظ کریں',
     'add.riotIdHint': 'Riot ID کے ساتھ ٹائل پہلے لاگ اِن سے پہلے ہی آئیکن اور رینک دکھاتی ہے (League کھلا ہونا چاہیے)۔',
-    'add.or': 'یا', 'add.current': 'موجودہ اکاؤنٹ لیں', 'add.manual': 'ابھی خود لاگ اِن کریں', 'add.manualSub': 'League بند کر کے خالی Riot Client کھولتا ہے – کوئی پاس ورڈ محفوظ نہیں ہوتا۔',
+    'add.or': 'یا', 'add.current': "موجودہ اکاؤنٹ محفوظ کریں", 'te.server': "سرور", 'tile.server': "اس اکاؤنٹ کا سرور", 'add.manual': "دستی لاگ اِن", 'add.manualSub': 'League بند کر کے خالی Riot Client کھولتا ہے – کوئی پاس ورڈ محفوظ نہیں ہوتا۔',
     'add.lockHint': 'پاس ورڈ Windows سے خفیہ کیے جاتے ہیں اور صرف اس PC پر آپ کا Windows صارف انہیں پڑھ سکتا ہے۔ یہ کبھی دکھائے یا کہیں بھیجے نہیں جاتے۔',
     'add.notOpen': 'League کھلا نہیں ہے۔', 'add.already': '{name} پہلے سے محفوظ ہے۔', 'add.takeOver': 'ابھی لاگ اِن اکاؤنٹ محفوظ کرتا ہے۔', 'add.fill': 'براہ کرم صارف نام اور پاس ورڈ درج کریں۔',
     'add.saved': 'محفوظ ہو گیا', 'add.savedFound': 'محفوظ ہو گیا – رینک لوڈ ہو گئے', 'add.savedLater': 'محفوظ ہو گیا – League کھلنے پر رینک آئیں گے', 'add.currentSaved': 'اکاؤنٹ محفوظ ہو گیا', 'show': 'دکھائیں',

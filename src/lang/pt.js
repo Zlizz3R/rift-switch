@@ -45,7 +45,7 @@
     'add.title': 'Adicionar conta', 'add.save': 'Salvar conta', 'add.saveHint': 'Só é salva – o login acontece quando você clicar no card depois.',
     'add.riotId': 'Riot ID', 'add.optional': 'opcional', 'add.user': 'Usuário da Riot', 'add.pass': 'Senha', 'add.btn': 'Salvar',
     'add.riotIdHint': 'Com Riot ID o card mostra ícone e elos antes do primeiro login (com o League aberto).',
-    'add.or': 'ou', 'add.current': 'Usar a conta atual', 'add.manual': 'Entrar eu mesmo agora', 'add.manualSub': 'Fecha o League e abre o Riot Client vazio – nenhuma senha é salva.',
+    'add.or': 'ou', 'add.current': "Salvar conta atual", 'te.server': "Servidor", 'tile.server': "Servidor desta conta", 'add.manual': "Entrar manualmente", 'add.manualSub': 'Fecha o League e abre o Riot Client vazio – nenhuma senha é salva.',
     'add.lockHint': 'As senhas são criptografadas pelo Windows e só o seu usuário do Windows neste PC pode lê-las. Elas nunca são mostradas nem enviadas.',
     'add.notOpen': 'O League não está aberto.', 'add.already': '{name} já está salva.', 'add.takeOver': 'Salva a conta que está logada agora.', 'add.fill': 'Preencha usuário e senha.',
     'add.saved': 'Salva', 'add.savedFound': 'Salva – elos carregados', 'add.savedLater': 'Salva – os elos chegam quando o League estiver aberto', 'add.currentSaved': 'Conta salva', 'show': 'Mostrar',

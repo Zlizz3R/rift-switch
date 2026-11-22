@@ -45,7 +45,7 @@
     'add.title': 'অ্যাকাউন্ট যোগ করুন', 'add.save': 'অ্যাকাউন্ট সেভ করুন', 'add.saveHint': 'শুধু সেভ হবে – পরে টাইলে ক্লিক করলে লগইন হবে।',
     'add.riotId': 'Riot ID', 'add.optional': 'ঐচ্ছিক', 'add.user': 'Riot ইউজারনেম', 'add.pass': 'পাসওয়ার্ড', 'add.btn': 'সেভ করুন',
     'add.riotIdHint': 'Riot ID দিলে প্রথম লগইনের আগেই টাইলে আইকন ও র‍্যাঙ্ক দেখা যায় (League খোলা থাকলে)।',
-    'add.or': 'অথবা', 'add.current': 'বর্তমান অ্যাকাউন্ট নিন', 'add.manual': 'এখন নিজে লগইন করুন', 'add.manualSub': 'League বন্ধ করে খালি Riot Client খোলে – কোনো পাসওয়ার্ড সেভ হয় না।',
+    'add.or': 'অথবা', 'add.current': "বর্তমান অ্যাকাউন্ট সেভ করো", 'te.server': "সার্ভার", 'tile.server': "এই অ্যাকাউন্টের সার্ভার", 'add.manual': "ম্যানুয়ালি লগইন", 'add.manualSub': 'League বন্ধ করে খালি Riot Client খোলে – কোনো পাসওয়ার্ড সেভ হয় না।',
     'add.lockHint': 'পাসওয়ার্ড Windows দিয়ে এনক্রিপ্ট করা হয় এবং শুধু এই PC-তে আপনার Windows ইউজারই খুলতে পারে। এগুলো কখনো দেখানো বা কোথাও পাঠানো হয় না।',
     'add.notOpen': 'League খোলা নেই।', 'add.already': '{name} আগেই সেভ করা আছে।', 'add.takeOver': 'এখন লগইন থাকা অ্যাকাউন্ট সেভ করে।', 'add.fill': 'ইউজারনেম ও পাসওয়ার্ড দিন।',
     'add.saved': 'সেভ হয়েছে', 'add.savedFound': 'সেভ হয়েছে – র‍্যাঙ্ক লোড হয়েছে', 'add.savedLater': 'সেভ হয়েছে – League খুললে র‍্যাঙ্ক আসবে', 'add.currentSaved': 'অ্যাকাউন্ট সেভ হয়েছে', 'show': 'দেখান',

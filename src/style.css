@@ -649,3 +649,9 @@ body.locked #passBox { background: var(--bg); }
 .mh-p:hover span { color: var(--text); text-decoration: underline; }
 .mh-p.me span { color: var(--text); font-weight: 600; }
 @media (max-width: 900px) { .mh-row { grid-template-columns: 86px minmax(0, 1fr); } .mh-teams { grid-column: 1 / -1; } }
+
+/* server of the account, small in the top left corner */
+.srv { position: absolute; top: 11px; left: 12px; font-size: 9.5px; font-weight: 700; letter-spacing: .6px;
+  color: var(--muted); opacity: .75; }
+.srv.low { top: 33px; }
+.srv.pbe { color: #b98cff; opacity: 1; }

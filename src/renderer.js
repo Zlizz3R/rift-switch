@@ -33,10 +33,10 @@ function applyStaticTexts() {
 }
 
 // ---------- what a tile shows (Customise tiles) ----------
-const TILE_DEFAULTS = { icon: true, level: true, tag: true, note: true, lock: true, solo: true, flex: true, r5: false, classic: false,
+const TILE_DEFAULTS = { icon: true, level: true, tag: true, note: true, lock: true, server: true, solo: true, flex: true, r5: false, classic: false,
   winrate: true, mmr: true, ranked: true, inactive: true, lastPlayed: false, wallet: false };
 const TILE_GROUPS = [
-  ['te.g.head', ['icon', 'level', 'tag', 'note', 'lock']],
+  ['te.g.head', ['icon', 'level', 'tag', 'note', 'lock', 'server']],
   ['te.g.ranks', ['solo', 'flex', 'r5', 'classic', 'winrate', 'mmr']],
   ['te.g.extra', ['ranked', 'inactive', 'lastPlayed', 'wallet']],
 ];
@@ -126,6 +126,7 @@ function tileHtml(a, o = tileOpt(), preview = false) {
   const rk = o.ranked && !hides('ranks') ? rankedBlock(a) : '';
   return `<div class="tile ${active ? 'active' : ''}" data-id="${esc(a.puuid)}" draggable="${draggable}">
     ${active ? `<span class="badge">${t('tile.active')}</span>` : ''}
+    ${o.server && a.region ? `<span class="srv${a.region === 'PBE' ? ' pbe' : ''}${active ? ' low' : ''}" title="${esc(t('tile.server'))}">${esc(a.region)}</span>` : ''}
     ${lockHtml(a, o)}
     <button class="more" data-more title="${esc(t('common.more'))}">${DOTS}</button>
     ${o.icon ? `<div class="avatar">
@@ -1004,6 +1005,9 @@ async function openCred(id) {
   $('credPass').type = 'password';
   $('credPass').placeholder = a.hasCred ? t('cred.keep') : '';
   $('credDelete').hidden = !a.hasCred;
+  // a saved account without Riot ID: it can be added here (then ranks and icon show up)
+  $('credRiotRow').hidden = !(a.placeholder && !a.tagLine);
+  $('credRiotId').value = '';
   $('credBox').hidden = false;
   ($('credUser').value ? $('credPass') : $('credUser')).focus();
 }
@@ -1011,9 +1015,10 @@ function closeCred() { $('credBox').hidden = true; $('credPass').value = ''; cre
 $('credCancel').onclick = closeCred;
 $('credForm').onsubmit = async e => {
   e.preventDefault();
-  const r = await api.setCred(credFor, { u: $('credUser').value, p: $('credPass').value });
+  const riotId = $('credRiotRow').hidden ? '' : $('credRiotId').value.trim();
+  const r = await api.setCred(credFor, { u: $('credUser').value, p: $('credPass').value, riotId });
   if (!r.ok) return toast(errText(r), true);
-  closeCred(); toast(t('cred.saved'));
+  closeCred(); toast(riotId ? t(r.found ? 'add.savedFound' : 'add.savedLater') : t('cred.saved'));
 };
 $('credDelete').onclick = async () => {
   const id = credFor;
