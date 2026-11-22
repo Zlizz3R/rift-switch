@@ -1127,12 +1127,12 @@ li.now .sw-dot { border-color: var(--gold); border-top-color: transparent; anima
 .ca-head { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
 .ca-head span { color: var(--muted); font-size: 12px; }
 .ca-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.ch { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; }
-.ch img { width: 22px; height: 22px; border-radius: 50%; }
-.ch i { color: var(--muted); font-style: normal; }
-.ch em { font-style: normal; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.ch.skin { border-color: rgba(200,170,110,.45); }
-.ch.champShard, .ch.skinShard { border-style: dashed; }
+.cl-chip { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; }
+.cl-chip img { width: 22px; height: 22px; border-radius: 50%; }
+.cl-chip i { color: var(--muted); font-style: normal; }
+.cl-chip em { font-style: normal; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.cl-chip.skin { border-color: rgba(200,170,110,.45); }
+.cl-chip.champShard, .cl-chip.skinShard { border-style: dashed; }
 
 /* sign-in needs a hand: what to do in the Riot Client */
 .login-manual { text-align: left; margin: 4px 0 14px; display: grid; gap: 10px; justify-items: center; }
