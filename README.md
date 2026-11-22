@@ -26,8 +26,10 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
 ### While you play (Live page)
 - **Clash** – your next opponents with their ranks and a **Multi op.gg** button for all five.
 - **Lobby check** – ranks of your party, and of your team in champion select where Riot shows the names.
-- **Champ select helper** – keep a pool of your champions, type the enemy laner (pre-filled when it's known) and see
-  which of your champions has the best win rate against it (from counterstats.net).
+- **Champ select helper** – keep a pool of your champions; in champion select the enemy picks appear as pictures – click
+  the one you expect in your lane (or type it) and see your champions ranked by win rate and counter rating against it
+  (counterstats.net). Every enemy pick is loaded in the background; "Pre-load all matchups" fetches every opponent your
+  pool meets on that lane while you queue (kept for a day).
 
 ### Tools & comfort
 - **Tools** – refresh ranks, close all Riot processes, restart League, clear the Riot Client cache (sign-ins stay),
