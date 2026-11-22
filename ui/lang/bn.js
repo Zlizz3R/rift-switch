@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'live.likelyLaner': "সম্ভবত আপনার লেনে (তার {n}% গেম সেখানে) – Riot প্রতিপক্ষের পজিশন লুকায়",
     'pen.games': "{n} গেম", 'pen.perGame': "প্রতিটিতে {m} মিনিট",
     'det.goldLead': "গোল্ড এগিয়ে – উপরে: {a} এগিয়ে, নিচে: {b} এগিয়ে",
     'det.players': "খেলোয়াড়", 'det.compare': "দুই খেলোয়াড়ের তুলনা", 'det.kills': "কিল", 'det.deaths': "মৃত্যু", 'det.assists': "অ্যাসিস্ট", 'det.phys': "শারীরিক ক্ষতি", 'det.magic': "জাদু ক্ষতি", 'det.true': "ট্রু ক্ষতি", 'det.mitig': "প্রতিহত ক্ষতি", 'det.heal': "হিলিং", 'det.spent': "খরচ করা সোনা", 'det.csMin': "CS / মিনিট", 'det.wards': "ওয়ার্ড বসানো", 'det.wardsKilled': "ওয়ার্ড ধ্বংস", 'det.pinks': "কন্ট্রোল ওয়ার্ড", 'det.cc': "ক্রাউড কন্ট্রোল", 'det.turretDmg': "টাওয়ারে ক্ষতি", 'det.obj': "লক্ষ্যে ক্ষতি", 'det.spree': "সবচেয়ে বড় কিলিং স্প্রি", 'det.crit': "সবচেয়ে বড় ক্রিটিক্যাল",

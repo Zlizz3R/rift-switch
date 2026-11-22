@@ -980,3 +980,6 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .mh-chev { position: absolute; right: 10px; top: 38px; width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 2; transition: transform .15s, stroke .15s; }
 .mh-row:hover .mh-chev { stroke: var(--text); }
 .mh-row.open .mh-chev { transform: rotate(180deg); }
+
+.h-pick .h-guess { position: absolute; right: -4px; top: -4px; width: 15px; height: 15px; border-radius: 50%; background: var(--gold); color: #1a1408;
+  font: 700 10px/15px inherit; font-style: normal; text-align: center; }

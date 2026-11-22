@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'live.likelyLaner': "provavelmente na sua rota ({n} % das partidas dele) – a Riot esconde as posições inimigas",
     'pen.games': "{n} partidas", 'pen.perGame': "{m} min cada",
     'det.goldLead': "Vantagem de ouro – em cima: {a} na frente, embaixo: {b} na frente",
     'det.players': "Jogadores", 'det.compare': "Comparar dois jogadores", 'det.kills': "Abates", 'det.deaths': "Mortes", 'det.assists': "Assistências", 'det.phys': "Dano físico", 'det.magic': "Dano mágico", 'det.true': "Dano verdadeiro", 'det.mitig': "Dano mitigado", 'det.heal': "Cura", 'det.spent': "Ouro gasto", 'det.csMin': "CS / min", 'det.wards': "Sentinelas colocadas", 'det.wardsKilled': "Sentinelas destruídas", 'det.pinks': "Sentinelas de controle", 'det.cc': "Controle de grupo", 'det.turretDmg': "Dano a torres", 'det.obj': "Dano a objetivos", 'det.spree': "Maior série", 'det.crit': "Maior crítico",

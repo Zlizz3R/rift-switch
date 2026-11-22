@@ -382,6 +382,28 @@ test('champ select helper: "who are you playing against?" shows the enemy picks,
   });
 });
 
+test('champ select helper: Riot hides the enemy positions – the enemy who plays my lane most is guessed and chosen', () => {
+  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 4, name: 'Malphite' }, { id: 5, name: 'Ahri' }];
+  const st = sampleState();
+  st.settings.champPool = [1];
+  st.settings.lane = 'top';
+  const share = { Darius: 88, Malphite: 40, Ahri: 2 };
+  const live = { clientUp: true, phase: 'ChampSelect', region: 'EUW', me: 'x',
+    champSelect: { myPosition: 'top', hiddenNames: true, allies: [], enemies: [{ championId: 4, position: '' }, { championId: 2, position: '' }, { championId: 5, position: '' }] } };
+  return withApp({ state: st, replies: { champions: champs, live, counters: (n) => ({ ok: true, share: share[n], list: [{ name: 'Garen', wr: 50 }] }) } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 200));
+    await app.settle();
+    assert.ok(app.$('[data-hpick="2"] .h-guess'), 'Darius marked as the likely laner');
+    assert.equal(app.$$('.h-guess').length, 1);
+    assert.equal(app.$('#hEnemy').value, 'Darius', 'and chosen');
+    await app.click('[data-hpick="4"]');
+    await new Promise((r) => setTimeout(r, 50));
+    await app.settle();
+    assert.equal(app.$('#hEnemy').value, 'Malphite', 'a click wins over the guess');
+  });
+});
+
 // ---------- tools ----------
 test('tools: every card runs its tool', () => withApp({}, async (app) => {
   await app.click('#navTools');

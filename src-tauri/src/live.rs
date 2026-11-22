@@ -447,6 +447,22 @@ pub fn parse_counters(page: &str, lane: &str) -> Vec<Value> {
     out
 }
 
+/// How many of the champion's games are on this lane (counterstats: "92% Pick Rate" in the lane head).
+pub fn lane_share(page: &str, lane: &str) -> Option<f64> {
+    let start = page.find(&format!("class=\"collapse\" id=\"{lane}\""))?;
+    let head = &page[start..(start + 1500).min(page.len())];
+    let end = head.find("% Pick Rate")?;
+    let num: String = head[..end]
+        .chars()
+        .rev()
+        .take_while(|c| c.is_ascii_digit() || *c == '.')
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    num.parse().ok()
+}
+
 /// Counters found are kept a day (counters.json in the data folder): a pre-load while queueing
 /// lasts all day. Failures are asked again next time.
 const COUNTERS_TTL: i64 = 86_400_000;
@@ -484,7 +500,7 @@ pub async fn counters(data_dir: &Path, enemy: &str, lane: &str) -> Value {
         .as_ref()
         .and_then(|c| c.get(&key).cloned())
     {
-        return json!({ "list": v["list"], "ok": true });
+        return json!({ "list": v["list"], "share": v["share"], "ok": true });
     }
     if crate::riot::offline_test() {
         return json!({ "list": [], "ok": false });
@@ -500,18 +516,19 @@ pub async fn counters(data_dir: &Path, enemy: &str, lane: &str) -> Value {
     // a page without this champion (unknown address) has no lane boxes at all
     let known = page.contains("class=\"collapse\" id=");
     let list = parse_counters(&page, lane);
+    let share = lane_share(&page, lane).unwrap_or(0.0);
     if known {
         let text = {
             let mut m = counters_cache(data_dir);
             let c = m.get_or_insert_with(HashMap::new);
             let now = now_ms();
             c.retain(|_, v| now - v["at"].as_i64().unwrap_or(0) < COUNTERS_TTL);
-            c.insert(key, json!({ "list": list, "at": now }));
+            c.insert(key, json!({ "list": list, "share": share, "at": now }));
             serde_json::to_string(&c).unwrap_or_default()
         };
         let _ = crate::store::write_atomic(&data_dir.join("counters.json"), text.as_bytes());
     }
-    json!({ "list": list, "ok": known })
+    json!({ "list": list, "share": share, "ok": known })
 }
 
 #[cfg(test)]
@@ -541,5 +558,8 @@ mod tests {
         assert_eq!(top[0]["rating"], 6.2);
         assert_eq!(top[1]["name"], "Cho'Gath");
         assert!(parse_counters(&page, "support").is_empty());
+        let head = "<span class=\"collapse\" id=\"top\"><label>Top Lane</label></span><span class=\"tag\">51.32% Win Rate</span><span class=\"tag\">92% Pick Rate</span>";
+        assert_eq!(lane_share(head, "top"), Some(92.0));
+        assert_eq!(lane_share(head, "mid"), None);
     }
 }

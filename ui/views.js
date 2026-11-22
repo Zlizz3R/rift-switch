@@ -447,8 +447,8 @@ function renderLive(force) {
       ${cs.enemies.some(e => e.championId) ? `<div class="enemy-row">${t('live.enemies')}: ${cs.enemies.filter(e => e.championId).map(e => `<img class="ch" title="${esc((champById(e.championId) || {}).name || '')}" src="${champIcon(e.championId)}" alt="">`).join('')}</div>` : ''}
     </div>`);
     // enemy laner known? (same position) -> preselect for the helper
-    const opp = cs.enemies.find(e => e.championId && cs.myPosition && e.position === cs.myPosition) || (cs.enemies.filter(e => e.championId).length === 1 ? cs.enemies.find(e => e.championId) : null);
-    if (opp && !helper.enemy) { helper.enemy = opp.championId; helper.autoEnemy = true; }
+    const opp = enemyPicks().find(p => p.laner);
+    if (opp && (!helper.enemy || (helper.autoEnemy && helper.enemy !== opp.id))) { helper.enemy = opp.id; helper.autoEnemy = true; }
     // every enemy pick, ahead of time (the laner first)
     want(cs.enemies.map(e => e.championId).filter(Boolean));
   } else if (helper.autoEnemy && !d.inGame) { helper.enemy = 0; helper.autoEnemy = false; }
@@ -462,7 +462,7 @@ function renderLive(force) {
 // counterstats.net has one page per champion: every champion with enough games against him on a
 // lane, with win rate and counter rating. One request per enemy covers the whole pool. Loaded in
 // the background as soon as an enemy is known – in champion select every enemy pick.
-const csCache = new Map();          // "enemyId|lane" -> [{name, wr, rating}] (empty = no data)
+const csCache = new Map();          // "enemyId|lane" -> { list: [{name, wr, rating}] (empty = no data), share: % of his games on this lane }
 const csKey = (id, lane) => id + '|' + lane;
 let csQueue = [], csBusy = false;
 const lane = () => (S.settings && S.settings.lane) || 'top';
@@ -485,7 +485,7 @@ async function runQueue() {
     const q = csQueue.shift();
     const c = champById(q.id);
     const r = c ? await api.counters(c.name, q.l) : null;
-    if (r && r.ok) csCache.set(q.k, r.list || []);
+    if (r && r.ok) csCache.set(q.k, { list: r.list || [], share: r.share || 0 });
     // a champion of my pool: everyone on its page plays against it on this lane -> load them too
     if (q.scan && r && r.list) want(r.list.map(x => (champByName(x.name) || {}).id).filter(id => id && id !== q.id));
     helper.load = { done: helper.load.done + 1, total: Math.max(helper.load.total, helper.load.done + 1 + csQueue.length) };
@@ -501,7 +501,7 @@ function preloadPool() { want(pool(), true); }
 // my pool against the chosen enemy, best first (wr undefined = still loading, null = no data)
 function bestPicks() {
   if (!helper.enemy) return null;
-  const list = csCache.get(csKey(helper.enemy, lane()));
+  const list = (csCache.get(csKey(helper.enemy, lane())) || {}).list;
   return pool().filter(id => id !== helper.enemy).map(id => {
     if (!list) return { id };
     const n = norm((champById(id) || {}).name);
@@ -509,16 +509,30 @@ function bestPicks() {
     return { id, wr: hit ? hit.wr : null, rating: hit ? hit.rating : null };
   }).sort((x, y) => (y.wr ?? -1) - (x.wr ?? -1) || (y.rating ?? -1) - (x.rating ?? -1));
 }
+// Riot doesn't show the enemies' positions in ranked: the likely laner is the enemy with the biggest
+// share of his games on this lane (counterstats), if it is a real one (15 % and more)
+function guessLaner(picks) {
+  if (picks.some(p => p.laner)) return picks;
+  let best = null;
+  for (const p of picks) {
+    const c = csCache.get(csKey(p.id, lane()));
+    p.share = c ? c.share : null;
+    if (p.share >= 15 && (!best || p.share > best.share)) best = p;
+  }
+  if (best) { best.laner = true; best.guess = true; }
+  return picks;
+}
 // enemy champions picked right now (champion select, or the game running)
 function enemyPicks() {
   const d = liveData || {};
   if (d.champSelect) {
     const cs = d.champSelect;
-    return cs.enemies.filter(e => e.championId).map(e => ({ id: e.championId, laner: !!(cs.myPosition && e.position === cs.myPosition) }));
+    const picks = cs.enemies.filter(e => e.championId).map(e => ({ id: e.championId, laner: !!(cs.myPosition && e.position === cs.myPosition) }));
+    return guessLaner(picks);
   }
   if (d.inGame) {
     const mine = d.inGame.teamTwo.some(p => p.puuid === d.me) ? 'teamTwo' : 'teamOne';
-    return d.inGame[mine === 'teamOne' ? 'teamTwo' : 'teamOne'].filter(p => p.championId).map(p => ({ id: p.championId, laner: false }));
+    return guessLaner(d.inGame[mine === 'teamOne' ? 'teamTwo' : 'teamOne'].filter(p => p.championId).map(p => ({ id: p.championId, laner: false })));
   }
   return [];
 }
@@ -535,7 +549,7 @@ function helperHtml() {
     <div class="h-sub">${t('live.poolTitle')}</div>
     ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
       <input id="hAdd" list="champList" placeholder="+ ${esc(t('live.addChamp'))}" spellcheck="false"></div>
-    ${picks.length ? `<div class="h-sub">${t('live.vsWho')}</div><div class="h-picks">${picks.map(x => `<button class="h-pick${x.id === helper.enemy ? ' on' : ''}${x.laner ? ' laner' : ''}" data-hpick="${x.id}" title="${esc((champById(x.id) || {}).name || '')}"><img src="${champIcon(x.id)}" alt=""></button>`).join('')}</div>` : ''}
+    ${picks.length ? `<div class="h-sub">${t('live.vsWho')}</div><div class="h-picks">${picks.map(x => `<button class="h-pick${x.id === helper.enemy ? ' on' : ''}${x.laner ? ' laner' : ''}" data-hpick="${x.id}" title="${esc((champById(x.id) || {}).name || '') + (x.guess ? ' – ' + t('live.likelyLaner', { n: Math.round(x.share) }) : '')}"><img src="${champIcon(x.id)}" alt="">${x.guess ? '<i class="h-guess">?</i>' : ''}</button>`).join('')}</div>` : ''}
     <div class="h-sub">${t('live.enemy')}</div>
     <div class="h-enemy">${helper.enemy ? `<img class="h-en" src="${champIcon(helper.enemy)}" alt="">` : ''}<input id="hEnemy" list="champList" placeholder="${esc(t('live.typeChamp'))}" spellcheck="false" value="${enemyName}"></div>
     <div class="h-pre"><button class="btn small" id="hPre" ${load ? 'disabled' : ''}>${t('live.preloadBtn')}</button>
