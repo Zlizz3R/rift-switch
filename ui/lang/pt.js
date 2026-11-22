@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'multi.title': "{n} contas selecionadas", 'multi.hint': "Ctrl+clique adiciona ou remove um card, Shift+clique seleciona um intervalo, Esc limpa.", 'multi.clear': "Limpar seleção", 'multi.opgg': "Multibusca do op.gg", 'multi.removeTitle': "Remover {n} contas?", 'multi.first5': "O op.gg aceita 5 por vez – as 5 primeiras serão abertas.",
     'pos.top': "Topo", 'pos.jungle': "Selva", 'pos.mid': "Meio", 'pos.bot': "Atirador", 'pos.support': "Suporte",
     'pen.title': "Punições e esperas", 'pen.left': "faltam {t}", 'pen.until': "até {date}", 'pen.noEnd': "sem fim indicado", 'pen.asOf': "em {date}", 'pen.wait': "Espera {t}", 'pen.note': "Do último login de cada conta – as outras são verificadas quando você entra nelas.", 'restrict.LowPriorityQueue': "Fila de baixa prioridade (espera antes da fila)", 'restrict.QUEUE_DODGER': "Punição por dodge", 'restrict.LEAVER_BUSTED': "Bloqueio do LeaverBuster",
     'mh.storeTitle': "Espaço usado pelo histórico salvo", 'mh.storeGames': "{n} partidas", 'mh.clear': "Apagar o histórico salvo", 'mh.clearTitle': "Apagar todo o histórico?", 'mh.clearText': "As {n} partidas salvas ({size}) de todas as suas contas são apagadas deste PC. As que ainda estão no cliente do League voltam na próxima vez; as mais antigas somem para sempre.", 'mh.clearYes': "Apagar tudo", 'mh.clearWarn': "Isso NÃO pode ser desfeito!", 'mh.cleared': "Histórico apagado.",

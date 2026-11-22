@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'multi.title': "{n} اکاؤنٹ منتخب", 'multi.hint': "Ctrl+کلک سے ٹائل شامل یا ہٹائیں، Shift+کلک سے رینج، Esc سے انتخاب ختم۔", 'multi.clear': "انتخاب ختم کریں", 'multi.opgg': "op.gg ملٹی سرچ", 'multi.removeTitle': "{n} اکاؤنٹ ہٹائیں؟", 'multi.first5': "op.gg ایک بار میں 5 لیتا ہے – پہلے 5 کھلیں گے۔",
     'pos.top': "ٹاپ", 'pos.jungle': "جنگل", 'pos.mid': "مڈ", 'pos.bot': "باٹ", 'pos.support': "سپورٹ",
     'pen.title': "سزائیں اور انتظار", 'pen.left': "باقی {t}", 'pen.until': "{date} تک", 'pen.noEnd': "اختتام نہیں بتایا گیا", 'pen.asOf': "{date} تک کی معلومات", 'pen.wait': "انتظار {t}", 'pen.note': "ہر اکاؤنٹ کے اپنے آخری لاگ اِن سے – باقی اکاؤنٹ لاگ اِن پر چیک ہوتے ہیں۔", 'restrict.LowPriorityQueue': "لو پرائیرٹی قطار (قطار سے پہلے انتظار)", 'restrict.QUEUE_DODGER': "ڈاج ٹائمر", 'restrict.LEAVER_BUSTED': "LeaverBuster لاک",
     'mh.storeTitle': "محفوظ میچ ہسٹری کی جگہ", 'mh.storeGames': "{n} میچ", 'mh.clear': "محفوظ میچ ہسٹری حذف کریں", 'mh.clearTitle': "پوری میچ ہسٹری حذف کریں؟", 'mh.clearText': "آپ کے تمام اکاؤنٹس کے {n} محفوظ میچ ({size}) اس پی سی سے حذف ہو جائیں گے۔ جو میچ ابھی League کلائنٹ میں ہیں وہ اگلی بار واپس آ جائیں گے؛ پرانے ہمیشہ کے لیے ختم۔", 'mh.clearYes': "سب حذف کریں", 'mh.clearWarn': "اسے واپس نہیں کیا جا سکتا!", 'mh.cleared': "میچ ہسٹری حذف ہو گئی۔",

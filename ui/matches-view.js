@@ -26,14 +26,13 @@ function rankCell(r) {
 const POSITIONS = ['top', 'jungle', 'mid', 'bot', 'support'];
 const POS_FILE = { top: 'top', jungle: 'jungle', mid: 'middle', bot: 'bottom', support: 'utility' };
 const posIcon = p => 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-' + POS_FILE[p] + '.png';
-// own team on the left. Positions (and the icons in the middle) only when both teams have all five –
+// blue side (100) left, red side (200) right – like the client. Positions (and the icons in the middle) only when both teams have all five –
 // they are Riot's guess from the game, so anything less is shown in the client's order.
 function lineUp(g, mine) {
   const ids = [...new Set(g.players.map(p => p.team))];
   let a, b;
   if (ids.length === 2) {
-    const own = g.players.find(p => mine.has(p.puuid));
-    const left = own ? own.team : ids[0];
+    const left = Math.min(...ids);
     a = g.players.filter(p => p.team === left); b = g.players.filter(p => p.team !== left);
   } else { const h = Math.ceil(g.players.length / 2); a = g.players.slice(0, h); b = g.players.slice(h); }
   const full = t => t.length === 5 && POSITIONS.every(p => t.some(x => x.pos === p));

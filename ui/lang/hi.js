@@ -96,6 +96,7 @@
     'nav.live': "लाइव",
     'nav.tools': "टूल्स",
     'set.theme': "रूप",
+    'multi.title': "{n} अकाउंट चुने गए", 'multi.hint': "Ctrl+क्लिक से टाइल जोड़ें या हटाएँ, Shift+क्लिक से रेंज चुनें, Esc से हटाएँ।", 'multi.clear': "चयन हटाएँ", 'multi.opgg': "op.gg मल्टी-सर्च", 'multi.removeTitle': "{n} अकाउंट हटाएँ?", 'multi.first5': "op.gg एक बार में 5 लेता है – पहले 5 खुलेंगे।",
     'pos.top': "टॉप", 'pos.jungle': "जंगल", 'pos.mid': "मिड", 'pos.bot': "बॉट", 'pos.support': "सपोर्ट",
     'pen.title': "पेनल्टी और प्रतीक्षा समय", 'pen.left': "{t} बाकी", 'pen.until': "{date} तक", 'pen.noEnd': "अंत नहीं बताया गया", 'pen.asOf': "{date} तक की जानकारी", 'pen.wait': "प्रतीक्षा {t}", 'pen.note': "हर अकाउंट के अपने पिछले लॉगिन से – बाकी अकाउंट लॉगिन करने पर जाँचे जाते हैं।", 'restrict.LowPriorityQueue': "लो प्रायोरिटी कतार (कतार से पहले प्रतीक्षा)", 'restrict.QUEUE_DODGER': "डॉज टाइमर", 'restrict.LEAVER_BUSTED': "LeaverBuster लॉक",
     'mh.storeTitle': "सहेजे गए मैच इतिहास की जगह", 'mh.storeGames': "{n} मैच", 'mh.clear': "सहेजा गया मैच इतिहास हटाएँ", 'mh.clearTitle': "पूरा मैच इतिहास हटाएँ?", 'mh.clearText': "आपके सभी अकाउंट के {n} सहेजे गए मैच ({size}) इस पीसी से हटा दिए जाएँगे। जो मैच अभी League क्लाइंट में हैं वे अगली बार लौट आएँगे; पुराने हमेशा के लिए चले जाएँगे।", 'mh.clearYes': "सब हटाएँ", 'mh.clearWarn': "इसे वापस नहीं किया जा सकता!", 'mh.cleared': "मैच इतिहास हटा दिया गया।",

@@ -51,7 +51,7 @@
       <div id="viewAccounts">
       <div class="head">
         <div class="title-row">
-          <h1><span data-i18n="head.title"></span> <span id="count"></span></h1>
+          <h1><span data-i18n="head.title"></span></h1>
           <button class="add-cat" id="addAcc"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="head.addAcc"></span></button>
           <button class="add-cat" id="addCat" data-i18n-title="head.addCatTitle"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="head.addCat"></span></button>
           <span class="grow"></span>
@@ -67,7 +67,6 @@
           </select>
           <button class="tool-btn" id="editTiles" data-i18n-title="head.editTiles"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
         </div>
-        <p class="sub" data-i18n="head.sub"></p>
       </div>
       <div id="board"></div>
       <div class="empty" id="empty" hidden>
@@ -133,7 +132,7 @@
       </section>
 
       <section id="viewTools" hidden>
-        <div class="head"><h1 data-i18n="tools.title"></h1><p class="sub" data-i18n="tools.sub"></p></div>
+        <div class="head"><h1><span data-i18n="tools.title"></span> <span class="info" data-i18n-title="tools.sub">?</span></h1></div>
         <div class="tools-grid">
           <button class="tool-card" id="toolRefresh"><b data-i18n="tools.refresh"></b><span data-i18n="tools.refreshT"></span></button>
           <button class="tool-card" data-tool="closeAll"><b data-i18n="tools.closeAll"></b><span data-i18n="tools.closeAllT"></span></button>
@@ -149,13 +148,12 @@
 
     <aside class="drawer" id="drawer">
       <div class="drawer-head">
-        <h2 data-i18n="add.title"></h2>
+        <h2><span data-i18n="add.title"></span> <span class="info" data-i18n-title="add.lockHint">?</span></h2>
         <button class="icon" id="drawerClose"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
       </div>
       <form class="login-form" id="addForm" autocomplete="off">
-        <div class="form-title" data-i18n="add.save"></div>
-        <p class="fine" data-i18n="add.saveHint"></p>
-        <label><span><span data-i18n="add.riotId"></span> <span class="opt" data-i18n="add.optional"></span></span>
+        <div class="form-title"><span data-i18n="add.save"></span> <span class="info" data-i18n-title="add.saveHint">?</span></div>
+        <label><span><span data-i18n="add.riotId"></span> <span class="opt" data-i18n="add.optional"></span> <span class="info" data-i18n-title="add.riotIdHint">?</span></span>
           <input id="addRiotId" spellcheck="false" maxlength="24" placeholder="Name#Tag">
         </label>
         <label><span data-i18n="add.user"></span>
@@ -166,7 +164,6 @@
             <button type="button" class="eye" data-eye="addPass" data-i18n-title="show"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span>
         </label>
         <button class="btn gold wide" type="submit" data-i18n="add.btn"></button>
-        <p class="fine" data-i18n="add.riotIdHint"></p>
       </form>
 
       <div class="sep"><span data-i18n="add.or"></span></div>
@@ -180,8 +177,6 @@
         <span class="opt-sub" data-i18n="add.manualSub"></span>
       </button>
 
-      <p class="hint lock-hint"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-        <span data-i18n="add.lockHint"></span></p>
     </aside>
 
     <aside class="drawer" id="settingsDrawer">
@@ -277,8 +272,7 @@
 
 <div class="overlay" id="tileEditor" hidden>
   <div class="card tile-editor">
-    <h2 data-i18n="te.title"></h2>
-    <p class="fine center" data-i18n="te.sub"></p>
+    <h2><span data-i18n="te.title"></span> <span class="info" data-i18n-title="te.sub">?</span></h2>
     <div class="te-body">
       <div class="te-preview">
         <div class="te-label" data-i18n="te.preview"></div>
@@ -306,9 +300,9 @@
 
 <div class="overlay" id="credBox" hidden>
   <form class="card login-form" id="credForm" autocomplete="off">
-    <h2 data-i18n="cred.title"></h2>
+    <h2><span data-i18n="cred.title"></span> <span class="info" data-i18n-title="cred.hint">?</span></h2>
     <p class="fine center" id="credFor"></p>
-    <label id="credRiotRow" hidden><span><span data-i18n="add.riotId"></span> <span class="opt" data-i18n="add.optional"></span></span>
+    <label id="credRiotRow"><span><span data-i18n="add.riotId"></span> <span class="opt" data-i18n="add.optional"></span></span>
       <input id="credRiotId" spellcheck="false" maxlength="24" placeholder="Name#Tag">
     </label>
     <label><span data-i18n="add.user"></span>
@@ -318,7 +312,6 @@
       <span class="pw"><input id="credPass" type="password" maxlength="128">
         <button type="button" class="eye" data-eye="credPass" data-i18n-title="show"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span>
     </label>
-    <p class="fine" data-i18n="cred.hint"></p>
     <div class="row">
       <button type="button" class="btn danger" id="credDelete" data-i18n="common.delete"></button>
       <span class="grow"></span>

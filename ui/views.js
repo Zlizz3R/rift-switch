@@ -44,6 +44,46 @@ $('navLive').onclick = () => showView('live');
 $('navTools').onclick = () => showView('tools');
 $('navMatches').onclick = () => showView('matches');
 
+// ---------- several accounts at once ----------
+let picked = new Set(), lastPick = null;
+// Ctrl+click: add/remove one tile; Shift+click: every tile between the last picked one and this one
+function pickTile(id, range) {
+  if (!picked.size && selectedId && selectedId !== id) picked.add(selectedId);   // the open one counts
+  const order = [...document.querySelectorAll('#board .tile[data-id]')].map(x => x.dataset.id);
+  if (range && (lastPick || selectedId) && order.includes(lastPick || selectedId)) {
+    const [i, j] = [order.indexOf(lastPick || selectedId), order.indexOf(id)].sort((x, y) => x - y);
+    order.slice(i, j + 1).forEach(x => picked.add(x));
+  } else if (picked.has(id)) picked.delete(id);
+  else picked.add(id);
+  lastPick = id;
+  if (picked.size === 1) { selectedId = [...picked][0]; picked.clear(); }
+  render();
+}
+function pickedAccounts() { return S.accounts.filter(a => picked.has(a.puuid)); }
+function clearPicks() { if (picked.size) { picked.clear(); lastPick = null; render(); } }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && picked.size && !document.querySelector('.overlay:not([hidden])')) clearPicks(); });
+// all picked tiles into one category (one save)
+function moveMany(ids, cat) {
+  const set = new Set(ids);
+  const list = S.accounts.map(a => ({ puuid: a.puuid, category: set.has(a.puuid) ? cat : catOf(a) }));
+  arrange(list);
+}
+function renderMulti() {
+  const list = pickedAccounts();
+  document.querySelectorAll('.tile.selected, .tile.picked').forEach(el => el.classList.remove('selected', 'picked'));
+  list.forEach(a => document.querySelector(`.tile[data-id="${CSS.escape(a.puuid)}"]`)?.classList.add('picked'));
+  const ic = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
+  $('detail').innerHTML = `
+    <div class="m-head"><h2>${t('multi.title', { n: list.length })}</h2><span class="info" title="${esc(t('multi.hint'))}">?</span></div>
+    <div class="m-list">${list.map(a => `<div class="m-acc"><span class="m-av">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}</span><span>${esc(dispName(a))}</span></div>`).join('')}</div>
+    <div class="d-actions">
+      <button data-m="move">${ic('<path d="M3 7h7l2 2h9v10H3z"/><path d="M12 13h5M15 11l2 2-2 2"/>')}<span>${t('d.move')}</span></button>
+      <button data-m="opgg">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('multi.opgg')}</span></button>
+      <button data-m="remove" class="danger">${ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}<span>${t('menu.remove')}</span></button>
+    </div>
+    <button class="btn wide m-clear" data-m="clear">${t('multi.clear')}</button>`;
+}
+
 // ---------- right detail panel ----------
 let selectedId = null;
 let detailData = { id: null, hist: [], est: {} };
@@ -71,6 +111,10 @@ async function loadDetailChart(a) {
   renderDetail();
 }
 function renderDetail() {
+  // picked tiles that no longer exist (removed) drop out
+  for (const id of [...picked]) if (!S.accounts.some(a => a.puuid === id)) picked.delete(id);
+  if (picked.size > 1) return renderMulti();
+  document.querySelectorAll('.tile.picked').forEach(el => el.classList.remove('picked'));
   const a = selected();
   const box = $('detail');
   if (!a) { box.innerHTML = `<div class="d-empty">${t('empty.text')}</div>`; return; }
@@ -99,7 +143,7 @@ function renderDetail() {
       ${st && st.ready === false ? `<div class="warn">${ic('<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/>')}${t('rk.notReady')}</div>` : ''}
     </div>
     ${hides('ranks') ? '' : `<div class="d-chart">${detailData.id === a.puuid ? historyChart(detailData.hist, detailData.est, true) : ''}</div>`}`}
-    <button class="btn gold d-switch" id="dSwitch" ${signedIn ? 'disabled' : ''}>${ic('<path d="M7 4l12 8-12 8z"/>')}${signedIn ? t('d.signedIn') : t('d.switch')}</button>
+    <button class="btn gold d-switch" id="dSwitch" title="${esc(t('d.hint'))}" ${signedIn ? 'disabled' : ''}>${ic('<path d="M7 4l12 8-12 8z"/>')}${signedIn ? t('d.signedIn') : t('d.switch')}</button>
     <div class="d-actions">
       ${a.placeholder ? '' : `<button data-d="profile">${ic('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')}<span>${t('d.profile')}</span></button>`}
       <button data-d="login">${ic('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>')}<span>${t('d.login')}</span></button>
@@ -108,10 +152,43 @@ function renderDetail() {
       <button data-d="move">${ic('<path d="M3 7h7l2 2h9v10H3z"/><path d="M12 13h5M15 11l2 2-2 2"/>')}<span>${t('d.move')}</span></button>
       <button data-d="remove" class="danger">${ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}<span>${t('menu.remove')}</span></button>
     </div>
-    <p class="fine d-hint">${t('d.hint')}</p>`;
+`;
   loadDetailChart(a);
 }
 $('detail').addEventListener('click', async e => {
+  const m = e.target.closest('[data-m]');
+  if (m && picked.size > 1) {
+    const list = pickedAccounts();
+    const what = m.dataset.m;
+    if (what === 'clear') return clearPicks();
+    if (what === 'opgg') {
+      // op.gg multi-search: up to 5 Riot IDs of one server
+      const named = list.filter(x => x.gameName && x.tagLine);
+      if (!named.length) return;
+      if (named.length > 5) toast(t('multi.first5'));
+      return api.openMulti(named[0].region || 'euw', named.slice(0, 5).map(x => x.gameName + '#' + x.tagLine));
+    }
+    if (what === 'remove') {
+      if (await confirmBox(t('multi.removeTitle', { n: list.length }), t('menu.removeText'), t('menu.remove'), t('mh.clearWarn'))) {
+        for (const x of list) await api.remove(x.puuid);
+        picked.clear();
+      }
+      return;
+    }
+    if (what === 'move') {
+      e.stopPropagation();
+      const targets = [['', t('cat.none')], ...cats().map(c => [c.id, c.name])];
+      const menu = $('siteMenu');
+      menu.innerHTML = targets.map(([cid, n]) => `<button data-cat="${esc(cid)}">${esc(n)}</button>`).join('');
+      menu.dataset.id = '';
+      menu.dataset.many = JSON.stringify(list.map(x => x.puuid));
+      const r = m.getBoundingClientRect();
+      menu.hidden = false;
+      menu.style.left = Math.min(r.left, innerWidth - menu.offsetWidth - 8) + 'px';
+      menu.style.top = Math.min(r.bottom + 4, innerHeight - menu.offsetHeight - 8) + 'px';
+    }
+    return;
+  }
   const a = selected();
   if (!a) return;
   if (e.target.closest('#dSwitch')) return switchTo(a.puuid);
@@ -156,8 +233,11 @@ siteMenu.addEventListener('click', e => {
   const c = e.target.closest('[data-cat]');
   const a = S.accounts.find(x => x.puuid === siteMenu.dataset.id);
   const p = siteMenu.dataset.player ? JSON.parse(siteMenu.dataset.player) : null;
+  const many = siteMenu.dataset.many ? JSON.parse(siteMenu.dataset.many) : null;
   siteMenu.hidden = true;
   siteMenu.dataset.player = '';
+  siteMenu.dataset.many = '';
+  if (c && many) return moveMany(many, c.dataset.cat || '');
   if (b && p) openSite(p, b.dataset.site);
   else if (b && a) openSite(a, b.dataset.site);
   if (c && a) moveTo(a.puuid, c.dataset.cat || '');
@@ -243,14 +323,14 @@ function activePenalties() {
 function penaltiesHtml() {
   const list = activePenalties();
   if (!list.length) return '';
-  return `<div class="live-card pen-card"><div class="lc-head"><h3>${t('pen.title')}</h3></div>
+  return `<div class="live-card pen-card"><div class="lc-head"><h3>${t('pen.title')} <span class="info" title="${esc(t('pen.note'))}">?</span></h3></div>
     ${list.map(({ a, p, asOf }) => `<div class="pen-row">
       <span class="pen-av">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}</span>
       <div class="pen-name"><b>${esc(dispName(a))}</b><small>${esc(reasonText({ code: p.code, args: p.args }))}</small></div>
       ${p.until ? `<span class="pen-left" data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</span>`
         : `<span class="pen-left none" title="${esc(t('pen.asOf', { date: fmtDate(asOf) }))}">${t('pen.noEnd')}</span>`}
     </div>`).join('')}
-    <p class="fine">${t('pen.note')}</p></div>`;
+</div>`;
 }
 // running countdowns (live page, title bar) tick every second while there is one
 setInterval(() => {
@@ -280,9 +360,9 @@ function renderLive(force) {
     const mine = d.inGame.teamTwo.some(p => p.puuid === d.me) ? 'teamTwo' : 'teamOne';
     const theirs = mine === 'teamOne' ? 'teamTwo' : 'teamOne';
     const ids = d.inGame[theirs].filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
-    parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.enemies')}</h3>
+    parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.enemies')} <span class="info" title="${esc(t('live.ranksNote'))}">?</span></h3>
       ${ids.length ? `<button class="btn gold ext-btn multi-btn" data-ids="${esc(ids.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button>` : ''}</div>
-      <p class="fine">${t('live.ranksNote')}</p>${d.inGame[theirs].map(playerRow).join('')}</div>`);
+      ${d.inGame[theirs].map(playerRow).join('')}</div>`);
     parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.allies')}</h3></div>${d.inGame[mine].map(playerRow).join('')}</div>`);
   }
   if (d.lobby && d.lobby.members.length) {

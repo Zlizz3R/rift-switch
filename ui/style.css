@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #0b0e14;
   --bg2: #10141d;
   --panel: #141925;
@@ -12,6 +12,8 @@
   --red: #e5484d;
   --radius: 14px;
 }
+/* one rule for everything hidden: a display: flex elsewhere must never show an empty box */
+[hidden] { display: none !important; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--bg); color: var(--text);
   font: 13px/1.4 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
@@ -784,13 +786,36 @@ body.locked #passBox { background: var(--bg); }
 .rk-cell.none { color: #4a5468; }
 .mh-h { font-size: 9px; letter-spacing: .05em; text-transform: uppercase; color: #5d6780; height: 14px; }
 /* wide: both queues written out, and the table takes all the room the row has */
-@container (min-width: 1250px) {
+@container (min-width: 1650px) {
   /* the table keeps its natural width; the game itself (champion, KDA, stats, items) spreads over the rest */
   .mh-row { grid-template-columns: 96px minmax(0, 1fr) auto; }
-  .mh-main { flex-direction: row; align-items: center; justify-content: space-evenly; gap: 18px; }
+  .mh-main { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-evenly; gap: 8px 18px; min-width: 0; }
   .mh-teams { font-size: 12px; column-gap: 8px;
     grid-template-columns: 124px 124px minmax(0, 150px) 20px 22px 20px minmax(0, 150px) 124px 124px; }
   .mh-c.w { display: flex; }
   .mh-h.w { display: block; }
   .mh-c.n { display: none; }
 }
+
+/* "?" with an explanation as tooltip (instead of lines of text) */
+.info { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; font: 700 10px/1 system-ui, sans-serif;
+  color: var(--muted); border: 1px solid var(--line); cursor: help; vertical-align: 2px; margin-left: 4px; text-transform: none; letter-spacing: 0; }
+.info:hover { color: var(--text); border-color: var(--gold); }
+#credRiotRow.ro input { color: var(--muted); background: transparent; cursor: default; }
+#credRiotRow.ro .opt { display: none; }
+
+/* drag & drop: where the tile will slide in */
+.tile.ins-before::before, .tile.ins-after::after { content: ''; position: absolute; top: 6px; bottom: 6px; width: 3px; border-radius: 3px;
+  background: var(--gold); box-shadow: 0 0 10px rgba(200,170,110,.7); pointer-events: none; z-index: 5; }
+.tile.ins-before::before { left: -9px; }
+.tile.ins-after::after { right: -9px; }
+
+/* several accounts picked (Ctrl/Shift+click) */
+.tile.picked { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(200,170,110,.25); }
+.m-head { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.m-head h2 { font-size: 17px; margin: 0; }
+.m-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; max-height: 50%; overflow: auto; }
+.m-acc { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.m-av { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: #1c2331; flex: none; }
+.m-av img { width: 100%; height: 100%; }
+.m-clear { margin-top: 12px; }

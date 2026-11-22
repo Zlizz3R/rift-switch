@@ -627,7 +627,6 @@ function renderMain() {
   applyStaticTexts();
   $('cryptoWarn').hidden = !S.cryptoBroken;
   const accs = S.accounts;
-  $('count').textContent = accs.length ? accs.length : '';
   $('empty').hidden = accs.length > 0;
   renderBoard();
 
@@ -825,6 +824,8 @@ $('board').addEventListener('click', e => {
   if (e.target.closest('input')) return;
   if (e.target.closest('[data-reveal]')) return toggleReveal(tile.dataset.id);
   const id = tile.dataset.id, now = Date.now();
+  if (e.ctrlKey || e.metaKey || e.shiftKey) { lastTileClick = { id: null, t: 0 }; return pickTile(id, e.shiftKey); }
+  if (picked.size) { picked.clear(); lastPick = null; }
   if (lastTileClick.id === id && now - lastTileClick.t < 450) { lastTileClick = { id: null, t: 0 }; return switchTo(id); }
   lastTileClick = { id, t: now };
   selectAccount(id);
@@ -909,9 +910,25 @@ document.addEventListener('keydown', e => {
   if (!$('credBox').hidden) closeCred();
 });
 
-// drag tiles: reorder, or drop into another category
+// drag tiles: a gold line shows where the tile will slide in (before or after the tile under the
+// mouse); dropping on an empty part of a category puts it at the end of that category
 let dragId = null;
-function clearDrop() { document.querySelectorAll('.drop').forEach(x => x.classList.remove('drop')); }
+function clearDrop() { document.querySelectorAll('.drop, .ins-before, .ins-after').forEach(x => x.classList.remove('drop', 'ins-before', 'ins-after')); }
+// the tile under the mouse and which side of it the mouse is on
+function dropSpot(e) {
+  const tile = e.target.closest('.tile');
+  if (!tile || tile.dataset.id === dragId) return { tile: null };
+  const r = tile.getBoundingClientRect();
+  return { tile, after: e.clientX > r.left + r.width / 2 };
+}
+// the account the dragged tile goes in front of (null = end of the category)
+function beforeIdOf(spot) {
+  if (!spot.tile) return null;
+  if (!spot.after) return spot.tile.dataset.id;
+  let n = spot.tile.nextElementSibling;
+  while (n && (!n.classList.contains('tile') || n.dataset.id === dragId)) n = n.nextElementSibling;
+  return n ? n.dataset.id : null;
+}
 $('board').addEventListener('dragstart', e => {
   const tile = e.target.closest('.tile');
   if (!tile) return;
@@ -927,19 +944,22 @@ $('board').addEventListener('dragover', e => {
   if (!sec) return;
   e.preventDefault();
   clearDrop();
-  const tile = e.target.closest('.tile');
-  if (tile && tile.dataset.id !== dragId) tile.classList.add('drop');
-  else if (!tile) (sec.closest('section.cat') || sec).classList.add('drop');
+  const spot = dropSpot(e);
+  if (spot.tile) spot.tile.classList.add(spot.after ? 'ins-after' : 'ins-before');
+  else if (!e.target.closest('.tile')) (sec.closest('section.cat') || sec).classList.add('drop');
 });
 $('board').addEventListener('drop', e => {
   if (!dragId) return;
   const sec = e.target.closest('[data-cat]');
   if (!sec) return;
   e.preventDefault();
-  const tile = e.target.closest('.tile');
+  const spot = dropSpot(e);
+  const onSelf = !spot.tile && e.target.closest('.tile');
+  const before = beforeIdOf(spot);
   const id = dragId;
   dragId = null; dragging = false;
-  if (tile && tile.dataset.id === id) return render();
+  clearDrop();
+  if (onSelf) return render();
   // moving a tile by hand = your own order from now on, starting from what you see
   if (sortMode() !== 'custom') {
     S.accounts = sortList(S.accounts);
@@ -947,7 +967,7 @@ $('board').addEventListener('drop', e => {
     api.setSetting('sort', 'custom');
     toast(t('drag.toCustom'));
   }
-  moveTo(id, sec.dataset.cat || '', tile ? tile.dataset.id : null);
+  moveTo(id, sec.dataset.cat || '', before);
 });
 
 $('min').onclick = () => api.win('min');
@@ -1022,9 +1042,11 @@ async function openCred(id) {
   $('credPass').type = 'password';
   $('credPass').placeholder = a.hasCred ? t('cred.keep') : '';
   $('credDelete').hidden = !a.hasCred;
-  // a saved account without Riot ID: it can be added here (then ranks and icon show up)
-  $('credRiotRow').hidden = !(a.placeholder && !a.tagLine);
-  $('credRiotId').value = '';
+  // the Riot ID: shown when known (Riot's, can't be changed); a saved account without one can get it here
+  const known = !!(a.gameName && a.tagLine);
+  $('credRiotId').value = known ? (hides('name') ? '••••••' : a.gameName + (hides('tag') ? '' : '#' + a.tagLine)) : '';
+  $('credRiotId').readOnly = known;
+  $('credRiotRow').classList.toggle('ro', known);
   $('credBox').hidden = false;
   ($('credUser').value ? $('credPass') : $('credUser')).focus();
 }
@@ -1032,7 +1054,7 @@ function closeCred() { $('credBox').hidden = true; $('credPass').value = ''; cre
 $('credCancel').onclick = closeCred;
 $('credForm').onsubmit = async e => {
   e.preventDefault();
-  const riotId = $('credRiotRow').hidden ? '' : $('credRiotId').value.trim();
+  const riotId = $('credRiotId').readOnly ? '' : $('credRiotId').value.trim();
   const r = await api.setCred(credFor, { u: $('credUser').value, p: $('credPass').value, riotId });
   if (!r.ok) return toast(errText(r), true);
   closeCred(); toast(riotId ? t(r.found ? 'add.savedFound' : 'add.savedLater') : t('cred.saved'));
