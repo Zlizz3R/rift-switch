@@ -34,7 +34,7 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
   open the logs or the app's data folder.
 - **Auto-accept** switch in the title bar, **System / Light / Dark** appearance.
 - **Tray app** – the ⬇ button keeps it running in the tray (switch from the tray menu), ✕ quits; can start with Windows.
-- **Light on resources** – about 35–40 MB RAM in the tray (one process), roughly 80–120 MB with the window open.
+- **Light on resources** – in the tray one process with about 8 MB RAM and almost no CPU (measured: 0.03 % of one core); about 90 MB while the window is open, all of it freed again when it goes back to the tray.
 
 ## How it works (and what it stores)
 
