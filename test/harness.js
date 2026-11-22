@@ -20,9 +20,11 @@ function sampleState(extra = {}) {
   };
 }
 
-async function boot({ state = sampleState(), replies = {}, width = 1300 } = {}) {
+// upTo: load the window's scripts only up to this file (the first state can arrive before the rest is loaded)
+async function boot({ state = sampleState(), replies = {}, width = 1300, upTo = null } = {}) {
   let html = fs.readFileSync(path.join(UI, 'index.html'), 'utf8');
-  const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+  let scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+  if (upTo) scripts = scripts.slice(0, scripts.indexOf(upTo) + 1);
   html = html.replace(/<script src="[^"]+"><\/script>/g, '');
   const dom = new JSDOM(html, { pretendToBeVisual: true, runScripts: 'dangerously', url: 'http://tauri.localhost/' });
   const w = dom.window;

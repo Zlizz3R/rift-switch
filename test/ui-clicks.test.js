@@ -145,6 +145,18 @@ test('tiles: a PBE account shows the test server box instead of "Unranked"; a pe
   });
 });
 
+test('the board draws before views.js has loaded (the first state can come that early)', async () => {
+  const st = sampleState();
+  st.accounts[2].penalties = { at: Date.now(), list: [{ code: 'LeaverBusterLowPriorityQueue', until: Date.now() + 60000 }] };
+  st.accounts[1].region = 'PBE';
+  const app = await boot({ state: st, upTo: 'renderer.js' });
+  try {
+    assert.deepEqual(app.errors.map(String), []);
+    assert.equal(app.$$('#board .tile[data-id]').length, 4);
+    assert.ok(app.$('.tile-pen') && app.$('.pbe-box'));
+  } finally { app.close(); }
+});
+
 // ---------- drag & drop ----------
 test('dragging shows a line before/after the tile and slides the tile in there', () => withApp({}, async (app) => {
   const { w } = app;
