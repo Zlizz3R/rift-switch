@@ -550,6 +550,41 @@ test('bulk add: paste a list, see what was understood, add everything into a cat
   });
 });
 
+// ---------- layouts and keyboard ----------
+test('layouts: tiles, small tiles and a list – the list rows work like tiles', () => withApp({}, async (app) => {
+  await app.click('[data-layout="list"]');
+  assert.deepEqual(lastCall(app, 'set-setting').args, ['layout', 'list']);
+  assert.equal(app.$$('#board .grid.list .tile.row').length, 4);
+  assert.match(app.$(`.tile.row[data-id="${P(2)}"]`).textContent, /Gold II/);
+  await app.click(app.$(`.tile.row[data-id="${P(2)}"] .c-name`));
+  assert.ok(app.$(`.tile.row[data-id="${P(2)}"]`).classList.contains('selected'));
+  await app.click('[data-layout="compact"]');
+  assert.equal(app.$$('#board .grid.compact .tile').length, 4);
+}));
+
+test('keyboard: pages, search, arrow keys, Enter logs in, ? lists the shortcuts', () => withApp({}, async (app) => {
+  const press = async (key, o = {}) => { app.d.body.dispatchEvent(new app.w.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...o })); await app.settle(); };
+  await press('2', { ctrlKey: true });
+  assert.ok(!app.$('#viewDash').hidden);
+  await press('f', { ctrlKey: true });
+  assert.ok(!app.$('#viewAccounts').hidden);
+  assert.equal(app.d.activeElement, app.$('#search'));
+  app.$('#search').blur();
+  await press('ArrowRight');
+  const first = app.$('#board .tile.selected').dataset.id;
+  await press('ArrowRight');
+  const second = app.$('#board .tile.selected').dataset.id;
+  assert.notEqual(first, second);
+  await press('Enter');
+  await app.click('#confirmYes');
+  assert.deepEqual(lastCall(app, 'switch').args, [second]);
+  await press('a', { ctrlKey: true });
+  assert.equal(app.$$('#board .tile.picked').length, 4);
+  await press('?');
+  assert.ok(!app.$('#helpBox').hidden);
+  assert.match(app.$('#helpBody').textContent, /Ctrl\+Shift\+N/);
+}));
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;

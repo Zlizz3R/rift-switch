@@ -43,6 +43,14 @@ function showView(v) {
   if (v === 'dash') { renderDash(); loadDash(); }
 }
 $('navAccounts').onclick = () => showView('accounts');
+// tiles / small tiles / list
+document.querySelector('.layout-seg').addEventListener('click', e => {
+  const b = e.target.closest('[data-layout]');
+  if (!b) return;
+  S.settings = { ...S.settings, layout: b.dataset.layout };
+  render();
+  api.setSetting('layout', b.dataset.layout);
+});
 $('navLive').onclick = () => showView('live');
 $('navDash').onclick = () => showView('dash');
 $('navTools').onclick = () => showView('tools');

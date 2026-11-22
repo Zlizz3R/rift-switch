@@ -218,8 +218,39 @@ let dragging = false;
 const cats = () => S.categories || [];
 const catOf = a => (a.category && cats().some(c => c.id === a.category)) ? a.category : '';
 
+// how the accounts are shown: big tiles, small tiles, or one row each
+const layout = () => (S.settings && S.settings.layout) || 'tiles';
+// one account as a row of the list view (the same .tile class: clicks, menus, dragging and picking work alike)
+function rowRank(r) {
+  if (r && !TIERS.includes(r.tier) && !(r.wins + r.losses)) r = null;
+  if (!r) return `<span class="r-cell un">${t('tile.unranked')}</span>`;
+  const games = r.wins + r.losses, wr = games && r.wl !== false ? Math.round(100 * r.wins / games) : null;
+  return `<span class="r-cell"><img src="${crestUrl(r.tier)}" alt=""><b>${tierName(r.tier)}${APEX.includes(r.tier) ? '' : ' ' + r.division}</b> <i>${r.lp} LP</i>${wr != null ? ` <em class="${wr >= 53 ? 'good' : wr <= 47 ? 'bad' : ''}">${wr} %</em>` : ''}</span>`;
+}
+function rowHtml(a, o = tileOpt()) {
+  const active = a.puuid === S.active;
+  const p = a.profile || {};
+  const pen = tilePenHtml(a);
+  const cells = [];
+  if (o.server) cells.push(`<span class="c-srv${a.region === 'PBE' ? ' pbe' : ''}">${esc(a.region || '')}</span>`);
+  if (a.placeholder) cells.push(`<span class="c-first">${t('tile.notLoggedIn')}</span>`);
+  else if (hides('ranks')) cells.push(`<span class="c-first">${t('stream.ranksHidden')}</span>`);
+  else for (const [k] of QUEUES.filter(([k]) => o[k])) cells.push(`<span class="c-rank" title="${esc(QUEUES.find(q => q[0] === k)[1])}">${a.region === 'PBE' ? '' : rowRank(a[k])}</span>`);
+  if (o.wallet && p.be != null && !hides('wallet')) cells.push(`<span class="c-wallet"><b class="be">${num(p.be)}</b> BE · <b class="rp">${num(p.rp)}</b> RP</span>`);
+  if (o.lastPlayed) cells.push(`<span class="c-last">${a.lastPlayed ? esc(ago(a.lastPlayed)) : ''}</span>`);
+  return `<div class="tile row ${active ? 'active' : ''}${a.placeholder ? ' pending' : ''}" data-id="${esc(a.puuid)}" draggable="true">
+    ${o.icon ? `<span class="c-av">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}${o.level && !hides('level') && a.level ? `<i>${a.level}</i>` : ''}</span>` : ''}
+    <span class="c-name"><b title="${esc(fullName(a))}">${esc(dispName(a))}${o.tag && dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}</b>${active ? `<span class="badge">${t('tile.active')}</span>` : ''}
+      ${o.note && !hides('note') && a.note ? `<span class="note" data-note>${esc(a.note)}</span>` : '<span data-note></span>'}</span>
+    ${pen ? `<span class="c-pen">${pen}</span>` : ''}
+    ${cells.join('')}
+    ${lockHtml(a, o)}
+    <button class="more" data-more title="${esc(t('common.more'))}">${DOTS}</button>
+  </div>`;
+}
 function gridHtml(cat, list) {
-  return `<div class="grid" data-cat="${esc(cat)}">${list.length ? list.map(a => tileHtml(a)).join('')
+  const lay = layout();
+  return `<div class="grid ${lay}" data-cat="${esc(cat)}">${list.length ? list.map(a => (lay === 'list' ? rowHtml(a) : tileHtml(a))).join('')
     : `<div class="cat-empty">${t('cat.dropHere')}</div>`}</div>`;
 }
 function sectionHtml(c, list) {
@@ -667,6 +698,7 @@ function render() {
 }
 function renderMain() {
   applyStaticTexts();
+  document.querySelectorAll('[data-layout]').forEach(b => b.classList.toggle('on', b.dataset.layout === layout()));
   $('cryptoWarn').hidden = !S.cryptoBroken;
   const accs = S.accounts;
   $('empty').hidden = accs.length > 0;
@@ -985,6 +1017,7 @@ function dropSpot(e) {
   const tile = e.target.closest('.tile');
   if (!tile || tile.dataset.id === dragId) return { tile: null };
   const r = tile.getBoundingClientRect();
+  if (tile.classList.contains('row')) return { tile, after: e.clientY > r.top + r.height / 2 };
   return { tile, after: e.clientX > r.left + r.width / 2 };
 }
 // the account the dragged tile goes in front of (null = end of the category)
@@ -1194,7 +1227,7 @@ const stateReady = api.getState().then(s => { S = s; render(); });
 })();
 
 // ---------- help pages ("?"): "## " heading, "- " list item, other lines paragraphs ----------
-const HELP_TITLES = { helper: 'live.helper', tools: 'tools.title', live: 'live.title', mh: 'mh.title' };
+const HELP_TITLES = { keys: 'keys.title', helper: 'live.helper', tools: 'tools.title', live: 'live.title', mh: 'mh.title' };
 function openHelp(topic) {
   const lines = t('help.' + topic).split('\n');
   let html = '', list = false;

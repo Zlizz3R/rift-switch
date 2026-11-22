@@ -68,6 +68,12 @@
             <option value="played" data-i18n="sort.played"></option>
             <option value="name" data-i18n="sort.name"></option>
           </select>
+          <div class="seg layout-seg">
+            <button data-layout="tiles" data-i18n-title="lay.tiles"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button>
+            <button data-layout="compact" data-i18n-title="lay.compact"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="5" rx="1"/><rect x="9.5" y="4" width="5" height="5" rx="1"/><rect x="16" y="4" width="5" height="5" rx="1"/><rect x="3" y="11" width="5" height="5" rx="1"/><rect x="9.5" y="11" width="5" height="5" rx="1"/><rect x="16" y="11" width="5" height="5" rx="1"/></svg></button>
+            <button data-layout="list" data-i18n-title="lay.list"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button>
+          </div>
+          <button class="tool-btn" id="keysBtn" data-i18n-title="keys.title"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
           <button class="tool-btn" id="editTiles" data-i18n-title="head.editTiles"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
         </div>
       </div>
@@ -465,5 +471,6 @@
 <script src="matches-view.js"></script>
 <script src="dashboard.js"></script>
 <script src="bulk.js"></script>
+<script src="keys.js"></script>
 </body>
 </html>
