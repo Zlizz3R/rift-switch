@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'add.existed': "پہلے سے محفوظ ہے۔", 'add.idFound': "شامل ہو گیا – رینک نظر آ رہے ہیں۔ سوئچ کرنے کے لیے ایک بار ہاتھ سے لاگ اِن کریں۔", 'add.idLater': "شامل ہو گیا – اس سرور پر League چلنے پر رینک آئیں گے۔ سوئچ کرنے کے لیے ایک بار ہاتھ سے لاگ اِن کریں۔", 'add.idHint': "Name#Tag یا پروفائل لنک (op.gg، u.gg …)۔ صرف Riot ID بھی کافی ہے: ٹائل رینک دکھاتی ہے، ایک بار ہاتھ سے لاگ اِن کے بعد سوئچ ہوتا ہے۔",
     'multi.title': "{n} اکاؤنٹ منتخب", 'multi.hint': "Ctrl+کلک سے ٹائل شامل یا ہٹائیں، Shift+کلک سے رینج، Esc سے انتخاب ختم۔", 'multi.clear': "انتخاب ختم کریں", 'multi.opgg': "op.gg ملٹی سرچ", 'multi.removeTitle': "{n} اکاؤنٹ ہٹائیں؟", 'multi.first5': "op.gg ایک بار میں 5 لیتا ہے – پہلے 5 کھلیں گے۔",
     'pos.top': "ٹاپ", 'pos.jungle': "جنگل", 'pos.mid': "مڈ", 'pos.bot': "باٹ", 'pos.support': "سپورٹ",
     'pen.title': "سزائیں اور انتظار", 'pen.left': "باقی {t}", 'pen.until': "{date} تک", 'pen.noEnd': "اختتام نہیں بتایا گیا", 'pen.asOf': "{date} تک کی معلومات", 'pen.wait': "انتظار {t}", 'pen.note': "ہر اکاؤنٹ کے اپنے آخری لاگ اِن سے – باقی اکاؤنٹ لاگ اِن پر چیک ہوتے ہیں۔", 'restrict.LowPriorityQueue': "لو پرائیرٹی قطار (قطار سے پہلے انتظار)", 'restrict.QUEUE_DODGER': "ڈاج ٹائمر", 'restrict.LEAVER_BUSTED': "LeaverBuster لاک",

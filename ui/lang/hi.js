@@ -96,6 +96,7 @@
     'nav.live': "लाइव",
     'nav.tools': "टूल्स",
     'set.theme': "रूप",
+    'add.existed': "पहले से सहेजा है।", 'add.idFound': "जोड़ा गया – रैंक दिख रहे हैं। स्विच करने के लिए एक बार हाथ से लॉगिन करें।", 'add.idLater': "जोड़ा गया – उस सर्वर पर League चलने पर रैंक दिखेंगे। स्विच करने के लिए एक बार हाथ से लॉगिन करें।", 'add.idHint': "Name#Tag या प्रोफ़ाइल लिंक (op.gg, u.gg …)। सिर्फ Riot ID भी चलेगा: टाइल रैंक दिखाती है, एक बार हाथ से लॉगिन के बाद स्विच होता है।",
     'multi.title': "{n} अकाउंट चुने गए", 'multi.hint': "Ctrl+क्लिक से टाइल जोड़ें या हटाएँ, Shift+क्लिक से रेंज चुनें, Esc से हटाएँ।", 'multi.clear': "चयन हटाएँ", 'multi.opgg': "op.gg मल्टी-सर्च", 'multi.removeTitle': "{n} अकाउंट हटाएँ?", 'multi.first5': "op.gg एक बार में 5 लेता है – पहले 5 खुलेंगे।",
     'pos.top': "टॉप", 'pos.jungle': "जंगल", 'pos.mid': "मिड", 'pos.bot': "बॉट", 'pos.support': "सपोर्ट",
     'pen.title': "पेनल्टी और प्रतीक्षा समय", 'pen.left': "{t} बाकी", 'pen.until': "{date} तक", 'pen.noEnd': "अंत नहीं बताया गया", 'pen.asOf': "{date} तक की जानकारी", 'pen.wait': "प्रतीक्षा {t}", 'pen.note': "हर अकाउंट के अपने पिछले लॉगिन से – बाकी अकाउंट लॉगिन करने पर जाँचे जाते हैं।", 'restrict.LowPriorityQueue': "लो प्रायोरिटी कतार (कतार से पहले प्रतीक्षा)", 'restrict.QUEUE_DODGER': "डॉज टाइमर", 'restrict.LEAVER_BUSTED': "LeaverBuster लॉक",

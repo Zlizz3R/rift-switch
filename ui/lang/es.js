@@ -98,6 +98,7 @@
     'nav.live': "En vivo",
     'nav.tools': "Herramientas",
     'set.theme': "Apariencia",
+    'add.existed': "Ya está guardada.", 'add.idFound': "Añadida: ya ves los rangos. Para cambiar a ella, inicia sesión una vez a mano.", 'add.idLater': "Añadida: los rangos aparecen cuando League se abra en ese servidor. Para cambiar a ella, inicia sesión una vez a mano.", 'add.idHint': "Name#Tag o un enlace de perfil (op.gg, u.gg …). Basta con el Riot ID: la tarjeta muestra los rangos y el cambio funciona tras un inicio de sesión a mano.",
     'multi.title': "{n} cuentas seleccionadas", 'multi.hint': "Ctrl+clic añade o quita una tarjeta, Mayús+clic selecciona un rango, Esc lo borra.", 'multi.clear': "Quitar selección", 'multi.opgg': "Multibúsqueda de op.gg", 'multi.removeTitle': "¿Quitar {n} cuentas?", 'multi.first5': "op.gg acepta 5 a la vez: se abren las 5 primeras.",
     'pos.top': "Top", 'pos.jungle': "Jungla", 'pos.mid': "Medio", 'pos.bot': "Bot", 'pos.support': "Apoyo",
     'pen.title': "Sanciones y esperas", 'pen.left': "quedan {t}", 'pen.until': "hasta {date}", 'pen.noEnd': "sin fin indicado", 'pen.asOf': "a {date}", 'pen.wait': "Espera {t}", 'pen.note': "Del último inicio de sesión de cada cuenta: las demás se comprueban al entrar en ellas.", 'restrict.LowPriorityQueue': "Cola de baja prioridad (espera antes de buscar)", 'restrict.QUEUE_DODGER': "Penalización por dodge", 'restrict.LEAVER_BUSTED': "Bloqueo de LeaverBuster",

@@ -1117,19 +1117,40 @@ async fn do_add_new(c_in: Value) -> Value {
 }
 
 /// Save a login for later – nothing is closed or logged in now.
+/// Save an account for later – nothing is closed or logged in now. With a login (+ optional Riot ID
+/// or profile link), or only a Riot ID / profile link: then the tile shows ranks, and switching to it
+/// works once you have logged in to it by hand (the app keeps that sign-in).
 async fn do_add_saved(c_in: Value) -> Value {
     with(|c| c.gen += 1);
-    let Some((u, p)) = valid_cred(&c_in) else {
-        return err_key("m.fill");
-    };
+    let cred = valid_cred(&c_in);
+    let half = !c_in["u"].as_str().unwrap_or("").trim().is_empty()
+        || !c_in["p"].as_str().unwrap_or("").is_empty();
     let rid = c_in["riotId"].as_str().unwrap_or("").trim().to_string();
+    if cred.is_none() && (half || rid.is_empty()) {
+        return err_key("m.fill");
+    }
     let (mut gn, mut tl) = (String::new(), String::new());
     if !rid.is_empty() {
-        let Some((g, t)) = parse_riot_id(&rid) else {
+        let Some((g, t)) = accounts::parse_profile_link(&rid).or_else(|| parse_riot_id(&rid))
+        else {
             return err_key("m.riotIdFormat");
         };
         gn = g;
         tl = t;
+    }
+    // already a tile with that Riot ID?
+    let existing = with(|c| {
+        c.st.accounts
+            .iter()
+            .find(|a| {
+                str_of(a, "gameName").eq_ignore_ascii_case(&gn)
+                    && str_of(a, "tagLine").eq_ignore_ascii_case(&tl)
+                    && !gn.is_empty()
+            })
+            .map(|a| str_of(a, "puuid").to_string())
+    });
+    if let (Some(id), None) = (&existing, &cred) {
+        return json!({ "ok": true, "existed": true, "puuid": id });
     }
     let hit = if gn.is_empty() {
         None
@@ -1137,6 +1158,7 @@ async fn do_add_saved(c_in: Value) -> Value {
         riot::lookup_riot_id(&gn, &tl).await
     };
     let id = match &hit {
+        _ if existing.is_some() && hit.is_none() => existing.clone().unwrap(),
         Some(h) => {
             let id = str_of(h, "puuid").to_string();
             upsert(h.clone());
@@ -1150,7 +1172,7 @@ async fn do_add_saved(c_in: Value) -> Value {
         None => {
             let id = format!("new-{}", uuid4());
             let name = if gn.is_empty() {
-                mask_login(&u)
+                mask_login(&cred.as_ref().map(|c| c.0.clone()).unwrap_or_default())
             } else {
                 gn.clone()
             };
@@ -1160,9 +1182,11 @@ async fn do_add_saved(c_in: Value) -> Value {
             id
         }
     };
-    store_cred(&id, &u, &p);
+    if let Some((u, p)) = &cred {
+        store_cred(&id, u, p);
+    }
     save();
-    json!({ "ok": true, "found": hit.is_some(), "riotId": !gn.is_empty() })
+    json!({ "ok": true, "found": hit.is_some(), "riotId": !gn.is_empty(), "noLogin": cred.is_none(), "puuid": id })
 }
 
 fn uuid4() -> String {

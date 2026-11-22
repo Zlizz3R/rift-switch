@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'add.existed': "আগেই সংরক্ষিত।", 'add.idFound': "যোগ হয়েছে – র‍্যাঙ্ক দেখা যাচ্ছে। সুইচ করতে একবার হাতে লগইন করুন।", 'add.idLater': "যোগ হয়েছে – সেই সার্ভারে League চালু হলে র‍্যাঙ্ক আসবে। সুইচ করতে একবার হাতে লগইন করুন।", 'add.idHint': "Name#Tag বা প্রোফাইল লিংক (op.gg, u.gg …)। শুধু Riot ID-ও চলবে: টাইলে র‍্যাঙ্ক দেখায়, একবার হাতে লগইনের পর সুইচ হয়।",
     'multi.title': "{n}টি অ্যাকাউন্ট বাছাই", 'multi.hint': "Ctrl+ক্লিকে টাইল যোগ বা বাদ, Shift+ক্লিকে একটি পরিসর, Esc-এ বাতিল।", 'multi.clear': "বাছাই বাতিল", 'multi.opgg': "op.gg মাল্টি-সার্চ", 'multi.removeTitle': "{n}টি অ্যাকাউন্ট সরাবেন?", 'multi.first5': "op.gg একবারে ৫টি নেয় – প্রথম ৫টি খোলা হবে।",
     'pos.top': "টপ", 'pos.jungle': "জাঙ্গল", 'pos.mid': "মিড", 'pos.bot': "বট", 'pos.support': "সাপোর্ট",
     'pen.title': "শাস্তি ও অপেক্ষার সময়", 'pen.left': "আর {t}", 'pen.until': "{date} পর্যন্ত", 'pen.noEnd': "শেষ সময় দেওয়া নেই", 'pen.asOf': "{date} অনুযায়ী", 'pen.wait': "অপেক্ষা {t}", 'pen.note': "প্রতিটি অ্যাকাউন্টের নিজের শেষ লগইন থেকে – অন্যগুলো লগইন করলে যাচাই হয়।", 'restrict.LowPriorityQueue': "লো প্রায়োরিটি কিউ (কিউর আগে অপেক্ষা)", 'restrict.QUEUE_DODGER': "ডজ টাইমার", 'restrict.LEAVER_BUSTED': "LeaverBuster লক",

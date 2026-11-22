@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'add.existed': "已经保存。", 'add.idFound': "已添加——段位已显示。要切换到它，请先手动登录一次。", 'add.idLater': "已添加——在该服务器运行英雄联盟后显示段位。要切换到它，请先手动登录一次。", 'add.idHint': "Name#Tag 或个人主页链接（op.gg、u.gg…）。只填 Riot ID 也可以：卡片显示段位，手动登录一次后即可切换。",
     'multi.title': "已选择 {n} 个账号", 'multi.hint': "Ctrl+点击添加或移除卡片，Shift+点击选择范围，Esc 取消。", 'multi.clear': "取消选择", 'multi.opgg': "op.gg 多人查询", 'multi.removeTitle': "移除 {n} 个账号？", 'multi.first5': "op.gg 一次最多 5 个——将打开前 5 个。",
     'pos.top': "上单", 'pos.jungle': "打野", 'pos.mid': "中单", 'pos.bot': "下路", 'pos.support': "辅助",
     'pen.title': "惩罚与等待时间", 'pen.left': "还剩 {t}", 'pen.until': "至 {date}", 'pen.noEnd': "未给出结束时间", 'pen.asOf': "截至 {date}", 'pen.wait': "等待 {t}", 'pen.note': "来自每个账号最近一次登录——其他账号在你登录时检查。", 'restrict.LowPriorityQueue': "低优先级队列（排队前需等待）", 'restrict.QUEUE_DODGER': "秒退惩罚", 'restrict.LEAVER_BUSTED': "LeaverBuster 锁定",

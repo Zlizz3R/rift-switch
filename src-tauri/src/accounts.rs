@@ -49,6 +49,56 @@ pub fn parse_riot_id(s: &str) -> Option<(String, String)> {
     Some((name.trim().to_string(), tag.to_string()))
 }
 
+/// A profile link of op.gg, u.gg, League of Graphs, Porofessor or Mobalytics -> (gameName, tagLine).
+/// The last part of the link is "Name-Tag" (URL-encoded); the tag is after the last "-".
+pub fn parse_profile_link(s: &str) -> Option<(String, String)> {
+    let s = s.trim();
+    let rest = s
+        .strip_prefix("https://")
+        .or_else(|| s.strip_prefix("http://"))
+        .unwrap_or(s);
+    let host = rest.split('/').next()?.to_lowercase();
+    let host = host.strip_prefix("www.").unwrap_or(&host);
+    if ![
+        "op.gg",
+        "u.gg",
+        "leagueofgraphs.com",
+        "porofessor.gg",
+        "mobalytics.gg",
+    ]
+    .contains(&host)
+    {
+        return None;
+    }
+    let path = rest.split(['?', '#']).next()?;
+    let last = path.trim_end_matches('/').rsplit('/').next()?;
+    let decoded = percent_decode(last)?;
+    let (name, tag) = decoded.rsplit_once('-')?;
+    parse_riot_id(&format!("{name}#{tag}"))
+}
+fn percent_decode(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            b'%' if i + 2 < b.len() => {
+                out.push(u8::from_str_radix(std::str::from_utf8(&b[i + 1..i + 3]).ok()?, 16).ok()?);
+                i += 3;
+            }
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            c => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
 /// Account ids from the window: a puuid or a "new-<uuid>" placeholder, nothing else.
 pub fn is_id(id: &str) -> bool {
     let rest = id.strip_prefix("new-").unwrap_or(id);
@@ -327,6 +377,38 @@ mod tests {
         assert_eq!(Value::Object(list[0].clone()).to_string(), before);
         upsert_into(&mut list, cur(3, 27), 3);
         assert_eq!(list[0]["decay"]["at"], 3);
+    }
+
+    #[test]
+    fn profile_links() {
+        let id = |a: &str, b: &str| Some((a.to_string(), b.to_string()));
+        assert_eq!(
+            parse_profile_link("https://op.gg/lol/summoners/euw/Zlizz3R-EUW"),
+            id("Zlizz3R", "EUW")
+        );
+        assert_eq!(
+            parse_profile_link(
+                "https://www.op.gg/summoners/euw/2%20StoneD%204%20Plays-EUW?queue=solo"
+            ),
+            id("2 StoneD 4 Plays", "EUW")
+        );
+        assert_eq!(
+            parse_profile_link("op.gg/summoners/euw/Name-With-Dash-1234/"),
+            id("Name-With-Dash", "1234")
+        );
+        assert_eq!(
+            parse_profile_link("https://u.gg/lol/profile/euw1/m%C3%BCller-euw/overview"),
+            None
+        ); // last part is "overview"
+        assert_eq!(
+            parse_profile_link("https://u.gg/lol/profile/euw1/m%C3%BCller-euw"),
+            id("müller", "euw")
+        );
+        assert_eq!(
+            parse_profile_link("https://evil.com/summoners/euw/A-B12"),
+            None
+        );
+        assert_eq!(parse_profile_link("Zlizz3R#EUW"), None);
     }
 
     #[test]

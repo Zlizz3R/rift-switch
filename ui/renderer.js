@@ -1008,12 +1008,15 @@ $('optCurrent').onclick = async () => {
 $('addForm').onsubmit = async e => {
   e.preventDefault();
   const riotId = $('addRiotId').value.trim(), u = $('addUser').value.trim(), p = $('addPass').value;
-  if (!u || !p) return toast(t('add.fill'), true);
+  // a Riot ID (or profile link) alone is enough; a login needs both fields
+  if ((!u || !p) && (u || p || !riotId)) return toast(t('add.fill'), true);
   const r = await api.addSaved({ riotId, u, p });
   if (!r.ok) return toast(errText(r), true);
   $('addRiotId').value = $('addUser').value = $('addPass').value = '';
   openDrawer(false);
-  toast(r.found ? t('add.savedFound') : r.riotId ? t('add.savedLater') : t('add.saved'));
+  if (r.puuid) selectAccount(r.puuid);
+  toast(r.existed ? t('add.existed') : r.noLogin ? t(r.found ? 'add.idFound' : 'add.idLater')
+    : r.found ? t('add.savedFound') : r.riotId ? t('add.savedLater') : t('add.saved'));
 };
 $('optManual').onclick = async () => {
   if (!(await guardRunningGame())) return;

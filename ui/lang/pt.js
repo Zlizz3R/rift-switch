@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'add.existed': "Já está salva.", 'add.idFound': "Adicionada – os elos já aparecem. Para trocar para ela, entre nela uma vez à mão.", 'add.idLater': "Adicionada – os elos aparecem quando o League rodar nesse servidor. Para trocar para ela, entre nela uma vez à mão.", 'add.idHint': "Name#Tag ou um link de perfil (op.gg, u.gg …). Só o Riot ID já basta: o card mostra os elos e a troca funciona depois de um login à mão.",
     'multi.title': "{n} contas selecionadas", 'multi.hint': "Ctrl+clique adiciona ou remove um card, Shift+clique seleciona um intervalo, Esc limpa.", 'multi.clear': "Limpar seleção", 'multi.opgg': "Multibusca do op.gg", 'multi.removeTitle': "Remover {n} contas?", 'multi.first5': "O op.gg aceita 5 por vez – as 5 primeiras serão abertas.",
     'pos.top': "Topo", 'pos.jungle': "Selva", 'pos.mid': "Meio", 'pos.bot': "Atirador", 'pos.support': "Suporte",
     'pen.title': "Punições e esperas", 'pen.left': "faltam {t}", 'pen.until': "até {date}", 'pen.noEnd': "sem fim indicado", 'pen.asOf': "em {date}", 'pen.wait': "Espera {t}", 'pen.note': "Do último login de cada conta – as outras são verificadas quando você entra nelas.", 'restrict.LowPriorityQueue': "Fila de baixa prioridade (espera antes da fila)", 'restrict.QUEUE_DODGER': "Punição por dodge", 'restrict.LEAVER_BUSTED': "Bloqueio do LeaverBuster",
