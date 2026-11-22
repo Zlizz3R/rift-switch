@@ -1,5 +1,5 @@
 // Rank arithmetic shared by the window and the tests (no DOM, no Electron):
-// rank scores, the rough MMR guess and the decay countdown.
+// rank scores and the decay countdown.
 (function (root) {
   const TIERS = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'];
   const DIVS = ['IV', 'III', 'II', 'I'];
@@ -19,18 +19,6 @@
     const i = Math.min(6, Math.floor(s / 400));
     const d = Math.min(3, Math.floor((s - i * 400) / 100));
     return { tier: TIERS[i], division: DIVS[d] };
-  }
-  // Riot doesn't publish MMR: rank + LP as the base, nudged by win rate (weighted by games)
-  function mmrScore(a) {
-    const qs = [a.solo, a.flex].filter(Boolean);
-    if (!qs.length) return null;
-    const q = (a.solo && (a.solo.wins + a.solo.losses) >= 10) ? a.solo
-      : qs.sort((x, y) => (y.wins + y.losses) - (x.wins + x.losses))[0];
-    const games = q.wl === false ? 0 : q.wins + q.losses;
-    const wr = games ? q.wins / games : 0.5;
-    const conf = Math.min(1, games / 80);
-    const adj = Math.max(-200, Math.min(200, (wr - 0.5) * 800 * conf));
-    return { score: rankScore(q) + adj, queue: q === a.solo ? 'Solo/Duo' : 'Flex', diff: adj };
   }
 
   // Ranked decay (Diamond and up, Solo/Duo and Flex): Riot keeps a bank of days. It only tells
@@ -57,7 +45,7 @@
     return best;
   }
 
-  const api = { TIERS, DIVS, APEX, DAY, rankScore, scoreToRank, mmrScore, decayInfo };
+  const api = { TIERS, DIVS, APEX, DAY, rankScore, scoreToRank, decayInfo };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RankMath = api;
 })(typeof window !== 'undefined' ? window : this);

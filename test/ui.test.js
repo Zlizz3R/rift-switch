@@ -21,17 +21,13 @@ test('decay countdown on the tiles', () => {
   assert.equal(RM.decayInfo({ solo: { tier: 'DIAMOND' }, lastPlayed: now - 90 * DAY }, null, now).days, 0);
 });
 
-test('rank score and MMR guess', () => {
+test('rank score', () => {
   assert.equal(RM.rankScore({ tier: 'IRON', division: 'IV', lp: 0 }), 0);
   assert.equal(RM.rankScore({ tier: 'GOLD', division: 'I', lp: 50 }), 3 * 400 + 300 + 50);
   assert.ok(RM.rankScore({ tier: 'MASTER', lp: 10 }) > RM.rankScore({ tier: 'DIAMOND', division: 'I', lp: 99 }));
   assert.deepEqual(RM.scoreToRank(1550), { tier: 'GOLD', division: 'I' });
   assert.equal(RM.scoreToRank(3000).plus, true);
-  const winning = RM.mmrScore({ solo: { tier: 'GOLD', division: 'II', lp: 0, wins: 70, losses: 30, wl: true } });
-  assert.ok(winning.diff > 0);
-  const unknown = RM.mmrScore({ solo: { tier: 'GOLD', division: 'II', lp: 0, wins: 70, losses: 0, wl: false } });
-  assert.equal(unknown.diff, 0);            // no real win/loss -> no nudge
-  assert.equal(RM.mmrScore({}), null);
+  assert.equal(RM.mmrScore, undefined, 'no MMR guess (Riot policy)');
 });
 
 test('every language has every text with the same placeholders', () => {

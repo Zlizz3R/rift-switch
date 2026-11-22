@@ -38,10 +38,10 @@ function applyStaticTexts() {
 
 // ---------- what a tile shows (Customise tiles) ----------
 const TILE_DEFAULTS = { icon: true, level: true, tag: true, note: true, lock: true, server: true, solo: true, flex: true, r5: false, classic: false,
-  winrate: true, mmr: true, ranked: true, inactive: true, lastPlayed: false, wallet: false };
+  winrate: true, ranked: true, inactive: true, lastPlayed: false, wallet: false };
 const TILE_GROUPS = [
   ['te.g.head', ['icon', 'level', 'tag', 'note', 'lock', 'server']],
-  ['te.g.ranks', ['solo', 'flex', 'r5', 'classic', 'winrate', 'mmr']],
+  ['te.g.ranks', ['solo', 'flex', 'r5', 'classic', 'winrate']],
   ['te.g.extra', ['ranked', 'inactive', 'lastPlayed', 'wallet']],
 ];
 const tileOpt = () => ({ ...TILE_DEFAULTS, ...((S.settings && S.settings.tile) || {}) });
@@ -67,13 +67,6 @@ function phaseName(p) {
   return I18N.STRINGS.en[key] ? t(key) : String(p || '').replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
-// ---------- MMR estimate ----------
-// rough guess from rank, LP and win rate (rankmath.js)
-function mmrEstimate(a) {
-  const m = RankMath.mmrScore(a);
-  if (!m) return null;
-  return { label: scoreToLabel(m.score), queue: m.queue, diff: m.diff };
-}
 const decayInfo = a => RankMath.decayInfo(a, S.active);
 function scoreToLabel(v) {
   const r = RankMath.scoreToRank(v);
@@ -149,8 +142,6 @@ function tileHtml(a, o = tileOpt(), preview = false) {
   if (a.placeholder) return placeholderHtml(a, o);
   const pbe = a.region === 'PBE';
   const active = a.puuid === S.active;
-  const m = mmrEstimate(a);
-  const trend = m ? (m.diff > 40 ? ' ↑' : m.diff < -40 ? ' ↓' : '') : '';
   const p = a.profile || {};
   const extras = [];
   if (o.lastPlayed && a.lastPlayed) extras.push(`<span>${t('tile.lastPlayed', { ago: ago(a.lastPlayed) })}</span>`);
@@ -177,9 +168,6 @@ function tileHtml(a, o = tileOpt(), preview = false) {
     ${rk}
     ${pbe ? (QUEUES.some(([k]) => o[k]) ? pbeHtml() : '') : hides('ranks') ? `<div class="stream-hidden">${t('stream.ranksHidden')}</div>` : rk && !QUEUES.some(([k]) => o[k] && a[k]) ? '' : QUEUES.some(([k]) => o[k]) ? `<div class="ranks">${QUEUES.filter(([k]) => o[k]).map(([k, n]) => rankRow(n, a[k], o.winrate)).join('')}</div>` : ''}
     ${extras.length ? `<div class="tile-extra">${extras.join('')}</div>` : ''}
-    ${o.mmr && !pbe && !hides('ranks') ? `<div class="mmr" title="${esc(t('tile.mmrTitle', { q: m ? m.queue : '–' }))}">
-      <span>${t('tile.mmr')}</span><b>${m ? '≈ ' + m.label + trend : '–'}</b>
-    </div>` : ''}
   </div>`;
 }
 

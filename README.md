@@ -13,7 +13,7 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
   screen open → signs in without a restart), otherwise leaves your lobby/queue, closes League, swaps the session and
   presses *Play* for you.
 - **Tiles + detail panel** – every account shows Riot ID, icon, level and ranks (Solo/Duo, Flex, Ranked 5v5,
-  Classic 5v5), win rate and a rough MMR estimate. The panel on the right has *Switch* (greyed out when already signed
+  Classic 5v5), win rate. The panel on the right has *Log in* (greyed out when already signed
   in), profile, login details, *Open with* (op.gg, Porofessor, League of Graphs, Mobalytics, u.gg), note, move and remove.
 - **Ranked readiness** – what a fresh account still needs (level 30, 20 champions, 10 normal games) plus Riot's own
   restrictions (e.g. LeaverBuster). Lobby-only reasons (party size, rank spread) are ignored.
