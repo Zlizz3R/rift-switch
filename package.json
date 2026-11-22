@@ -6,7 +6,8 @@
     "dev": "tauri dev",
     "dist": "tauri build",
     "test": "node --test test/ && cargo test --manifest-path src-tauri/Cargo.toml",
-    "strings": "node tools/tray-strings.js"
+    "strings": "node tools/tray-strings.js",
+    "ai-export": "node tools/ai-export.js"
   },
   "keywords": [
     "league-of-legends",
