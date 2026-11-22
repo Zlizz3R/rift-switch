@@ -10,7 +10,7 @@
     getHistory: puuid => call('get-history', puuid),
     live: () => call('live'),
     champions: () => call('champions'),
-    matchup: (mine, enemy, lane) => call('matchup', mine, enemy, lane),
+    counters: (enemy, lane) => call('counters', enemy, lane),
     rankedGames: puuid => call('ranked-games', puuid),
     tool: what => call('tool', what),
     openMulti: (region, ids) => call('open-multi', region, ids),

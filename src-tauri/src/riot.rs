@@ -103,7 +103,7 @@ fn read_lock(file: &Path) -> Option<Lock> {
 }
 
 /// Test copies with RS_NO_RIOT set never talk to the Riot Client or League (safe while you play).
-fn offline_test() -> bool {
+pub fn offline_test() -> bool {
     std::env::var_os("RS_DATA").is_some() && std::env::var_os("RS_NO_RIOT").is_some()
 }
 

@@ -296,27 +296,51 @@ test('live page: only real penalties, with time left; a queue wait shows in the 
   assert.ok(app.visible('#helpBox'));
 }));
 
-test('champ select helper: pool under its heading, an enemy loads all matchups at once, best first; pre-load', () => {
-  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Malphite' }];
-  const wr = { Garen: 48.2, Illaoi: 53.1 };
+test('champ select helper: one counters page per enemy ranks the pool; pre-load scans the pool; enemy picks are clickable', () => {
+  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Malphite' }, { id: 5, name: "Cho'Gath" }];
+  // counterstats: who does well against <enemy>
+  const pages = {
+    Darius: [{ name: 'Garen', wr: 48, rating: 4.1 }, { name: 'Illaoi', wr: 53, rating: 5.2 }],
+    Malphite: [{ name: 'Garen', wr: 51, rating: 5.0 }],
+    Garen: [{ name: 'Darius', wr: 52 }, { name: 'Malphite', wr: 49 }],
+    Illaoi: [{ name: 'Darius', wr: 47 }, { name: "Cho'Gath", wr: 50 }],
+  };
   const st = sampleState();
   st.settings.champPool = [1, 3];
-  return withApp({ state: st, replies: { champions: champs, matchup: (me) => ({ wr: wr[me] }) } }, async (app) => {
+  return withApp({ state: st, replies: { champions: champs, counters: (enemy) => ({ ok: true, list: pages[enemy] || [] }) } }, async (app) => {
     await app.click('#navLive');
     assert.match(app.$('.helper').textContent, /My champion pool/);
     assert.equal(app.$$('.h-chip').length, 2);
     await app.type('#hEnemy', 'Darius');
     await new Promise((r) => setTimeout(r, 100));
     await app.settle();
-    assert.deepEqual(app.called('matchup').map((c) => c.args.slice(0, 2)).sort(), [['Garen', 'Darius'], ['Illaoi', 'Darius']]);
+    assert.deepEqual(app.called('counters').map((c) => c.args[0]), ['Darius'], 'one request for the whole pool');
     assert.deepEqual(app.$$('.h-res b').map((x) => x.textContent), ['Illaoi', 'Garen'], 'best first');
     assert.match(app.$('.helper').textContent, /Best picks against Darius/);
-    const before = app.called('matchup').length;
     await app.click('#hPre');
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 200));
     await app.settle();
-    assert.ok(app.called('matchup').length > before, 'pre-load asks for the popular champions');
-    assert.ok(app.called('matchup').every((c) => c.args[0] !== c.args[1]), 'never a champion against itself');
+    const asked = app.called('counters').map((c) => c.args[0]);
+    for (const n of ['Garen', 'Illaoi', 'Malphite', "Cho'Gath"]) assert.ok(asked.includes(n), 'pre-load reaches ' + n);
+    assert.equal(asked.filter((n) => n === 'Darius').length, 1, 'nothing asked twice');
+  });
+});
+
+test('champ select helper: "who are you playing against?" shows the enemy picks, a click chooses one', () => {
+  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 4, name: 'Malphite' }];
+  const st = sampleState();
+  st.settings.champPool = [1];
+  const live = { clientUp: true, phase: 'ChampSelect', region: 'EUW', me: 'x',
+    champSelect: { myPosition: 'top', hiddenNames: true, allies: [], enemies: [{ championId: 2, position: 'jungle' }, { championId: 4, position: 'mid' }, { championId: 0 }] } };
+  return withApp({ state: st, replies: { champions: champs, live, counters: () => ({ ok: true, list: [{ name: 'Garen', wr: 50 }] }) } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 100));
+    await app.settle();
+    assert.match(app.$('.helper').textContent, /Who are you playing against\?/);
+    assert.equal(app.$$('.h-pick').length, 2, 'only champions already picked');
+    await app.click('[data-hpick="4"]');
+    assert.equal(app.$('#hEnemy').value, 'Malphite');
+    assert.ok(app.$('[data-hpick="4"]').classList.contains('on'));
   });
 });
 

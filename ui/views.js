@@ -319,7 +319,7 @@ document.querySelectorAll('[data-tool]').forEach(b => b.onclick = async () => {
 
 // ---------- Live: lobby check, champ select helper, Clash ----------
 let liveData = null, liveTimer = null, champs = [];
-let helper = { enemy: 0, results: null, running: false };
+let helper = { enemy: 0, load: null };
 const champById = id => champs.find(c => c.id === id);
 // typed name -> champion (ignores case, spaces and apostrophes: "kai sa" finds Kai'Sa)
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -440,80 +440,77 @@ function renderLive(force) {
     const opp = cs.enemies.find(e => e.championId && cs.myPosition && e.position === cs.myPosition) || (cs.enemies.filter(e => e.championId).length === 1 ? cs.enemies.find(e => e.championId) : null);
     if (opp && !helper.enemy) { helper.enemy = opp.championId; helper.autoEnemy = true; }
     // every enemy pick, ahead of time (the laner first)
-    preload(cs.enemies.map(e => e.championId).filter(Boolean));
-  } else if (helper.autoEnemy) { helper.enemy = 0; helper.autoEnemy = false; helper.results = null; }
+    want(cs.enemies.map(e => e.championId).filter(Boolean));
+  } else if (helper.autoEnemy && !d.inGame) { helper.enemy = 0; helper.autoEnemy = false; }
   if (!parts.length || (parts.length === 1 && pens)) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
   parts.push(helperHtml());
   // keep focus/scroll of the helper's inputs: only replace when something changed
   const html = parts.join('');
   if ($('liveBody').dataset.html !== html) { $('liveBody').innerHTML = html; $('liveBody').dataset.html = html; }
 }
-// ---------- matchups, loaded ahead ----------
-// win rate of (my champion, enemy, lane), kept for this session; filled in the background as soon
-// as an enemy is known – in champion select for every enemy pick – so the answer is there at once
-const muCache = new Map();
-const muKey = (me, enemy, lane) => me + '|' + enemy + '|' + lane;
-let muQueue = [], muBusy = false;
+// ---------- counters, loaded ahead ----------
+// counterstats.net has one page per champion: every champion with enough games against him on a
+// lane, with win rate and counter rating. One request per enemy covers the whole pool. Loaded in
+// the background as soon as an enemy is known – in champion select every enemy pick.
+const csCache = new Map();          // "enemyId|lane" -> [{name, wr, rating}] (empty = no data)
+const csKey = (id, lane) => id + '|' + lane;
+let csQueue = [], csBusy = false;
 const lane = () => (S.settings && S.settings.lane) || 'top';
-function preload(enemies) {
+function want(ids, scan = false) {
   const l = lane();
-  for (const enemy of enemies) for (const me of pool()) {
-    const k = muKey(me, enemy, l);
-    if (me !== enemy && !muCache.has(k) && !muQueue.some(q => q.k === k)) muQueue.push({ k, me, enemy, l });
+  for (const id of ids) {
+    const k = csKey(id, l);
+    if (!id || csCache.has(k) || csQueue.some(q => q.k === k)) continue;
+    csQueue.push({ k, id, l, scan });
   }
-  helper.total = (helper.total || 0) + 0;
-  runQueue();
+  if (csQueue.length) runQueue();
 }
 async function runQueue() {
-  if (muBusy) return;
-  muBusy = true;
-  const start = muQueue.length;
-  helper.load = { done: 0, total: start };
-  while (muQueue.length) {
+  if (csBusy) return;
+  csBusy = true;
+  helper.load = { done: 0, total: csQueue.length };
+  while (csQueue.length) {
     // the enemy shown right now first
-    muQueue.sort((a, b) => (b.enemy === helper.enemy) - (a.enemy === helper.enemy));
-    const q = muQueue.shift();
-    const me = champById(q.me), en = champById(q.enemy);
-    const r = me && en ? await api.matchup(me.name, en.name, q.l) : null;
-    muCache.set(q.k, r && r.wr != null ? r.wr : null);
-    helper.load = { done: helper.load.done + 1, total: Math.max(helper.load.total, helper.load.done + 1 + muQueue.length) };
+    csQueue.sort((x, y) => (y.id === helper.enemy) - (x.id === helper.enemy));
+    const q = csQueue.shift();
+    const c = champById(q.id);
+    const r = c ? await api.counters(c.name, q.l) : null;
+    if (r && r.ok) csCache.set(q.k, r.list || []);
+    // a champion of my pool: everyone on its page plays against it on this lane -> load them too
+    if (q.scan && r && r.list) want(r.list.map(x => (champByName(x.name) || {}).id).filter(id => id && id !== q.id));
+    helper.load = { done: helper.load.done + 1, total: Math.max(helper.load.total, helper.load.done + 1 + csQueue.length) };
     if (view === 'live') renderLive();
   }
   helper.load = null;
-  muBusy = false;
+  csBusy = false;
   if (view === 'live') renderLive();
 }
-// the champions played most on each lane – the pre-load's opponents (top: the old helper's list)
-const POPULAR = {
-  top: ['Garen', 'Darius', 'Malphite', 'Renekton', 'Aatrox', 'Mordekaiser', 'Ornn', 'Jax', 'Sett', 'Shen', 'Sion', 'Yone', 'Gnar', 'Irelia', 'Gangplank',
-    'Fiora', 'Ambessa', 'Kayle', 'Vayne', 'Dr. Mundo', 'Jayce', 'Riven', 'Nasus', 'Camille', 'Yorick', 'Volibear', "K'Sante", 'Zaahen', 'Urgot',
-    'Teemo', 'Tryndamere', 'Akali', 'Yasuo', "Cho'Gath", 'Gwen', 'Singed', 'Illaoi', 'Olaf', 'Tahm Kench', 'Gragas', 'Rumble', 'Kennen', 'Pantheon',
-    'Kled', 'Varus', 'Vladimir', 'Trundle', 'Poppy', 'Quinn', 'Warwick'],
-  jungle: ['Lee Sin', 'Graves', 'Kayn', 'Viego', "Kha'Zix", 'Elise', 'Nidalee', 'Hecarim', 'Vi', 'Jarvan IV', 'Kindred', 'Diana', 'Ekko', 'Evelynn',
-    'Shaco', 'Warwick', 'Master Yi', 'Amumu', 'Zac', 'Sejuani', 'Nocturne', 'Rammus', 'Udyr', 'Volibear', 'Xin Zhao', "Bel'Veth", 'Briar', 'Lillia',
-    'Fiddlesticks', 'Nunu & Willump', 'Rengar', 'Talon', 'Wukong', 'Karthus', 'Ivern', 'Skarner', 'Brand', 'Taliyah', 'Gragas', 'Poppy'],
-  mid: ['Ahri', 'Sylas', 'Yasuo', 'Yone', 'Zed', 'Katarina', 'Akali', 'Viktor', 'Syndra', 'Orianna', 'Lux', 'Hwei', 'Vex', 'Galio', 'Annie', 'Veigar',
-    'Malzahar', 'Fizz', 'Leblanc', 'Talon', 'Ekko', 'Diana', 'Kassadin', 'Cassiopeia', 'Twisted Fate', 'Azir', 'Anivia', 'Vladimir', 'Lissandra',
-    'Xerath', "Vel'Koz", 'Qiyana', 'Aurora', 'Naafiri', 'Akshan', 'Zoe', 'Ryze', 'Corki', 'Taliyah', 'Aurelion Sol'],
-  adc: ['Jinx', 'Caitlyn', 'Ezreal', "Kai'Sa", 'Jhin', 'Miss Fortune', 'Vayne', 'Ashe', 'Lucian', 'Samira', 'Draven', 'Xayah', 'Sivir', 'Tristana',
-    'Twitch', 'Varus', 'Zeri', 'Aphelios', "Kog'Maw", 'Smolder', 'Nilah', 'Kalista', 'Senna', 'Ziggs', 'Seraphine', 'Mel', 'Yunara'],
-  support: ['Thresh', 'Lulu', 'Nautilus', 'Leona', 'Pyke', 'Blitzcrank', 'Morgana', 'Karma', 'Senna', 'Milio', 'Nami', 'Soraka', 'Rakan', 'Janna',
-    'Bard', 'Yuumi', 'Braum', 'Alistar', 'Rell', 'Zyra', 'Brand', 'Xerath', 'Lux', 'Sona', 'Seraphine', 'Renata Glasc', 'Taric', 'Maokai', 'Swain',
-    "Vel'Koz", 'Zilean', 'Poppy', 'Neeko', 'Camille'],
-};
-function preloadPopular() {
-  const ids = (POPULAR[lane()] || []).map(n => (champByName(n) || {}).id).filter(Boolean);
-  preload(ids);
-}
+// "pre-load": every matchup my pool has on this lane according to counterstats
+function preloadPool() { want(pool(), true); }
 
-// my pool against the chosen enemy, best first (null = still loading)
+// my pool against the chosen enemy, best first (wr undefined = still loading, null = no data)
 function bestPicks() {
   if (!helper.enemy) return null;
-  const l = lane();
+  const list = csCache.get(csKey(helper.enemy, lane()));
   return pool().filter(id => id !== helper.enemy).map(id => {
-    const k = muKey(id, helper.enemy, l);
-    return { id, wr: muCache.has(k) ? muCache.get(k) : undefined };
-  }).sort((x, y) => (y.wr ?? -1) - (x.wr ?? -1));
+    if (!list) return { id };
+    const n = norm((champById(id) || {}).name);
+    const hit = list.find(x => norm(x.name) === n);
+    return { id, wr: hit ? hit.wr : null, rating: hit ? hit.rating : null };
+  }).sort((x, y) => (y.wr ?? -1) - (x.wr ?? -1) || (y.rating ?? -1) - (x.rating ?? -1));
+}
+// enemy champions picked right now (champion select, or the game running)
+function enemyPicks() {
+  const d = liveData || {};
+  if (d.champSelect) {
+    const cs = d.champSelect;
+    return cs.enemies.filter(e => e.championId).map(e => ({ id: e.championId, laner: !!(cs.myPosition && e.position === cs.myPosition) }));
+  }
+  if (d.inGame) {
+    const mine = d.inGame.teamTwo.some(p => p.puuid === d.me) ? 'teamTwo' : 'teamOne';
+    return d.inGame[mine === 'teamOne' ? 'teamTwo' : 'teamOne'].filter(p => p.championId).map(p => ({ id: p.championId, laner: false }));
+  }
+  return [];
 }
 
 function helperHtml() {
@@ -521,20 +518,24 @@ function helperHtml() {
   const opts = champs.map(c => `<option value="${esc(c.name)}">`).join('');
   const res = bestPicks();
   const load = helper.load;
+  const picks = enemyPicks();
+  const enemyName = esc((champById(helper.enemy) || {}).name || '');
   return `<datalist id="champList">${opts}</datalist><div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')} <button class="help-btn" data-help="helper" title="${esc(t('help.open'))}">?</button></h3>
-      <select id="hLane">${['top', 'jungle', 'mid', 'adc', 'support'].map(l => `<option value="${l}" ${((S.settings && S.settings.lane) || 'top') === l ? 'selected' : ''}>${t('lane.' + l)}</option>`).join('')}</select></div>
+      <select id="hLane">${['top', 'jungle', 'mid', 'adc', 'support'].map(l => `<option value="${l}" ${lane() === l ? 'selected' : ''}>${t('lane.' + l)}</option>`).join('')}</select></div>
     <div class="h-sub">${t('live.poolTitle')}</div>
     ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
       <input id="hAdd" list="champList" placeholder="+ ${esc(t('live.addChamp'))}" spellcheck="false"></div>
+    ${picks.length ? `<div class="h-sub">${t('live.vsWho')}</div><div class="h-picks">${picks.map(x => `<button class="h-pick${x.id === helper.enemy ? ' on' : ''}${x.laner ? ' laner' : ''}" data-hpick="${x.id}" title="${esc((champById(x.id) || {}).name || '')}"><img src="${champIcon(x.id)}" alt=""></button>`).join('')}</div>` : ''}
     <div class="h-sub">${t('live.enemy')}</div>
-    <div class="h-enemy">${helper.enemy ? `<img class="h-en" src="${champIcon(helper.enemy)}" alt="">` : ''}<input id="hEnemy" list="champList" placeholder="${esc(t('live.typeChamp'))}" spellcheck="false" value="${esc((champById(helper.enemy) || {}).name || '')}"></div>
-    <div class="h-pre"><button class="btn small" id="hPre" ${load ? 'disabled' : ''}>${t('live.preloadBtn', { n: (POPULAR[lane()] || []).length })}</button>
+    <div class="h-enemy">${helper.enemy ? `<img class="h-en" src="${champIcon(helper.enemy)}" alt="">` : ''}<input id="hEnemy" list="champList" placeholder="${esc(t('live.typeChamp'))}" spellcheck="false" value="${enemyName}"></div>
+    <div class="h-pre"><button class="btn small" id="hPre" ${load ? 'disabled' : ''}>${t('live.preloadBtn')}</button>
       <span class="info" title="${esc(t('live.preloadT'))}">?</span></div>
     ${load && load.total ? `<div class="h-load"><span>${t('live.preload', { n: load.done, total: load.total })}</span><span class="bar"><i style="width:${Math.round(100 * load.done / load.total)}%"></i></span></div>` : ''}
-    ${res && res.length ? `<div class="h-sub">${t('live.bestVs', { name: esc((champById(helper.enemy) || {}).name || '') })}</div><div class="h-results">${res.map((r, i) => `<div class="h-res ${i === 0 && r.wr != null ? 'best' : ''}">
+    ${res && res.length ? `<div class="h-sub">${t('live.bestVs', { name: enemyName })}</div><div class="h-results">${res.map((r, i) => `<div class="h-res ${i === 0 && r.wr != null ? 'best' : ''}"${r.rating != null ? ` title="${esc(t('live.ratingT', { r: r.rating.toFixed(1) }))}"` : ''}>
       <img src="${champIcon(r.id)}" alt=""><b>${esc((champById(r.id) || {}).name || '')}</b>
       <span class="bar"><i style="width:${r.wr == null ? 0 : Math.max(0, Math.min(100, (r.wr - 40) * 5))}%"></i></span>
-      <span class="wr ${r.wr >= 52 ? 'good' : r.wr != null && r.wr <= 48 ? 'bad' : ''}">${r.wr === undefined ? '<i class="dots">…</i>' : r.wr == null ? '–' : r.wr.toFixed(1) + '%'}</span></div>`).join('')}
+      <span class="rt">${r.rating != null ? r.rating.toFixed(1) : ''}</span>
+      <span class="wr ${r.wr >= 52 ? 'good' : r.wr != null && r.wr <= 48 ? 'bad' : ''}">${r.wr === undefined ? '<i class="dots">…</i>' : r.wr == null ? '–' : Math.round(r.wr) + '%'}</span></div>`).join('')}
       <p class="fine">${t('live.source')}</p></div>` : ''}
   </div>`;
 }
@@ -543,9 +544,12 @@ $('liveBody').addEventListener('click', async e => {
   if (og) { const [n, tag] = og.dataset.opgg.split('#'); return openSite({ gameName: n, tagLine: tag, region: (liveData && liveData.region) || selected()?.region }, 'opgg'); }
   const mb = e.target.closest('#clashAll, .multi-btn');
   if (mb) return api.openMulti((liveData && liveData.region) || (selected() && selected().region) || 'euw', mb.dataset.ids.split('|'));
-  if (e.target.closest('#hPre')) { if (!pool().length) return toast(t('live.poolEmpty'), true); return preloadPopular(); }
+  if (e.target.closest('#hPre')) { if (!pool().length) return toast(t('live.poolEmpty'), true); return preloadPool(); }
   const del = e.target.closest('[data-hdel]');
-  if (del) { savePool(pool().filter(id => id !== Number(del.dataset.hdel))); helper.results = null; return renderLive(); }
+  if (del) { savePool(pool().filter(id => id !== Number(del.dataset.hdel))); return renderLive(); }
+  // "who are you playing against?" – a click on an enemy pick
+  const pk = e.target.closest('[data-hpick]');
+  if (pk) { helper.enemy = Number(pk.dataset.hpick); helper.autoEnemy = false; want([helper.enemy]); return renderLive(true); }
 
 });
 $('liveBody').addEventListener('change', e => {
@@ -553,7 +557,6 @@ $('liveBody').addEventListener('change', e => {
     const c = champByName(e.target.value);
     if (!c) return toast(t('live.unknownChamp'), true);
     if (!pool().includes(c.id)) savePool([...pool(), c.id]);
-    if (helper.enemy) preload([helper.enemy]);
     renderLive(true);
     $('hAdd') && $('hAdd').focus();
   }
@@ -562,10 +565,10 @@ $('liveBody').addEventListener('change', e => {
     const c = champByName(e.target.value);
     if (e.target.value.trim() && !c) return toast(t('live.unknownChamp'), true);
     helper.enemy = c ? c.id : 0;
-    if (helper.enemy) preload([helper.enemy]);
+    if (helper.enemy) want([helper.enemy]);
     renderLive(true);
   }
-  if (e.target.id === 'hLane') { S.settings = { ...S.settings, lane: e.target.value }; api.setSetting('lane', e.target.value); if (helper.enemy) preload([helper.enemy]); renderLive(); }
+  if (e.target.id === 'hLane') { S.settings = { ...S.settings, lane: e.target.value }; api.setSetting('lane', e.target.value); if (helper.enemy) want([helper.enemy]); renderLive(); }
 });
 
 // ---------- after every render ----------

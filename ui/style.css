@@ -912,3 +912,11 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 @keyframes pulse { from { opacity: .3; } to { opacity: 1; } }
 
 .h-pre { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+
+.h-picks { display: flex; gap: 8px; flex-wrap: wrap; }
+.h-pick { padding: 0; border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer; position: relative; opacity: .75; transition: opacity .15s, border-color .15s, transform .15s; }
+.h-pick img { width: 40px; height: 40px; border-radius: 6px; display: block; }
+.h-pick:hover { opacity: 1; transform: translateY(-1px); }
+.h-pick.laner { border-color: rgba(200,170,110,.35); }
+.h-pick.on { opacity: 1; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(200,170,110,.18); }
+.h-res .rt { font-size: 10.5px; color: var(--muted); min-width: 24px; text-align: right; }

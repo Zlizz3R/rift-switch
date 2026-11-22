@@ -391,113 +391,155 @@ pub async fn game_assets(data_dir: &Path) -> Value {
     out
 }
 
-// ---------- matchup win rate (counterstats.net page; null if its layout changes) ----------
+// ---------- counters (counterstats.net champion page; empty if its layout changes) ----------
+//
+// One page per enemy: in each lane it lists every champion with enough games against him,
+// with that champion's win rate and counterstats' counter rating (how easy the lane is).
+// So one request answers "which of my champions is best against X" for the whole pool.
 
-static MATCHUPS: Mutex<Option<HashMap<String, Value>>> = Mutex::new(None);
-fn slug(n: &str) -> String {
-    match n.to_lowercase().as_str() {
-        "nunu & willump" => "nunu".into(),
-        "renata glasc" => "renata".into(),
-        l => l.chars().filter(|c| c.is_ascii_alphanumeric()).collect(),
-    }
-}
-/// First "dd.d%" between 35 and 65 on the page = the enemy's win rate in that matchup.
-pub fn first_rate(text: &str) -> Option<f64> {
-    let b = text.as_bytes();
-    let mut i = 0;
-    while let Some(p) = text[i..].find('%') {
-        let end = i + p;
-        // walk back over digits and one dot: dd.d or dd.dd directly before '%'
-        let mut s = end;
-        while s > 0 && (b[s - 1].is_ascii_digit() || b[s - 1] == b'.') {
-            s -= 1;
+/// counterstats' address of a champion: "Dr. Mundo" -> "dr-mundo", "Kai'Sa" -> "kaisa",
+/// "Nunu & Willump" -> "nunu-willump"
+pub fn slug(n: &str) -> String {
+    let mut out = String::new();
+    for c in n.to_lowercase().chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c);
+        } else if (c == ' ' || c == '&' || c == '-') && !out.ends_with('-') && !out.is_empty() {
+            out.push('-');
         }
-        let num = &text[s..end];
-        if let Some((a, c)) = num.split_once('.') {
-            let a = if a.len() > 2 { &a[a.len() - 2..] } else { a };
-            if a.len() == 2 && (1..=2).contains(&c.len()) && !c.contains('.') {
-                if let Ok(v) = format!("{a}.{c}").parse::<f64>() {
-                    if (35.0..=65.0).contains(&v) {
-                        return Some(v);
-                    }
-                }
+    }
+    out.trim_end_matches('-').to_string()
+}
+fn unescape(s: &str) -> String {
+    s.replace("&#039;", "'")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
+        .trim()
+        .to_string()
+}
+/// The "Best picks against …" box of one lane: [{name, wr, rating}], best first.
+pub fn parse_counters(page: &str, lane: &str) -> Vec<Value> {
+    let Some(start) = page.find(&format!("class=\"collapse\" id=\"{lane}\"")) else {
+        return vec![];
+    };
+    let rest = &page[start..];
+    // the lane ends where its "Worst picks" box starts (same champions, reversed)
+    let end = rest.find("Worst Picks").unwrap_or(rest.len());
+    let sec = &rest[..end];
+    let mut out = vec![];
+    for row in sec.split("champ-box__row").skip(1) {
+        let take = |from: &str, to: &str| -> Option<String> {
+            let i = row.find(from)? + from.len();
+            let j = row[i..].find(to)? + i;
+            Some(row[i..j].to_string())
+        };
+        let rating = take("<label>", " ")
+            .or_else(|| take("<label>", "<"))
+            .and_then(|v| v.trim().parse::<f64>().ok());
+        let name = take("<span class=\"champion\">", "</span>").map(|v| unescape(&v));
+        let wr = take("<span class=\"b\">", "%").and_then(|v| v.trim().parse::<f64>().ok());
+        if let (Some(name), Some(wr)) = (name, wr) {
+            if (20.0..=80.0).contains(&wr) {
+                out.push(json!({ "name": name, "wr": wr, "rating": rating }));
             }
         }
-        i = end + 1;
     }
-    None
+    out
 }
-/// Win rates found are kept a day (matchups.json in the data folder), like the old helper's cache:
-/// a pre-load while queueing lasts all day. Failures are asked again next time.
-const MATCHUP_TTL: i64 = 86_400_000;
-fn matchup_cache(
+
+/// Counters found are kept a day (counters.json in the data folder): a pre-load while queueing
+/// lasts all day. Failures are asked again next time.
+const COUNTERS_TTL: i64 = 86_400_000;
+static COUNTERS: Mutex<Option<HashMap<String, Value>>> = Mutex::new(None);
+fn counters_cache(
     data_dir: &Path,
 ) -> std::sync::MutexGuard<'static, Option<HashMap<String, Value>>> {
-    let mut m = MATCHUPS.lock().unwrap();
+    let mut m = COUNTERS.lock().unwrap();
     if m.is_none() {
+        // the old per-matchup cache of earlier builds
+        let _ = std::fs::remove_file(data_dir.join("matchups.json"));
         let now = now_ms();
-        let saved: HashMap<String, Value> = std::fs::read_to_string(data_dir.join("matchups.json"))
+        let saved: HashMap<String, Value> = std::fs::read_to_string(data_dir.join("counters.json"))
             .ok()
             .and_then(|t| serde_json::from_str(&t).ok())
             .unwrap_or_default();
         *m = Some(
             saved
                 .into_iter()
-                .filter(|(_, v)| now - v["at"].as_i64().unwrap_or(0) < MATCHUP_TTL)
+                .filter(|(_, v)| now - v["at"].as_i64().unwrap_or(0) < COUNTERS_TTL)
                 .collect(),
         );
     }
     m
 }
-pub async fn matchup(data_dir: &Path, mine: &str, enemy: &str, lane: &str) -> Value {
+/// Who does well against `enemy` on `lane`: {list: [{name, wr, rating}], ok}
+pub async fn counters(data_dir: &Path, enemy: &str, lane: &str) -> Value {
     let lane = if ["top", "jungle", "mid", "adc", "support"].contains(&lane) {
         lane
     } else {
         "top"
     };
-    let key = format!("{mine}|{enemy}|{lane}");
-    if let Some(v) = matchup_cache(data_dir)
+    let key = format!("{}|{lane}", slug(enemy));
+    if let Some(v) = counters_cache(data_dir)
         .as_ref()
         .and_then(|c| c.get(&key).cloned())
     {
-        if now_ms() - v["at"].as_i64().unwrap_or(0) < MATCHUP_TTL {
-            return json!({ "wr": v["wr"], "source": "counterstats.net" });
-        }
+        return json!({ "list": v["list"], "ok": true });
+    }
+    if crate::riot::offline_test() {
+        return json!({ "list": [], "ok": false });
     }
     let url = format!(
-        "https://www.counterstats.net/league-of-legends/{}/vs-{}/{lane}/all",
-        slug(enemy),
-        slug(mine)
+        "https://www.counterstats.net/league-of-legends/{}",
+        slug(enemy)
     );
-    let wr = match web_text(&url, 4).await {
-        Some((200, t)) => first_rate(&t).map(|v| ((100.0 - v) * 10.0).round() / 10.0),
-        _ => None,
+    let page = match web_text(&url, 8).await {
+        Some((200, t)) => t,
+        _ => return json!({ "list": [], "ok": false }),
     };
-    if let Some(w) = wr {
+    // a page without this champion (unknown address) has no lane boxes at all
+    let known = page.contains("class=\"collapse\" id=");
+    let list = parse_counters(&page, lane);
+    if known {
         let text = {
-            let mut m = matchup_cache(data_dir);
+            let mut m = counters_cache(data_dir);
             let c = m.get_or_insert_with(HashMap::new);
             let now = now_ms();
-            c.retain(|_, v| now - v["at"].as_i64().unwrap_or(0) < MATCHUP_TTL);
-            c.insert(key, json!({ "wr": w, "at": now }));
+            c.retain(|_, v| now - v["at"].as_i64().unwrap_or(0) < COUNTERS_TTL);
+            c.insert(key, json!({ "list": list, "at": now }));
             serde_json::to_string(&c).unwrap_or_default()
         };
-        let _ = crate::store::write_atomic(&data_dir.join("matchups.json"), text.as_bytes());
+        let _ = crate::store::write_atomic(&data_dir.join("counters.json"), text.as_bytes());
     }
-    json!({ "wr": wr, "source": wr.map(|_| "counterstats.net") })
+    json!({ "list": list, "ok": known })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn matchup_rate() {
-        assert_eq!(
-            first_rate("pick 3.1% ban 12.50% win 47.3% games"),
-            Some(47.3)
-        );
-        assert_eq!(first_rate("nothing"), None);
-        assert_eq!(slug("Nunu & Willump"), "nunu");
+    fn counterstats_pages() {
+        assert_eq!(slug("Nunu & Willump"), "nunu-willump");
         assert_eq!(slug("Kai'Sa"), "kaisa");
+        assert_eq!(slug("Dr. Mundo"), "dr-mundo");
+        assert_eq!(slug("Jarvan IV"), "jarvan-iv");
+        assert_eq!(slug("Cho'Gath"), "chogath");
+        let row = |name: &str, r: &str, wr: u32| {
+            format!("<a class=\"champ-box__row\" href=\"x\"><span class=\"rating-bar\" style=\"width: 114px\"><label>{r} <i class=\"icon\"></i></label></span> <div class=\"win-wrap\"> <span class=\"champion\">{name}</span> <span class=\"win\">Win <span class=\"b\">{wr}%</span></span></div></a>")
+        };
+        let page = format!(
+            "<span class=\"collapse\" id=\"mid\"></span>{}<span class=\"collapse\" id=\"top\"></span><h3>Best Picks</h3>{}{}<h3>Worst Picks</h3>{}",
+            row("Ahri", "5.0", 51),
+            row("Kayle", "6.2", 56),
+            row("Cho&#039;Gath", "5.6", 53),
+            row("Riven", "3.4", 42)
+        );
+        let top = parse_counters(&page, "top");
+        assert_eq!(top.len(), 2);
+        assert_eq!(top[0]["name"], "Kayle");
+        assert_eq!(top[0]["wr"], 56.0);
+        assert_eq!(top[0]["rating"], 6.2);
+        assert_eq!(top[1]["name"], "Cho'Gath");
+        assert!(parse_counters(&page, "support").is_empty());
     }
 }
