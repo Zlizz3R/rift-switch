@@ -14,7 +14,7 @@
     rankedGames: puuid => call('ranked-games', puuid),
     dashboard: () => call('dashboard'),
     collections: () => call('collections'),
-    setGoal: (puuid, goal) => call('goal', puuid, goal),
+    setGoal: (puuid, goal, q) => call('goal', puuid, goal, q || 'solo'),
     tool: what => call('tool', what),
     openMulti: (region, ids) => call('open-multi', region, ids),
     switchTo: puuid => call('switch', puuid),

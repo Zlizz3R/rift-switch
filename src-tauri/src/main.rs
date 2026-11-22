@@ -2136,16 +2136,28 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     .collect();
             Value::Array(list)
         }),
+        // a rank goal per account and queue: Solo/Duo in "goal", the others in "goals"
         "goal" => {
             let goal = ops::goal_of(&a(1));
+            let q = s(2);
             if with(|c| {
                 c.st.account_mut(&s(0))
-                    .map(|a| match goal {
-                        Some(g) => {
-                            a.insert("goal".into(), g);
-                        }
-                        None => {
-                            a.remove("goal");
+                    .map(|a| {
+                        if q.is_empty() || q == "solo" {
+                            match goal {
+                                Some(g) => a.insert("goal".into(), g),
+                                None => a.remove("goal"),
+                            };
+                        } else if RANK_QUEUES.contains(&q.as_str()) {
+                            let gs = a.entry("goals").or_insert_with(|| json!({}));
+                            if !gs.is_object() {
+                                *gs = json!({});
+                            }
+                            let gs = gs.as_object_mut().unwrap();
+                            match goal {
+                                Some(g) => gs.insert(q.clone(), g),
+                                None => gs.remove(&q),
+                            };
                         }
                     })
                     .is_some()
@@ -2344,9 +2356,14 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     .collect()
             });
             let puuid = f["puuid"].as_str().filter(|p| is_id(p)).map(String::from);
+            // "" / null = every queue; else one or several groups, comma separated
             let queue = f["queue"]
                 .as_str()
-                .filter(|q| matches::QUEUE_GROUPS.iter().any(|(k, _)| k == q))
+                .filter(|q| {
+                    !q.is_empty()
+                        && q.split(',')
+                            .all(|k| matches::QUEUE_GROUPS.iter().any(|(g, _)| *g == k))
+                })
                 .map(String::from);
             with(|c| {
                 json!({ "index": c.mh.index_list(&accs, puuid.as_deref(), queue.as_deref()), "waiting": c.mh.missing().len(),

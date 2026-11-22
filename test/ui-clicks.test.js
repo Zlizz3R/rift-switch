@@ -506,6 +506,15 @@ test('match history: every filter control works without errors', () => withApp({
   for (const v of ['today', '7', '30', '90', 'custom', 'all']) await app.type('#mhRange', v);
   for (const b of app.$$('[data-mhr]')) await app.click(b);
   for (const b of app.$$('[data-mhq]')) await app.click(b);
+  // queues add up; "All" clears them
+  await app.click('[data-mhq=""]');
+  await app.click('[data-mhq="solo"]');
+  await app.click('[data-mhq="classic"]');
+  assert.equal(lastCall(app, 'matches').args[0].queue, 'solo,classic');
+  await app.click('[data-mhq="solo"]');
+  assert.equal(lastCall(app, 'matches').args[0].queue, 'classic');
+  await app.click('[data-mhq=""]');
+  assert.equal(lastCall(app, 'matches').args[0].queue, null);
   await app.click('#mhAdvBtn');
   for (const id of ['#mhMinK', '#mhMaxD', '#mhMinKda']) await app.type(id, '1');
   for (const v of ['new', 'kda', 'kills', 'deaths', 'dmg', 'cs', 'long']) await app.type('#mhSort', v);
@@ -689,7 +698,7 @@ test('live page: stands at once, even while the client and the champion list sti
 
 // ---------- overview page ----------
 function dashReplies() {
-  const now = Date.now(), D = 86400000;
+  const now = Date.now(), D = 86400000;   // Player3 also plays Ranked 5v5 (see dashState)
   const r = (tier, division, lp) => ({ tier, division, lp });
   return {
     dashboard: [
@@ -700,7 +709,12 @@ function dashReplies() {
     ],
   };
 }
-test('overview: every account in one LP chart, the period in numbers, a goal per account', () => withApp({ replies: dashReplies() }, async (app) => {
+function dashState() {
+  const st = sampleState();
+  st.accounts[2].r5 = { tier: 'SILVER', division: 'II', lp: 40, wins: 3, losses: 2, wl: true };
+  return st;
+}
+test('overview: every account in one LP chart, the period in numbers, a goal per account', () => withApp({ state: dashState(), replies: dashReplies() }, async (app) => {
   await app.click('#navDash');
   assert.ok(!app.$('#viewDash').hidden);
   assert.equal(app.$$('.dash-chip').length, 3);
@@ -718,16 +732,33 @@ test('overview: every account in one LP chart, the period in numbers, a goal per
   assert.equal(app.$$('.dash-chart path.acc').length, 2);
   // goal: saved and shown with the LP left
   await app.type(`select[data-goal="${P(1)}"]`, 'PLATINUM:IV');
-  assert.deepEqual(app.called('goal').pop().args, [P(1), { tier: 'PLATINUM', division: 'IV' }]);
+  assert.deepEqual(app.called('goal').pop().args, [P(1), { tier: 'PLATINUM', division: 'IV' }, 'solo']);
   assert.match(app.$(`tr[data-dacc="${P(1)}"]`).textContent, /190 LP to go/);
   // 7 days: only the last games count
   await app.click('[data-dd="7"]');
   assert.match(app.$(`tr[data-dacc="${P(2)}"]`).textContent, /1–0/);
-  // Flex: nobody has a Flex rank
+  // queues freely combined: Solo/Duo + Ranked 5v5 (Player3 has one) – a line per account and queue
+  await app.click('[data-dd="30"]');
+  await app.click('[data-dq="r5"]');
+  assert.ok(app.$('[data-dq="solo"]').classList.contains('on') && app.$('[data-dq="r5"]').classList.contains('on'));
+  assert.equal(app.$$('.dash-table tbody tr').length, 4);
+  assert.match(app.$('.dash-table').textContent, /Ranked 5v5/);
+  assert.ok(app.$('.dash-chart path[stroke-dasharray="2 4"]'), 'Ranked 5v5 drawn dotted');
+  // its own goal per queue
+  await app.type(`select[data-goal="${P(3)}"][data-gq="r5"]`, 'GOLD:I');
+  assert.deepEqual(app.called('goal').pop().args, [P(3), { tier: 'GOLD', division: 'I' }, 'r5']);
+  // Solo/Duo off: only Ranked 5v5 left; the last queue can't be switched off
+  await app.click('[data-dq="solo"]');
+  assert.equal(app.$$('.dash-table tbody tr').length, 1);
+  await app.click('[data-dq="r5"]');
+  assert.ok(app.$('[data-dq="r5"]').classList.contains('on'));
+  // Flex alone: nobody has a Flex rank
   await app.click('[data-dq="flex"]');
+  await app.click('[data-dq="r5"]');
   assert.match(app.$('#dashBody').textContent, /No ranked data yet/);
   // a row opens the profile
   await app.click('[data-dq="solo"]');
+  await app.click('[data-dq="flex"]');
   await app.click(app.$(`tr[data-dacc="${P(1)}"] td`));
   assert.ok(!app.$('#profileBox').hidden);
 }));

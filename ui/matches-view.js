@@ -1,7 +1,7 @@
 // Match history page: recent games of all saved accounts in one list (op.gg style, kept short).
 // Uses the globals of renderer.js / views.js (S, t, $, esc, api, CHAMP_ICON, SITES, openSite …).
 
-const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
+const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 710: 'Ranked 5v5', 4310: 'Classic 5v5', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
 const NORMAL_QUEUES = [400, 430, 480, 490];
 const MULTI = { 2: 'mh.double', 3: 'mh.triple', 4: 'mh.quadra', 5: 'mh.penta' };
 const MH_DEFAULT = { from: '', to: '', range: 'all', result: '', champ: 0, sort: 'new', minKills: '', maxDeaths: '', minKda: '', minMulti: '' };
@@ -233,10 +233,10 @@ function rankTip(r) {
   const [tier, div, lp] = r;
   return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
 }
-let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, filter: { puuid: '', queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
-  if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440].includes(g.q) ? ' ' + t('mh.ranked') : '');
+  if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440, 710, 4310].includes(g.q) ? ' ' + t('mh.ranked') : '');
   if (NORMAL_QUEUES.includes(g.q)) return t('mh.normal');
   return g.mode ? g.mode.charAt(0) + g.mode.slice(1).toLowerCase() : t('mh.other');
 }
@@ -274,7 +274,7 @@ async function loadMatches() {
   try {
     if (!champs.length) champs = (await api.champions()) || [];   // names for the champion filter
     if (!assets || !Object.keys(assets.items || {}).length) assets = (await api.matchesAssets()) || null;
-    const d = await api.matches({ puuid: mh.filter.puuid || null, queue: mh.filter.queue || null });
+    const d = await api.matches({ puuid: mh.filter.puuid || null, queue: [...mh.filter.queues].join(',') || null });
     if (d) {
       const lack = d.index.map(r => r[0]).filter(id => !mh.cache.has(id));
       for (let i = 0; i < lack.length; i += 500) {
@@ -296,7 +296,7 @@ function renderMatches() {
   $('mhAccount').innerHTML = `<option value="">${esc(t('mh.allAccounts'))}</option>`
     + accs.map(a => `<option value="${esc(a.puuid)}">${esc(dispName(a))}</option>`).join('');
   $('mhAccount').value = mh.filter.puuid;
-  document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq === mh.filter.queue));
+  document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq ? mh.filter.queues.has(b.dataset.mhq) : !mh.filter.queues.size));
   // "Load older games": always at the top; greyed out (with the reason) while League is closed
   const more = $('mhMore');
   more.textContent = d && d.loadingOlder ? (d.older && d.older[1] ? t('mh.loadingCount', { n: d.older[0], total: d.older[1] }) : t('mh.loadingOlder')) : t('mh.more');
@@ -482,7 +482,12 @@ function gameRow(g, as) {
 
 // filters
 $('mhAccount').onchange = () => { mh.filter.puuid = $('mhAccount').value; loadMatches(); };
-document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => { mh.filter.queue = b.dataset.mhq; loadMatches(); }));
+// queues: any combination ("All" clears it); a click adds or removes one
+document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => {
+  const q = b.dataset.mhq, set = mh.filter.queues;
+  if (!q) set.clear(); else if (set.has(q)) set.delete(q); else set.add(q);
+  loadMatches();
+}));
 // "show more" and jumping to a record's game
 $('viewMatches').addEventListener('click', e => {
   if (e.target.closest('#mhShowMore')) { mh.show += 40; renderMatches(); return; }

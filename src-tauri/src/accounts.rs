@@ -192,9 +192,9 @@ fn rank_key(q: Option<&Value>) -> String {
     }
 }
 
-/// LP history: one entry whenever Solo/Duo or Flex changes (max 300).
+/// LP history: one entry whenever one of the ranked queues changes (max 300).
 pub fn record_history(a: &mut Obj, now: i64) {
-    if !truthy(a.get("solo")) && !truthy(a.get("flex")) {
+    if !RANK_QUEUES.iter().any(|k| truthy(a.get(*k))) {
         return;
     }
     let pick = |q: Option<&Value>| match q {
@@ -203,15 +203,23 @@ pub fn record_history(a: &mut Obj, now: i64) {
         }
         _ => Value::Null,
     };
-    let e = json!({ "t": now, "solo": pick(a.get("solo")), "flex": pick(a.get("flex")) });
+    let mut e = json!({ "t": now });
+    for k in RANK_QUEUES {
+        let v = pick(a.get(k));
+        // Ranked 5v5 / Classic only when there is one (old entries have just Solo/Duo and Flex)
+        if k == "solo" || k == "flex" || !v.is_null() {
+            e[k] = v;
+        }
+    }
     let h = a.entry("history").or_insert_with(|| json!([]));
     if !h.is_array() {
         *h = json!([]);
     }
     let h = h.as_array_mut().unwrap();
     if let Some(last) = h.last() {
-        if rank_key(last.get("solo")) == rank_key(e.get("solo"))
-            && rank_key(last.get("flex")) == rank_key(e.get("flex"))
+        if RANK_QUEUES
+            .iter()
+            .all(|k| rank_key(last.get(*k)) == rank_key(e.get(*k)))
         {
             return;
         }

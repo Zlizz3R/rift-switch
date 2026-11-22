@@ -713,11 +713,22 @@ pub struct HistorySummary {
 /// The match list -> last played, ranked games, normal-games count.
 pub fn summarize_games(games: &[Value], now: i64) -> HistorySummary {
     let q = |g: &Value| g["queueId"].as_i64().unwrap_or(0);
-    let ranked = games.iter().filter(|g| q(g) == 420 || q(g) == 440).map(|g| {
-        let p = &g["participants"][0];
-        json!({ "id": g["gameId"], "t": g["gameCreation"], "q": if q(g) == 420 { "solo" } else { "flex" },
+    let key = |id: i64| match id {
+        420 => Some("solo"),
+        440 => Some("flex"),
+        710 => Some("r5"),
+        4310 => Some("classic"),
+        _ => None,
+    };
+    let ranked = games
+        .iter()
+        .filter(|g| key(q(g)).is_some())
+        .map(|g| {
+            let p = &g["participants"][0];
+            json!({ "id": g["gameId"], "t": g["gameCreation"], "q": key(q(g)),
                 "win": p["stats"]["win"] == true, "champ": p["championId"] })
-    }).collect();
+        })
+        .collect();
     HistorySummary {
         last_played: games
             .iter()

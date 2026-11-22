@@ -14,9 +14,11 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-pub const QUEUE_GROUPS: [(&str, &[i64]); 5] = [
+pub const QUEUE_GROUPS: [(&str, &[i64]); 7] = [
     ("solo", &[420]),
     ("flex", &[440]),
+    ("r5", &[710]),
+    ("classic", &[4310]),
     ("normal", &[400, 430, 490, 480]),
     ("aram", &[450, 2400]),
     ("arena", &[1700, 1710]),
@@ -338,8 +340,13 @@ impl Matches {
         puuid: Option<&str>,
         queue: Option<&str>,
     ) -> Vec<(String, i64, i64, Vec<String>)> {
-        let group: Option<&[i64]> =
-            queue.and_then(|q| QUEUE_GROUPS.iter().find(|(k, _)| *k == q).map(|(_, v)| *v));
+        // one group or several, comma separated ("solo,flex,r5")
+        let group: Option<Vec<i64>> = queue.map(|q| {
+            q.split(',')
+                .filter_map(|k| QUEUE_GROUPS.iter().find(|(g, _)| *g == k))
+                .flat_map(|(_, v)| v.iter().copied())
+                .collect()
+        });
         let mut rows: Vec<(String, i64, i64, Vec<String>)> = vec![];
         let mut pos: HashMap<String, usize> = HashMap::new();
         for (owner, ids) in &self.by {
@@ -350,7 +357,7 @@ impl Matches {
                 let Some(e) = self.index.get(id) else {
                     continue;
                 };
-                if group.is_some_and(|g| !g.contains(&e.q)) {
+                if group.as_ref().is_some_and(|g| !g.contains(&e.q)) {
                     continue;
                 }
                 match pos.get(id) {
@@ -775,6 +782,16 @@ mod tests {
         assert!(!dir.join("matches.json").exists() && dir.join("matches.json.migrated").exists());
         let idx = m.index_list(&["p0".to_string()], None, None);
         assert_eq!(idx[0], json!(["7", 7000, 420, "p0"]));
+        assert_eq!(
+            m.index_list(&["p0".to_string()], None, Some("flex,r5"))
+                .len(),
+            0
+        );
+        assert_eq!(
+            m.index_list(&["p0".to_string()], None, Some("flex,solo"))
+                .len(),
+            1
+        );
         let games = read_entries(&m.games_file(), &m.entries(&["7".to_string()]));
         assert_eq!(games[0]["id"], "7");
         let _ = fs::remove_dir_all(&dir);
