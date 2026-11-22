@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'pen.games': "{n} مباريات", 'pen.perGame': "{m} دقيقة لكل مباراة",
     'det.goldLead': "تفوق الذهب – في الأعلى: {a} متقدم، في الأسفل: {b} متقدم",
     'det.players': "اللاعبون", 'det.compare': "قارن بين لاعبَين", 'det.kills': "قتل", 'det.deaths': "وفيات", 'det.assists': "مساعدات", 'det.phys': "ضرر مادي", 'det.magic': "ضرر سحري", 'det.true': "ضرر حقيقي", 'det.mitig': "ضرر مخفف", 'det.heal': "علاج", 'det.spent': "ذهب مُنفق", 'det.csMin': "CS / دقيقة", 'det.wards': "مراقبات موضوعة", 'det.wardsKilled': "مراقبات مدمرة", 'det.pinks': "مراقبات تحكم", 'det.cc': "تحكم بالحشود", 'det.turretDmg': "ضرر للأبراج", 'det.obj': "ضرر للأهداف", 'det.spree': "أطول سلسلة قتل", 'det.crit': "أكبر ضربة حرجة",
     'tile.pbeTitle': "خادم الاختبار (PBE)", 'tile.pbeText': "لا يوجد تصنيف – هنا تجرب المحتوى الجديد", 'pen.lowPrio': "أولوية منخفضة", 'pen.short': "عقوبة",

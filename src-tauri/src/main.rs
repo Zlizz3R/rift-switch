@@ -721,9 +721,12 @@ async fn tick_inner(my_gen: u64) {
                         .unwrap_or_default();
                     prof.extend(p);
                     a.insert("profile".into(), Value::Object(prof));
+                    let games = notices.iter().find_map(|n| n["games"].as_i64());
+                    ops::set_low_prio(a, None, Some(games), now);
                     if let Some((check, mut pens)) = elig {
                         a.insert("rankedCheck".into(), check);
-                        pens.extend(notices);
+                        // the low priority queue has its own mark (games / wait per game)
+                        pens.extend(notices.into_iter().filter(|n| n["games"].is_null()));
                         ops::set_penalties(a, pens, now);
                     }
                 }
@@ -747,9 +750,12 @@ async fn tick_inner(my_gen: u64) {
 
     // lobby / queue: the low priority queue or a dodge timer shows up here
     if matches!(phase.as_deref(), Some("Lobby" | "Matchmaking")) {
-        let waits = riot::queue_wait_now().await;
+        let (waits, low) = riot::queue_wait_now().await;
         let changed = with(|c| {
-            let ch = c.live.waits != waits;
+            let lp =
+                c.st.account_mut(&id)
+                    .is_some_and(|a| ops::set_low_prio(a, low, None, now));
+            let ch = c.live.waits != waits || lp;
             if ch {
                 c.live.waits = waits.clone();
                 if let Some(a) = c.st.account_mut(&id) {

@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'pen.games': "{n} parties", 'pen.perGame': "{m} min chacune",
     'det.goldLead': "Avance en or – en haut : {a} devant, en bas : {b} devant",
     'det.players': "Joueurs", 'det.compare': "Comparer deux joueurs", 'det.kills': "Éliminations", 'det.deaths': "Morts", 'det.assists': "Assistances", 'det.phys': "Dégâts physiques", 'det.magic': "Dégâts magiques", 'det.true': "Dégâts bruts", 'det.mitig': "Dégâts atténués", 'det.heal': "Soins", 'det.spent': "Or dépensé", 'det.csMin': "CS / min", 'det.wards': "Balises posées", 'det.wardsKilled': "Balises détruites", 'det.pinks': "Balises de contrôle", 'det.cc': "Contrôle de foule", 'det.turretDmg': "Dégâts aux tours", 'det.obj': "Dégâts aux objectifs", 'det.spree': "Plus grande série", 'det.crit': "Plus gros critique",
     'tile.pbeTitle': "Serveur de test (PBE)", 'tile.pbeText': "Pas de classé – ici tu testes les nouveautés", 'pen.lowPrio': "Basse priorité", 'pen.short': "Sanction",

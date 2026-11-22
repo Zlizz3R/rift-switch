@@ -96,6 +96,7 @@
     'nav.live': "लाइव",
     'nav.tools': "टूल्स",
     'set.theme': "रूप",
+    'pen.games': "{n} गेम", 'pen.perGame': "हर बार {m} मिनट",
     'det.goldLead': "गोल्ड बढ़त – ऊपर: {a} आगे, नीचे: {b} आगे",
     'det.players': "खिलाड़ी", 'det.compare': "दो खिलाड़ियों की तुलना", 'det.kills': "किल", 'det.deaths': "मौतें", 'det.assists': "असिस्ट", 'det.phys': "शारीरिक क्षति", 'det.magic': "जादुई क्षति", 'det.true': "ट्रू क्षति", 'det.mitig': "रोकी गई क्षति", 'det.heal': "हीलिंग", 'det.spent': "खर्च सोना", 'det.csMin': "CS / मिनट", 'det.wards': "वार्ड लगाए", 'det.wardsKilled': "वार्ड नष्ट", 'det.pinks': "कंट्रोल वार्ड", 'det.cc': "क्राउड कंट्रोल", 'det.turretDmg': "टावर पर क्षति", 'det.obj': "उद्देश्यों पर क्षति", 'det.spree': "सबसे बड़ी किलिंग स्प्री", 'det.crit': "सबसे बड़ा क्रिटिकल",
     'tile.pbeTitle': "टेस्ट सर्वर (PBE)", 'tile.pbeText': "यहाँ रैंक्ड नहीं – नई चीज़ें आज़माने के लिए", 'pen.lowPrio': "लो प्रायोरिटी", 'pen.short': "दंड",

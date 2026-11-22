@@ -136,6 +136,58 @@ pub fn set_penalties(a: &mut Obj, list: Vec<Value>, now: i64) {
     }
 }
 
+/// The low priority queue of an account, kept until it is really over (not only this game's wait):
+/// lowPrio = { games?, perGame? (seconds), at }.
+/// `queue`: what a running search says (Some(0) = searching without it -> over).
+/// `notice_games`: games left from the LeaverBuster notices (Some(None) = notices read, none left).
+pub fn set_low_prio(
+    a: &mut Obj,
+    queue: Option<i64>,
+    notice_games: Option<Option<i64>>,
+    now: i64,
+) -> bool {
+    let before = a.get("lowPrio").cloned();
+    let mut lp = before
+        .clone()
+        .and_then(|v| v.as_object().cloned())
+        .unwrap_or_default();
+    match queue {
+        Some(0) => {
+            lp.clear();
+        }
+        Some(s) => {
+            lp.insert("perGame".into(), json!(s));
+        }
+        None => {}
+    }
+    match notice_games {
+        Some(Some(g)) => {
+            lp.insert("games".into(), json!(g));
+        }
+        // the notices said nothing more: over, if they were what told us
+        Some(None) if lp.contains_key("games") => {
+            lp.clear();
+        }
+        _ => {}
+    }
+    if lp.is_empty() {
+        a.remove("lowPrio");
+    } else {
+        lp.insert("at".into(), json!(now));
+        a.insert("lowPrio".into(), Value::Object(lp));
+    }
+    let after = a.get("lowPrio");
+    before.as_ref().map(|v| {
+        let mut v = v.clone();
+        v.as_object_mut().map(|o| o.remove("at"));
+        v
+    }) != after.map(|v| {
+        let mut v = v.clone();
+        v.as_object_mut().map(|o| o.remove("at"));
+        v
+    })
+}
+
 // ---------- small decisions ----------
 
 /// How long until the next look at League (ms). Fast while the window is open or something waits
@@ -360,5 +412,23 @@ mod tests {
         assert!(!allowed_url("https://op.gg.evil.com/"));
         assert!(!allowed_url("http://op.gg/"));
         assert!(!allowed_url("file:///C:/Windows"));
+    }
+    #[test]
+    fn low_prio_stays_until_over() {
+        let mut a = Obj::new();
+        assert!(set_low_prio(&mut a, Some(60), None, 1));
+        assert_eq!(a["lowPrio"]["perGame"], 60);
+        // between games (no search): kept
+        assert!(!set_low_prio(&mut a, None, None, 2));
+        assert!(a.contains_key("lowPrio"));
+        assert!(set_low_prio(&mut a, None, Some(Some(2)), 3));
+        assert_eq!(a["lowPrio"]["games"], 2);
+        // the notices drop it: over
+        assert!(set_low_prio(&mut a, None, Some(None), 4));
+        assert!(!a.contains_key("lowPrio"));
+        // a search without it: over
+        set_low_prio(&mut a, Some(60), None, 5);
+        assert!(set_low_prio(&mut a, Some(0), None, 6));
+        assert!(!a.contains_key("lowPrio"));
     }
 }

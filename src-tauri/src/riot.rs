@@ -507,7 +507,18 @@ pub fn leaver_notices_of(list: &[Value]) -> Vec<Value> {
                 .collect::<String>()
         );
         if !out.iter().any(|p| p["code"] == code) {
-            out.push(json!({ "code": code, "until": 0 }));
+            // games still under the penalty ("punishedGamesRemaining" and the like)
+            let games = n.as_object().and_then(|o| {
+                o.iter()
+                    .find(|(k, v)| {
+                        k.to_lowercase().contains("games") && v.as_i64().is_some_and(|g| g > 0)
+                    })
+                    .and_then(|(_, v)| v.as_i64())
+            });
+            out.push(match games {
+                Some(g) => json!({ "code": code, "until": 0, "games": g }),
+                None => json!({ "code": code, "until": 0 }),
+            });
         }
     }
     out
@@ -531,10 +542,18 @@ pub fn queue_waits(search: &Value, now: i64) -> Vec<Value> {
     }
     out
 }
-pub async fn queue_wait_now() -> Vec<Value> {
+/// The wait per game of a low priority queue (seconds), 0 = none. It stays in the search for the
+/// whole queue, also after this game's wait has run out.
+pub fn low_prio_secs(search: &Value) -> i64 {
+    search["lowPriorityData"]["penaltyTime"]
+        .as_f64()
+        .unwrap_or(0.0) as i64
+}
+/// -> (waits, low priority seconds per game; None = no search running)
+pub async fn queue_wait_now() -> (Vec<Value>, Option<i64>) {
     match lcu("/lol-matchmaking/v1/search", 2000, "GET").await {
-        Some(s) if s.is_object() => queue_waits(&s, now_ms()),
-        _ => vec![],
+        Some(s) if s.is_object() => (queue_waits(&s, now_ms()), Some(low_prio_secs(&s))),
+        _ => (vec![], None),
     }
 }
 
@@ -1040,6 +1059,14 @@ mod tests {
             1
         )
         .is_empty());
+        assert_eq!(low_prio_secs(&s), 300);
+        assert_eq!(low_prio_secs(&json!({ "searchState": "Searching" })), 0);
+        let n = leaver_notices_of(&[
+            json!({ "type": "PunishedGamesRemaining", "punishedGamesRemaining": 2 }),
+            json!({ "type": "Reminder" }),
+        ]);
+        assert_eq!(n.len(), 1);
+        assert_eq!(n[0]["games"], 2);
         // not penalties: what the client says while a game runs or it can't check
         for c in [
             "Unknown",

@@ -120,12 +120,23 @@ function leftText(until) {
 // the penalty or queue wait of an account that runs out last (low priority queue, leaver lock, …)
 function tilePenalty(a) {
   const now = Date.now();
-  const list = ((a.penalties && a.penalties.list) || []).filter(p => isPenalty(p.code) && (!p.until || p.until > now));
+  // the low priority queue has its own line (games / minutes per game), not a countdown
+  const lowP = c => /lowpriority/i.test(c || '');
+  const list = ((a.penalties && a.penalties.list) || []).filter(p => isPenalty(p.code) && !lowP(p.code) && (!p.until || p.until > now));
   const live = S.live || {};
-  if (live.clientUp && live.puuid === a.puuid) for (const w of live.waits || []) if (w.until > now) list.push({ code: w.code || 'LowPriorityQueue', until: w.until });
+  if (live.clientUp && live.puuid === a.puuid) for (const w of live.waits || []) if (w.until > now && !lowP(w.code)) list.push({ code: w.code || 'LowPriorityQueue', until: w.until });
   return list.sort((x, y) => (y.until || Infinity) - (x.until || Infinity))[0] || null;
 }
+// "2 games · 1 min each" (whatever is known)
+function lowPrioText(lp) {
+  const parts = [];
+  if (lp.games) parts.push(t('pen.games', { n: lp.games }));
+  if (lp.perGame) parts.push(t('pen.perGame', { m: Math.max(1, Math.round(lp.perGame / 60)) }));
+  return parts.join(' · ');
+}
 function tilePenHtml(a) {
+  const CLOCK = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  if (a.lowPrio) return `<div class="tile-pen" title="${esc(t('restrict.LowPriorityQueue'))}">${CLOCK}<span>${esc(t('pen.lowPrio'))}</span>${lowPrioText(a.lowPrio) ? `<b>${esc(lowPrioText(a.lowPrio))}</b>` : ''}</div>`;
   const p = tilePenalty(a);
   if (!p) return '';
   const left = p.until ? `<b data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</b>` : '';

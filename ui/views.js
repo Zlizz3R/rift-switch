@@ -386,7 +386,8 @@ function activePenalties() {
   const out = [];
   for (const a of S.accounts || []) {
     const list = (a.penalties && a.penalties.list) || [];
-    for (const p of list) if (isPenalty(p.code) && (!p.until || p.until > now)) out.push({ a, p, asOf: a.penalties.at });
+    for (const p of list) if (isPenalty(p.code) && !(a.lowPrio && /lowpriority/i.test(p.code)) && (!p.until || p.until > now)) out.push({ a, p, asOf: a.penalties.at });
+    if (a.lowPrio) out.push({ a, p: { code: 'LowPriorityQueue', low: a.lowPrio }, asOf: a.lowPrio.at });
   }
   return out.sort((x, y) => (x.p.until || Infinity) - (y.p.until || Infinity));
 }
@@ -397,7 +398,7 @@ function penaltiesHtml() {
     ${list.map(({ a, p, asOf }) => `<div class="pen-row">
       <span class="pen-av">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}</span>
       <div class="pen-name"><b>${esc(dispName(a))}</b><small>${esc(reasonText({ code: p.code, args: p.args }))}</small></div>
-      ${p.until ? `<span class="pen-left" data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</span>`
+      ${p.low ? `<span class="pen-left">${esc(lowPrioText(p.low) || t('pen.noEnd'))}</span>` : p.until ? `<span class="pen-left" data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</span>`
         : `<span class="pen-left none" title="${esc(t('pen.asOf', { date: fmtDate(asOf) }))}">${t('pen.noEnd')}</span>`}
     </div>`).join('')}
 </div>`;

@@ -97,6 +97,7 @@
     'nav.live': "Live",
     'nav.tools': "Инструменты",
     'set.theme': "Оформление",
+    'pen.games': "игр: {n}", 'pen.perGame': "по {m} мин",
     'det.goldLead': "Преимущество в золоте – выше: впереди {a}, ниже: впереди {b}",
     'det.players': "Игроки", 'det.compare': "Сравнить двух игроков", 'det.kills': "Убийства", 'det.deaths': "Смерти", 'det.assists': "Помощь", 'det.phys': "Физ. урон", 'det.magic': "Маг. урон", 'det.true': "Чистый урон", 'det.mitig': "Снижено урона", 'det.heal': "Лечение", 'det.spent': "Потрачено золота", 'det.csMin': "CS / мин", 'det.wards': "Варды поставлены", 'det.wardsKilled': "Варды уничтожены", 'det.pinks': "Контрольные варды", 'det.cc': "Контроль", 'det.turretDmg': "Урон по башням", 'det.obj': "Урон по объектам", 'det.spree': "Лучшая серия", 'det.crit': "Сильнейший крит",
     'tile.pbeTitle': "Тестовый сервер (PBE)", 'tile.pbeText': "Без рейтинга – здесь пробуют новое", 'pen.lowPrio': "Низкий приоритет", 'pen.short': "Штраф",

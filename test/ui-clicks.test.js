@@ -132,22 +132,25 @@ test('tiles: a PBE account shows the test server box instead of "Unranked"; a pe
   const st = sampleState();
   st.accounts[1].region = 'PBE';
   st.accounts[1].solo = null; st.accounts[1].flex = null;
-  st.accounts[2].penalties = { at: Date.now(), list: [{ code: 'LeaverBusterLowPriorityQueue', until: Date.now() + 5 * 60000 }] };
+  st.accounts[2].penalties = { at: Date.now(), list: [{ code: 'PlayerTimedRestriction', until: Date.now() + 5 * 60000 }] };
+  st.accounts[0].lowPrio = { games: 2, perGame: 60, at: Date.now() };
   return withApp({ state: st }, async (app) => {
     const pbe = tile(app, 2);
     assert.ok(pbe.querySelector('.pbe-box'), 'test server box');
     assert.doesNotMatch(pbe.textContent, /Unranked/);
     const pen = tile(app, 3).querySelector('.tile-pen');
     assert.ok(pen, 'penalty on the tile');
-    assert.match(pen.textContent, /Low priority/);
+    assert.match(pen.textContent, /Penalty/);
     assert.match(pen.textContent, /[45]:\d\d left/);
-    assert.equal(tile(app, 1).querySelector('.tile-pen'), null);
+    const low = tile(app, 1).querySelector('.tile-pen');
+    assert.match(low.textContent, /Low priority\s*2 games · 1 min each/, 'games and minutes, no countdown');
+    assert.equal(tile(app, 4).querySelector('.tile-pen'), null);
   });
 });
 
 test('the board draws before views.js has loaded (the first state can come that early)', async () => {
   const st = sampleState();
-  st.accounts[2].penalties = { at: Date.now(), list: [{ code: 'LeaverBusterLowPriorityQueue', until: Date.now() + 60000 }] };
+  st.accounts[2].lowPrio = { games: 1, perGame: 60, at: Date.now() };
   st.accounts[1].region = 'PBE';
   const app = await boot({ state: st, upTo: 'renderer.js' });
   try {

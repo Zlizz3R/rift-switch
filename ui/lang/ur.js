@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'pen.games': "{n} گیمز", 'pen.perGame': "ہر ایک {m} منٹ",
     'det.goldLead': "گولڈ برتری – اوپر: {a} آگے، نیچے: {b} آگے",
     'det.players': "کھلاڑی", 'det.compare': "دو کھلاڑیوں کا موازنہ", 'det.kills': "کِلز", 'det.deaths': "اموات", 'det.assists': "اسسٹس", 'det.phys': "جسمانی نقصان", 'det.magic': "جادوئی نقصان", 'det.true': "ٹرو نقصان", 'det.mitig': "روکا گیا نقصان", 'det.heal': "ہیلنگ", 'det.spent': "خرچ سونا", 'det.csMin': "CS / منٹ", 'det.wards': "وارڈ لگائے", 'det.wardsKilled': "وارڈ تباہ", 'det.pinks': "کنٹرول وارڈ", 'det.cc': "کراؤڈ کنٹرول", 'det.turretDmg': "ٹاورز کو نقصان", 'det.obj': "اہداف کو نقصان", 'det.spree': "سب سے بڑی کِلنگ اسپری", 'det.crit': "سب سے بڑا کریٹیکل",
     'tile.pbeTitle': "ٹیسٹ سرور (PBE)", 'tile.pbeText': "یہاں رینکڈ نہیں – نیا مواد آزمائیں", 'pen.lowPrio': "لو پرائیورٹی", 'pen.short': "سزا",
