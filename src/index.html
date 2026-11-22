@@ -100,7 +100,11 @@
           <select id="mhRange">
             <option value="all" data-i18n="mh.rAll"></option><option value="today" data-i18n="mh.rToday"></option>
             <option value="7" data-i18n="mh.r7"></option><option value="30" data-i18n="mh.r30"></option><option value="90" data-i18n="mh.r90"></option>
+            <option value="custom" data-i18n="mh.rCustom"></option>
           </select>
+          <span class="mh-dates" id="mhDates" hidden>
+            <input class="mh-input date" id="mhFrom" type="date"><span>–</span><input class="mh-input date" id="mhTo" type="date">
+          </span>
           <div class="seg">
             <button data-mhr="" data-i18n="mh.resAll"></button><button data-mhr="win" data-i18n="mh.wins"></button><button data-mhr="loss" data-i18n="mh.losses"></button>
           </div>

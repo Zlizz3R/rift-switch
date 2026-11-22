@@ -735,6 +735,19 @@ ipcMain.handle('matches', async (_e, filter) => {
 // "Load older games": the next 20 games of every account the running client can see
 // (same server), then their details in the background.
 let loadingOlder = false;
+// ranks of the players in the shown games: cached ones right away, missing ones fetched
+// from the League client (a few at a time) – the page asks again until none are missing
+let fetchingRanks = false;
+ipcMain.handle('player-ranks', async (_e, puuids) => {
+  const ids = Array.isArray(puuids) ? puuids.filter(p => typeof p === 'string' && /^[0-9a-f-]{36}$/i.test(p)).slice(0, 500) : [];
+  let pending = 0;
+  if (live.clientUp && !fetchingRanks && matches.staleRanks(ids).length) {
+    fetchingRanks = true;
+    try { await matches.fetchRanks(ids, p => riot.rankedFor(p)); } finally { fetchingRanks = false; }
+    pending = matches.staleRanks(ids).length;
+  }
+  return { ranks: matches.ranksFor(ids), pending: live.clientUp ? pending : 0 };
+});
 ipcMain.handle('matches-more', async () => {
   if (loadingOlder || !live.clientUp) return { ok: false, offline: !live.clientUp };
   loadingOlder = true;
@@ -977,7 +990,10 @@ function createWindow(show) {
     backgroundColor: '#0b0e14',
     title: tr('app.name'),
     icon: path.join(__dirname, 'icon.png'),
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true,
+      // test screenshots: the hidden window must keep painting
+      ...(process.env.RS_SHOT ? { backgroundThrottling: false, offscreen: false } : {}) },
+    ...(process.env.RS_SHOT ? { paintWhenInitiallyHidden: true, width: Number(process.env.RS_W) || 1040 } : {}),
   });
   win.loadFile(path.join(__dirname, 'index.html'));
   // the window only ever shows our own page; links go through open-external
@@ -987,6 +1003,8 @@ function createWindow(show) {
   win.webContents.on('did-finish-load', () => { applyScale(); const q = afterLoad; afterLoad = []; q.forEach(f => f()); });
   win.on('closed', () => { win = null; lastPushed = null; });
   win.once('ready-to-show', () => { if (show && !process.env.RS_SHOT) win.show(); });
+  // test screenshots: shown far off-screen and without focus, so Chromium really paints every change
+  if (process.env.RS_SHOT) win.once('ready-to-show', () => { win.setPosition(-4000, 0); win.showInactive(); });
   // closing: with "close to tray" the window really closes but the app keeps running in the tray
 
   // dev helper: RS_SHOT=file.png runs RS_JS (renderer code, ';;'-separated steps), saves a screenshot and quits

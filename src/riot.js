@@ -109,9 +109,12 @@ function lcu(p, timeout = 4000, method = 'GET') {
 
 // own: data of the signed-in account. For other accounts the client only
 // reports wins (losses come back as 0), so win/loss is marked unknown there.
+const KNOWN_TIERS = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'];
 function pickQueue(stats, q, own) {
   const x = stats && stats.queueMap && stats.queueMap[q];
   if (!x || !x.tier || x.tier === 'NONE' || x.tier === 'NA' || x.tier === '') return null;
+  // tiers Riot uses as a placeholder before placements (e.g. 'SALT' in Classic 5v5) count as unranked
+  if (!KNOWN_TIERS.includes(x.tier) && !((x.wins || 0) + (x.losses || 0))) return null;
   const wl = own || !(x.losses === 0 && x.wins > 0);
   return { tier: x.tier, division: x.division, lp: x.leaguePoints, wins: x.wins, losses: x.losses, wl };
 }

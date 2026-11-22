@@ -107,4 +107,32 @@ const QUEUE_GROUPS = { solo: [420], flex: [440], normal: [400, 430, 490, 480], a
 function queueMatch(q, group) { return (QUEUE_GROUPS[group] || []).includes(q); }
 
 const known = puuid => (db.by[puuid] || []).length;
-module.exports = { load, note, fill, list, forget, compact, missing, known, QUEUE_GROUPS, _db: () => db };
+
+// Current Solo/Duo + Flex of players seen in games, kept 12 hours ({ s, f, at }; s/f = [tier, division, lp] or null).
+// Riot only tells the rank now, not the one at the time of the game.
+const RANK_TTL = 12 * 3600000;
+const packRank = q => (q ? [q.tier, q.division || '', q.lp || 0] : null);
+function ranksFor(puuids, now = Date.now()) {
+  const r = db.ranks || {};
+  return Object.fromEntries(puuids.filter(p => r[p]).map(p => [p, r[p]]));
+}
+function staleRanks(puuids, now = Date.now()) {
+  const r = db.ranks || {};
+  return [...new Set(puuids)].filter(p => p && (!r[p] || now - r[p].at > RANK_TTL));
+}
+// rankedFor(puuid) -> { solo, flex } | null; asks at most `max` players, 4 at a time
+async function fetchRanks(puuids, rankedFor, max = 30) {
+  const todo = staleRanks(puuids).slice(0, max);
+  db.ranks = db.ranks || {};
+  for (let i = 0; i < todo.length; i += 4) {
+    const part = todo.slice(i, i + 4);
+    const res = await Promise.all(part.map(p => rankedFor(p).catch(() => null)));
+    part.forEach((p, k) => { if (res[k]) db.ranks[p] = { s: packRank(res[k].solo), f: packRank(res[k].flex), at: Date.now() }; });
+  }
+  // keep the cache small: players not in any kept game go
+  const inGames = new Set(Object.values(db.games).flatMap(g => g.players.map(x => x.puuid)));
+  for (const p of Object.keys(db.ranks)) if (!inGames.has(p)) delete db.ranks[p];
+  if (todo.length) save();
+  return todo.length;
+}
+module.exports = { ranksFor, staleRanks, fetchRanks, load, note, fill, list, forget, compact, missing, known, QUEUE_GROUPS, _db: () => db };

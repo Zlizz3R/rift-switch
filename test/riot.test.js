@@ -160,3 +160,21 @@ test('match history filters, sorting and summary', () => {
   assert.deepEqual(s.streak, { win: true, n: 1 });
   assert.equal(MF.summarize([]), null);
 });
+
+test('placeholder tiers before placements (Classic 5v5 "SALT") count as unranked', () => {
+  const stats = { queueMap: { JADE_RANKED_SOLO_5x5: { tier: 'SALT', division: 'IV', leaguePoints: 0, wins: 0, losses: 0 } } };
+  assert.equal(riot.pickQueue(stats, 'JADE_RANKED_SOLO_5x5', true), null);
+  stats.queueMap.JADE_RANKED_SOLO_5x5.wins = 3;
+  assert.equal(riot.pickQueue(stats, 'JADE_RANKED_SOLO_5x5', true).tier, 'SALT');   // played: shown as it is
+});
+
+test('match history: own date range, both days included', () => {
+  const MF = require('../src/matchfilter');
+  const at = (y, m, d, h) => new Date(y, m - 1, d, h).getTime();
+  const g = (id, t) => ({ id, t, dur: 1800, owners: ['me'], players: [{ puuid: 'me', k: 1, d: 1, a: 1, cs: 1, dmg: 1, win: true }] });
+  const games = [g('a', at(2026, 11, 1, 23)), g('b', at(2026, 11, 3, 0)), g('c', at(2026, 11, 5, 23)), g('d', at(2026, 11, 6, 0))];
+  assert.deepEqual(MF.filterGames(games, { range: 'custom', from: '2026-11-03', to: '2026-11-05' }).map(x => x.id), ['c', 'b']);
+  assert.deepEqual(MF.filterGames(games, { range: 'custom', from: '2026-11-05', to: '2026-11-03' }).map(x => x.id), ['c', 'b']);
+  assert.deepEqual(MF.filterGames(games, { range: 'custom', from: '2026-11-05', to: '' }).map(x => x.id), ['d', 'c']);
+  assert.equal(MF.dayStart('bad'), null);
+});

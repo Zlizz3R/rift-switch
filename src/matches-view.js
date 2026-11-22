@@ -4,8 +4,22 @@
 const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
 const NORMAL_QUEUES = [400, 430, 480, 490];
 const MULTI = { 2: 'mh.double', 3: 'mh.triple', 4: 'mh.quadra', 5: 'mh.penta' };
-const MH_DEFAULT = { range: 'all', result: '', champ: 0, sort: 'new', minKills: '', maxDeaths: '', minKda: '', minMulti: '' };
-let mh = { filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+const MH_DEFAULT = { from: '', to: '', range: 'all', result: '', champ: 0, sort: 'new', minKills: '', maxDeaths: '', minKda: '', minMulti: '' };
+// tier -> short chip text and colour
+const TIER_SHORT = { IRON: 'I', BRONZE: 'B', SILVER: 'S', GOLD: 'G', PLATINUM: 'P', EMERALD: 'E', DIAMOND: 'D', MASTER: 'M', GRANDMASTER: 'GM', CHALLENGER: 'C' };
+const ROMAN = { I: 1, II: 2, III: 3, IV: 4 };
+function rankChip(r, kind) {
+  if (!r) return `<i class="rk-c ${kind} none">–</i>`;
+  const [tier, div] = r;
+  const short = TIER_SHORT[tier] ? TIER_SHORT[tier] + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ROMAN[div] || '') : '?';
+  return `<i class="rk-c ${kind} t-${String(tier).toLowerCase()}">${short}</i>`;
+}
+function rankTip(r) {
+  if (!r) return t('tile.unranked');
+  const [tier, div, lp] = r;
+  return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
+}
+let mh = { ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440].includes(g.q) ? ' ' + t('mh.ranked') : '');
@@ -48,15 +62,39 @@ function renderMatches() {
   $('mhSummary').innerHTML = summaryHtml(list);
   if (!list.length) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.noMatch')}</div>`; return; }
   const shown = list.slice(0, mh.show);
+  loadRanks(shown);
   $('mhList').innerHTML = shown.map(g => gameRow(g, d.assets || {})).join('')
     + (list.length > shown.length ? `<div class="mh-more"><button class="btn" id="mhShowMore">${t('mh.showMore', { n: list.length - shown.length })}</button></div>` : '');
+}
+
+// ---------- ranks of the players ----------
+let ranksBusy = false;
+async function loadRanks(games) {
+  const ids = [...new Set(games.flatMap(g => g.players.map(p => p.puuid)).filter(Boolean))];
+  if (ranksBusy || !ids.length) return;
+  const missing = ids.filter(p => !mh.ranks[p]);
+  if (!missing.length && mh.ranksChecked) return;
+  ranksBusy = true;
+  try {
+    const r = await api.playerRanks(ids);
+    mh.ranksChecked = true;
+    const before = Object.keys(mh.ranks).length;
+    Object.assign(mh.ranks, (r && r.ranks) || {});
+    const grew = Object.keys(mh.ranks).length > before;
+    ranksBusy = false;
+    if (grew && view === 'matches') renderMatches();
+    else if (r && r.pending && view === 'matches') setTimeout(() => loadRanks(games), 500);
+  } catch { ranksBusy = false; }
 }
 
 // ---------- filters ----------
 const champName = id => ((typeof champById === 'function' && champById(id)) || {}).name || '';
 function syncFilterInputs() {
   const f = mh.f;
-  $('mhRange').value = f.range; $('mhSort').value = f.sort; $('mhMulti').value = String(f.minMulti || '');
+  $('mhRange').value = f.range; $('mhSort').value = f.sort;
+  $('mhDates').hidden = f.range !== 'custom';
+  if (document.activeElement !== $('mhFrom')) $('mhFrom').value = f.from;
+  if (document.activeElement !== $('mhTo')) $('mhTo').value = f.to; $('mhMulti').value = String(f.minMulti || '');
   document.querySelectorAll('[data-mhr]').forEach(b => b.classList.toggle('on', b.dataset.mhr === f.result));
   if (document.activeElement !== $('mhChamp')) $('mhChamp').value = f.champ ? champName(f.champ) : '';
   for (const [id, k] of [['mhMinK', 'minKills'], ['mhMaxD', 'maxDeaths'], ['mhMinKda', 'minKda']]) if (document.activeElement !== $(id)) $(id).value = f[k];
@@ -71,7 +109,17 @@ function syncFilterInputs() {
   }
 }
 function setFilter(patch) { Object.assign(mh.f, patch); mh.show = 40; renderMatches(); }
-$('mhRange').onchange = () => setFilter({ range: $('mhRange').value });
+$('mhRange').onchange = () => {
+  const range = $('mhRange').value;
+  // custom: start with the last 7 days so both fields have something sensible
+  if (range === 'custom' && !mh.f.from && !mh.f.to) {
+    const iso = d => new Date(d - new Date(d).getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    return setFilter({ range, from: iso(Date.now() - 6 * 86400000), to: iso(Date.now()) });
+  }
+  setFilter({ range });
+};
+$('mhFrom').onchange = () => setFilter({ from: $('mhFrom').value });
+$('mhTo').onchange = () => setFilter({ to: $('mhTo').value });
 $('mhSort').onchange = () => setFilter({ sort: $('mhSort').value });
 $('mhMulti').onchange = () => setFilter({ minMulti: $('mhMulti').value });
 document.querySelectorAll('[data-mhr]').forEach(b => (b.onclick = () => setFilter({ result: b.dataset.mhr })));
@@ -128,10 +176,15 @@ function gameRow(g, as) {
   const owner = S.accounts.find(a => a.puuid === ownerId);
   const others = g.owners.slice(1).map(id => S.accounts.find(a => a.puuid === id)).filter(Boolean);
   const mine = new Set(g.owners);
-  const side = teamId => g.players.filter(p => p.team === teamId).map(p => `
-      <button class="mh-p${mine.has(p.puuid) ? ' me' : ''}" data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(p.name + (p.tag ? '#' + p.tag : ''))}">
+  const side = teamId => g.players.filter(p => p.team === teamId).map(p => {
+    const rk = mh.ranks[p.puuid];
+    const tip = p.name + (p.tag ? '#' + p.tag : '') + (rk ? `\nSolo/Duo: ${rankTip(rk.s)}\nFlex: ${rankTip(rk.f)}\n(${t('mh.rankNow')})` : '');
+    return `
+      <button class="mh-p${mine.has(p.puuid) ? ' me' : ''}" data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(tip)}">
+        ${rk ? `<span class="rk-cs">${rankChip(rk.s, 'solo')}${rankChip(rk.f, 'flex')}</span>` : ''}
         <img src="${CHAMP_ICON(p.champ)}" alt=""><span>${esc(hides('name') && mine.has(p.puuid) ? dispName(S.accounts.find(a => a.puuid === p.puuid) || {}) : p.name || '?')}</span>
-      </button>`).join('');
+      </button>`;
+  }).join('');
   const teams = [...new Set(g.players.map(p => p.team))];
   return `<div class="mh-row ${res}" data-owner="${esc(ownerId)}" data-gid="${esc(g.id)}">
     <div class="mh-meta">

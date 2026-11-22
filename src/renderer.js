@@ -1,7 +1,10 @@
 const $ = id => document.getElementById(id);
 const CDRAGON = 'https://raw.communitydragon.org/latest/plugins';
 const iconUrl = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/profile-icons/${id}.jpg`;
-const crestUrl = tier => `${CDRAGON}/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${tier.toLowerCase()}.svg`;
+// emblem of a tier; tiers the app doesn't know get no picture (transparent pixel)
+const crestUrl = tier => (RankMath.TIERS.includes(tier)
+  ? `${CDRAGON}/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${tier.toLowerCase()}.svg`
+  : 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==');
 
 const { TIERS, DIVS, APEX, DAY, rankScore } = RankMath;   // rankmath.js
 // the ranked queues shown on tiles / in the profile: [key, label]
@@ -16,7 +19,8 @@ let shownSaveError = null;
 const lang = () => (S.settings && S.settings.lang) || 'en';
 const t = (key, vars) => I18N.t(lang(), key, vars);
 const locale = () => I18N.LOCALES[lang()] || 'en-GB';
-const tierName = tier => t('tier.' + tier);
+// unknown tiers (new modes) are shown as their own name, e.g. SALT -> Salt
+const tierName = tier => (I18N.STRINGS.en['tier.' + tier] ? t('tier.' + tier) : String(tier || '').charAt(0) + String(tier || '').slice(1).toLowerCase());
 let appliedLang = null;
 // fills every data-i18n / data-i18n-title / data-i18n-ph element of the static page
 function applyStaticTexts() {
@@ -81,6 +85,7 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const num = n => (n == null ? '–' : n.toLocaleString(locale()));
 
 function rankRow(label, r, showWr = true) {
+  if (r && !TIERS.includes(r.tier) && !(r.wins + r.losses)) r = null;   // placeholder tier before placements
   if (!r) return `<div class="rank"><span class="ph"></span><div><div class="q">${label}</div><div class="t"><i>${t('tile.unranked')}</i></div></div></div>`;
   const div = APEX.includes(r.tier) ? '' : ' ' + r.division;
   const head = `<img src="${crestUrl(r.tier)}" alt="">
@@ -90,7 +95,8 @@ function rankRow(label, r, showWr = true) {
     return `<div class="rank" title="${esc(t('tile.wlUnknown'))}">${head}<div class="wr"><b>–</b>${t('tile.wins', { n: r.wins })}</div></div>`;
   }
   const games = r.wins + r.losses;
-  const wr = games ? Math.round(100 * r.wins / games) : 0;
+  if (!games) return `<div class="rank">${head}</div>`;
+  const wr = Math.round(100 * r.wins / games);
   const cls = wr >= 53 ? 'good' : wr <= 47 ? 'bad' : '';
   return `<div class="rank" title="${esc(t('tile.wlTitle', { w: r.wins, l: r.losses }) + (r.wlStale ? t('tile.wlStale') : ''))}">${head}
     <div class="wr"><b class="${cls}">${wr}%</b>${t('tile.games', { n: games })}</div></div>`;

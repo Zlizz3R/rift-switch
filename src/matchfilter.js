@@ -8,17 +8,27 @@
   const kda = p => (p.d ? (p.k + p.a) / p.d : p.k + p.a + 1000);   // no deaths = "perfect", ranked above all
   const csMin = (p, g) => p.cs / Math.max(1, g.dur / 60);
 
-  // f: { range: 'all'|'today'|'7'|'30'|'90', result: ''|'win'|'loss', champ: id, minKills, maxDeaths,
+  // "2026-11-03" -> local midnight of that day (ms), or null
+  const dayStart = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null; };
+
+  // f: { range: 'all'|'today'|'7'|'30'|'90'|'custom', from: 'YYYY-MM-DD', to: 'YYYY-MM-DD', result: ''|'win'|'loss', champ: id, minKills, maxDeaths,
   //      minKda, minMulti, sort: 'new'|'kda'|'kills'|'deaths'|'dmg'|'cs'|'long' }
   function filterGames(games, f = {}, now = Date.now()) {
     const num = v => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
-    let from = 0;
+    let from = 0, to = Infinity;
     if (f.range === 'today') { const d = new Date(now); d.setHours(0, 0, 0, 0); from = d.getTime(); }
     else if (['7', '30', '90'].includes(String(f.range))) from = now - Number(f.range) * DAY;
+    else if (f.range === 'custom') {
+      // both days included; a missing end = open end; swapped dates are fine
+      let a = dayStart(f.from), b = dayStart(f.to);
+      if (a != null && b != null && a > b) [a, b] = [b, a];
+      if (a != null) from = a;
+      if (b != null) to = b + DAY;
+    }
     const minK = num(f.minKills), maxD = num(f.maxDeaths), minKda = num(f.minKda), minMulti = num(f.minMulti), champ = num(f.champ);
     const out = games.filter(g => {
       const p = me(g);
-      if (!p || g.t < from) return false;
+      if (!p || g.t < from || g.t >= to) return false;
       if (f.result === 'win' && (!p.win || g.remake)) return false;
       if (f.result === 'loss' && (p.win || g.remake)) return false;
       if (champ && p.champ !== champ) return false;
@@ -71,7 +81,7 @@
     return { win: first, n };
   }
 
-  const api = { filterGames, summarize, streakOf, kda, me };
+  const api = { dayStart, filterGames, summarize, streakOf, kda, me };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MatchFilter = api;
 })(typeof window !== 'undefined' ? window : this);

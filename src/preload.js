@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('api', {
   update: what => ipcRenderer.invoke('update', what),
   matches: filter => ipcRenderer.invoke('matches', filter),
   matchesMore: () => ipcRenderer.invoke('matches-more'),
+  playerRanks: puuids => ipcRenderer.invoke('player-ranks', puuids),
   onMatchesChanged: fn => ipcRenderer.on('matches-changed', () => fn()),
   unlock: pass => ipcRenderer.invoke('unlock', pass),
   lock: (what, pass, oldPass) => ipcRenderer.invoke('lock', what, pass, oldPass),
