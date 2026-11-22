@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rift Switch</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- texts: data-i18n = text, data-i18n-title = tooltip, data-i18n-ph = placeholder (see i18n.js) -->
+<div class="frame">
+  <header class="titlebar">
+    <div class="brand"><span class="logo">L</span><span data-i18n="app.name">Rift Switch</span></div>
+    <div class="live" id="live"></div>
+    <button class="stream-pill" id="streamPill" hidden data-i18n-title="stream.pillTitle"><svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg><span data-i18n="stream.pill"></span></button>
+    <label class="aa-toggle" data-i18n-title="aa.title"><input type="checkbox" id="aaToggle"><span class="sw"></span><span data-i18n="aa.label"></span></label>
+    <div class="winbtns">
+      <button id="min" data-i18n-title="win.min"><svg viewBox="0 0 10 10"><path d="M1 5h8"/></svg></button>
+      <button id="toTray" data-i18n-title="win.tray"><svg viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
+      <button id="close" class="x" data-i18n-title="win.quit"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
+    </div>
+  </header>
+
+  <div class="body">
+    <nav class="sidebar">
+      <button class="nav active" id="navAccounts" data-i18n-title="nav.accounts">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="9" rx="1.5"/><rect x="3" y="14" width="7.5" height="7" rx="1.5"/><rect x="13.5" y="14" width="7.5" height="7" rx="1.5"/></svg>
+      </button>
+      <button class="nav" id="navLive" data-i18n-title="nav.live">
+        <svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span class="live-dot" id="liveDot" hidden></span>
+      </button>
+      <button class="nav" id="navMatches" data-i18n-title="nav.matches">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/></svg>
+      </button>
+      <button class="nav" id="navTools" data-i18n-title="nav.tools">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>
+      </button>
+      <button class="nav add" id="navAdd" data-i18n-title="nav.add">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div class="spacer"></div>
+      <button class="nav coffee" id="navCoffee" data-i18n-title="support.title">
+        <svg viewBox="0 0 24 24"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3c0 1.5 1 1.5 1 3M12 3c0 1.5 1 1.5 1 3"/></svg>
+      </button>
+      <button class="nav" id="navSettings" data-i18n-title="nav.settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </nav>
+
+    <main>
+      <div class="crypto-warn" id="cryptoWarn" hidden>
+        <b data-i18n="crypto.title"></b><span data-i18n="crypto.text"></span>
+      </div>
+      <div id="viewAccounts">
+      <div class="head">
+        <div class="title-row">
+          <h1><span data-i18n="head.title"></span> <span id="count"></span></h1>
+          <button class="add-cat" id="addAcc"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="head.addAcc"></span></button>
+          <button class="add-cat" id="addCat" data-i18n-title="head.addCatTitle"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="head.addCat"></span></button>
+          <span class="grow"></span>
+          <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="search" data-i18n-ph="head.search" spellcheck="false"></label>
+          <select id="sort">
+            <option value="level" data-i18n="sort.level"></option>
+            <option value="custom" data-i18n="sort.custom"></option>
+            <option value="rank" data-i18n="sort.rank"></option>
+            <option value="flex" data-i18n="sort.flex"></option>
+            <option value="played" data-i18n="sort.played"></option>
+            <option value="name" data-i18n="sort.name"></option>
+          </select>
+          <button class="tool-btn" id="editTiles" data-i18n-title="head.editTiles"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
+        </div>
+        <p class="sub" data-i18n="head.sub"></p>
+      </div>
+      <div id="board"></div>
+      <div class="empty" id="empty" hidden>
+        <div class="empty-ring"><span>+</span></div>
+        <h2 data-i18n="empty.title"></h2>
+        <p data-i18n="empty.text"></p>
+        <button class="btn gold" id="emptyAdd" data-i18n="empty.btn"></button>
+      </div>
+      </div>
+
+      <section id="viewLive" hidden>
+        <div class="head"><h1 data-i18n="live.title"></h1><p class="sub" id="liveSub"></p></div>
+        <div id="liveBody"></div>
+      </section>
+
+      <section id="viewMatches" hidden>
+        <div class="head"><h1 data-i18n="mh.title"></h1><p class="sub" id="mhSub"></p></div>
+        <div class="mh-filter">
+          <select id="mhAccount"></select>
+          <div class="seg">
+            <button data-mhq="" data-i18n="mh.allQueues"></button><button data-mhq="solo">Solo/Duo</button><button data-mhq="flex">Flex</button>
+            <button data-mhq="normal" data-i18n="mh.normal"></button><button data-mhq="aram">ARAM</button><button data-mhq="arena">Arena</button>
+          </div>
+          <span class="grow"></span>
+          <span class="mh-store" id="mhStore" data-i18n-title="mh.storeTitle"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span id="mhStoreText"></span></span>
+          <button class="btn small icon-btn danger" id="mhClear" data-i18n-title="mh.clear"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
+          <button class="btn gold small" id="mhMore"></button>
+        </div>
+        <div class="mh-filter">
+          <select id="mhRange">
+            <option value="all" data-i18n="mh.rAll"></option><option value="today" data-i18n="mh.rToday"></option>
+            <option value="7" data-i18n="mh.r7"></option><option value="30" data-i18n="mh.r30"></option><option value="90" data-i18n="mh.r90"></option>
+            <option value="custom" data-i18n="mh.rCustom"></option>
+          </select>
+          <span class="mh-dates" id="mhDates" hidden>
+            <input class="mh-input date" id="mhFrom" type="date"><span>–</span><input class="mh-input date" id="mhTo" type="date">
+          </span>
+          <div class="seg">
+            <button data-mhr="" data-i18n="mh.resAll"></button><button data-mhr="win" data-i18n="mh.wins"></button><button data-mhr="loss" data-i18n="mh.losses"></button>
+          </div>
+          <input class="mh-input" id="mhChamp" list="mhChampList" data-i18n-ph="mh.champPh" spellcheck="false">
+          <datalist id="mhChampList"></datalist>
+          <select id="mhSort">
+            <option value="new" data-i18n="mh.sNew"></option><option value="kda" data-i18n="mh.sKda"></option>
+            <option value="kills" data-i18n="mh.sKills"></option><option value="deaths" data-i18n="mh.sDeaths"></option>
+            <option value="dmg" data-i18n="mh.sDmg"></option><option value="cs" data-i18n="mh.sCs"></option><option value="long" data-i18n="mh.sLong"></option>
+          </select>
+          <button class="btn small mh-adv-btn" id="mhAdvBtn"><span data-i18n="mh.moreFilters"></span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+        </div>
+        <div class="mh-filter mh-adv" id="mhAdv" hidden>
+          <label><span data-i18n="mh.minKills"></span><input class="mh-input num" id="mhMinK" type="number" min="0" max="60"></label>
+          <label><span data-i18n="mh.maxDeaths"></span><input class="mh-input num" id="mhMaxD" type="number" min="0" max="60"></label>
+          <label><span data-i18n="mh.minKda"></span><input class="mh-input num" id="mhMinKda" type="number" min="0" max="50" step="0.5"></label>
+          <select id="mhMulti">
+            <option value="" data-i18n="mh.multiAny"></option><option value="2" data-i18n="mh.m2"></option><option value="3" data-i18n="mh.m3"></option>
+            <option value="4" data-i18n="mh.m4"></option><option value="5" data-i18n="mh.m5"></option>
+          </select>
+          <span class="grow"></span>
+          <button class="btn small" id="mhReset" data-i18n="mh.reset"></button>
+        </div>
+        <div id="mhSummary"></div>
+        <div id="mhList"></div>
+      </section>
+
+      <section id="viewTools" hidden>
+        <div class="head"><h1 data-i18n="tools.title"></h1><p class="sub" data-i18n="tools.sub"></p></div>
+        <div class="tools-grid">
+          <button class="tool-card" id="toolRefresh"><b data-i18n="tools.refresh"></b><span data-i18n="tools.refreshT"></span></button>
+          <button class="tool-card" data-tool="closeAll"><b data-i18n="tools.closeAll"></b><span data-i18n="tools.closeAllT"></span></button>
+          <button class="tool-card" data-tool="restart"><b data-i18n="tools.restart"></b><span data-i18n="tools.restartT"></span></button>
+          <button class="tool-card" data-tool="clearCache"><b data-i18n="tools.clearCache"></b><span data-i18n="tools.clearCacheT"></span></button>
+          <button class="tool-card" data-tool="openLogs"><b data-i18n="tools.openLogs"></b><span data-i18n="tools.openLogsT"></span></button>
+          <button class="tool-card" data-tool="openData"><b data-i18n="tools.openData"></b><span data-i18n="tools.openDataT"></span></button>
+        </div>
+      </section>
+    </main>
+
+    <aside class="detail" id="detail"></aside>
+
+    <aside class="drawer" id="drawer">
+      <div class="drawer-head">
+        <h2 data-i18n="add.title"></h2>
+        <button class="icon" id="drawerClose"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
+      </div>
+      <form class="login-form" id="addForm" autocomplete="off">
+        <div class="form-title" data-i18n="add.save"></div>
+        <p class="fine" data-i18n="add.saveHint"></p>
+        <label><span><span data-i18n="add.riotId"></span> <span class="opt" data-i18n="add.optional"></span></span>
+          <input id="addRiotId" spellcheck="false" maxlength="24" placeholder="Name#Tag">
+        </label>
+        <label><span data-i18n="add.user"></span>
+          <input id="addUser" spellcheck="false" maxlength="64">
+        </label>
+        <label><span data-i18n="add.pass"></span>
+          <span class="pw"><input id="addPass" type="password" maxlength="128">
+            <button type="button" class="eye" data-eye="addPass" data-i18n-title="show"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span>
+        </label>
+        <button class="btn gold wide" type="submit" data-i18n="add.btn"></button>
+        <p class="fine" data-i18n="add.riotIdHint"></p>
+      </form>
+
+      <div class="sep"><span data-i18n="add.or"></span></div>
+
+      <button class="option" id="optCurrent">
+        <span class="opt-title" data-i18n="add.current"></span>
+        <span class="opt-sub" id="optCurrentSub"></span>
+      </button>
+      <button class="option" id="optManual">
+        <span class="opt-title" data-i18n="add.manual"></span>
+        <span class="opt-sub" data-i18n="add.manualSub"></span>
+      </button>
+
+      <p class="hint lock-hint"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+        <span data-i18n="add.lockHint"></span></p>
+    </aside>
+
+    <aside class="drawer" id="settingsDrawer">
+      <div class="drawer-head">
+        <h2 data-i18n="set.title"></h2>
+        <button class="icon" id="settingsClose"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
+      </div>
+      <div class="set-g" data-i18n="set.gAppearance"></div>
+      <div class="lang-row">
+        <span data-i18n="set.language"></span>
+        <select id="langSelect"></select>
+      </div>
+      <div class="lang-row">
+        <span data-i18n="set.colors"></span>
+        <select id="themeSelect">
+          <option value="system" data-i18n="theme.system"></option>
+          <option value="light" data-i18n="theme.light"></option>
+          <option value="dark" data-i18n="theme.dark"></option>
+        </select>
+      </div>
+      <div class="lang-row">
+        <span data-i18n="set.uiScale"></span>
+        <select id="scaleSelect">
+          <option value="80">80 %</option><option value="90">90 %</option><option value="100">100 %</option>
+          <option value="110">110 %</option><option value="125">125 %</option><option value="150">150 %</option>
+        </select>
+      </div>
+      <button class="option" id="openTileEditor">
+        <span class="opt-title" data-i18n="set.tiles"></span>
+        <span class="opt-sub" data-i18n="set.tilesT"></span>
+      </button>
+
+      <div class="set-g" data-i18n="set.gSwitch"></div>
+      <label class="toggle"><input type="checkbox" data-setting="confirmSwitch"><span class="sw"></span>
+        <span><b data-i18n="set.confirm"></b><small data-i18n="set.confirmT"></small></span></label>
+      <label class="toggle"><input type="checkbox" data-setting="autoPlay"><span class="sw"></span>
+        <span><b data-i18n="set.play"></b><small data-i18n="set.playT"></small></span></label>
+      <label class="toggle"><input type="checkbox" data-setting="autoAccept"><span class="sw"></span>
+        <span><b data-i18n="set.accept"></b><small data-i18n="set.acceptT"></small></span></label>
+
+      <div class="set-g" data-i18n="set.gPrivacy"></div>
+      <div class="toggle-wrap">
+        <label class="toggle"><input type="checkbox" data-setting="streamer"><span class="sw"></span>
+          <span><b data-i18n="set.streamer"></b><small data-i18n="set.streamerT"></small></span></label>
+        <button class="expand" id="streamExpand"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+      </div>
+      <div class="stream-opts" id="streamOpts" hidden></div>
+      <button class="option" id="lockBtn"><span class="opt-title" data-i18n="lock.title"></span><span class="opt-sub" id="lockSub"></span></button>
+      <div class="data-row" id="lockRow" hidden>
+        <button class="option" id="lockNow"><span class="opt-title" data-i18n="lock.now"></span></button>
+        <button class="option" id="lockOff"><span class="opt-title" data-i18n="lock.off"></span></button>
+      </div>
+
+      <div class="set-g" data-i18n="set.gSystem"></div>
+      <label class="toggle"><input type="checkbox" data-setting="autostart"><span class="sw"></span>
+        <span><b data-i18n="set.autostart"></b><small data-i18n="set.autostartT"></small></span></label>
+      <div class="data-row">
+        <button class="option" id="exportBtn"><span class="opt-title" data-i18n="set.export"></span><span class="opt-sub" data-i18n="set.exportT"></span></button>
+        <button class="option" id="importBtn"><span class="opt-title" data-i18n="set.import"></span><span class="opt-sub" data-i18n="set.importT"></span></button>
+      </div>
+
+      <div class="set-g" data-i18n="set.gAbout"></div>
+      <div class="lang-row upd-row"><span><span id="updVer"></span><small id="updText"></small></span><button class="btn small" id="updBtn"></button></div>
+      <button class="option support" id="supportBtn">
+        <span class="opt-title" data-i18n="support.title"></span>
+        <span class="opt-sub" data-i18n="support.sub"></span>
+      </button>
+      <p class="legal" data-i18n="legal.riot"></p>
+    </aside>
+  </div>
+</div>
+
+<div class="overlay" id="quitBox" hidden>
+  <div class="card quit-card">
+    <h2 data-i18n="quit.title"></h2>
+    <p data-i18n="quit.text"></p>
+    <div class="quit-bar"><i></i></div>
+  </div>
+</div>
+
+<div class="overlay" id="pending" hidden>
+  <div class="card">
+    <div class="spinner"></div>
+    <h2 data-i18n="pend.title"></h2>
+    <p data-i18n="pend.text"></p>
+    <button class="btn" id="cancelAdd" data-i18n="common.cancel"></button>
+  </div>
+</div>
+
+<div class="overlay" id="profileBox" hidden>
+  <div class="card profile" id="profileCard"></div>
+</div>
+
+<div class="overlay" id="tileEditor" hidden>
+  <div class="card tile-editor">
+    <h2 data-i18n="te.title"></h2>
+    <p class="fine center" data-i18n="te.sub"></p>
+    <div class="te-body">
+      <div class="te-preview">
+        <div class="te-label" data-i18n="te.preview"></div>
+        <div id="tePreview"></div>
+      </div>
+      <div class="te-options" id="teOptions"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="teReset" data-i18n="te.reset"></button>
+      <span class="grow"></span>
+      <button class="btn gold" id="teDone" data-i18n="te.done"></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="loginBox" hidden>
+  <div class="card">
+    <div class="spinner" id="loginSpin"></div>
+    <div class="fail-icon" id="loginFail" hidden>!</div>
+    <h2 id="loginTitle"></h2>
+    <p id="loginText"></p>
+    <button class="btn" id="loginDismiss"></button>
+  </div>
+</div>
+
+<div class="overlay" id="credBox" hidden>
+  <form class="card login-form" id="credForm" autocomplete="off">
+    <h2 data-i18n="cred.title"></h2>
+    <p class="fine center" id="credFor"></p>
+    <label id="credRiotRow" hidden><span><span data-i18n="add.riotId"></span> <span class="opt" data-i18n="add.optional"></span></span>
+      <input id="credRiotId" spellcheck="false" maxlength="24" placeholder="Name#Tag">
+    </label>
+    <label><span data-i18n="add.user"></span>
+      <input id="credUser" spellcheck="false" maxlength="64">
+    </label>
+    <label><span data-i18n="add.pass"></span>
+      <span class="pw"><input id="credPass" type="password" maxlength="128">
+        <button type="button" class="eye" data-eye="credPass" data-i18n-title="show"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span>
+    </label>
+    <p class="fine" data-i18n="cred.hint"></p>
+    <div class="row">
+      <button type="button" class="btn danger" id="credDelete" data-i18n="common.delete"></button>
+      <span class="grow"></span>
+      <button type="button" class="btn" id="credCancel" data-i18n="common.cancel"></button>
+      <button type="submit" class="btn gold" data-i18n="common.save"></button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="passBox" hidden>
+  <form class="card login-form" id="passForm" autocomplete="off">
+    <h2 id="passTitle"></h2>
+    <p class="fine center" id="passText"></p>
+    <label><span data-i18n="pw.pass"></span>
+      <span class="pw"><input id="passIn" type="password" maxlength="128"></span>
+    </label>
+    <label id="passAgainRow"><span data-i18n="pw.again"></span>
+      <span class="pw"><input id="passAgain" type="password" maxlength="128"></span>
+    </label>
+    <p class="fine err" id="passErr" hidden></p>
+    <div class="row">
+      <button type="button" class="btn" id="passSkip" hidden></button>
+      <span class="grow"></span>
+      <button type="button" class="btn" id="passCancel" data-i18n="common.cancel"></button>
+      <button type="submit" class="btn gold" id="passOk"></button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="confirm" hidden>
+  <div class="card">
+    <div class="danger-banner" id="confirmDanger" hidden><svg viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3zM12 10v5M12 18v.5"/></svg><span id="confirmDangerText"></span></div>
+    <h2 id="confirmTitle"></h2>
+    <p id="confirmText"></p>
+    <div class="row">
+      <button class="btn" id="confirmNo" data-i18n="common.cancel"></button>
+      <button class="btn gold" id="confirmYes"></button>
+    </div>
+  </div>
+</div>
+
+<div class="menu" id="menu" hidden>
+  <!-- same order as the detail panel: Switch | Profile, Login, Open with, Note, Move | Delete -->
+  <button data-act="switch" data-i18n="menu.switch"></button>
+  <hr>
+  <button data-act="profile" data-real data-i18n="menu.profile"></button>
+  <button data-act="cred" data-i18n="menu.login"></button>
+  <div class="sub" data-real>
+    <button class="sub-btn"><span data-i18n="menu.openWith"></span> <span class="arrow">›</span></button>
+    <div class="submenu">
+      <button data-act="open" data-site="opgg">op.gg</button>
+      <button data-act="open" data-site="poro">Porofessor</button>
+      <button data-act="open" data-site="log">League of Graphs</button>
+      <button data-act="open" data-site="moba">Mobalytics</button>
+      <button data-act="open" data-site="ugg">u.gg</button>
+    </div>
+  </div>
+  <button data-act="note" data-i18n="menu.note"></button>
+  <div id="menuCats"></div>
+  <hr>
+  <button data-act="remove" class="danger" data-i18n="menu.remove"></button>
+</div>
+
+<div class="menu" id="catMenu" hidden>
+  <button data-cact="rename" data-i18n="cat.mRename"></button>
+  <button data-cact="up" data-i18n="cat.mUp"></button>
+  <button data-cact="down" data-i18n="cat.mDown"></button>
+  <hr>
+  <button data-cact="del" class="danger" data-i18n="cat.mDelete"></button>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="tauri-api.js"></script>
+<script src="lang/zh.js"></script>
+<script src="lang/hi.js"></script>
+<script src="lang/es.js"></script>
+<script src="lang/fr.js"></script>
+<script src="lang/ar.js"></script>
+<script src="lang/bn.js"></script>
+<script src="lang/pt.js"></script>
+<script src="lang/ru.js"></script>
+<script src="lang/ur.js"></script>
+<script src="i18n.js"></script>
+<script src="rankmath.js"></script>
+<script src="renderer.js"></script>
+<script src="views.js"></script>
+<script src="matchfilter.js"></script>
+<script src="matches-view.js"></script>
+</body>
+</html>

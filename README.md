@@ -41,11 +41,11 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
 - **No passwords needed.** An account is a snapshot of the Riot Client's *“Stay signed in”* session
   (`%LOCALAPPDATA%\Riot Games\Riot Client\Data`). Switching restores that snapshot.
 - **Optional password** for automatic re-login when a session has expired. It is typed into the Riot Client
-  window (`src/autofill.ps1`) and "Stay signed in" is ticked – the app never talks to Riot's servers itself.
+  window (`src-tauri/scripts/autofill.ps1`) and "Stay signed in" is ticked – the app never talks to Riot's servers itself.
   It only types when it recognised the login form, only while the Riot Client is the front window, and it checks
   that every click really lands on the Riot Client.
 - Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI**
-  (Electron `safeStorage`): only your Windows user on your PC can decrypt them. Your logins and sessions never leave your PC.
+  : only your Windows user on your PC can decrypt them. Your logins and sessions never leave your PC.
 - The only outside requests: icons/game data from CommunityDragon, and – in the champ select helper – the two
   champion names of a matchup to counterstats.net. No account data is sent anywhere.
 - Ranks, icons etc. come from the **local League Client API** (the same one the client uses itself); icons and
@@ -58,39 +58,45 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
 
 Grab the latest version from [Releases](https://github.com/Zlizz3R/rift-switch/releases):
 
-- **RiftSwitch-Setup-x.y.z.exe** – installer (Start menu + desktop shortcut, uninstall via Windows settings)
-- **RiftSwitch-Portable-x.y.z.exe** – no installation, just run it
+- **Rift Switch_x.y.z_x64-setup.exe** – installer (Start menu shortcut, uninstall via Windows settings, updates itself)
+
+Light on purpose: the app is a small native program (Rust + the WebView2 that comes with Windows). While it
+sits in the tray there is no window at all – one process, a few MB of memory, and it asks League a handful of
+questions every 15–60 seconds (the client's own events wake it up when something happens).
 
 The app isn't code-signed (that costs a few hundred euros a year), so Windows SmartScreen may show
 *“Windows protected your PC”* – click **More info → Run anyway**. The full source is right here if you want to check it.
 
-## Install / run (from source)
+## Build from source
 
-Requires [Node.js](https://nodejs.org) on Windows.
+Requires [Rust](https://rustup.rs) (with the Visual Studio C++ build tools) and [Node.js](https://nodejs.org) on Windows.
 
 ```powershell
 git clone https://github.com/Zlizz3R/rift-switch.git
 cd rift-switch
 npm install
-npm start
+npm run dev      # run it
+npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 ```
-
-Or double-click `Rift Switch.cmd` after `npm install`. Build the installer yourself with `npm run dist` (output in `dist/`).
 
 ## Development notes
 
-- `src/main.js` – main process: window, tray, IPC, switching, polling
-- `src/core/` – pure logic with tests: accounts & LP history, settings, export/import, password sealing
-  and app lock, tray/jump-list content, the accounts.json store
-- `src/riot.js` – Riot Client / League Client API, process handling; `src/lcuevents.js` – client events (WebSocket)
-- `src/live.js` – live page data, champion data, matchups; `src/matches.js` – match history store
-- `src/autofill.ps1` – typing a login into the Riot Client (UI Automation, picture scan as fallback)
-- `src/renderer.js`, `views.js`, `matches-view.js`, `rankmath.js`, `index.html`, `style.css` – the window
-- `src/i18n.js` – English and German texts, `src/lang/*.js` – the other 9 languages
-- Tests: `npm test` (Node's built-in test runner, no Electron needed); they run on every push (GitHub Actions)
-- Releases: push a tag `vX.Y.Z` matching package.json – GitHub Actions builds and publishes the installer,
-  installed copies update themselves
-- Test copy on its own data folder: `RS_DATA=<folder> npx electron .`
+- `src-tauri/src/` – the background part (Rust, Tauri 2):
+  `main.rs` window, tray, the one `call` command the window uses, switching, polling;
+  `riot.rs` Riot Client / League Client API, sessions, processes; `events.rs` client events (WebSocket);
+  `live.rs` live page data, champion data, matchups; `matches.rs` the match history store (no limit:
+  `matches/games.jsonl`, only an index stays in memory);
+  `accounts.rs`, `settings.rs`, `store.rs`, `secrets.rs`, `menu.rs` – pure logic with tests;
+  `updater.rs` GitHub releases; `winsys.rs` autostart and jump list
+- `src-tauri/scripts/` – typing a login into the Riot Client (UI Automation, picture scan as fallback), closing the PBE dialog
+- `ui/` – the window: `tauri-api.js` (its link to the background part), `renderer.js`, `views.js`,
+  `matches-view.js`, `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
+- Tray and jump-list texts are copied from the window's texts: `npm run strings` after changing one
+- Tests: `npm test` (window logic with Node's test runner + `cargo test` for the background part); they run on every push
+- Releases: push a tag `vX.Y.Z` matching the version in `src-tauri/tauri.conf.json` – GitHub Actions builds and
+  publishes the installer, installed copies update themselves
+- Test copy on its own data folder: `$env:RS_DATA='<folder>'; .\src-tauri\target\debug\rift-switch.exe`
+  (never touches autostart, the jump list or the real data)
 
 ## Support
 

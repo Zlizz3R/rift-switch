@@ -1,88 +1,29 @@
 {
   "name": "rift-switch",
-  "version": "1.0.0",
-  "description": "A good-looking League of Legends account switcher for Windows (11 languages).",
-  "main": "src/main.js",
+  "version": "1.1.0",
+  "description": "A fast, light League of Legends account switcher for Windows (11 languages).",
   "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder --win",
-    "test": "node --test test/"
+    "dev": "tauri dev",
+    "dist": "tauri build",
+    "test": "node --test test/ && cargo test --manifest-path src-tauri/Cargo.toml",
+    "strings": "node tools/tray-strings.js"
   },
   "keywords": [
     "league-of-legends",
     "account-switcher",
-    "electron",
+    "tauri",
     "riot-client"
   ],
   "author": "Zlizz3R",
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^45.4.1",
-    "electron-builder": "^26.18.0"
+    "@tauri-apps/cli": "^2.12.6"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Zlizz3R/rift-switch.git"
   },
   "homepage": "https://github.com/Zlizz3R/rift-switch",
-  "productName": "Rift Switch",
-  "build": {
-    "appId": "com.zlizz3r.riftswitch",
-    "productName": "Rift Switch",
-    "copyright": "Copyright © 2026 Zlizz3R",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "src/**/*",
-      "package.json",
-      "LICENSE"
-    ],
-    "asarUnpack": [
-      "src/autofill.ps1",
-      "src/rcmodal.ps1"
-    ],
-    "win": {
-      "icon": "src/icon.png",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Rift Switch",
-      "artifactName": "RiftSwitch-Setup-${version}.${ext}",
-      "deleteAppDataOnUninstall": false
-    },
-    "portable": {
-      "artifactName": "RiftSwitch-Portable-${version}.${ext}"
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Zlizz3R",
-        "repo": "rift-switch"
-      }
-    ]
-  },
-  "dependencies": {
-    "electron-updater": "^6.8.11",
-    "ws": "^8.23.0"
-  }
+  "productName": "Rift Switch"
 }

@@ -1,0 +1,280 @@
+//! accounts.json (reading with repairs + one-time migrations, atomic writing) and the
+//! export / import file.
+
+use crate::accounts::{clean_text, is_id, is_puuid, mask_login, str_of, truthy, valid_cred, Obj};
+use crate::settings::{defaults, merge_settings};
+use serde_json::{json, Value};
+use std::fs;
+use std::path::Path;
+
+#[derive(Debug, Clone, Default)]
+pub struct State {
+    pub accounts: Vec<Obj>,
+    pub categories: Vec<Obj>,
+    pub active: Option<String>,
+    pub settings: Obj,
+    pub lock: Option<Value>,
+    /// anything else in the file is kept as it was
+    pub extra: Obj,
+}
+
+impl State {
+    pub fn to_json(&self) -> Value {
+        let mut o = Obj::new();
+        o.insert("accounts".into(), Value::Array(self.accounts.iter().cloned().map(Value::Object).collect()));
+        o.insert("categories".into(), Value::Array(self.categories.iter().cloned().map(Value::Object).collect()));
+        o.insert("active".into(), self.active.clone().map_or(Value::Null, Value::String));
+        o.insert("settings".into(), Value::Object(self.settings.clone()));
+        if let Some(l) = &self.lock {
+            o.insert("lock".into(), l.clone());
+        }
+        for (k, v) in &self.extra {
+            o.entry(k.clone()).or_insert_with(|| v.clone());
+        }
+        Value::Object(o)
+    }
+    pub fn account(&self, id: &str) -> Option<&Obj> {
+        self.accounts.iter().find(|a| str_of(a, "puuid") == id)
+    }
+    pub fn account_mut(&mut self, id: &str) -> Option<&mut Obj> {
+        self.accounts.iter_mut().find(|a| str_of(a, "puuid") == id)
+    }
+    pub fn has(&self, id: &str) -> bool {
+        self.account(id).is_some()
+    }
+    pub fn set_bool(&self, k: &str) -> bool {
+        truthy(self.settings.get(k))
+    }
+    pub fn lang(&self) -> String {
+        self.settings.get("lang").and_then(Value::as_str).unwrap_or("en").to_string()
+    }
+}
+
+/// Whatever was in the file -> a complete, current state.
+pub fn normalize(raw: Value) -> State {
+    let mut o = raw.as_object().cloned().unwrap_or_default();
+    let objs = |v: Option<Value>| -> Vec<Obj> {
+        v.and_then(|v| v.as_array().cloned()).unwrap_or_default().into_iter().filter_map(|x| x.as_object().cloned()).collect()
+    };
+    let mut accounts = objs(o.remove("accounts"));
+    for a in &mut accounts {
+        for k in ["gameName", "tagLine"] {
+            if let Some(Value::String(s)) = a.get(k) {
+                let c = clean_text(s);
+                a.insert(k.into(), json!(c));
+            }
+        }
+    }
+    let categories = objs(o.remove("categories"));
+    let active = o.remove("active").and_then(|v| v.as_str().map(String::from));
+    let mut settings = defaults();
+    if let Some(Value::Object(s)) = o.remove("settings") {
+        for (k, v) in s {
+            settings.insert(k, v);
+        }
+    }
+    // one-time: sorting by level became the default (existing saves had "custom")
+    if !truthy(settings.get("sortLevelDefault")) {
+        settings.insert("sort".into(), json!("level"));
+        settings.insert("sortLevelDefault".into(), json!(true));
+    }
+    // one-time: "Start League automatically" is on by default
+    if !truthy(settings.get("autoPlayDefault")) {
+        settings.insert("autoPlay".into(), json!(true));
+        settings.insert("autoPlayDefault".into(), json!(true));
+    }
+    let lock = o.remove("lock").filter(|l| l.is_object());
+    State { accounts, categories, active, settings, lock, extra: o }
+}
+
+/// Reads the file (or file.bak if the real one is missing). A damaged file is copied aside first,
+/// never silently overwritten. Err(text) = it was damaged (for the log).
+pub fn read_state(file: &Path) -> (State, Option<String>) {
+    let bak = file.with_extension("json.bak");
+    let src = if file.exists() { file.to_path_buf() } else if bak.exists() { bak } else { return (normalize(Value::Null), None) };
+    let text = fs::read_to_string(&src).unwrap_or_default();
+    match serde_json::from_str::<Value>(text.trim_start_matches('\u{feff}')) {
+        Ok(v) => (normalize(v), None),
+        Err(e) => {
+            let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis());
+            let _ = fs::copy(&src, file.with_file_name(format!("accounts.damaged-{ts}.json")));
+            (normalize(Value::Null), Some(e.to_string()))
+        }
+    }
+}
+
+/// Write to file.tmp, then rename: a crash mid-write never leaves half a file.
+pub fn write_atomic(file: &Path, text: &[u8]) -> std::io::Result<()> {
+    if let Some(d) = file.parent() {
+        fs::create_dir_all(d)?;
+    }
+    let tmp = file.with_extension("tmp");
+    fs::write(&tmp, text)?;
+    if fs::rename(&tmp, file).is_err() {
+        fs::write(file, text)?;
+        let _ = fs::remove_file(&tmp);
+    }
+    Ok(())
+}
+
+// ---------- export / import ----------
+
+const EXPORT_FIELDS: [&str; 16] = ["puuid", "gameName", "tagLine", "region", "note", "category", "addedAt", "iconId", "level",
+    "solo", "flex", "r5", "classic", "lastPlayed", "history", "rankedGames"];
+
+fn pick_fields(x: &Obj) -> Obj {
+    EXPORT_FIELDS.iter().filter_map(|k| x.get(*k).map(|v| (k.to_string(), v.clone()))).collect()
+}
+fn is_cat_id(s: &str) -> bool {
+    s.starts_with('c') && (2..=41).contains(&s.len()) && s[1..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+pub fn build_export(st: &State, secrets: Option<Value>, now: i64) -> Value {
+    let mut settings = st.settings.clone();
+    settings.remove("autostart");
+    let mut f = json!({
+        "app": "rift-switch", "version": 1, "exportedAt": now,
+        "accounts": st.accounts.iter().filter(|a| !truthy(a.get("placeholder"))).map(pick_fields).collect::<Vec<_>>(),
+        "categories": st.categories, "settings": settings,
+    });
+    if let Some(s) = secrets {
+        f["secrets"] = s;
+    }
+    f
+}
+
+/// A parsed file -> Some(file) if it is one of ours.
+pub fn check_file(d: Value) -> Option<Value> {
+    (d.get("app").and_then(Value::as_str) == Some("rift-switch") && d.get("accounts").map_or(false, Value::is_array)).then_some(d)
+}
+
+/// Merges the file into state (this PC's data wins, only gaps are filled); returns (added, updated).
+pub fn apply_import(st: &mut State, d: &Value, new_cat_name: &str, now: i64) -> (u32, u32) {
+    for c in d.get("categories").and_then(Value::as_array).into_iter().flatten() {
+        let Some(id) = c.get("id").and_then(Value::as_str) else { continue };
+        if is_cat_id(id) && !st.categories.iter().any(|x| str_of(x, "id") == id) {
+            let name: String = c.get("name").and_then(Value::as_str).unwrap_or("").chars().take(32).collect();
+            st.categories.push(json!({ "id": id, "name": if name.is_empty() { new_cat_name.to_string() } else { name },
+                "collapsed": truthy(c.get("collapsed")) }).as_object().unwrap().clone());
+        }
+    }
+    let (mut added, mut updated) = (0, 0);
+    for x in d.get("accounts").and_then(Value::as_array).into_iter().flatten() {
+        let Some(x) = x.as_object() else { continue };
+        if !is_puuid(str_of(x, "puuid")) {
+            continue;
+        }
+        let mut acc = pick_fields(x);
+        let note: String = str_of(&acc, "note").chars().take(24).collect();
+        acc.insert("note".into(), json!(note));
+        let cat = str_of(&acc, "category").to_string();
+        if !cat.is_empty() && !st.categories.iter().any(|c| str_of(c, "id") == cat) {
+            acc.remove("category");
+        }
+        let id = str_of(&acc, "puuid").to_string();
+        if let Some(have) = st.account_mut(&id) {
+            if !truthy(have.get("note")) && !note.is_empty() {
+                have.insert("note".into(), json!(note));
+            }
+            if !truthy(have.get("category")) && acc.contains_key("category") {
+                have.insert("category".into(), acc["category"].clone());
+            }
+            updated += 1;
+        } else {
+            if !truthy(acc.get("addedAt")) {
+                acc.insert("addedAt".into(), json!(now));
+            }
+            st.accounts.push(acc);
+            added += 1;
+        }
+    }
+    if let Some(s) = d.get("settings") {
+        merge_settings(&mut st.settings, s);
+    }
+    (added, updated)
+}
+
+/// Sealed logins -> [(account id, user, password)] to store; adds placeholder tiles for logins that
+/// only existed as "saved, never signed in". A login already on this PC wins.
+pub fn logins_to_restore(st: &mut State, logins: &[Value], now: i64) -> Vec<(String, String, String)> {
+    let mut out = vec![];
+    for l in logins {
+        let Some((u, p)) = valid_cred(l) else { continue };
+        let id = l.get("puuid").and_then(Value::as_str).unwrap_or("");
+        if !is_id(id) {
+            continue;
+        }
+        if !st.has(id) && truthy(l.get("placeholder")) {
+            let name: String = l.get("gameName").and_then(Value::as_str).map(String::from).unwrap_or_else(|| mask_login(&u)).chars().take(32).collect();
+            let tag: String = l.get("tagLine").and_then(Value::as_str).unwrap_or("").chars().take(8).collect();
+            st.accounts.push(json!({ "puuid": id, "placeholder": true, "note": "", "addedAt": now, "gameName": name, "tagLine": tag })
+                .as_object().unwrap().clone());
+        }
+        let Some(a) = st.account(id) else { continue };
+        if truthy(a.get("hasCred")) && !truthy(a.get("credBroken")) {
+            continue;
+        }
+        out.push((id.to_string(), u, p));
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const P1: &str = "11111111-1111-1111-1111-111111111111";
+    const P2: &str = "22222222-2222-2222-2222-222222222222";
+
+    #[test]
+    fn migrations_damaged_file_atomic_write() {
+        let s = normalize(json!({ "settings": { "sort": "custom", "autoPlay": false } }));
+        assert_eq!(s.settings["sort"], "level");
+        assert_eq!(s.settings["autoPlay"], true);
+        assert!(s.accounts.is_empty());
+        assert_eq!(normalize(json!({ "settings": { "sort": "name", "sortLevelDefault": true } })).settings["sort"], "name");
+        assert_eq!(normalize(json!({ "accounts": [{ "gameName": "\u{2066}A\u{2069}", "tagLine": "\u{2066}187\u{2069}" }] })).accounts[0]["tagLine"], "187");
+
+        let dir = std::env::temp_dir().join(format!("rs-store-test-{}", std::process::id()));
+        let file = dir.join("accounts.json");
+        write_atomic(&file, json!({ "accounts": [{ "puuid": P1 }], "keepMe": 1 }).to_string().as_bytes()).unwrap();
+        let (st, err) = read_state(&file);
+        assert!(err.is_none());
+        assert_eq!(st.accounts[0]["puuid"], P1);
+        assert_eq!(st.to_json()["keepMe"], 1);
+        fs::write(&file, "{ broken").unwrap();
+        let (st, err) = read_state(&file);
+        assert!(st.accounts.is_empty() && err.is_some());
+        assert!(fs::read_dir(&dir).unwrap().any(|f| f.unwrap().file_name().to_string_lossy().starts_with("accounts.damaged-")));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn export_import_round_trip() {
+        let st = normalize(json!({
+            "accounts": [{ "puuid": P1, "gameName": "A", "note": "main", "category": "c1", "hasCred": true, "solo": { "tier": "GOLD" } },
+                         { "puuid": format!("new-{P2}"), "placeholder": true, "gameName": "x•••" }],
+            "categories": [{ "id": "c1", "name": "Mains" }], "settings": { "autostart": true, "lang": "de", "uiScale": "110" } }));
+        let file = build_export(&st, None, 5);
+        assert_eq!(file["accounts"].as_array().unwrap().len(), 1);
+        assert!(file["accounts"][0].get("hasCred").is_none());
+        assert!(file["settings"].get("autostart").is_none());
+        assert!(check_file(file.clone()).is_some());
+        assert!(check_file(json!({ "app": "other", "accounts": [] })).is_none());
+
+        let mut here = normalize(json!({ "accounts": [{ "puuid": P1, "note": "", "gameName": "A" }], "settings": { "lang": "en" } }));
+        let mut f2 = file.clone();
+        f2["accounts"].as_array_mut().unwrap().extend([json!({ "puuid": "../evil" }), json!({ "puuid": P2, "gameName": "B", "note": "x".repeat(50) })]);
+        assert_eq!(apply_import(&mut here, &f2, "New", 1), (1, 1));
+        assert_eq!(here.accounts[0]["note"], "main");
+        assert_eq!(here.accounts[1]["note"].as_str().unwrap().len(), 24);
+        assert_eq!(here.categories[0]["id"], "c1");
+        assert_eq!(here.settings["lang"], "de");
+
+        let logins = logins_to_restore(&mut here, &[
+            json!({ "puuid": P1, "u": "a", "p": "b" }),
+            json!({ "puuid": format!("new-{P1}"), "u": "c", "p": "d", "placeholder": true, "gameName": "c•••" }),
+            json!({ "puuid": "bad", "u": "e", "p": "f" }), json!({ "puuid": P2, "u": "", "p": "x" })], 1);
+        assert_eq!(logins.iter().map(|l| l.0.clone()).collect::<Vec<_>>(), vec![P1.to_string(), format!("new-{P1}")]);
+        assert!(here.accounts.iter().any(|a| a["puuid"] == format!("new-{P1}") && a["placeholder"] == true));
+    }
+}

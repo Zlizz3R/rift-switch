@@ -1,5 +1,5 @@
-# Push a tag like v1.1.0 (matching "version" in package.json): this builds the installer and
-# the portable .exe and publishes them as a GitHub release - installed copies then update themselves.
+# Push a tag like v1.1.0 (matching "version" in src-tauri/tauri.conf.json): this builds the installer
+# and publishes it as a GitHub release - installed copies then update themselves.
 name: Release
 on:
   push:
@@ -15,8 +15,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
       - run: npm ci
       - run: npm test
-      - run: npx electron-builder --win --publish always
+      - run: npx tauri build
+      - name: Publish
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${GITHUB_REF_NAME}" src-tauri/target/release/bundle/nsis/*-setup.exe --title "Rift Switch ${GITHUB_REF_NAME}" --generate-notes
