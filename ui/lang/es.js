@@ -26,7 +26,7 @@
     'rk.cleared': 'desbloqueado', 'rk.blocked': 'bloqueado', 'rk.riot': 'Riot: {q}', 'rk.until': ' hasta {date}',
     'rk.normals': 'Normales', 'rk.normals10': '10 partidas normales (Grieta)', 'rk.normalsNote': 'Las cuentas nuevas deben jugar 10 partidas normales PvP en la Grieta del Invocador antes de clasificatorias. Contadas desde el historial.',
     'restrict.PlayerMinLevelRestriction': 'Se necesita nivel {n}', 'restrict.PlayerAvailableChampionRestriction': 'Se necesitan {n} campeones propios',
-    'restrict.QueueDisabled': 'Cola desactivada por Riot', 'restrict.PlayerRankedSuspensionRestriction': 'Suspensión de clasificatorias',
+    'restrict.QueueDisabled': 'Riot ha cerrado las clasificatorias ahora mismo', 'restrict.PlayerRankedSuspensionRestriction': 'Suspensión de clasificatorias',
     'restrict.PlayerTimedRestriction': 'Bloqueo temporal (p. ej. LeaverBuster)', 'restrict.PlayerLeaverBustedRestriction': 'Bloqueo de LeaverBuster',
     'restrict.PlayerLeaverQueueLockoutRestriction': 'Espera de cola por LeaverBuster', 'restrict.PlayerLeaverTaintedWarningRestriction': 'Aviso de LeaverBuster pendiente',
     'restrict.PlayerBannedRestriction': 'Cuenta suspendida', 'restrict.PlayerInGameRestriction': 'En partida ahora mismo', 'restrict.PlayerMinorRestriction': 'Límite de juego (protección de menores)',

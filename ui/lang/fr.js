@@ -26,7 +26,7 @@
     'rk.cleared': 'débloqué', 'rk.blocked': 'bloqué', 'rk.riot': 'Riot : {q}', 'rk.until': ' jusqu’au {date}',
     'rk.normals': 'Normales', 'rk.normals10': '10 parties normales (Faille)', 'rk.normalsNote': 'Les nouveaux comptes doivent jouer 10 parties normales PvP sur la Faille de l’invocateur avant le classé. Compté depuis l’historique.',
     'restrict.PlayerMinLevelRestriction': 'Niveau {n} requis', 'restrict.PlayerAvailableChampionRestriction': '{n} champions possédés requis',
-    'restrict.QueueDisabled': 'File désactivée par Riot', 'restrict.PlayerRankedSuspensionRestriction': 'Suspension du classé',
+    'restrict.QueueDisabled': 'Riot a fermé le classé pour le moment', 'restrict.PlayerRankedSuspensionRestriction': 'Suspension du classé',
     'restrict.PlayerTimedRestriction': 'Blocage temporaire (p. ex. LeaverBuster)', 'restrict.PlayerLeaverBustedRestriction': 'Blocage LeaverBuster',
     'restrict.PlayerLeaverQueueLockoutRestriction': 'Délai de file LeaverBuster', 'restrict.PlayerLeaverTaintedWarningRestriction': 'Avertissement LeaverBuster en attente',
     'restrict.PlayerBannedRestriction': 'Compte banni', 'restrict.PlayerInGameRestriction': 'Actuellement en partie', 'restrict.PlayerMinorRestriction': 'Limite de temps de jeu (protection des mineurs)',

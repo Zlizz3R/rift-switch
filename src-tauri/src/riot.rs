@@ -475,6 +475,44 @@ pub fn penalties_of(list: &[Value]) -> Vec<Value> {
     out
 }
 
+/// LeaverBuster messages the client keeps for the signed-in account (e.g. a low priority queue for
+/// the next game, already before you queue). Their exact form isn't documented: only entries whose
+/// type speaks of a penalty are taken.
+pub async fn leaver_notices() -> Vec<Value> {
+    let Some(Value::Array(list)) = get("/lol-leaver-buster/v1/notifications").await else {
+        return vec![];
+    };
+    leaver_notices_of(&list)
+}
+pub fn leaver_notices_of(list: &[Value]) -> Vec<Value> {
+    let mut out: Vec<Value> = vec![];
+    for n in list {
+        let ty = n["type"]
+            .as_str()
+            .or(n["notificationType"].as_str())
+            .unwrap_or("");
+        let low = ty.to_lowercase();
+        if ![
+            "prio", "queue", "leaver", "lock", "tainted", "punish", "penalty",
+        ]
+        .iter()
+        .any(|w| low.contains(w))
+        {
+            continue;
+        }
+        let code = format!(
+            "LeaverBuster{}",
+            ty.chars()
+                .filter(|c| c.is_ascii_alphanumeric())
+                .collect::<String>()
+        );
+        if !out.iter().any(|p| p["code"] == code) {
+            out.push(json!({ "code": code, "until": 0 }));
+        }
+    }
+    out
+}
+
 /// Waiting times the client gives when you try to queue: the low priority queue (LeaverBuster,
 /// "wait N minutes before you can queue") and lockouts such as the dodge timer.
 /// -> [{ code, until }] (until = now + the seconds left)

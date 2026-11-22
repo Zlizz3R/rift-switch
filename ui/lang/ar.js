@@ -26,7 +26,7 @@
     'rk.cleared': 'مفتوح', 'rk.blocked': 'مقفل', 'rk.riot': 'Riot: {q}', 'rk.until': ' حتى {date}',
     'rk.normals': 'عادية', 'rk.normals10': '10 مباريات عادية (Rift)', 'rk.normalsNote': 'يجب على الحسابات الجديدة لعب 10 مباريات PvP عادية في Summoner’s Rift قبل المصنّف. محسوبة من سجل المباريات.',
     'restrict.PlayerMinLevelRestriction': 'يلزم المستوى {n}', 'restrict.PlayerAvailableChampionRestriction': 'يلزم امتلاك {n} بطلاً',
-    'restrict.QueueDisabled': 'الطابور معطّل حالياً من Riot', 'restrict.PlayerRankedSuspensionRestriction': 'إيقاف عن المصنّف',
+    'restrict.QueueDisabled': 'أغلقت Riot التصنيف حاليًا', 'restrict.PlayerRankedSuspensionRestriction': 'إيقاف عن المصنّف',
     'restrict.PlayerTimedRestriction': 'حظر مؤقت (مثل LeaverBuster)', 'restrict.PlayerLeaverBustedRestriction': 'حظر LeaverBuster',
     'restrict.PlayerLeaverQueueLockoutRestriction': 'انتظار طابور LeaverBuster', 'restrict.PlayerLeaverTaintedWarningRestriction': 'تحذير LeaverBuster معلّق',
     'restrict.PlayerBannedRestriction': 'الحساب محظور', 'restrict.PlayerInGameRestriction': 'في مباراة حالياً', 'restrict.PlayerMinorRestriction': 'حد وقت اللعب (حماية القاصرين)',

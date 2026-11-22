@@ -26,7 +26,7 @@
     'rk.cleared': 'کھلا ہے', 'rk.blocked': 'بند ہے', 'rk.riot': 'Riot: {q}', 'rk.until': ' {date} تک',
     'rk.normals': 'نارمل', 'rk.normals10': '10 نارمل گیمز (Rift)', 'rk.normalsNote': 'نئے اکاؤنٹس کو رینکڈ سے پہلے Summoner’s Rift پر 10 نارمل PvP گیمز کھیلنے ہوتے ہیں۔ میچ ہسٹری سے گنا گیا۔',
     'restrict.PlayerMinLevelRestriction': 'لیول {n} درکار ہے', 'restrict.PlayerAvailableChampionRestriction': '{n} اپنے چیمپئن درکار ہیں',
-    'restrict.QueueDisabled': 'Riot نے قطار عارضی طور پر بند کی ہے', 'restrict.PlayerRankedSuspensionRestriction': 'رینکڈ پر پابندی',
+    'restrict.QueueDisabled': 'Riot نے رینکڈ ابھی بند کیا ہے', 'restrict.PlayerRankedSuspensionRestriction': 'رینکڈ پر پابندی',
     'restrict.PlayerTimedRestriction': 'عارضی پابندی (جیسے LeaverBuster)', 'restrict.PlayerLeaverBustedRestriction': 'LeaverBuster پابندی',
     'restrict.PlayerLeaverQueueLockoutRestriction': 'LeaverBuster قطار انتظار', 'restrict.PlayerLeaverTaintedWarningRestriction': 'LeaverBuster انتباہ باقی',
     'restrict.PlayerBannedRestriction': 'اکاؤنٹ پر پابندی', 'restrict.PlayerInGameRestriction': 'اس وقت گیم میں', 'restrict.PlayerMinorRestriction': 'کھیلنے کے وقت کی حد (نابالغوں کا تحفظ)',

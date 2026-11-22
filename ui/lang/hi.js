@@ -26,7 +26,7 @@
     'rk.cleared': 'अनलॉक', 'rk.blocked': 'ब्लॉक', 'rk.riot': 'Riot: {q}', 'rk.until': ' {date} तक',
     'rk.normals': 'नॉर्मल', 'rk.normals10': '10 नॉर्मल गेम (Rift)', 'rk.normalsNote': 'नए अकाउंट को रैंक्ड से पहले Summoner’s Rift पर 10 नॉर्मल PvP गेम खेलने होते हैं। मैच हिस्ट्री से गिना गया।',
     'restrict.PlayerMinLevelRestriction': 'लेवल {n} चाहिए', 'restrict.PlayerAvailableChampionRestriction': '{n} अपने चैंपियन चाहिए',
-    'restrict.QueueDisabled': 'Riot ने क्यू अभी बंद की है', 'restrict.PlayerRankedSuspensionRestriction': 'रैंक्ड पर रोक',
+    'restrict.QueueDisabled': 'Riot ने रैंक्ड अभी बंद किया है', 'restrict.PlayerRankedSuspensionRestriction': 'रैंक्ड पर रोक',
     'restrict.PlayerTimedRestriction': 'समय-सीमित रोक (जैसे LeaverBuster)', 'restrict.PlayerLeaverBustedRestriction': 'LeaverBuster रोक',
     'restrict.PlayerLeaverQueueLockoutRestriction': 'LeaverBuster क्यू देरी', 'restrict.PlayerLeaverTaintedWarningRestriction': 'LeaverBuster चेतावनी बाकी',
     'restrict.PlayerBannedRestriction': 'अकाउंट बैन', 'restrict.PlayerInGameRestriction': 'अभी गेम में', 'restrict.PlayerMinorRestriction': 'खेलने के समय की सीमा (नाबालिग सुरक्षा)',

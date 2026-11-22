@@ -284,6 +284,8 @@ function decayWarning(a) {
 // Riot's own answer (incl. bans, leaver locks …) is used on top.
 const OWN_REASONS = ['PlayerMinLevelRestriction', 'PlayerAvailableChampionRestriction'];
 function reasonText(x) {
+  // a LeaverBuster message about the low priority queue reads like the queue wait itself
+  if (/^LeaverBuster.*low/i.test(x.code || '')) x = { ...x, code: 'LowPriorityQueue' };
   const args = x.args || {};
   const n = args.playerMinLevelRestriction || args.playerAvailableChampionRestriction;
   const key = 'restrict.' + x.code;
@@ -294,7 +296,8 @@ function reasonText(x) {
   return txt + (x.until > Date.now() ? t('rk.until', { date: new Date(x.until).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }) : '');
 }
 function rankedStatus(a) {
-  if (a.placeholder || a.level == null) return null;
+  // the PBE has no ranked queues at all: nothing to be "ready" for
+  if (a.placeholder || a.level == null || a.region === 'PBE') return null;
   const champs = a.profile && a.profile.champs;
   const lvlOk = a.level >= 30;
   const chOk = champs == null ? null : champs >= 20;

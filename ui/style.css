@@ -737,8 +737,8 @@ body.locked #passBox { background: var(--bg); }
 /* match history: storage used + delete everything */
 .mh-store { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .mh-store svg { width: 14px; height: 14px; }
-.icon-btn { display: inline-grid; place-items: center; width: 30px; padding: 0; }
-.icon-btn svg { width: 15px; height: 15px; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0 !important; align-self: center; line-height: 0; }
+.icon-btn svg { width: 15px; height: 15px; display: block; }
 .icon-btn:disabled { opacity: .35; cursor: default; }
 /* confirm dialog with a big red warning (things that can't be undone) */
 .danger-banner { display: flex; align-items: center; gap: 12px; margin: -4px 0 14px; padding: 12px 14px; border-radius: 10px;

@@ -26,7 +26,7 @@
     'rk.cleared': 'открыто', 'rk.blocked': 'закрыто', 'rk.riot': 'Riot: {q}', 'rk.until': ' до {date}',
     'rk.normals': 'Обычные', 'rk.normals10': '10 обычных игр (Ущелье)', 'rk.normalsNote': 'Новым аккаунтам нужно сыграть 10 обычных PvP-игр на Ущелье призывателей перед рейтинговыми. Подсчитано по истории матчей.',
     'restrict.PlayerMinLevelRestriction': 'Нужен {n} уровень', 'restrict.PlayerAvailableChampionRestriction': 'Нужно {n} своих чемпионов',
-    'restrict.QueueDisabled': 'Очередь временно отключена Riot', 'restrict.PlayerRankedSuspensionRestriction': 'Запрет на рейтинговые',
+    'restrict.QueueDisabled': 'Riot сейчас закрыл рейтинговые игры', 'restrict.PlayerRankedSuspensionRestriction': 'Запрет на рейтинговые',
     'restrict.PlayerTimedRestriction': 'Временная блокировка (напр. LeaverBuster)', 'restrict.PlayerLeaverBustedRestriction': 'Блокировка LeaverBuster',
     'restrict.PlayerLeaverQueueLockoutRestriction': 'Ожидание очереди LeaverBuster', 'restrict.PlayerLeaverTaintedWarningRestriction': 'Непринятое предупреждение LeaverBuster',
     'restrict.PlayerBannedRestriction': 'Аккаунт заблокирован', 'restrict.PlayerInGameRestriction': 'Сейчас в игре', 'restrict.PlayerMinorRestriction': 'Ограничение времени игры (защита несовершеннолетних)',

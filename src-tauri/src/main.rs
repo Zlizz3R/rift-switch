@@ -700,10 +700,11 @@ async fn tick_inner(my_gen: u64) {
         // profile details of the signed-in account, every 5 minutes
         if new_puuid || with(|c| now - c.last_profile_at > 300_000) {
             with(|c| c.last_profile_at = now);
-            let (p, hs, elig) = tokio::join!(
+            let (p, hs, elig, notices) = tokio::join!(
                 riot::profile_data(&cur),
                 riot::history_summary(&id),
-                riot::ranked_eligibility()
+                riot::ranked_eligibility(),
+                riot::leaver_notices()
             );
             if stale() {
                 return;
@@ -717,8 +718,9 @@ async fn tick_inner(my_gen: u64) {
                         .unwrap_or_default();
                     prof.extend(p);
                     a.insert("profile".into(), Value::Object(prof));
-                    if let Some((check, pens)) = elig {
+                    if let Some((check, mut pens)) = elig {
                         a.insert("rankedCheck".into(), check);
+                        pens.extend(notices);
                         ops::set_penalties(a, pens, now);
                     }
                 }

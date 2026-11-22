@@ -26,7 +26,7 @@
     'rk.cleared': '已解锁', 'rk.blocked': '已锁定', 'rk.riot': 'Riot：{q}', 'rk.until': ' 至 {date}',
     'rk.normals': '匹配', 'rk.normals10': '10 场匹配（召唤师峡谷）', 'rk.normalsNote': '新账号需要先在召唤师峡谷打 10 场匹配才能打排位。根据比赛记录统计。',
     'restrict.PlayerMinLevelRestriction': '需要 {n} 级', 'restrict.PlayerAvailableChampionRestriction': '需要拥有 {n} 个英雄',
-    'restrict.QueueDisabled': 'Riot 暂时关闭了该队列', 'restrict.PlayerRankedSuspensionRestriction': '排位禁赛',
+    'restrict.QueueDisabled': 'Riot 目前关闭了排位', 'restrict.PlayerRankedSuspensionRestriction': '排位禁赛',
     'restrict.PlayerTimedRestriction': '限时封禁（如挂机惩罚）', 'restrict.PlayerLeaverBustedRestriction': '挂机惩罚',
     'restrict.PlayerLeaverQueueLockoutRestriction': '挂机惩罚排队等待', 'restrict.PlayerLeaverTaintedWarningRestriction': '挂机警告未确认',
     'restrict.PlayerBannedRestriction': '账号被封禁', 'restrict.PlayerInGameRestriction': '正在游戏中', 'restrict.PlayerMinorRestriction': '游戏时长限制（未成年人保护）',

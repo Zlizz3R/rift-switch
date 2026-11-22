@@ -26,7 +26,7 @@
     'rk.cleared': 'liberado', 'rk.blocked': 'bloqueado', 'rk.riot': 'Riot: {q}', 'rk.until': ' até {date}',
     'rk.normals': 'Normais', 'rk.normals10': '10 partidas normais (Summoner’s Rift)', 'rk.normalsNote': 'Contas novas precisam jogar 10 partidas normais PvP no Summoner’s Rift antes da ranqueada. Contado pelo histórico.',
     'restrict.PlayerMinLevelRestriction': 'Nível {n} necessário', 'restrict.PlayerAvailableChampionRestriction': '{n} campeões próprios necessários',
-    'restrict.QueueDisabled': 'Fila desativada pela Riot', 'restrict.PlayerRankedSuspensionRestriction': 'Suspensão da ranqueada',
+    'restrict.QueueDisabled': 'A Riot fechou a ranqueada no momento', 'restrict.PlayerRankedSuspensionRestriction': 'Suspensão da ranqueada',
     'restrict.PlayerTimedRestriction': 'Bloqueio temporário (ex. LeaverBuster)', 'restrict.PlayerLeaverBustedRestriction': 'Bloqueio do LeaverBuster',
     'restrict.PlayerLeaverQueueLockoutRestriction': 'Espera de fila do LeaverBuster', 'restrict.PlayerLeaverTaintedWarningRestriction': 'Aviso do LeaverBuster pendente',
     'restrict.PlayerBannedRestriction': 'Conta banida', 'restrict.PlayerInGameRestriction': 'Em partida agora', 'restrict.PlayerMinorRestriction': 'Limite de tempo de jogo (proteção de menores)',
