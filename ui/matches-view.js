@@ -25,28 +25,49 @@ function rankCell(r) {
 // ---------- details of one game (click a game) ----------
 const k1 = n => (Math.abs(n) >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n));
 const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + k1(Math.abs(n));
-function goldChart(g, left) {
-  // blue minus red (left minus right) team gold per minute
-  const idx = side => g.players.map((p, i) => (p.team === side ? i : -1)).filter(i => i >= 0);
-  const L = idx(left), R = g.players.map((_, i) => i).filter(i => !L.includes(i));
-  const diff = g.gold.map(f => L.reduce((s, i) => s + (f[i] || 0), 0) - R.reduce((s, i) => s + (f[i] || 0), 0));
+// a lead over the game: above the middle line the left side is ahead, below the right side
+// (teams: blue / red; two players: gold / light blue). Hovering shows the lead at that minute.
+function diffChart(diff, id, cls) {
   const max = Math.max(1000, ...diff.map(Math.abs));
   const W = 600, H = 120, x = i => (i / Math.max(1, diff.length - 1)) * W, y = v => H / 2 - (v / max) * (H / 2 - 6);
   const pts = diff.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const marks = [10, 15, 20, 25, 30, 35, 40].filter(m => m < diff.length).map(m => `<line x1="${x(m)}" x2="${x(m)}" y1="0" y2="${H}" class="gl"/>`).join('');
+  const ms = [10, 15, 20, 25, 30, 35, 40].filter(m => m < diff.length);
   // minute labels as text under the chart (inside the stretched SVG they would be distorted)
-  const labels = [10, 15, 20, 25, 30, 35, 40].filter(m => m < diff.length).map(m => `<span style="left:${(100 * m / Math.max(1, diff.length - 1)).toFixed(2)}%">${m}′</span>`).join('');
-  return `<div class="det-chart">
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${marks}
+  const labels = ms.map(m => `<span style="left:${(100 * m / Math.max(1, diff.length - 1)).toFixed(2)}%">${m}′</span>`).join('');
+  return `<div class="det-chart ${cls}">
+    <div class="dc-plot" data-diff="${diff.join(',')}"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${ms.map(m => `<line x1="${x(m)}" x2="${x(m)}" y1="0" y2="${H}" class="gl"/>`).join('')}
       <line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" class="zero"/>
-      <clipPath id="up${g.id}"><rect x="0" y="0" width="${W}" height="${H / 2}"/></clipPath>
-      <clipPath id="dn${g.id}"><rect x="0" y="${H / 2}" width="${W}" height="${H / 2}"/></clipPath>
-      <polygon points="0,${H / 2} ${pts} ${W},${H / 2}" class="a-blue" clip-path="url(#up${g.id})"/>
-      <polygon points="0,${H / 2} ${pts} ${W},${H / 2}" class="a-red" clip-path="url(#dn${g.id})"/>
-      <polyline points="${pts}" class="ln"/></svg>
+      <clipPath id="up${id}"><rect x="0" y="0" width="${W}" height="${H / 2}"/></clipPath>
+      <clipPath id="dn${id}"><rect x="0" y="${H / 2}" width="${W}" height="${H / 2}"/></clipPath>
+      <polygon points="0,${H / 2} ${pts} ${W},${H / 2}" class="a-up" clip-path="url(#up${id})"/>
+      <polygon points="0,${H / 2} ${pts} ${W},${H / 2}" class="a-dn" clip-path="url(#dn${id})"/>
+      <polyline points="${pts}" class="ln"/></svg><i class="dc-cur" hidden></i><span class="dc-tip" hidden></span></div>
     <div class="det-mins">${labels}</div>
     <div class="det-scale"><span>±${k1(max)}</span><span>${t('det.goldEnd')}: ${sign(diff[diff.length - 1])}</span></div></div>`;
 }
+function goldChart(g, left) {
+  // blue minus red (left minus right) team gold per minute
+  const L = g.players.map((p, i) => (p.team === left ? i : -1)).filter(i => i >= 0);
+  const R = g.players.map((_, i) => i).filter(i => !L.includes(i));
+  const diff = g.gold.map(f => L.reduce((s, i) => s + (f[i] || 0), 0) - R.reduce((s, i) => s + (f[i] || 0), 0));
+  return diffChart(diff, 't' + g.id, 'team');
+}
+// hover: a line and the lead at that minute
+document.addEventListener('mousemove', e => {
+  const plot = e.target.closest && e.target.closest('.dc-plot');
+  document.querySelectorAll('.dc-plot.hov').forEach(p => { if (p !== plot) { p.classList.remove('hov'); p.querySelector('.dc-cur').hidden = p.querySelector('.dc-tip').hidden = true; } });
+  if (!plot) return;
+  const d = plot.dataset.diff.split(',').map(Number);
+  const r = plot.getBoundingClientRect();
+  const i = Math.max(0, Math.min(d.length - 1, Math.round(((e.clientX - r.left) / Math.max(1, r.width)) * (d.length - 1))));
+  const left = (100 * i) / Math.max(1, d.length - 1);
+  const cur = plot.querySelector('.dc-cur'), tip = plot.querySelector('.dc-tip');
+  plot.classList.add('hov');
+  cur.hidden = tip.hidden = false;
+  cur.style.left = left + '%';
+  tip.innerHTML = `${i}′ <b class="${d[i] > 0 ? 'up' : d[i] < 0 ? 'down' : ''}">${sign(d[i])}</b>`;
+  tip.style.left = Math.min(92, Math.max(8, left)) + '%';
+});
 function detailsHtml(g, as, mine) {
   const { a, b, roles } = lineUp(g, mine);
   const mins = Math.max(1, g.dur / 60);
@@ -146,24 +167,17 @@ function compareHtml(g, a, b, roles, mine) {
     const v1 = x || 0, v2 = y || 0, max = Math.max(v1, v2) || 1;
     const better = v1 === v2 ? 0 : (v1 > v2) !== !!lowBetter ? 1 : 2;
     const show = v => (fmt ? fmt(v) : fmtN(v));
-    return `<div class="cmp-row"><b class="${better === 1 ? 'up' : ''}">${show(v1)}</b><span class="cmp-bar l"><i style="width:${Math.round(100 * v1 / max)}%"></i></span>
-      <span class="cmp-l">${key.includes('.') ? t(key) : key}</span><span class="cmp-bar r"><i style="width:${Math.round(100 * v2 / max)}%"></i></span><b class="${better === 2 ? 'up' : ''}">${show(v2)}</b></div>`;
+    return `<div class="cmp-row"><span class="cmp-bar l"><i style="width:${Math.round(100 * v1 / max)}%"></i></span><b class="v1 ${better === 1 ? 'up' : ''}">${show(v1)}</b>
+      <span class="cmp-l">${key.includes('.') ? t(key) : key}</span><b class="v2 ${better === 2 ? 'up' : ''}">${show(v2)}</b><span class="cmp-bar r"><i style="width:${Math.round(100 * v2 / max)}%"></i></span></div>`;
   }).join('');
   // their gold over the game (from the timeline)
   let chart = '';
   const i1 = g.players.indexOf(P), i2 = g.players.indexOf(Q);
   if (g.gold && g.gold.length > 2) {
     const s1 = g.gold.map(f => f[i1] || 0), s2 = g.gold.map(f => f[i2] || 0);
-    const max = Math.max(1000, ...s1, ...s2);
-    const W = 600, H = 110, x = i => (i / Math.max(1, s1.length - 1)) * W, y = v => H - 4 - (v / max) * (H - 10);
-    const line = s => s.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-    const marks = [10, 15, 20, 25, 30, 35, 40].filter(m => m < s1.length);
     const at = m => `<span>${t('det.goldAt', { m })} <b class="${s1[m] > s2[m] ? 'up' : s1[m] < s2[m] ? 'down' : ''}">${sign(s1[m] - s2[m])}</b></span>`;
-    chart = `<div class="det-chart cmp-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-        ${marks.map(m => `<line x1="${x(m)}" x2="${x(m)}" y1="0" y2="${H}" class="gl"/>`).join('')}
-        <polyline points="${line(s2)}" class="ln2"/><polyline points="${line(s1)}" class="ln1"/></svg>
-      <div class="det-mins">${marks.map(m => `<span style="left:${(100 * m / Math.max(1, s1.length - 1)).toFixed(2)}%">${m}′</span>`).join('')}</div>
-      <div class="det-scale cmp-at">${[10, 15, 20].filter(m => m < s1.length).map(at).join('')}<span>${t('det.goldEnd')} <b class="${P.gold > Q.gold ? 'up' : P.gold < Q.gold ? 'down' : ''}">${sign(P.gold - Q.gold)}</b></span></div></div>`;
+    chart = `<div class="det-h cmp-gh">${t('det.goldLead', { a: esc(P.name || '?'), b: esc(Q.name || '?') })}</div>${diffChart(s1.map((v, i) => v - s2[i]), 'c' + g.id, 'cmp-chart')}
+      <div class="det-scale cmp-at">${[10, 15, 20].filter(m => m < s1.length).map(at).join('')}</div>`;
   }
   return `<div class="cmp-head">${pick('l', P)}<span class="cmp-vs">VS</span>${pick('r', Q)}</div>
     <div class="cmp-rows">${rows}</div>${chart}`;
@@ -429,7 +443,8 @@ function gameRow(g, as) {
   const owner = S.accounts.find(a => a.puuid === ownerId);
   const others = g.owners.slice(1).map(id => S.accounts.find(a => a.puuid === id)).filter(Boolean);
   const mine = new Set(g.owners);
-  return `<div class="mh-row ${res}" data-owner="${esc(ownerId)}" data-gid="${esc(g.id)}">
+  return `<div class="mh-row ${res}${mh.open.has(String(g.id)) ? ' open' : ''}" data-owner="${esc(ownerId)}" data-gid="${esc(g.id)}">
+    <svg class="mh-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
     <div class="mh-meta">
       <b class="mh-q">${esc(queueLabel(g))}</b>
       <span title="${esc(new Date(g.t).toLocaleString(locale()))}">${esc(ago(g.t))}</span>

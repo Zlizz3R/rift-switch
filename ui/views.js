@@ -542,9 +542,9 @@ function helperHtml() {
     ${load && load.total ? `<div class="h-load"><span>${t('live.preload', { n: load.done, total: load.total })}</span><span class="bar"><i style="width:${Math.round(100 * load.done / load.total)}%"></i></span></div>` : ''}
     ${res && res.length ? `<div class="h-sub">${t('live.bestVs', { name: enemyName })}</div><div class="h-results">${res.map((r, i) => `<div class="h-res ${i === 0 && r.wr != null ? 'best' : ''}"${r.rating != null ? ` title="${esc(t('live.ratingT', { r: r.rating.toFixed(1) }))}"` : ''}>
       <img src="${champIcon(r.id)}" alt=""><b>${esc((champById(r.id) || {}).name || '')}</b>
-      <span class="bar"><i style="width:${r.wr == null ? 0 : Math.max(0, Math.min(100, (r.wr - 40) * 5))}%"></i></span>
+      <span class="wr ${r.wr >= 52 ? 'good' : r.wr != null && r.wr <= 48 ? 'bad' : ''}">${r.wr === undefined ? '<i class="dots">…</i>' : r.wr == null ? '–' : Math.round(r.wr) + '%'}</span>
       <span class="rt">${r.rating != null ? r.rating.toFixed(1) : ''}</span>
-      <span class="wr ${r.wr >= 52 ? 'good' : r.wr != null && r.wr <= 48 ? 'bad' : ''}">${r.wr === undefined ? '<i class="dots">…</i>' : r.wr == null ? '–' : Math.round(r.wr) + '%'}</span></div>`).join('')}
+      <span class="bar"><i style="width:${r.wr == null ? 0 : Math.max(0, Math.min(100, (r.wr - 40) * 5))}%"></i></span></div>`).join('')}
       <p class="fine">${t('live.source')}</p></div>` : ''}
   </div>`;
 }
