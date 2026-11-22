@@ -7,8 +7,21 @@ const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 const RUN_NAME: &str = "Rift Switch";
 
 pub fn set_autostart(on: bool, exe: &Path) {
-    use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
-    let Ok(key) = winreg::RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(RUN_KEY, KEY_SET_VALUE) else { return };
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_QUERY_VALUE, KEY_SET_VALUE};
+    let Ok(key) = winreg::RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(RUN_KEY, KEY_SET_VALUE | KEY_QUERY_VALUE) else { return };
+    // the old Electron version's entry ("electron.app.…" pointing at Rift Switch) would start a copy that no longer exists
+    let old: Vec<String> = key
+        .enum_values()
+        .flatten()
+        .filter(|(name, v)| {
+            let cmd = v.to_string().to_lowercase();
+            name.starts_with("electron.app.") && (cmd.contains("lol-switcher") || cmd.contains("rift-switch") || cmd.contains("rift switch"))
+        })
+        .map(|(name, _)| name)
+        .collect();
+    for name in old {
+        let _ = key.delete_value(name);
+    }
     if on {
         let _ = key.set_value(RUN_NAME, &format!("\"{}\" --hidden", exe.display()));
     } else {
