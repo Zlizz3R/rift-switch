@@ -36,7 +36,7 @@ function goldChart(g, left) {
   const marks = [10, 15, 20, 25, 30, 35, 40].filter(m => m < diff.length).map(m => `<line x1="${x(m)}" x2="${x(m)}" y1="0" y2="${H}" class="gl"/>`).join('');
   // minute labels as text under the chart (inside the stretched SVG they would be distorted)
   const labels = [10, 15, 20, 25, 30, 35, 40].filter(m => m < diff.length).map(m => `<span style="left:${(100 * m / Math.max(1, diff.length - 1)).toFixed(2)}%">${m}′</span>`).join('');
-  return `<div class="det-chart"><div class="det-h">${t('det.goldDiff')}</div>
+  return `<div class="det-chart">
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${marks}
       <line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" class="zero"/>
       <clipPath id="up${g.id}"><rect x="0" y="0" width="${W}" height="${H / 2}"/></clipPath>
@@ -87,7 +87,7 @@ function detailsHtml(g, as, mine) {
   if (roles) {
     const at = (p, m) => { if (!g.gold || g.gold.length <= m) return null; const i = g.players.indexOf(p); return g.gold[m][i]; };
     const cell = (v, fmt = sign) => `<span class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v == null ? '–' : fmt(v)}</span>`;
-    h2h = `<div class="det-h">${t('det.h2h')}</div><table class="det-h2h"><thead><tr><th></th>
+    h2h = `<table class="det-h2h"><thead><tr><th></th>
         ${g.gold && g.gold.length > 10 ? `<th>${t('det.goldAt', { m: 10 })}</th>` : ''}${g.gold && g.gold.length > 15 ? `<th>${t('det.goldAt', { m: 15 })}</th>` : ''}
         <th>${t('det.goldEnd')}</th><th>CS</th><th>${t('det.dmg')}</th><th>Level</th><th></th></tr></thead><tbody>${roles.map((r, i) => {
       const L = a[i], R = b[i];
@@ -101,12 +101,72 @@ function detailsHtml(g, as, mine) {
   }
   const left = Math.min(...g.players.map(p => p.team));
   const old = !g.v || g.v < 3;
-  return `<div class="mh-det">
+  // folding sections like the settings (several may be open); players open at first
+  const open = mh.secs.get(String(g.id)) || new Set(['players']);
+  const sec = (key, title, body) => body ? `<div class="det-g${open.has(key) ? ' open' : ''}" data-sec="${key}" role="button" tabindex="0"><span>${title}</span><svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+    <div class="det-body">${open.has(key) ? body : ''}</div>` : '';
+  return `<div class="mh-det" data-det="${esc(String(g.id))}">
     ${old ? `<p class="fine">${t('det.upgrading')}</p>` : ''}
-    ${table(a, 'l')}${table(b, 'r')}
-    ${h2h}
-    ${g.gold && g.gold.length > 2 ? goldChart(g, left) : ''}
+    ${sec('players', t('det.players'), table(a, 'l') + table(b, 'r'))}
+    ${sec('h2h', t('det.h2h'), h2h)}
+    ${sec('gold', t('det.goldDiff'), g.gold && g.gold.length > 2 ? goldChart(g, left) : '')}
+    ${sec('compare', t('det.compare'), compareHtml(g, a, b, roles, mine))}
   </div>`;
+}
+
+// ---------- two players side by side (freely chosen) ----------
+const CMP_ROWS = [
+  ['det.kills', p => p.k], ['det.deaths', p => p.d, true], ['det.assists', p => p.a],
+  ['KDA', p => (p.d ? (p.k + p.a) / p.d : p.k + p.a), false, v => v.toFixed(2)],
+  ['det.dmg', p => p.dmg], ['det.phys', p => p.x && p.x.phys], ['det.magic', p => p.x && p.x.magic], ['det.true', p => p.x && p.x.true],
+  ['det.taken', p => p.x && p.x.taken], ['det.mitig', p => p.x && p.x.mitig], ['det.heal', p => p.x && p.x.heal],
+  ['mh.gold', p => p.gold], ['det.spent', p => p.x && p.x.spent],
+  ['CS', p => p.cs], ['det.csMin', (p, g) => p.cs / Math.max(1, g.dur / 60), false, v => v.toFixed(1)],
+  ['det.vision', p => p.vis], ['det.wards', p => p.x && p.x.wards], ['det.wardsKilled', p => p.x && p.x.wardsKilled], ['det.pinks', p => p.x && p.x.pinks],
+  ['det.cc', p => p.x && p.x.cc, false, v => v + ' s'], ['det.turretDmg', p => p.x && p.x.turretDmg], ['det.obj', p => p.x && p.x.obj],
+  ['det.spree', p => p.x && p.x.spree], ['det.crit', p => p.x && p.x.crit], ['Level', p => p.lvl],
+];
+function compareHtml(g, a, b, roles, mine) {
+  const ps = [...a, ...b];
+  if (ps.length < 2) return '';
+  // first time: me against my lane opponent (or the first of the other team)
+  let pair = mh.cmp.get(String(g.id));
+  if (!pair) {
+    const me = ps.find(p => mine.has(p.puuid)) || ps[0];
+    const mySide = a.includes(me) ? a : b, other = mySide === a ? b : a;
+    const vs = (roles && other[mySide.indexOf(me)]) || other.find(p => p.pos && p.pos === me.pos) || other[0] || ps.find(p => p !== me);
+    pair = [ps.indexOf(me), ps.indexOf(vs)];
+  }
+  const [P, Q] = [ps[pair[0]] || ps[0], ps[pair[1]] || ps[1]];
+  const pick = (which, sel) => `<label class="cmp-pick ${which}"><img src="${CHAMP_ICON(sel.champ)}" alt=""><select data-cmp="${which === 'l' ? 0 : 1}">${ps.map((p, i) => `<option value="${i}" ${p === sel ? 'selected' : ''}>${esc((p.name || '?') + (champName(p.champ) ? ' – ' + champName(p.champ) : ''))}</option>`).join('')}</select></label>`;
+  const fmtN = v => (Math.abs(v) >= 10000 ? k1(v) : Math.round(v).toLocaleString(locale()));
+  const rows = CMP_ROWS.map(([key, f, lowBetter, fmt]) => {
+    const x = f(P, g), y = f(Q, g);
+    if (x == null && y == null) return '';
+    const v1 = x || 0, v2 = y || 0, max = Math.max(v1, v2) || 1;
+    const better = v1 === v2 ? 0 : (v1 > v2) !== !!lowBetter ? 1 : 2;
+    const show = v => (fmt ? fmt(v) : fmtN(v));
+    return `<div class="cmp-row"><b class="${better === 1 ? 'up' : ''}">${show(v1)}</b><span class="cmp-bar l"><i style="width:${Math.round(100 * v1 / max)}%"></i></span>
+      <span class="cmp-l">${key.includes('.') ? t(key) : key}</span><span class="cmp-bar r"><i style="width:${Math.round(100 * v2 / max)}%"></i></span><b class="${better === 2 ? 'up' : ''}">${show(v2)}</b></div>`;
+  }).join('');
+  // their gold over the game (from the timeline)
+  let chart = '';
+  const i1 = g.players.indexOf(P), i2 = g.players.indexOf(Q);
+  if (g.gold && g.gold.length > 2) {
+    const s1 = g.gold.map(f => f[i1] || 0), s2 = g.gold.map(f => f[i2] || 0);
+    const max = Math.max(1000, ...s1, ...s2);
+    const W = 600, H = 110, x = i => (i / Math.max(1, s1.length - 1)) * W, y = v => H - 4 - (v / max) * (H - 10);
+    const line = s => s.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const marks = [10, 15, 20, 25, 30, 35, 40].filter(m => m < s1.length);
+    const at = m => `<span>${t('det.goldAt', { m })} <b class="${s1[m] > s2[m] ? 'up' : s1[m] < s2[m] ? 'down' : ''}">${sign(s1[m] - s2[m])}</b></span>`;
+    chart = `<div class="det-chart cmp-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+        ${marks.map(m => `<line x1="${x(m)}" x2="${x(m)}" y1="0" y2="${H}" class="gl"/>`).join('')}
+        <polyline points="${line(s2)}" class="ln2"/><polyline points="${line(s1)}" class="ln1"/></svg>
+      <div class="det-mins">${marks.map(m => `<span style="left:${(100 * m / Math.max(1, s1.length - 1)).toFixed(2)}%">${m}′</span>`).join('')}</div>
+      <div class="det-scale cmp-at">${[10, 15, 20].filter(m => m < s1.length).map(at).join('')}<span>${t('det.goldEnd')} <b class="${P.gold > Q.gold ? 'up' : P.gold < Q.gold ? 'down' : ''}">${sign(P.gold - Q.gold)}</b></span></div></div>`;
+  }
+  return `<div class="cmp-head">${pick('l', P)}<span class="cmp-vs">VS</span>${pick('r', Q)}</div>
+    <div class="cmp-rows">${rows}</div>${chart}`;
 }
 
 // ---------- the ten players ----------
@@ -159,7 +219,7 @@ function rankTip(r) {
   const [tier, div, lp] = r;
   return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
 }
-let mh = { open: new Set(), pin: 0, ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440].includes(g.q) ? ' ' + t('mh.ranked') : '');
@@ -443,6 +503,25 @@ $('mhList').addEventListener('click', e => {
   if (!row) return;
   const id = row.dataset.gid;
   if (mh.open.has(id)) mh.open.delete(id); else mh.open.add(id);
+  renderMatches();
+});
+// details: fold a section open/closed
+function toggleSec(head) {
+  const det = head.closest('[data-det]');
+  const id = det.dataset.det;
+  const open = new Set(mh.secs.get(id) || ['players']);
+  if (open.has(head.dataset.sec)) open.delete(head.dataset.sec); else open.add(head.dataset.sec);
+  mh.secs.set(id, open);
+  renderMatches();
+}
+$('mhList').addEventListener('click', e => { const h = e.target.closest('[data-sec]'); if (h) toggleSec(h); });
+$('mhList').addEventListener('keydown', e => { const h = e.target.closest('[data-sec]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleSec(h); } });
+$('mhList').addEventListener('change', e => {
+  const sel = e.target.closest('[data-cmp]');
+  if (!sel) return;
+  const det = sel.closest('[data-det]');
+  const both = [...det.querySelectorAll('[data-cmp]')].map(s => Number(s.value));
+  mh.cmp.set(det.dataset.det, both);
   renderMatches();
 });
 // a player's name: "open with" menu (op.gg, Porofessor …), region of the owning account

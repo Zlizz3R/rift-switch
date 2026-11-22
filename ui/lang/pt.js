@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'det.players': "Jogadores", 'det.compare': "Comparar dois jogadores", 'det.kills': "Abates", 'det.deaths': "Mortes", 'det.assists': "Assistências", 'det.phys': "Dano físico", 'det.magic': "Dano mágico", 'det.true': "Dano verdadeiro", 'det.mitig': "Dano mitigado", 'det.heal': "Cura", 'det.spent': "Ouro gasto", 'det.csMin': "CS / min", 'det.wards': "Sentinelas colocadas", 'det.wardsKilled': "Sentinelas destruídas", 'det.pinks': "Sentinelas de controle", 'det.cc': "Controle de grupo", 'det.turretDmg': "Dano a torres", 'det.obj': "Dano a objetivos", 'det.spree': "Maior série", 'det.crit': "Maior crítico",
     'tile.pbeTitle': "Servidor de testes (PBE)", 'tile.pbeText': "Sem ranqueada – aqui você testa novidades", 'pen.lowPrio': "Baixa prioridade", 'pen.short': "Penalidade",
     'live.vsWho': "Contra quem você joga?", 'live.ratingT': "Nota de counter {r} (counterstats.net) – quanto maior, mais fácil a rota",
     'live.preloadBtn': "Pré-carregar todos os confrontos", 'live.preloadT': "Carrega cada campeão que seu grupo enfrenta nesta rota segundo o counterstats.net (normalmente 30–50 cada) – melhor clicar na fila. Fica salvo por um dia.",

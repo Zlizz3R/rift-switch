@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'det.players': "اللاعبون", 'det.compare': "قارن بين لاعبَين", 'det.kills': "قتل", 'det.deaths': "وفيات", 'det.assists': "مساعدات", 'det.phys': "ضرر مادي", 'det.magic': "ضرر سحري", 'det.true': "ضرر حقيقي", 'det.mitig': "ضرر مخفف", 'det.heal': "علاج", 'det.spent': "ذهب مُنفق", 'det.csMin': "CS / دقيقة", 'det.wards': "مراقبات موضوعة", 'det.wardsKilled': "مراقبات مدمرة", 'det.pinks': "مراقبات تحكم", 'det.cc': "تحكم بالحشود", 'det.turretDmg': "ضرر للأبراج", 'det.obj': "ضرر للأهداف", 'det.spree': "أطول سلسلة قتل", 'det.crit': "أكبر ضربة حرجة",
     'tile.pbeTitle': "خادم الاختبار (PBE)", 'tile.pbeText': "لا يوجد تصنيف – هنا تجرب المحتوى الجديد", 'pen.lowPrio': "أولوية منخفضة", 'pen.short': "عقوبة",
     'live.vsWho': "ضد من تلعب؟", 'live.ratingT': "تقييم المواجهة {r} (counterstats.net) – كلما ارتفع كان المسار أسهل",
     'live.preloadBtn': "تحميل كل المواجهات مسبقًا", 'live.preloadT': "يحمّل كل بطل تواجهه مجموعتك في هذا المسار حسب counterstats.net (عادة 30–50 لكل بطل) – الأفضل الضغط أثناء الانتظار. يُحفظ يومًا.",

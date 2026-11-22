@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'det.players': "玩家", 'det.compare': "对比两名玩家", 'det.kills': "击杀", 'det.deaths': "死亡", 'det.assists': "助攻", 'det.phys': "物理伤害", 'det.magic': "魔法伤害", 'det.true': "真实伤害", 'det.mitig': "减免伤害", 'det.heal': "治疗", 'det.spent': "花费金币", 'det.csMin': "补刀 / 分", 'det.wards': "插眼", 'det.wardsKilled': "排眼", 'det.pinks': "控制守卫", 'det.cc': "控制时长", 'det.turretDmg': "对塔伤害", 'det.obj': "对目标伤害", 'det.spree': "最大连杀", 'det.crit': "最高暴击",
     'tile.pbeTitle': "测试服（PBE）", 'tile.pbeText': "没有排位——在这里试玩新内容", 'pen.lowPrio': "低优先级", 'pen.short': "处罚",
     'live.vsWho': "你的对手是谁？", 'live.ratingT': "克制评分 {r}（counterstats.net）——越高对线越轻松",
     'live.preloadBtn': "预加载全部对位", 'live.preloadT': "加载你的英雄池在该位置会遇到的每个对手（据 counterstats.net，通常每个 30–50 个）——最好在排队时点击。保存一天。",

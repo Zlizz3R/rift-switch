@@ -411,10 +411,30 @@ test('match history: a click opens the details (not on a name); names open "open
   assert.ok(app.visible('#siteMenu'));
   await app.click(app.$('.mh-row .mh-kda') || app.$('.mh-row .mh-meta'));
   assert.ok(app.$('.mh-det'), 'details open');
-  assert.ok(app.$('.det-h2h'), 'lane vs lane');
-  assert.equal(app.$$('.det-table').length, 2);
+  assert.equal(app.$$('.det-table').length, 2, 'players open at first');
+  assert.equal(app.$('.det-h2h'), null, 'other sections folded');
+  assert.deepEqual(app.$$('.det-g').map((h) => h.dataset.sec), ['players', 'h2h', 'compare'], 'no gold section without a timeline');
+  await app.click('[data-sec="h2h"]');
+  assert.ok(app.$('.det-h2h'), 'lane vs lane opens');
+  assert.ok(app.$('.mh-det'), 'a section head does not close the game');
+  await app.click('[data-sec="players"]');
+  assert.equal(app.$$('.det-table').length, 0, 'players fold');
   await app.click(app.$('.mh-row .mh-meta'));
   assert.equal(app.$('.mh-det'), null, 'closes again');
+}));
+
+test('match details: two freely chosen players compared, with their gold over time', () => withApp({ replies: mhReplies([game(1, { v: 3, gold: Array.from({ length: 20 }, (_, m) => Array.from({ length: 10 }, (_, i) => 500 + m * 400 + i * 10)) })]) }, async (app) => {
+  await app.click('#navMatches');
+  await app.click(app.$('.mh-row .mh-meta'));
+  await app.click('[data-sec="compare"]');
+  const sel = app.$$('[data-cmp]');
+  assert.equal(sel.length, 2);
+  assert.notEqual(sel[0].value, sel[1].value, 'two different players at first');
+  assert.ok(app.$$('.cmp-row').length >= 8, 'many stats');
+  assert.ok(app.$('.cmp-chart'), 'gold over time');
+  await app.type(sel[1], '9');
+  assert.equal(app.$$('[data-cmp]')[1].value, '9', 'kept after the change');
+  assert.ok(app.$('.mh-det'), 'still open');
 }));
 
 test('match history: multikill chip pins those games; the bin deletes after the red warning', () => withApp({ replies: mhReplies([game(1), game(2, { players: game(2).players.map((p) => ({ ...p, multi: 0 })) })]) }, async (app) => {
