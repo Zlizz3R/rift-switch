@@ -81,6 +81,8 @@ struct Core {
     no_persist: Option<String>,
     /// logins sealed with the app password: their key, only while unlocked
     login_key: Option<secrets::Key>,
+    /// "Load older games" running: (games done, games to do)
+    older: Option<(usize, usize)>,
 }
 
 impl Core {
@@ -121,6 +123,7 @@ impl Core {
             read_only,
             no_persist: None,
             login_key: None,
+            older: None,
         }
     }
 }
@@ -861,6 +864,81 @@ async fn tick_inner(my_gen: u64) {
 
 /// Fetches up to `max` missing game details from the client. Games the client can't give
 /// (twice) are skipped for the rest of this run.
+/// Every game the running client still has for each account of its server (page by page until
+/// nothing new comes), then the details of every game missing them. Stops when League closes or a
+/// game starts; the page refreshes as games come in.
+async fn load_everything() {
+    let go_on = || {
+        with(|c| {
+            c.live.client_up
+                && !c
+                    .live
+                    .phase
+                    .as_deref()
+                    .is_some_and(|p| IN_GAME.contains(&p))
+        })
+    };
+    let (accs, region) = with(|c| {
+        let region = c
+            .live
+            .puuid
+            .clone()
+            .and_then(|p| c.st.account(&p).map(|a| str_of(a, "region").to_string()))
+            .unwrap_or_default();
+        (c.st.accounts.clone(), region)
+    });
+    for acc in accs {
+        let (id, r) = (
+            str_of(&acc, "puuid").to_string(),
+            str_of(&acc, "region").to_string(),
+        );
+        if truthy(acc.get("placeholder")) || (!region.is_empty() && !r.is_empty() && r != region) {
+            continue;
+        }
+        for _ in 0..100 {
+            if !go_on() {
+                break;
+            }
+            let beg = with(|c| c.mh.known(&id));
+            let Some(list) = riot::match_list(&id, beg, beg + 20).await else {
+                break;
+            };
+            let added = with(|c| {
+                c.mh.note(&id, &list);
+                c.mh.known(&id) - beg
+            });
+            if list.is_empty() || added == 0 {
+                break; // the client has nothing older
+            }
+        }
+    }
+    emit("matches-changed", Value::Null);
+    let todo: Vec<String> = with(|c| {
+        let mut ids = c.mh.missing();
+        ids.extend(c.mh.outdated(usize::MAX));
+        ids.dedup();
+        ids
+    });
+    let total = todo.len();
+    with(|c| c.older = Some((0, total)));
+    for (i, chunk) in todo.chunks(4).enumerate() {
+        if !go_on() {
+            break;
+        }
+        fetch_games(chunk.to_vec()).await;
+        let done = ((i + 1) * 4).min(total);
+        with(|c| c.older = Some((done, total)));
+        if i % 2 == 1 {
+            emit("matches-changed", Value::Null);
+        }
+    }
+    with(|c| {
+        c.loading_older = false;
+        c.older = None;
+    });
+    emit("matches-changed", Value::Null);
+}
+
 async fn fill_games(max: usize) -> usize {
     let ids: Vec<String> = with(|c| {
         let failed = &c.failed_games;
@@ -1963,7 +2041,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 .map(String::from);
             with(|c| {
                 json!({ "index": c.mh.index_list(&accs, puuid.as_deref(), queue.as_deref()), "waiting": c.mh.missing().len(),
-                "loadingOlder": c.loading_older, "clientUp": c.live.client_up })
+                "loadingOlder": c.loading_older, "older": c.older.map(|(d, t)| json!([d, t])), "clientUp": c.live.client_up })
             })
         }
         // up to 500 games by id, read from disk outside the lock
@@ -2059,57 +2137,32 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             with(|c| json!({ "ranks": c.mh.ranks_for(&all), "pending": pending }))
         }
         // "Load older games": the next 20 games of every account the running client can see
+        // "Load older games": every game the client still has, for every account on its server, and
+        // all details of games stored without them – in the background, with progress on the button
         "matches-more" => {
-            let ok = with(|c| {
-                if c.loading_older || !c.live.client_up {
-                    return false;
+            let state = with(|c| {
+                if !c.live.client_up {
+                    return Some("offline");
+                }
+                if c.live
+                    .phase
+                    .as_deref()
+                    .is_some_and(|p| IN_GAME.contains(&p))
+                {
+                    return Some("inGame"); // not while you play
+                }
+                if c.loading_older {
+                    return Some("busy");
                 }
                 c.loading_older = true;
-                true
+                c.older = Some((0, 0));
+                None
             });
-            if !ok {
-                return json!({ "ok": false, "offline": !with(|c| c.live.client_up) });
+            if let Some(why) = state {
+                return json!({ "ok": false, "offline": why == "offline", "inGame": why == "inGame" });
             }
-            let (accs, region) = with(|c| {
-                let region = c
-                    .live
-                    .puuid
-                    .clone()
-                    .and_then(|p| c.st.account(&p).map(|a| str_of(a, "region").to_string()))
-                    .unwrap_or_default();
-                (c.st.accounts.clone(), region)
-            });
-            let mut added = 0;
-            for acc in accs {
-                let (id, r) = (str_of(&acc, "puuid"), str_of(&acc, "region"));
-                if truthy(acc.get("placeholder"))
-                    || (!region.is_empty() && !r.is_empty() && r != region)
-                {
-                    continue;
-                }
-                let beg = with(|c| c.mh.known(id));
-                if let Some(list) = riot::match_list(id, beg, beg + 20).await {
-                    added += with(|c| {
-                        c.mh.note(id, &list);
-                        c.mh.known(id) - beg
-                    });
-                }
-            }
-            // details: a few at a time so the client isn't flooded; the page refreshes as they come
-            tauri::async_runtime::spawn(async {
-                for _ in 0..40 {
-                    if with(|c| c.mh.missing().is_empty() || !c.live.client_up) {
-                        break;
-                    }
-                    if fill_games(4).await == 0 {
-                        break;
-                    }
-                    emit("matches-changed", Value::Null);
-                }
-                with(|c| c.loading_older = false);
-                emit("matches-changed", Value::Null);
-            });
-            json!({ "ok": true, "added": added })
+            tauri::async_runtime::spawn(load_everything());
+            json!({ "ok": true })
         }
         "update" => {
             if s(0) == "install" {

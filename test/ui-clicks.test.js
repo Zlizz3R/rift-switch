@@ -368,6 +368,18 @@ test('match history: every filter control works without errors', () => withApp({
   assert.equal(app.$$('.mh-row').length, 3);
 }));
 
+test('match history: "load older games" shows its progress, and waits until a game is over', () => withApp({ replies: { ...mhReplies([game(1)]), 'matches-more': { ok: false, inGame: true } } }, async (app) => {
+  await app.click('#navMatches');
+  await app.click('#mhMore');
+  assert.match(app.$('#toast').textContent, /Not during a game/);
+}));
+
+test('match history: progress on the button while everything loads', () => withApp({ replies: { ...mhReplies([game(1)]), matches: { ...mhReplies([game(1)]).matches, loadingOlder: true, older: [12, 40] } } }, async (app) => {
+  await app.click('#navMatches');
+  assert.equal(app.$('#mhMore').textContent, 'Loading 12 / 40 …');
+  assert.ok(app.$('#mhMore').disabled);
+}));
+
 // ---------- everything clickable ----------
 test('every button of every page can be clicked without a script error', () => withApp({ replies: mhReplies([game(1)]) }, async (app) => {
   const skip = '#close, #toTray, #min, #updBtn, #supportBtn, #navCoffee, #exportBtn, #importBtn';

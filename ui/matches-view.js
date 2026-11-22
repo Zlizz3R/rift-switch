@@ -207,7 +207,7 @@ async function loadMatches() {
         for (const g of (await api.matchesGet(lack.slice(i, i + 500))) || []) mh.cache.set(String(g.id), g);
       }
       const games = d.index.filter(r => mh.cache.has(r[0])).map(r => ({ ...mh.cache.get(r[0]), owners: r.slice(3) }));
-      mh.data = { games, waiting: d.waiting, loadingOlder: d.loadingOlder, clientUp: d.clientUp, assets: assets || {} };
+      mh.data = { games, waiting: d.waiting, loadingOlder: d.loadingOlder, older: d.older, clientUp: d.clientUp, assets: assets || {} };
     }
   } catch (e) { console.warn('matches', e); }
   mh.loading = false;
@@ -225,7 +225,7 @@ function renderMatches() {
   document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq === mh.filter.queue));
   // "Load older games": always at the top; greyed out (with the reason) while League is closed
   const more = $('mhMore');
-  more.textContent = d && d.loadingOlder ? t('mh.loadingOlder') : t('mh.more');
+  more.textContent = d && d.loadingOlder ? (d.older && d.older[1] ? t('mh.loadingCount', { n: d.older[0], total: d.older[1] }) : t('mh.loadingOlder')) : t('mh.more');
   // only blocked while it is already loading; without League a click explains why
   more.disabled = !!(d && d.loadingOlder);
   more.title = '';
@@ -434,8 +434,7 @@ $('viewMatches').addEventListener('click', async e => {
   e.target.closest('#mhMore').textContent = t('mh.loadingOlder');
   const r = await api.matchesMore();
   if (r && r.offline) toast(t('mh.moreOffline'), true);
-  if (r && r.ok) mh.limit = (mh.limit || 80) + 80;
-  if (r && r.ok && !r.added) toast(t('mh.noOlder'));
+  if (r && r.inGame) toast(t('mh.moreInGame'), true);
   loadMatches();
 });
 $('mhList').addEventListener('click', e => {
