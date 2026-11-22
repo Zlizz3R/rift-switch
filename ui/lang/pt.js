@@ -98,7 +98,6 @@
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
     'm.credSaveFailed': "Não foi possível salvar o login (criptografia ou disco). Nada foi alterado.",
-    'set.overlay': "Vantagem de ouro na partida", 'set.overlayT': "Uma barrinha no topo da partida: seu time contra o inimigo pelo valor dos itens comprados, e rota contra rota no Summoner's Rift. Também no ARAM e outros modos. Precisa do modo sem bordas ou janela.",
     'sw.title': "Entrando", 'sw.close': "Salvando o login, fechando o League", 'sw.client': "Iniciando o Riot Client", 'sw.signin': "Entrando na conta", 'sw.signin_typing': "Digitando o login", 'sw.signin_verify': "Confirmando o login", 'sw.play': "Clicando em Jogar", 'sw.launch': "O League está iniciando",
     'live.likelyLaner': "provavelmente na sua rota ({n} % das partidas dele) – a Riot esconde as posições inimigas",
     'pen.games': "{n} partidas", 'pen.perGame': "{m} min cada",

@@ -95,7 +95,6 @@
     'nav.tools': "工具",
     'set.theme': "外观",
     'm.credSaveFailed': "无法保存登录信息（加密或磁盘问题），未做任何更改。",
-    'set.overlay': "游戏内金币领先", 'set.overlayT': "游戏顶部的小条：按已购买装备价值比较你的队伍与敌方，召唤师峡谷中还有分路对比。ARAM 等模式也可用。需要无边框或窗口模式。",
     'sw.title': "正在登录", 'sw.close': "保存登录状态，关闭英雄联盟", 'sw.client': "启动 Riot 客户端", 'sw.signin': "登录中", 'sw.signin_typing': "正在输入登录信息", 'sw.signin_verify': "正在确认登录", 'sw.play': "点击“开始”", 'sw.launch': "英雄联盟启动中",
     'live.likelyLaner': "可能在你这条线（他 {n}% 的对局在这里）——Riot 隐藏了敌方位置",
     'pen.games': "{n} 局", 'pen.perGame': "每局 {m} 分钟",

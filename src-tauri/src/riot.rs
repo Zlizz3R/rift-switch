@@ -141,23 +141,6 @@ fn rc_lock() -> Option<Lock> {
     read_lock(&rc_dir().join("Config").join("lockfile"))
 }
 
-/// Riot's Live Client Data API of the running game (only on this PC, own certificate).
-pub async fn live_game_data() -> Option<Value> {
-    if offline_test() {
-        return None;
-    }
-    let r = local_client()
-        .get("https://127.0.0.1:2999/liveclientdata/allgamedata")
-        .timeout(Duration::from_millis(1500))
-        .send()
-        .await
-        .ok()?;
-    if !r.status().is_success() {
-        return None;
-    }
-    serde_json::from_str(&r.text().await.ok()?).ok()
-}
-
 fn local_client() -> &'static reqwest::Client {
     static C: OnceLock<reqwest::Client> = OnceLock::new();
     C.get_or_init(|| {

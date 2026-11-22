@@ -27,9 +27,6 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
 - **Streamer mode** – hides names, tags, icons, ranks … (you choose what).
 
 ### While you play (Live page)
-- **In-game gold lead** – a small see-through bar at the top of the game: your team against the enemy by the value
-  of the items bought (gold in the bank can't be seen), lane against lane on Summoner's Rift. Works in ARAM and other
-  modes too; needs borderless or windowed mode. It never takes the focus and lets every click through.
 - **Clash** – your next opponents with their ranks and a **Multi op.gg** button for all five.
 - **Lobby check** – ranks of your party, and of your team in champion select where Riot shows the names.
 - **Champ select helper** – keep a pool of your champions; in champion select the enemy picks appear as pictures – click
@@ -56,13 +53,13 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
 - Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI**
   : only your Windows user on your PC can decrypt them. Your logins and sessions never leave your PC.
 - Outside requests – no account data is sent anywhere:
-  - **CommunityDragon** – icons, rank emblems, champion and item data (item prices for the in-game overlay).
+  - **CommunityDragon** – icons, rank emblems, champion and item data.
   - **counterstats.net** – champion names only, for the champ select helper.
   - **GitHub** – every 6 hours: is there a newer release? A new installer is downloaded in the background and checked
     (size, SHA-256); it only runs when you say so.
   - Sites like op.gg only when you open a profile there yourself (with that player's Riot ID in the address).
 - On your PC only: the Riot Client and League Client API (`127.0.0.1`, their own certificate – accepted only for these
-  local addresses) and, during a game, Riot's **Live Client Data API** (`127.0.0.1:2999`) for the overlay.
+  local addresses).
 - Ranks, icons etc. come from the **local League Client API** (the same one the client uses itself); icons and
   rank emblems are loaded from [CommunityDragon](https://communitydragon.org).
 
@@ -78,7 +75,6 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
 | League doesn't start after logging in | Make sure *Start League automatically* is on (Settings → Logging in). The app presses *Play* as soon as the Riot Client accepts it. |
 | "Log in once by hand" | The account has no saved sign-in yet (or it expired and no password is saved): log in once in the Riot Client with *Stay signed in*. |
 | Ranks or the match history stay empty | They come from the League client: open League on that account once. Accounts of another server are filled in when League runs on that server. |
-| The in-game bar doesn't show | Use *Borderless* or *Windowed* in the game's video settings (exclusive full screen hides every overlay); check the setting *In-game gold lead*. |
 | The Riot Client window is blank or broken | Tools → *Clear Riot Client cache* (sign-ins stay), then restart League. |
 | Anything else | Attach the newest file from Tools → *Open app data folder* (`error.log`) to an [issue](https://github.com/Zlizz3R/rift-switch/issues). |
 
@@ -112,7 +108,7 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 - `src-tauri/src/` – the background part (Rust, Tauri 2):
   `main.rs` window, tray, the one `call` command the window uses, switching, polling;
   `riot.rs` Riot Client / League Client API, sessions, processes; `events.rs` client events (WebSocket);
-  `live.rs` live page data, champion data, matchups; `overlay.rs` the in-game gold bar; `matches.rs` the match history store (no limit:
+  `live.rs` live page data, champion data, matchups; `matches.rs` the match history store (no limit:
   `matches/games.jsonl`, only an index stays in memory);
   `accounts.rs`, `settings.rs`, `store.rs`, `secrets.rs`, `menu.rs` – pure logic with tests;
   `updater.rs` GitHub releases; `winsys.rs` autostart and jump list

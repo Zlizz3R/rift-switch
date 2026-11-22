@@ -10,7 +10,7 @@ pub const LANGS: [&str; 11] = [
 
 pub fn defaults() -> Obj {
     json!({
-        "autostart": false, "closeToTray": true, "autoAccept": false, "autoPlay": true, "confirmSwitch": true, "overlay": true,
+        "autostart": false, "closeToTray": true, "autoAccept": false, "autoPlay": true, "confirmSwitch": true,
         "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "tile": null,
         "streamer": false, "streamerHide": null, "uiScale": "100"
     })
