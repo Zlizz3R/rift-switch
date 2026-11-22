@@ -1,7 +1,7 @@
 # Rift Switch
 
 A small, good-looking account switcher and companion for **League of Legends** on Windows.
-Pick an account, press **Switch**, and League restarts with it – no typing, no logging out by hand.
+Pick an account, press **Log in**, and League restarts with it – no typing, no logging out by hand.
 
 *German UI name: „Kluft Wechsler“. Available in 11 languages: English, Deutsch, 中文, हिन्दी, Español, Français,
 العربية, বাংলা, Português, Русский, اردو.*
@@ -9,14 +9,17 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
 ## Features
 
 ### Accounts
-- **One-click switching** – checks first where the Riot Client is (already signed in → just presses *Play*; login
+- **One-click login** – checks first where the Riot Client is (already signed in → just presses *Play*; login
   screen open → signs in without a restart), otherwise leaves your lobby/queue, closes League, swaps the session and
-  presses *Play* for you.
+  presses *Play* for you. A progress screen shows every step (saving the sign-in, Riot Client, signing in, Play,
+  League starting) and can cancel it.
 - **Tiles + detail panel** – every account shows Riot ID, icon, level and ranks (Solo/Duo, Flex, Ranked 5v5,
   Classic 5v5), win rate. The panel on the right has *Log in* (greyed out when already signed
   in), profile, login details, *Open with* (op.gg, Porofessor, League of Graphs, Mobalytics, u.gg), note, move and remove.
 - **Ranked readiness** – what a fresh account still needs (level 30, 20 champions, 10 normal games) plus Riot's own
   restrictions (e.g. LeaverBuster). Lobby-only reasons (party size, rank spread) are ignored.
+- **Penalties on the tile** – leaver locks and dodge timers with the time left; a low priority queue with the games
+  left and the wait per game, until it is over.
 - **Decay warning** – Riot's own "decays in X days" for the signed-in account, an inactivity hint for the others.
 - **Profile & LP history** – Blue Essence, RP, champions, skins, honor, mastery, last played and an LP chart; before
   the first recorded point the chart estimates your past LP from the ranked games it has seen (±20 LP per game, dashed).
@@ -24,10 +27,14 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
 - **Streamer mode** – hides names, tags, icons, ranks … (you choose what).
 
 ### While you play (Live page)
+- **In-game gold lead** – a small see-through bar at the top of the game: your team against the enemy by the value
+  of the items bought (gold in the bank can't be seen), lane against lane on Summoner's Rift. Works in ARAM and other
+  modes too; needs borderless or windowed mode. It never takes the focus and lets every click through.
 - **Clash** – your next opponents with their ranks and a **Multi op.gg** button for all five.
 - **Lobby check** – ranks of your party, and of your team in champion select where Riot shows the names.
 - **Champ select helper** – keep a pool of your champions; in champion select the enemy picks appear as pictures – click
-  the one you expect in your lane (or type it) and see your champions ranked by win rate and counter rating against it
+  the one you expect in your lane (or type it; Riot hides the enemies' positions, so the app marks the likely laner by
+  how often each champion plays your lane) and see your champions ranked by win rate and counter rating against it
   (counterstats.net). Every enemy pick is loaded in the background; "Pre-load all matchups" fetches every opponent your
   pool meets on that lane while you queue (kept for a day).
 
@@ -48,13 +55,32 @@ Pick an account, press **Switch**, and League restarts with it – no typing, no
   that every click really lands on the Riot Client.
 - Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI**
   : only your Windows user on your PC can decrypt them. Your logins and sessions never leave your PC.
-- The only outside requests: icons/game data from CommunityDragon, and – in the champ select helper – the two
-  champion names of a matchup to counterstats.net. No account data is sent anywhere.
+- Outside requests – no account data is sent anywhere:
+  - **CommunityDragon** – icons, rank emblems, champion and item data (item prices for the in-game overlay).
+  - **counterstats.net** – champion names only, for the champ select helper.
+  - **GitHub** – every 6 hours: is there a newer release? A new installer is downloaded in the background and checked
+    (size, SHA-256); it only runs when you say so.
+  - Sites like op.gg only when you open a profile there yourself (with that player's Riot ID in the address).
+- On your PC only: the Riot Client and League Client API (`127.0.0.1`, their own certificate – accepted only for these
+  local addresses) and, during a game, Riot's **Live Client Data API** (`127.0.0.1:2999`) for the overlay.
 - Ranks, icons etc. come from the **local League Client API** (the same one the client uses itself); icons and
   rank emblems are loaded from [CommunityDragon](https://communitydragon.org).
 
 > ⚠️ The local client API is used by many community tools but is not officially supported by Riot.
 > Automatic login and auto-accept only do what you would do by hand – use them at your own discretion.
+
+## Troubleshooting
+
+| Problem | What to do |
+|---|---|
+| *Riot Client not found* | Install the Riot Client (or start it once by hand), then try again. |
+| The login screen or sign-in wasn't ready in time | Open the Riot Client once by hand – it may be updating – then log in again. |
+| League doesn't start after logging in | Make sure *Start League automatically* is on (Settings → Logging in). The app presses *Play* as soon as the Riot Client accepts it. |
+| "Log in once by hand" | The account has no saved sign-in yet (or it expired and no password is saved): log in once in the Riot Client with *Stay signed in*. |
+| Ranks or the match history stay empty | They come from the League client: open League on that account once. Accounts of another server are filled in when League runs on that server. |
+| The in-game bar doesn't show | Use *Borderless* or *Windowed* in the game's video settings (exclusive full screen hides every overlay); check the setting *In-game gold lead*. |
+| The Riot Client window is blank or broken | Tools → *Clear Riot Client cache* (sign-ins stay), then restart League. |
+| Anything else | Attach the newest file from Tools → *Open app data folder* (`error.log`) to an [issue](https://github.com/Zlizz3R/rift-switch/issues). |
 
 ## Download
 
@@ -86,7 +112,7 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 - `src-tauri/src/` – the background part (Rust, Tauri 2):
   `main.rs` window, tray, the one `call` command the window uses, switching, polling;
   `riot.rs` Riot Client / League Client API, sessions, processes; `events.rs` client events (WebSocket);
-  `live.rs` live page data, champion data, matchups; `matches.rs` the match history store (no limit:
+  `live.rs` live page data, champion data, matchups; `overlay.rs` the in-game gold bar; `matches.rs` the match history store (no limit:
   `matches/games.jsonl`, only an index stays in memory);
   `accounts.rs`, `settings.rs`, `store.rs`, `secrets.rs`, `menu.rs` – pure logic with tests;
   `updater.rs` GitHub releases; `winsys.rs` autostart and jump list
