@@ -9,6 +9,7 @@ mod events;
 mod live;
 mod matches;
 mod menu;
+mod ops;
 mod riot;
 mod secrets;
 mod settings;
@@ -80,6 +81,48 @@ struct Core {
     no_persist: Option<String>,
     /// logins sealed with the app password: their key, only while unlocked
     login_key: Option<secrets::Key>,
+}
+
+impl Core {
+    fn new(st: State, mh: matches::Matches, read_only: bool) -> Core {
+        let st_locked = st.lock.is_some();
+        Core {
+            st,
+            mh,
+            live: Live::default(),
+            pending_add: false,
+            pending_cred: None,
+            login: Value::Null,
+            login_token: 0,
+            busy: false,
+            expecting: None,
+            locked: st_locked,
+            crypto_broken: false,
+            save_error: None,
+            last_saved: String::new(),
+            last_pushed: String::new(),
+            last_rank_sweep: 0,
+            last_profile_at: 0,
+            gen: 0,
+            ticking: false,
+            play_token: 0,
+            play_line: "live",
+            loading_older: false,
+            fetching_ranks: false,
+            unlock_fails: 0,
+            import_file: None,
+            accepting: false,
+            quitting: false,
+            tray_key: String::new(),
+            jump_key: String::new(),
+            after_load_switch: None,
+            failed_games: HashMap::new(),
+            expecting_since: 0,
+            read_only,
+            no_persist: None,
+            login_key: None,
+        }
+    }
 }
 
 static CORE: OnceLock<Mutex<Core>> = OnceLock::new();
@@ -543,19 +586,6 @@ async fn tick() {
     with(|c| c.ticking = false);
 }
 
-/// An account's known penalties (from its own last login): kept until they ran out.
-fn set_penalties(a: &mut Obj, list: Vec<Value>, now: i64) {
-    let list: Vec<Value> = list
-        .into_iter()
-        .filter(|p| p["until"].as_i64().is_none_or(|u| u == 0 || u > now))
-        .collect();
-    if list.is_empty() {
-        a.remove("penalties");
-    } else {
-        a.insert("penalties".into(), json!({ "at": now, "list": list }));
-    }
-}
-
 fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
     with(|c| {
         if let Some(a) = c.st.account_mut(id) {
@@ -689,7 +719,7 @@ async fn tick_inner(my_gen: u64) {
                     a.insert("profile".into(), Value::Object(prof));
                     if let Some((check, pens)) = elig {
                         a.insert("rankedCheck".into(), check);
-                        set_penalties(a, pens, now);
+                        ops::set_penalties(a, pens, now);
                     }
                 }
             });
@@ -724,7 +754,7 @@ async fn tick_inner(my_gen: u64) {
                         .unwrap_or_default();
                     list.retain(|p| !waits.iter().any(|w| w["code"] == p["code"]));
                     list.extend(waits.iter().cloned());
-                    set_penalties(a, list, now);
+                    ops::set_penalties(a, list, now);
                 }
             }
             ch
@@ -1405,18 +1435,6 @@ fn open_path(target: &str) -> bool {
     r.0 as isize > 32
 }
 const SUPPORT_URL: &str = "https://buymeacoffee.com/zlizz3r";
-fn allowed_url(u: &str) -> bool {
-    [
-        "op.gg/",
-        "u.gg/",
-        "leagueofgraphs.com/",
-        "porofessor.gg/",
-        "mobalytics.gg/",
-        "buymeacoffee.com/",
-    ]
-    .iter()
-    .any(|d| u.starts_with(&format!("https://{d}")) || u.starts_with(&format!("https://www.{d}")))
-}
 
 // ---------- export / import ----------
 
@@ -1862,32 +1880,14 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         "cat-add" => {
             let def = tr("cat.new", &[]);
-            let name: String = a(0)
-                .as_str()
-                .unwrap_or("")
-                .trim()
-                .chars()
-                .take(32)
-                .collect();
             let id = format!("c{}", &uuid4()[..8]);
-            with(|c| {
-                c.st.categories.push(obj(json!({ "id": id, "name": if name.is_empty() { def } else { name }, "collapsed": false })))
-            });
+            let name = a(0).as_str().unwrap_or("").to_string();
+            with(|c| ops::cat_add(&mut c.st, &name, &def, &id));
             save();
             json!(id)
         }
         "cat-rename" => {
-            let n: String = s(1).trim().chars().take(32).collect();
-            let id = s(0);
-            let ok = !n.is_empty()
-                && with(|c| {
-                    c.st.categories
-                        .iter_mut()
-                        .find(|x| str_of(x, "id") == id)
-                        .map(|x| x.insert("name".into(), json!(n)))
-                        .is_some()
-                });
-            if ok {
+            if with(|c| ops::cat_rename(&mut c.st, &s(0), &s(1))) {
                 save()
             } else {
                 push()
@@ -1895,106 +1895,30 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             Value::Null
         }
         "cat-toggle" => {
-            let id = s(0);
-            let hit = with(|c| {
-                c.st.categories
-                    .iter_mut()
-                    .find(|x| str_of(x, "id") == id)
-                    .map(|x| {
-                        let v = !truthy(x.get("collapsed"));
-                        x.insert("collapsed".into(), json!(v));
-                    })
-            });
-            if hit.is_some() {
+            if with(|c| ops::cat_toggle(&mut c.st, &s(0))) {
                 save();
             }
             Value::Null
         }
         "cat-move" => {
-            let (id, dir) = (s(0), num_of(args.get(1)));
-            let moved = with(|c| {
-                let Some(i) = c.st.categories.iter().position(|x| str_of(x, "id") == id) else {
-                    return false;
-                };
-                let j = if dir < 0.0 {
-                    i.checked_sub(1)
-                } else {
-                    Some(i + 1)
-                };
-                match j.filter(|j| *j < c.st.categories.len()) {
-                    Some(j) => {
-                        c.st.categories.swap(i, j);
-                        true
-                    }
-                    None => false,
-                }
-            });
-            if moved {
+            if with(|c| ops::cat_move(&mut c.st, &s(0), num_of(args.get(1)))) {
                 save();
             }
             Value::Null
         }
         "cat-del" => {
-            let id = s(0);
-            with(|c| {
-                c.st.categories.retain(|x| str_of(x, "id") != id);
-                for a in &mut c.st.accounts {
-                    if str_of(a, "category") == id {
-                        a.remove("category");
-                    }
-                }
-            });
+            with(|c| ops::cat_del(&mut c.st, &s(0)));
             save();
             Value::Null
         }
         // new order (+ category with "arrange") of every tile: drag & drop, "move to"
         "arrange" | "reorder" => {
-            let list = a(0);
-            let Some(list) = list.as_array() else {
+            let Some(list) = a(0).as_array().cloned() else {
                 return Value::Null;
             };
-            let arrange = ch == "arrange";
             with(|c| {
                 c.gen += 1;
-                let mut next: Vec<Obj> = vec![];
-                for item in list {
-                    let (id, cat) = if arrange {
-                        (
-                            item["puuid"].as_str().unwrap_or(""),
-                            item["category"].as_str(),
-                        )
-                    } else {
-                        (item.as_str().unwrap_or(""), None)
-                    };
-                    if next.iter().any(|a| str_of(a, "puuid") == id) {
-                        continue;
-                    }
-                    let Some(mut acc) = c.st.account(id).cloned() else {
-                        continue;
-                    };
-                    if arrange {
-                        match cat.filter(|k| {
-                            !k.is_empty() && c.st.categories.iter().any(|x| str_of(x, "id") == *k)
-                        }) {
-                            Some(k) => {
-                                acc.insert("category".into(), json!(k));
-                            }
-                            None => {
-                                acc.remove("category");
-                            }
-                        }
-                    }
-                    next.push(acc);
-                }
-                for a in &c.st.accounts {
-                    if !next
-                        .iter()
-                        .any(|x| str_of(x, "puuid") == str_of(a, "puuid"))
-                    {
-                        next.push(a.clone());
-                    }
-                }
-                c.st.accounts = next;
+                ops::arrange(&mut c.st, &list, ch == "arrange");
             });
             save();
             Value::Null
@@ -2004,43 +1928,11 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         "matchup" => live::matchup(&s(0), &s(1), &s(2)).await,
         "tool" => with_busy(do_tool(s(0))).await,
         "open-multi" => {
-            // op.gg multisearch for up to 5 Riot IDs (Clash opponents)
-            let list: Vec<String> = a(1)
-                .as_array()
-                .into_iter()
-                .flatten()
-                .take(5)
-                .map(|x| {
-                    x.as_str()
-                        .unwrap_or("")
-                        .chars()
-                        .filter(|c| c.is_alphanumeric() || " #_.-".contains(*c))
-                        .collect()
-                })
-                .collect();
-            if !list.is_empty() {
-                let reg: String = s(0)
-                    .to_lowercase()
-                    .chars()
-                    .filter(char::is_ascii_lowercase)
-                    .collect();
-                let reg = if reg.is_empty() {
-                    "euw".to_string()
-                } else {
-                    reg
-                };
-                let q: String = list
-                    .join(",")
-                    .bytes()
-                    .map(|b| {
-                        if b.is_ascii_alphanumeric() {
-                            (b as char).to_string()
-                        } else {
-                            format!("%{b:02X}")
-                        }
-                    })
-                    .collect();
-                open_path(&format!("https://op.gg/multisearch/{reg}?summoners={q}"));
+            // op.gg multisearch for up to 5 Riot IDs (Clash opponents, picked tiles)
+            if let Some(url) =
+                ops::opgg_multi_url(&s(0), a(1).as_array().map(Vec::as_slice).unwrap_or(&[]))
+            {
+                open_path(&url);
             }
             Value::Null
         }
@@ -2256,7 +2148,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         "open-external" => {
             let u = s(0);
-            if allowed_url(&u) {
+            if ops::allowed_url(&u) {
                 open_path(&u);
             }
             Value::Null
@@ -2708,17 +2600,7 @@ async fn tick_loop() {
             (wait, queue)
         });
         let ev = events::connected();
-        let ms = if waiting || queue || win_shown() {
-            if ev && !waiting {
-                10_000
-            } else {
-                4_000
-            }
-        } else if ev {
-            60_000
-        } else {
-            15_000
-        };
+        let ms = ops::poll_ms(waiting, queue, win_shown(), ev);
         tokio::select! {
             _ = sleep(ms) => {}
             _ = KICK.notified() => {}
@@ -2765,43 +2647,11 @@ fn main() {
         winsys::set_app_id(APP_ID);
     }
     updater::set_dir(data_dir.join("updates"));
-    let locked = st.lock.is_some();
-    let _ = CORE.set(Mutex::new(Core {
+    let _ = CORE.set(Mutex::new(Core::new(
         st,
-        mh: matches::Matches::load(&data_dir),
-        live: Live::default(),
-        pending_add: false,
-        pending_cred: None,
-        login: Value::Null,
-        login_token: 0,
-        busy: false,
-        expecting: None,
-        locked,
-        crypto_broken: false,
-        save_error: None,
-        last_saved: String::new(),
-        last_pushed: String::new(),
-        last_rank_sweep: 0,
-        last_profile_at: 0,
-        gen: 0,
-        ticking: false,
-        play_token: 0,
-        play_line: "live",
-        loading_older: false,
-        fetching_ranks: false,
-        unlock_fails: 0,
-        import_file: None,
-        accepting: false,
-        quitting: false,
-        tray_key: String::new(),
-        jump_key: String::new(),
-        after_load_switch: None,
-        failed_games: HashMap::new(),
-        expecting_since: 0,
+        matches::Matches::load(&data_dir),
         read_only,
-        no_persist: None,
-        login_key: None,
-    }));
+    )));
 
     let mut builder = tauri::Builder::default();
     if !test_mode() {
@@ -2880,4 +2730,139 @@ fn main() {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    //! The background part's own state handling, without a window: the encrypted login files,
+    //! what the window gets to see, and a saved login turning into its real account.
+    //! (One test: the app has one shared state.)
+    use super::*;
+
+    const P1: &str = "11111111-1111-1111-1111-111111111111";
+    const P2: &str = "22222222-2222-2222-2222-222222222222";
+
+    #[test]
+    fn logins_snapshot_and_placeholders() {
+        let dir = std::env::temp_dir().join(format!("rs-main-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let _ = DATA.set(dir.clone());
+        let st = store::normalize(json!({
+            "accounts": [{ "puuid": P1, "gameName": "A", "history": [{ "t": 1 }, { "t": 2 }] },
+                         { "puuid": format!("new-{P2}"), "placeholder": true, "gameName": "x•••", "note": "smurf" }] }));
+        let _ = CORE.set(Mutex::new(Core::new(
+            st,
+            matches::Matches::load(&dir),
+            false,
+        )));
+
+        // a login file: plain DPAPI, then readable
+        store_cred(P1, "user", "Müller€");
+        assert!(matches!(cred_state(P1), Cred::Ok(ref u, ref p) if u == "user" && p == "Müller€"));
+        assert!(matches!(cred_state(P2), Cred::Missing));
+        std::fs::write(cred_file(P2), b"garbage").unwrap();
+        assert!(matches!(cred_state(P2), Cred::Broken));
+        let _ = std::fs::remove_file(cred_file(P2));
+
+        // sealed with the app password: unreadable without the key ("locked"), readable with it
+        let ks = secrets::new_key_salt();
+        let key = secrets::login_key("1234", &ks).unwrap();
+        with(|c| {
+            c.st.lock = Some(json!({ "salt": "", "hash": "", "ksalt": ks, "sealLogins": true }));
+            c.login_key = Some(key);
+        });
+        let logins = all_creds();
+        assert!(rewrite_creds(&logins));
+        assert!(secrets::is_sealed(
+            &secrets::decrypt_local(&dir, &std::fs::read(cred_file(P1)).unwrap()).unwrap()
+        ));
+        with(|c| c.login_key = None);
+        assert!(matches!(cred_state(P1), Cred::Locked));
+        check_creds();
+        assert_eq!(
+            with(|c| c.st.account(P1).unwrap()["credBroken"].clone()),
+            json!(false),
+            "locked is not broken"
+        );
+        assert!(!write_cred_file(P1, "{}"), "no writing without the key");
+        with(|c| c.login_key = Some(key));
+        assert_eq!(load_cred(P1), Some(("user".into(), "Müller€".into())));
+        // unsealed again
+        with(|c| c.st.lock = Some(json!({ "salt": "", "hash": "" })));
+        assert!(rewrite_creds(&all_creds()));
+        with(|c| c.login_key = None);
+        assert_eq!(load_cred(P1), Some(("user".into(), "Müller€".into())));
+
+        // what the window gets: no LP history list (only its length), no lock hash
+        let snap = with(|c| snapshot(c));
+        assert_eq!(snap["accounts"][0]["historyLen"], 2);
+        assert!(snap["accounts"][0].get("history").is_none());
+        assert!(snap.get("lock").is_none());
+        assert_eq!(snap["hasLock"], true);
+        // locked: nothing about the accounts
+        with(|c| c.locked = true);
+        let snap = with(|c| snapshot(c));
+        assert_eq!(snap["accounts"], json!([]));
+        assert_eq!(snap["locked"], true);
+        with(|c| c.locked = false);
+
+        // a saved login turns out to be an account: tile, login and note move over
+        let old = format!("new-{P2}");
+        store_cred(&old, "u2", "p2");
+        with(|c| {
+            c.st.active = Some(old.clone());
+            resolve_placeholder(c, &old, P2);
+        });
+        let (acc, active) = with(|c| (c.st.account(P2).cloned(), c.st.active.clone()));
+        let acc = acc.expect("moved to its real id");
+        assert!(acc.get("placeholder").is_none());
+        assert_eq!(active.as_deref(), Some(P2));
+        assert_eq!(load_cred(P2), Some(("u2".into(), "p2".into())));
+        assert!(!cred_file(&old).exists());
+        // ... and into an account that is already a tile: the tile stays, gets the login and the note
+        let old2 = format!(
+            "new-{}",
+            "3".repeat(36)
+                .chars()
+                .enumerate()
+                .map(|(i, c)| if [8, 13, 18, 23].contains(&i) { '-' } else { c })
+                .collect::<String>()
+        );
+        with(|c| {
+            c.st.accounts.push(
+                json!({ "puuid": old2, "placeholder": true, "note": "main", "hasCred": true })
+                    .as_object()
+                    .unwrap()
+                    .clone(),
+            )
+        });
+        with(|c| {
+            c.st.account_mut(P1)
+                .unwrap()
+                .insert("hasCred".into(), json!(false))
+        });
+        let _ = std::fs::remove_file(cred_file(P1));
+        store_cred(&old2, "u3", "p3");
+        with(|c| {
+            c.st.account_mut(P1)
+                .unwrap()
+                .insert("hasCred".into(), json!(false))
+        });
+        with(|c| resolve_placeholder(c, &old2, P1));
+        assert_eq!(with(|c| c.st.accounts.len()), 2, "no second tile");
+        assert_eq!(with(|c| c.st.account(P1).unwrap()["note"].clone()), "main");
+        assert_eq!(load_cred(P1), Some(("u3".into(), "p3".into())));
+
+        // the canary file
+        check_crypto();
+        assert!(!with(|c| c.crypto_broken));
+        std::fs::write(dir.join("keycheck.bin"), b"not dpapi").unwrap();
+        check_crypto();
+        assert!(
+            with(|c| c.crypto_broken),
+            "a key this start can't read is reported"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
