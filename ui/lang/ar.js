@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'tile.pbeTitle': "خادم الاختبار (PBE)", 'tile.pbeText': "لا يوجد تصنيف – هنا تجرب المحتوى الجديد", 'pen.lowPrio': "أولوية منخفضة", 'pen.short': "عقوبة",
     'live.vsWho': "ضد من تلعب؟", 'live.ratingT': "تقييم المواجهة {r} (counterstats.net) – كلما ارتفع كان المسار أسهل",
     'live.preloadBtn': "تحميل كل المواجهات مسبقًا", 'live.preloadT': "يحمّل كل بطل تواجهه مجموعتك في هذا المسار حسب counterstats.net (عادة 30–50 لكل بطل) – الأفضل الضغط أثناء الانتظار. يُحفظ يومًا.",
     'live.poolTitle': "مجموعة أبطالي", 'live.bestVs': "أفضل الاختيارات ضد {name}", 'live.preload': "جارٍ تحميل المواجهات {n} / {total} …",

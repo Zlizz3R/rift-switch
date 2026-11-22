@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'tile.pbeTitle': "Servidor de testes (PBE)", 'tile.pbeText': "Sem ranqueada – aqui você testa novidades", 'pen.lowPrio': "Baixa prioridade", 'pen.short': "Penalidade",
     'live.vsWho': "Contra quem você joga?", 'live.ratingT': "Nota de counter {r} (counterstats.net) – quanto maior, mais fácil a rota",
     'live.preloadBtn': "Pré-carregar todos os confrontos", 'live.preloadT': "Carrega cada campeão que seu grupo enfrenta nesta rota segundo o counterstats.net (normalmente 30–50 cada) – melhor clicar na fila. Fica salvo por um dia.",
     'live.poolTitle': "Meu grupo de campeões", 'live.bestVs': "Melhores escolhas contra {name}", 'live.preload': "Carregando confrontos {n} / {total} …",

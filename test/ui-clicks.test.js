@@ -53,12 +53,12 @@ test('without "confirm switch" a double click switches right away', () => withAp
 }));
 
 // ---------- several at once ----------
-test('Ctrl+click picks several tiles; the panel offers move / op.gg / remove; Esc clears', () => withApp({}, async (app) => {
+test('Ctrl+click picks several tiles; the panel offers note / move / open with / remove; Esc clears', () => withApp({}, async (app) => {
   await app.click(tile(app, 1));
   await app.click(tile(app, 3), { ctrlKey: true });
   assert.match(app.$('#detail').textContent, /2 accounts selected/);
   assert.ok(tile(app, 1).classList.contains('picked') && tile(app, 3).classList.contains('picked'));
-  assert.deepEqual(app.$$('#detail [data-m]').map((b) => b.dataset.m), ['note', 'move', 'opgg', 'remove', 'clear']);
+  assert.deepEqual(app.$$('#detail [data-m]').map((b) => b.dataset.m), ['note', 'move', 'open', 'remove', 'clear']);
   await app.key('Escape');
   assert.doesNotMatch(app.$('#detail').textContent, /accounts selected/);
 }));
@@ -89,11 +89,17 @@ test('picked tiles: removing asks with the red warning, then removes each', () =
   assert.deepEqual(app.called('remove').map((c) => c.args[0]).sort(), [P(1), P(3)].sort());
 }));
 
-test('picked tiles: op.gg multi-search with their Riot IDs', () => withApp({}, async (app) => {
+test('picked tiles: "open with" – op.gg multi-search first, other sites a tab each', () => withApp({}, async (app) => {
   await app.click(tile(app, 1));
   await app.click(tile(app, 2), { ctrlKey: true });
-  await app.click('#detail [data-m="opgg"]');
+  await app.click('#detail [data-m="open"]');
+  assert.equal(app.$$('#siteMenu [data-site]')[0].dataset.site, 'multi', 'multi-search first');
+  await app.click('#siteMenu [data-site="multi"]');
   assert.deepEqual(lastCall(app, 'open-multi').args[1], ['Player1#EUW', 'Player2#EUW']);
+  const before = app.called('open-external').length;
+  await app.click('#detail [data-m="open"]');
+  await app.click('#siteMenu [data-site="poro"]');
+  assert.equal(app.called('open-external').length - before, 2, 'one tab per account');
 }));
 
 test('picked tiles: one note for all of them', () => withApp({}, async (app) => {
@@ -106,21 +112,38 @@ test('picked tiles: one note for all of them', () => withApp({}, async (app) => 
   assert.deepEqual(app.called('note').map((c) => c.args).sort(), [[P(1), 'Main'], [P(3), 'Main']]);
 }));
 
-test('a box drawn over the board picks every tile it covers by more than half', () => withApp({}, async (app) => {
+test('a box drawn over the board picks every tile it touches', () => withApp({}, async (app) => {
   const { w } = app;
   // tiles 1-3 side by side, 200 px wide
   app.$$('#board .tile[data-id]').forEach((t, i) => (t.getBoundingClientRect = () => ({ left: i * 220, right: i * 220 + 200, top: 0, bottom: 200, width: 200, height: 200 })));
   const m = (type, x, y, target) => (target || w.document).dispatchEvent(new w.MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y }));
   m('mousedown', 5, 5, app.$('#board'));
-  m('mousemove', 330, 190);   // all of tile 1, 110 of 200 px of tile 2, nothing of tile 3
+  m('mousemove', 230, 190);   // all of tile 1, 10 px of tile 2, nothing of tile 3
   const hits = app.$$('.tile.box-hit').map((t) => t.dataset.id);
   assert.equal(hits.length, 2, 'shown while dragging');
   assert.ok(app.$('.select-box'));
-  m('mouseup', 330, 190);
+  m('mouseup', 230, 190);
   await app.settle();
   assert.equal(app.$('.select-box'), null);
   assert.match(app.$('#detail').textContent, /2 accounts selected/);
 }));
+
+test('tiles: a PBE account shows the test server box instead of "Unranked"; a penalty shows its time left', () => {
+  const st = sampleState();
+  st.accounts[1].region = 'PBE';
+  st.accounts[1].solo = null; st.accounts[1].flex = null;
+  st.accounts[2].penalties = { at: Date.now(), list: [{ code: 'LeaverBusterLowPriorityQueue', until: Date.now() + 5 * 60000 }] };
+  return withApp({ state: st }, async (app) => {
+    const pbe = tile(app, 2);
+    assert.ok(pbe.querySelector('.pbe-box'), 'test server box');
+    assert.doesNotMatch(pbe.textContent, /Unranked/);
+    const pen = tile(app, 3).querySelector('.tile-pen');
+    assert.ok(pen, 'penalty on the tile');
+    assert.match(pen.textContent, /Low priority/);
+    assert.match(pen.textContent, /[45]:\d\d left/);
+    assert.equal(tile(app, 1).querySelector('.tile-pen'), null);
+  });
+});
 
 // ---------- drag & drop ----------
 test('dragging shows a line before/after the tile and slides the tile in there', () => withApp({}, async (app) => {

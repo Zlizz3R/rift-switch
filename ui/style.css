@@ -920,3 +920,17 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .h-pick.laner { border-color: rgba(200,170,110,.35); }
 .h-pick.on { opacity: 1; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(200,170,110,.18); }
 .h-res .rt { font-size: 10.5px; color: var(--muted); min-width: 24px; text-align: right; }
+
+/* PBE: no ranked */
+.pbe-box { width: 100%; margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px;
+  background: rgba(185,140,255,.07); border: 1px solid rgba(185,140,255,.18); text-align: left; }
+.pbe-box svg { width: 22px; height: 22px; flex: none; fill: none; stroke: #b98cff; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.pbe-box b { display: block; font-size: 12px; font-weight: 600; color: #cdb2ff; }
+.pbe-box span { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+/* penalty / queue wait on the tile */
+.tile-pen { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  background: rgba(239,107,112,.12); border: 1px solid rgba(239,107,112,.3); color: #ef8a8e; font-size: 11px; }
+.tile-pen svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.tile-pen b { font-weight: 600; color: #ffb0b3; font-variant-numeric: tabular-nums; }
+
+.menu .menu-sep { height: 1px; margin: 4px 6px; background: var(--line, rgba(255,255,255,.08)); }

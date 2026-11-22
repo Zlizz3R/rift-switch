@@ -98,6 +98,7 @@
     'nav.live': "En vivo",
     'nav.tools': "Herramientas",
     'set.theme': "Apariencia",
+    'tile.pbeTitle': "Servidor de pruebas (PBE)", 'tile.pbeText': "Sin clasificatorias: aquí pruebas lo nuevo", 'pen.lowPrio': "Baja prioridad", 'pen.short': "Sanción",
     'live.vsWho': "¿Contra quién juegas?", 'live.ratingT': "Valoración de counter {r} (counterstats.net): cuanto más alta, más fácil la línea",
     'live.preloadBtn': "Precargar todos los enfrentamientos", 'live.preloadT': "Carga cada campeón al que se enfrenta tu grupo en esta línea según counterstats.net (normalmente 30–50 cada uno); mejor pulsarlo en cola. Se guarda un día.",
     'live.poolTitle': "Mi grupo de campeones", 'live.bestVs': "Mejores elecciones contra {name}", 'live.preload': "Cargando enfrentamientos {n} / {total} …",

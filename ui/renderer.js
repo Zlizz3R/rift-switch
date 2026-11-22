@@ -115,8 +115,30 @@ function lockHtml(a, o) {
   return a.hasCred || a.placeholder ? `<span class="lock ready" title="${esc(t('tile.lockTitle'))}">${CHECK}</span>` : '';
 }
 
+// the penalty or queue wait of an account that runs out last (low priority queue, leaver lock, …)
+function tilePenalty(a) {
+  const now = Date.now();
+  const list = ((a.penalties && a.penalties.list) || []).filter(p => isPenalty(p.code) && (!p.until || p.until > now));
+  const live = S.live || {};
+  if (live.clientUp && live.puuid === a.puuid) for (const w of live.waits || []) if (w.until > now) list.push({ code: w.code || 'LowPriorityQueue', until: w.until });
+  return list.sort((x, y) => (y.until || Infinity) - (x.until || Infinity))[0] || null;
+}
+function tilePenHtml(a) {
+  const p = tilePenalty(a);
+  if (!p) return '';
+  const left = p.until ? `<b data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</b>` : '';
+  return `<div class="tile-pen" title="${esc(reasonText({ code: p.code, args: p.args }))}">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>${esc(t(/lowpriority/i.test(p.code) ? 'pen.lowPrio' : 'pen.short'))}</span>${left}</div>`;
+}
+// the PBE has no ranked queues: a test server box instead of two "Unranked"
+function pbeHtml() {
+  return `<div class="pbe-box"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/></svg>
+    <div><b>${t('tile.pbeTitle')}</b><span>${t('tile.pbeText')}</span></div></div>`;
+}
+
 function tileHtml(a, o = tileOpt(), preview = false) {
   if (a.placeholder) return placeholderHtml(a, o);
+  const pbe = a.region === 'PBE';
   const active = a.puuid === S.active;
   const m = mmrEstimate(a);
   const trend = m ? (m.diff > 40 ? ' ↑' : m.diff < -40 ? ' ↓' : '') : '';
@@ -142,10 +164,11 @@ function tileHtml(a, o = tileOpt(), preview = false) {
     <div class="name" title="${esc(fullName(a))}">${esc(dispName(a))}${o.tag && dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}</div>
     ${!o.icon && showLvl && a.level ? `<div class="lvl-line">Level ${a.level}</div>` : ''}
     ${o.note && !hides('note') ? `<div class="note" data-note>${esc(a.note || '')}</div>` : '<div data-note></div>'}
+    ${preview ? '' : tilePenHtml(a)}
     ${rk}
-    ${hides('ranks') ? `<div class="stream-hidden">${t('stream.ranksHidden')}</div>` : rk && !QUEUES.some(([k]) => o[k] && a[k]) ? '' : QUEUES.some(([k]) => o[k]) ? `<div class="ranks">${QUEUES.filter(([k]) => o[k]).map(([k, n]) => rankRow(n, a[k], o.winrate)).join('')}</div>` : ''}
+    ${pbe ? (QUEUES.some(([k]) => o[k]) ? pbeHtml() : '') : hides('ranks') ? `<div class="stream-hidden">${t('stream.ranksHidden')}</div>` : rk && !QUEUES.some(([k]) => o[k] && a[k]) ? '' : QUEUES.some(([k]) => o[k]) ? `<div class="ranks">${QUEUES.filter(([k]) => o[k]).map(([k, n]) => rankRow(n, a[k], o.winrate)).join('')}</div>` : ''}
     ${extras.length ? `<div class="tile-extra">${extras.join('')}</div>` : ''}
-    ${o.mmr && !hides('ranks') ? `<div class="mmr" title="${esc(t('tile.mmrTitle', { q: m ? m.queue : '–' }))}">
+    ${o.mmr && !pbe && !hides('ranks') ? `<div class="mmr" title="${esc(t('tile.mmrTitle', { q: m ? m.queue : '–' }))}">
       <span>${t('tile.mmr')}</span><b>${m ? '≈ ' + m.label + trend : '–'}</b>
     </div>` : ''}
   </div>`;

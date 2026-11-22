@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'tile.pbeTitle': "ٹیسٹ سرور (PBE)", 'tile.pbeText': "یہاں رینکڈ نہیں – نیا مواد آزمائیں", 'pen.lowPrio': "لو پرائیورٹی", 'pen.short': "سزا",
     'live.vsWho': "آپ کس کے خلاف کھیل رہے ہیں؟", 'live.ratingT': "کاؤنٹر ریٹنگ {r} (counterstats.net) – جتنی زیادہ، لین اتنی آسان",
     'live.preloadBtn': "تمام میچ اپ پہلے سے لوڈ کریں", 'live.preloadT': "counterstats.net کے مطابق اس لین پر آپ کے پول کا سامنا کرنے والے ہر چیمپئن کو لوڈ کرتا ہے (عموماً 30–50) – قطار میں کلک کریں۔ ایک دن محفوظ رہتا ہے۔",
     'live.poolTitle': "میرا چیمپئن پول", 'live.bestVs': "{name} کے خلاف بہترین پک", 'live.preload': "میچ اپ لوڈ ہو رہے ہیں {n} / {total} …",

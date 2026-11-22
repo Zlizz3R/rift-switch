@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'tile.pbeTitle': "Serveur de test (PBE)", 'tile.pbeText': "Pas de classé – ici tu testes les nouveautés", 'pen.lowPrio': "Basse priorité", 'pen.short': "Sanction",
     'live.vsWho': "Contre qui joues-tu ?", 'live.ratingT': "Note de counter {r} (counterstats.net) – plus elle est haute, plus la voie est facile",
     'live.preloadBtn': "Précharger tous les matchups", 'live.preloadT': "Charge chaque champion que ton pool affronte sur cette voie selon counterstats.net (souvent 30 à 50 chacun) – à cliquer en file d'attente. Gardé un jour.",
     'live.poolTitle': "Mon pool de champions", 'live.bestVs': "Meilleurs choix contre {name}", 'live.preload': "Chargement des matchups {n} / {total} …",

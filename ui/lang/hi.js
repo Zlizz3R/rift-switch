@@ -96,6 +96,7 @@
     'nav.live': "लाइव",
     'nav.tools': "टूल्स",
     'set.theme': "रूप",
+    'tile.pbeTitle': "टेस्ट सर्वर (PBE)", 'tile.pbeText': "यहाँ रैंक्ड नहीं – नई चीज़ें आज़माने के लिए", 'pen.lowPrio': "लो प्रायोरिटी", 'pen.short': "दंड",
     'live.vsWho': "आप किसके ख़िलाफ़ खेल रहे हैं?", 'live.ratingT': "काउंटर रेटिंग {r} (counterstats.net) – जितनी ऊँची, लेन उतनी आसान",
     'live.preloadBtn': "सभी मैचअप पहले से लोड करें", 'live.preloadT': "counterstats.net के अनुसार इस लेन पर आपके पूल के सामने आने वाला हर चैंपियन लोड करता है (आमतौर पर 30–50) – कतार में क्लिक करें। एक दिन सहेजा रहता है।",
     'live.poolTitle': "मेरा चैंपियन पूल", 'live.bestVs': "{name} के ख़िलाफ़ सबसे अच्छे पिक", 'live.preload': "मैचअप लोड हो रहे हैं {n} / {total} …",

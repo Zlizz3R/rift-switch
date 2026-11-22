@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'tile.pbeTitle': "测试服（PBE）", 'tile.pbeText': "没有排位——在这里试玩新内容", 'pen.lowPrio': "低优先级", 'pen.short': "处罚",
     'live.vsWho': "你的对手是谁？", 'live.ratingT': "克制评分 {r}（counterstats.net）——越高对线越轻松",
     'live.preloadBtn': "预加载全部对位", 'live.preloadT': "加载你的英雄池在该位置会遇到的每个对手（据 counterstats.net，通常每个 30–50 个）——最好在排队时点击。保存一天。",
     'live.poolTitle': "我的英雄池", 'live.bestVs': "对阵 {name} 的最佳选择", 'live.preload': "正在加载对位 {n} / {total} …",

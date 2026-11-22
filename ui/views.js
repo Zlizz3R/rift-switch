@@ -96,7 +96,7 @@ document.addEventListener('mousemove', e => {
   for (const tl of document.querySelectorAll('#board .tile[data-id]')) {
     const q = tl.getBoundingClientRect();
     const w = Math.max(0, Math.min(r.r, q.right) - Math.max(r.l, q.left)), h = Math.max(0, Math.min(r.b, q.bottom) - Math.max(r.t, q.top));
-    const hit = q.width > 0 && q.height > 0 && w * h > 0.5 * q.width * q.height;
+    const hit = q.width > 0 && q.height > 0 && w > 0 && h > 0;
     tl.classList.toggle('box-hit', hit);
     if (hit) box.hits.push(tl.dataset.id);
   }
@@ -116,6 +116,16 @@ document.addEventListener('mouseup', () => {
 });
 
 // all picked tiles into one category (one save)
+// several accounts on one site: op.gg's multi-search (5 Riot IDs of one server), else a tab each
+function openMany(list, site) {
+  const named = list.filter(x => !x.placeholder && x.gameName && x.tagLine);
+  if (!named.length) return;
+  if (site === 'multi') {
+    if (named.length > 5) toast(t('multi.first5'));
+    return api.openMulti(named[0].region || 'euw', named.slice(0, 5).map(x => x.gameName + '#' + x.tagLine));
+  }
+  named.forEach(x => openSite(x, site));
+}
 function moveMany(ids, cat) {
   const set = new Set(ids);
   const list = S.accounts.map(a => ({ puuid: a.puuid, category: set.has(a.puuid) ? cat : catOf(a) }));
@@ -132,7 +142,7 @@ function renderMulti() {
     <div class="d-actions m-actions">
       <button data-m="note">${ic('<path d="M4 20h4L19 9l-4-4L4 16z"/>')}<span>${t('d.edit')}</span></button>
       <button data-m="move">${ic('<path d="M3 7h7l2 2h9v10H3z"/><path d="M12 13h5M15 11l2 2-2 2"/>')}<span>${t('d.move')}</span></button>
-      <button data-m="opgg">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('multi.opgg')}</span></button>
+      <button data-m="open">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('menu.openWith')}</span></button>
       <button data-m="remove" class="danger">${ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}<span>${t('menu.remove')}</span></button>
     </div>
     <button class="btn wide m-clear" data-m="clear">${t('multi.clear')}</button>`;
@@ -222,12 +232,19 @@ $('detail').addEventListener('click', async e => {
       for (const x of list) await api.setNote(x.puuid, n);
       return toast(t('multi.noteDone', { n: list.length }));
     }
-    if (what === 'opgg') {
-      // op.gg multi-search: up to 5 Riot IDs of one server
-      const named = list.filter(x => x.gameName && x.tagLine);
-      if (!named.length) return;
-      if (named.length > 5) toast(t('multi.first5'));
-      return api.openMulti(named[0].region || 'euw', named.slice(0, 5).map(x => x.gameName + '#' + x.tagLine));
+    if (what === 'open') {
+      // op.gg multi-search first, then every site (one tab per account)
+      e.stopPropagation();
+      const menu = $('siteMenu');
+      menu.innerHTML = `<button data-site="multi">${esc(t('multi.opgg'))}</button><div class="menu-sep"></div>`
+        + SITES.map(([k, n]) => `<button data-site="${k}">${n}</button>`).join('');
+      menu.dataset.id = '';
+      menu.dataset.many = JSON.stringify(list.map(x => x.puuid));
+      const r = m.getBoundingClientRect();
+      menu.hidden = false;
+      menu.style.left = Math.min(r.left, innerWidth - menu.offsetWidth - 8) + 'px';
+      menu.style.top = Math.min(r.bottom + 4, innerHeight - menu.offsetHeight - 8) + 'px';
+      return;
     }
     if (what === 'remove') {
       if (await confirmBox(t('multi.removeTitle', { n: list.length }), t('menu.removeText'), t('menu.remove'), t('mh.clearWarn'))) {
@@ -299,6 +316,7 @@ siteMenu.addEventListener('click', e => {
   siteMenu.dataset.player = '';
   siteMenu.dataset.many = '';
   if (c && many) return moveMany(many, c.dataset.cat || '');
+  if (b && many) return openMany(many.map(id => S.accounts.find(x => x.puuid === id)).filter(Boolean), b.dataset.site);
   if (b && p) openSite(p, b.dataset.site);
   else if (b && a) openSite(a, b.dataset.site);
   if (c && a) moveTo(a.puuid, c.dataset.cat || '');

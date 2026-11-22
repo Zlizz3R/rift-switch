@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'tile.pbeTitle': "টেস্ট সার্ভার (PBE)", 'tile.pbeText': "এখানে র‍্যাঙ্কড নেই – নতুন জিনিস চেষ্টা করুন", 'pen.lowPrio': "লো প্রায়োরিটি", 'pen.short': "শাস্তি",
     'live.vsWho': "আপনি কার বিরুদ্ধে খেলছেন?", 'live.ratingT': "কাউন্টার রেটিং {r} (counterstats.net) – যত বেশি, লেন তত সহজ",
     'live.preloadBtn': "সব ম্যাচআপ আগে লোড করুন", 'live.preloadT': "counterstats.net অনুযায়ী এই লেনে আপনার পুল যাদের মুখোমুখি হয় তাদের সবাইকে লোড করে (সাধারণত ৩০–৫০) – কিউতে থাকার সময় চাপুন। এক দিন থাকে।",
     'live.poolTitle': "আমার চ্যাম্পিয়ন পুল", 'live.bestVs': "{name}-এর বিরুদ্ধে সেরা পিক", 'live.preload': "ম্যাচআপ লোড হচ্ছে {n} / {total} …",
