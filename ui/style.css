@@ -900,3 +900,15 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .select-box { position: fixed; z-index: 30; pointer-events: none; border: 1px solid var(--gold); background: rgba(200,170,110,.12); border-radius: 4px; }
 .tile.box-hit { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 #board { user-select: none; }
+
+/* champ select helper */
+.h-sub { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold2); margin: 12px 0 6px; }
+.h-sub:first-of-type { margin-top: 4px; }
+.h-enemy .h-en { width: 30px; height: 30px; border-radius: 6px; flex: none; }
+.h-load { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); margin-top: 10px; }
+.h-load .bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden; }
+.h-load .bar i { display: block; height: 100%; background: var(--gold); transition: width .2s; }
+.h-res .dots { font-style: normal; color: var(--muted); animation: pulse 1s infinite alternate; }
+@keyframes pulse { from { opacity: .3; } to { opacity: 1; } }
+
+.h-pre { display: flex; align-items: center; gap: 6px; margin-top: 12px; }

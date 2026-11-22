@@ -296,6 +296,30 @@ test('live page: only real penalties, with time left; a queue wait shows in the 
   assert.ok(app.visible('#helpBox'));
 }));
 
+test('champ select helper: pool under its heading, an enemy loads all matchups at once, best first; pre-load', () => {
+  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Malphite' }];
+  const wr = { Garen: 48.2, Illaoi: 53.1 };
+  const st = sampleState();
+  st.settings.champPool = [1, 3];
+  return withApp({ state: st, replies: { champions: champs, matchup: (me) => ({ wr: wr[me] }) } }, async (app) => {
+    await app.click('#navLive');
+    assert.match(app.$('.helper').textContent, /My champion pool/);
+    assert.equal(app.$$('.h-chip').length, 2);
+    await app.type('#hEnemy', 'Darius');
+    await new Promise((r) => setTimeout(r, 100));
+    await app.settle();
+    assert.deepEqual(app.called('matchup').map((c) => c.args.slice(0, 2)).sort(), [['Garen', 'Darius'], ['Illaoi', 'Darius']]);
+    assert.deepEqual(app.$$('.h-res b').map((x) => x.textContent), ['Illaoi', 'Garen'], 'best first');
+    assert.match(app.$('.helper').textContent, /Best picks against Darius/);
+    const before = app.called('matchup').length;
+    await app.click('#hPre');
+    await new Promise((r) => setTimeout(r, 150));
+    await app.settle();
+    assert.ok(app.called('matchup').length > before, 'pre-load asks for the popular champions');
+    assert.ok(app.called('matchup').every((c) => c.args[0] !== c.args[1]), 'never a champion against itself');
+  });
+});
+
 // ---------- tools ----------
 test('tools: every card runs its tool', () => withApp({}, async (app) => {
   await app.click('#navTools');

@@ -94,6 +94,8 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'live.preloadBtn': "预加载前 {n} 名", 'live.preloadT': "加载你的英雄池对阵该位置最常见英雄的数据——最好在排队时点击。需要几分钟，保存一天。",
+    'live.poolTitle': "我的英雄池", 'live.bestVs': "对阵 {name} 的最佳选择", 'live.preload': "正在加载对位 {n} / {total} …",
     'mh.loadingCount': "加载中 {n} / {total} …", 'mh.moreInGame': "对局中不加载——结束后一次性全部加载。",
     'multi.noteTitle': "为 {n} 个账号设置同一备注", 'multi.noteDone': "已为 {n} 个账号设置备注。",
     'det.dmg': "伤害", 'det.taken': "承伤", 'det.vision': "视野", 'det.visionT': "视野得分——插眼 / 排眼 / 购买真眼", 'det.items': "装备", 'det.h2h': "对位对比", 'det.goldAt': "{m}′ 金币", 'det.goldEnd': "结束时金币", 'det.goldDiff': "团队经济差（蓝方在上，红方在下）", 'det.upgrading': "较早的对局：英雄联盟运行时会补充全部详情和经济曲线。", 'det.towers': "防御塔", 'det.inhibs': "水晶", 'det.drakes': "小龙", 'det.heralds': "先锋", 'det.barons': "大龙",

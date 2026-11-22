@@ -427,20 +427,42 @@ pub fn first_rate(text: &str) -> Option<f64> {
     }
     None
 }
-pub async fn matchup(mine: &str, enemy: &str, lane: &str) -> Value {
+/// Win rates found are kept a day (matchups.json in the data folder), like the old helper's cache:
+/// a pre-load while queueing lasts all day. Failures are asked again next time.
+const MATCHUP_TTL: i64 = 86_400_000;
+fn matchup_cache(
+    data_dir: &Path,
+) -> std::sync::MutexGuard<'static, Option<HashMap<String, Value>>> {
+    let mut m = MATCHUPS.lock().unwrap();
+    if m.is_none() {
+        let now = now_ms();
+        let saved: HashMap<String, Value> = std::fs::read_to_string(data_dir.join("matchups.json"))
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_default();
+        *m = Some(
+            saved
+                .into_iter()
+                .filter(|(_, v)| now - v["at"].as_i64().unwrap_or(0) < MATCHUP_TTL)
+                .collect(),
+        );
+    }
+    m
+}
+pub async fn matchup(data_dir: &Path, mine: &str, enemy: &str, lane: &str) -> Value {
     let lane = if ["top", "jungle", "mid", "adc", "support"].contains(&lane) {
         lane
     } else {
         "top"
     };
     let key = format!("{mine}|{enemy}|{lane}");
-    if let Some(v) = MATCHUPS
-        .lock()
-        .unwrap()
-        .get_or_insert_with(HashMap::new)
-        .get(&key)
+    if let Some(v) = matchup_cache(data_dir)
+        .as_ref()
+        .and_then(|c| c.get(&key).cloned())
     {
-        return v.clone();
+        if now_ms() - v["at"].as_i64().unwrap_or(0) < MATCHUP_TTL {
+            return json!({ "wr": v["wr"], "source": "counterstats.net" });
+        }
     }
     let url = format!(
         "https://www.counterstats.net/league-of-legends/{}/vs-{}/{lane}/all",
@@ -451,16 +473,18 @@ pub async fn matchup(mine: &str, enemy: &str, lane: &str) -> Value {
         Some((200, t)) => first_rate(&t).map(|v| ((100.0 - v) * 10.0).round() / 10.0),
         _ => None,
     };
-    let res = json!({ "wr": wr, "source": wr.map(|_| "counterstats.net") });
-    if wr.is_some() {
-        let mut m = MATCHUPS.lock().unwrap();
-        let c = m.get_or_insert_with(HashMap::new);
-        if c.len() > 300 {
-            c.clear();
-        }
-        c.insert(key, res.clone());
+    if let Some(w) = wr {
+        let text = {
+            let mut m = matchup_cache(data_dir);
+            let c = m.get_or_insert_with(HashMap::new);
+            let now = now_ms();
+            c.retain(|_, v| now - v["at"].as_i64().unwrap_or(0) < MATCHUP_TTL);
+            c.insert(key, json!({ "wr": w, "at": now }));
+            serde_json::to_string(&c).unwrap_or_default()
+        };
+        let _ = crate::store::write_atomic(&data_dir.join("matchups.json"), text.as_bytes());
     }
-    res
+    json!({ "wr": wr, "source": wr.map(|_| "counterstats.net") })
 }
 
 #[cfg(test)]

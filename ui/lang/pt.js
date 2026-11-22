@@ -97,6 +97,8 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'live.preloadBtn': "Pré-carregar o top {n}", 'live.preloadT': "Carrega seu grupo contra os campeões mais jogados desta rota – melhor clicar na fila. Leva alguns minutos e fica salvo por um dia.",
+    'live.poolTitle': "Meu grupo de campeões", 'live.bestVs': "Melhores escolhas contra {name}", 'live.preload': "Carregando confrontos {n} / {total} …",
     'mh.loadingCount': "Carregando {n} / {total} …", 'mh.moreInGame': "Não durante uma partida – depois carrega tudo de uma vez.",
     'multi.noteTitle': "Uma nota para {n} contas", 'multi.noteDone': "Nota definida em {n} contas.",
     'det.dmg': "Dano", 'det.taken': "Recebido", 'det.vision': "Visão", 'det.visionT': "Placar de visão – sentinelas colocadas / destruídas / de controle compradas", 'det.items': "Itens", 'det.h2h': "Rota contra rota", 'det.goldAt': "Ouro @{m}′", 'det.goldEnd': "Ouro no fim", 'det.goldDiff': "Vantagem de ouro do time (azul em cima, vermelho embaixo)", 'det.upgrading': "Partida antiga: todos os detalhes e a curva de ouro chegam enquanto o League estiver aberto.", 'det.towers': "Torres", 'det.inhibs': "Inibidores", 'det.drakes': "Dragões", 'det.heralds': "Arautos", 'det.barons': "Barões",

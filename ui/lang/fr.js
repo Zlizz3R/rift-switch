@@ -98,6 +98,8 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'live.preloadBtn': "Précharger le top {n}", 'live.preloadT': "Charge ton pool contre les champions les plus joués de cette voie – à cliquer en file d'attente. Quelques minutes, gardé un jour.",
+    'live.poolTitle': "Mon pool de champions", 'live.bestVs': "Meilleurs choix contre {name}", 'live.preload': "Chargement des matchups {n} / {total} …",
     'mh.loadingCount': "Chargement {n} / {total} …", 'mh.moreInGame': "Pas pendant une partie – après, tout se charge d'un coup.",
     'multi.noteTitle': "Une note pour {n} comptes", 'multi.noteDone': "Note mise sur {n} comptes.",
     'det.dmg': "Dégâts", 'det.taken': "Subis", 'det.vision': "Vision", 'det.visionT': "Score de vision – balises posées / détruites / balises de contrôle achetées", 'det.items': "Objets", 'det.h2h': "Voie contre voie", 'det.goldAt': "Or @{m}′", 'det.goldEnd': "Or à la fin", 'det.goldDiff': "Avance en or de l'équipe (bleu en haut, rouge en bas)", 'det.upgrading': "Partie ancienne : tous les détails et la courbe d'or arrivent pendant que League tourne.", 'det.towers': "Tours", 'det.inhibs': "Inhibiteurs", 'det.drakes': "Dragons", 'det.heralds': "Hérauts", 'det.barons': "Barons",
