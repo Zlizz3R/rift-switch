@@ -34,8 +34,9 @@ pub struct Entry {
     v: u8,
 }
 
-/// Format of games stored now: 2 = players carry their position ("pos").
-pub const GAME_VERSION: u8 = 2;
+/// Format of games stored now: 2 = players carry their position ("pos"); 3 = every stat for the
+/// details view ("x"), team objectives ("teams") and the gold of each player per minute ("gold").
+pub const GAME_VERSION: u8 = 3;
 /// Summoner's Rift queues (only there positions mean something)
 const SR_QUEUES: [i64; 7] = [400, 420, 430, 440, 480, 490, 700];
 
@@ -389,14 +390,15 @@ impl Matches {
             .collect()
     }
 
-    /// Summoner's Rift games stored before positions were kept, newest first.
+    /// Games stored in an older format (no positions / details yet), newest first –
+    /// Summoner's Rift first, where positions matter most.
     pub fn outdated(&self, max: usize) -> Vec<String> {
         let mut out: Vec<(&String, &Entry)> = self
             .index
             .iter()
-            .filter(|(_, e)| e.v < GAME_VERSION && SR_QUEUES.contains(&e.q))
+            .filter(|(_, e)| e.v < GAME_VERSION)
             .collect();
-        out.sort_by_key(|(_, e)| std::cmp::Reverse(e.t));
+        out.sort_by_key(|(_, e)| (!SR_QUEUES.contains(&e.q), std::cmp::Reverse(e.t)));
         out.into_iter()
             .take(max)
             .map(|(id, _)| id.clone())
@@ -514,6 +516,87 @@ pub fn read_entries(file: &Path, entries: &[Entry]) -> Vec<Value> {
     out
 }
 
+/// Every number of a player the details view shows (kept short: about 0.3 KB per player).
+fn extra(s: &Value) -> Value {
+    const KEYS: [(&str, &str); 22] = [
+        ("totalDamageTaken", "taken"),
+        ("physicalDamageDealtToChampions", "phys"),
+        ("magicDamageDealtToChampions", "magic"),
+        ("trueDamageDealtToChampions", "true"),
+        ("totalHeal", "heal"),
+        ("damageSelfMitigated", "mitig"),
+        ("timeCCingOthers", "cc"),
+        ("wardsPlaced", "wards"),
+        ("wardsKilled", "wardsKilled"),
+        ("visionWardsBoughtInGame", "pinks"),
+        ("turretKills", "towers"),
+        ("inhibitorKills", "inhibs"),
+        ("damageDealtToObjectives", "obj"),
+        ("damageDealtToTurrets", "turretDmg"),
+        ("largestKillingSpree", "spree"),
+        ("largestCriticalStrike", "crit"),
+        ("goldSpent", "spent"),
+        ("totalMinionsKilled", "minions"),
+        ("neutralMinionsKilled", "jungle"),
+        ("doubleKills", "doubles"),
+        ("tripleKills", "triples"),
+        ("quadraKills", "quadras"),
+    ];
+    let mut o = crate::accounts::Obj::new();
+    for (from, to) in KEYS {
+        let n = num_of(s.get(from)) as i64;
+        if n != 0 {
+            o.insert(to.into(), json!(n));
+        }
+    }
+    for (from, to) in [("pentaKills", "pentas"), ("killingSprees", "sprees")] {
+        let n = num_of(s.get(from)) as i64;
+        if n != 0 {
+            o.insert(to.into(), json!(n));
+        }
+    }
+    if s["firstBloodKill"] == true {
+        o.insert("fb".into(), json!(true));
+    }
+    Value::Object(o)
+}
+/// A team's objectives.
+fn team(t: &Value) -> Value {
+    json!({ "id": t["teamId"], "towers": num(&t["towerKills"]), "inhibs": num(&t["inhibitorKills"]), "drakes": num(&t["dragonKills"]),
+        "barons": num(&t["baronKills"]), "heralds": num(&t["riftHeraldKills"]), "grubs": num(&t["hordeKills"]) })
+}
+/// The client's game timeline -> "gold": one list per minute with every player's total gold
+/// (in the order of "players"). Kept as long as the details view needs it (~1–2 KB).
+pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
+    let Some(frames) = tl["frames"].as_array() else {
+        return;
+    };
+    let gold: Vec<Value> = frames
+        .iter()
+        .map(|f| {
+            let pf = &f["participantFrames"];
+            Value::Array(
+                participant_ids
+                    .iter()
+                    .map(|id| num(&pf[id.to_string().as_str()]["totalGold"]))
+                    .collect(),
+            )
+        })
+        .collect();
+    if gold.len() > 1 {
+        game["gold"] = Value::Array(gold);
+    }
+}
+/// The participant ids of a game detail, in the order compact() lists the players.
+pub fn participant_ids(g: &Value) -> Vec<i64> {
+    g["participants"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|p| p["participantId"].as_i64().unwrap_or(0))
+        .collect()
+}
+
 /// The client's lane + role of a player -> top | jungle | mid | bot | support | "" (unknown).
 /// Riot guesses these from the game; the page only uses them when each team has all five.
 pub fn position(tl: &Value) -> &'static str {
@@ -557,6 +640,7 @@ pub fn compact(g: &Value) -> Option<Value> {
                 "items": (0..7).map(|i| num(&s[format!("item{i}").as_str()])).collect::<Vec<_>>(),
                 "spells": [num(&p["spell1Id"]), num(&p["spell2Id"])], "keystone": num(&s["perk0"]), "sub": num(&s["perkSubStyle"]),
                 "win": s["win"] == true, "multi": num(&s["largestMultiKill"]), "pos": position(&p["timeline"]),
+                "x": extra(s),
             })
         })
         .collect();
@@ -566,7 +650,8 @@ pub fn compact(g: &Value) -> Option<Value> {
     let dur = num_of(g.get("gameDuration")) as i64;
     Some(
         json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
-        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": GAME_VERSION }),
+        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": GAME_VERSION,
+        "teams": g["teams"].as_array().map(|t| t.iter().map(team).collect::<Vec<_>>()).unwrap_or_default() }),
     )
 }
 
@@ -592,6 +677,15 @@ mod tests {
         assert_eq!(g["players"][3]["name"], "N3");
         assert!(compact(&json!({})).is_none());
         assert_eq!(g["v"], GAME_VERSION);
+        assert_eq!(g["players"][3]["x"]["minions"], 100);
+        assert_eq!(g["players"][3]["x"]["jungle"], 5);
+        let mut g2 = g.clone();
+        let tl = json!({ "frames": [
+            { "participantFrames": (1..=10).map(|i| (i.to_string(), json!({ "totalGold": 500 }))).collect::<serde_json::Map<_, _>>() },
+            { "participantFrames": (1..=10).map(|i| (i.to_string(), json!({ "totalGold": 500 + i * 100 }))).collect::<serde_json::Map<_, _>>() } ] });
+        add_timeline(&mut g2, &tl, &participant_ids(&detail(5)));
+        assert_eq!(g2["gold"][1][0], 600);
+        assert_eq!(g2["gold"][1][9], 1500);
         assert_eq!(
             position(&json!({ "lane": "BOTTOM", "role": "DUO_SUPPORT" })),
             "support"

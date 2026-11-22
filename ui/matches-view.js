@@ -22,6 +22,93 @@ function rankCell(r) {
   return `<i class="rk-cell t-${String(tier).toLowerCase()}"><img src="${crestUrl(tier)}" alt=""><b>${esc(tierName(tier) + (apex ? '' : ' ' + div))}</b><small>${lp} LP</small></i>`;
 }
 
+// ---------- details of one game (click a game) ----------
+const k1 = n => (Math.abs(n) >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n));
+const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + k1(Math.abs(n));
+function goldChart(g, left) {
+  // blue minus red (left minus right) team gold per minute
+  const idx = side => g.players.map((p, i) => (p.team === side ? i : -1)).filter(i => i >= 0);
+  const L = idx(left), R = g.players.map((_, i) => i).filter(i => !L.includes(i));
+  const diff = g.gold.map(f => L.reduce((s, i) => s + (f[i] || 0), 0) - R.reduce((s, i) => s + (f[i] || 0), 0));
+  const max = Math.max(1000, ...diff.map(Math.abs));
+  const W = 600, H = 120, x = i => (i / Math.max(1, diff.length - 1)) * W, y = v => H / 2 - (v / max) * (H / 2 - 6);
+  const pts = diff.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const marks = [10, 15, 20, 25, 30, 35, 40].filter(m => m < diff.length).map(m => `<line x1="${x(m)}" x2="${x(m)}" y1="0" y2="${H}" class="gl"/>`).join('');
+  // minute labels as text under the chart (inside the stretched SVG they would be distorted)
+  const labels = [10, 15, 20, 25, 30, 35, 40].filter(m => m < diff.length).map(m => `<span style="left:${(100 * m / Math.max(1, diff.length - 1)).toFixed(2)}%">${m}′</span>`).join('');
+  return `<div class="det-chart"><div class="det-h">${t('det.goldDiff')}</div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${marks}
+      <line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" class="zero"/>
+      <clipPath id="up${g.id}"><rect x="0" y="0" width="${W}" height="${H / 2}"/></clipPath>
+      <clipPath id="dn${g.id}"><rect x="0" y="${H / 2}" width="${W}" height="${H / 2}"/></clipPath>
+      <polygon points="0,${H / 2} ${pts} ${W},${H / 2}" class="a-blue" clip-path="url(#up${g.id})"/>
+      <polygon points="0,${H / 2} ${pts} ${W},${H / 2}" class="a-red" clip-path="url(#dn${g.id})"/>
+      <polyline points="${pts}" class="ln"/></svg>
+    <div class="det-mins">${labels}</div>
+    <div class="det-scale"><span>±${k1(max)}</span><span>${t('det.goldEnd')}: ${sign(diff[diff.length - 1])}</span></div></div>`;
+}
+function detailsHtml(g, as, mine) {
+  const { a, b, roles } = lineUp(g, mine);
+  const mins = Math.max(1, g.dur / 60);
+  const all = g.players;
+  const maxDmg = Math.max(1, ...all.map(p => p.dmg || 0)), maxTaken = Math.max(1, ...all.map(p => (p.x && p.x.taken) || 0));
+  const teamOf = id => (g.teams || []).find(x => x.id === id) || {};
+  const sum = (ps, f) => ps.reduce((s, p) => s + (f(p) || 0), 0);
+  const head = (ps, side) => {
+    const tm = teamOf(ps[0] && ps[0].team);
+    const win = ps[0] && ps[0].win;
+    const obj = (k, label) => (tm[k] != null ? `<span title="${esc(t('det.' + k))}">${label} <b>${tm[k]}</b></span>` : '');
+    return `<div class="det-team ${side} ${win ? 'win' : 'loss'}">
+      <b>${t(win ? 'mh.win' : 'mh.loss')}</b>
+      <span>${sum(ps, p => p.k)} / ${sum(ps, p => p.d)} / ${sum(ps, p => p.a)}</span>
+      <span>${k1(sum(ps, p => p.gold))} ${t('mh.gold')}</span>
+      ${obj('towers', '🏰')}${obj('inhibs', '⬢')}${obj('drakes', '🐉')}${obj('heralds', '👁')}${obj('barons', '🟣')}</div>`;
+  };
+  const row = p => {
+    const x = p.x || {};
+    const ratio = p.d ? ((p.k + p.a) / p.d).toFixed(2) : t('mh.perfect');
+    return `<tr class="${mine.has(p.puuid) ? 'me' : ''}">
+      <td class="dc"><img src="${CHAMP_ICON(p.champ)}" alt=""><i>${p.lvl}</i><span data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}">${esc(p.name || '?')}</span></td>
+      <td><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small>${ratio}</small></td>
+      <td class="bar-cell"><b>${k1(p.dmg)}</b><span class="bar"><i style="width:${Math.round(100 * p.dmg / maxDmg)}%"></i></span></td>
+      <td class="bar-cell"><b>${x.taken != null ? k1(x.taken) : '–'}</b><span class="bar taken"><i style="width:${Math.round(100 * (x.taken || 0) / maxTaken)}%"></i></span></td>
+      <td><b>${k1(p.gold)}</b></td>
+      <td><b>${p.cs}</b><small>${(p.cs / mins).toFixed(1)}/min</small></td>
+      <td><b>${p.vis}</b><small>${x.wards != null ? `${x.wards} / ${x.wardsKilled || 0} / ${x.pinks || 0}` : ''}</small></td>
+      <td class="det-items">${(p.items || []).map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}</td>
+    </tr>`;
+  };
+  const table = (ps, side) => `${head(ps, side)}<table class="det-table"><thead><tr>
+      <th></th><th>KDA</th><th>${t('det.dmg')}</th><th>${t('det.taken')}</th><th>${t('mh.gold')}</th><th>CS</th>
+      <th title="${esc(t('det.visionT'))}">${t('det.vision')}</th><th>${t('det.items')}</th></tr></thead>
+      <tbody>${ps.map(row).join('')}</tbody></table>`;
+  // lane against lane: who was ahead at the end (and at 10 / 15 minutes from the gold timeline)
+  let h2h = '';
+  if (roles) {
+    const at = (p, m) => { if (!g.gold || g.gold.length <= m) return null; const i = g.players.indexOf(p); return g.gold[m][i]; };
+    const cell = (v, fmt = sign) => `<span class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v == null ? '–' : fmt(v)}</span>`;
+    h2h = `<div class="det-h">${t('det.h2h')}</div><table class="det-h2h"><thead><tr><th></th>
+        ${g.gold && g.gold.length > 10 ? `<th>${t('det.goldAt', { m: 10 })}</th>` : ''}${g.gold && g.gold.length > 15 ? `<th>${t('det.goldAt', { m: 15 })}</th>` : ''}
+        <th>${t('det.goldEnd')}</th><th>CS</th><th>${t('det.dmg')}</th><th>Level</th><th></th></tr></thead><tbody>${roles.map((r, i) => {
+      const L = a[i], R = b[i];
+      const d = (f) => f(L) - f(R);
+      return `<tr><td class="dc"><img src="${CHAMP_ICON(L.champ)}" alt=""><span>${esc(L.name || '?')}</span></td>
+        ${g.gold && g.gold.length > 10 ? `<td>${cell(at(L, 10) - at(R, 10))}</td>` : ''}${g.gold && g.gold.length > 15 ? `<td>${cell(at(L, 15) - at(R, 15))}</td>` : ''}
+        <td>${cell(d(p => p.gold))}</td><td>${cell(d(p => p.cs), v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v))}</td>
+        <td>${cell(d(p => p.dmg))}</td><td>${cell(d(p => p.lvl), v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v))}</td>
+        <td class="dc r"><span>${esc(R.name || '?')}</span><img src="${CHAMP_ICON(R.champ)}" alt=""><img class="role" src="${posIcon(r)}" alt=""></td></tr>`;
+    }).join('')}</tbody></table>`;
+  }
+  const left = Math.min(...g.players.map(p => p.team));
+  const old = !g.v || g.v < 3;
+  return `<div class="mh-det">
+    ${old ? `<p class="fine">${t('det.upgrading')}</p>` : ''}
+    ${table(a, 'l')}${table(b, 'r')}
+    ${h2h}
+    ${g.gold && g.gold.length > 2 ? goldChart(g, left) : ''}
+  </div>`;
+}
+
 // ---------- the ten players ----------
 const POSITIONS = ['top', 'jungle', 'mid', 'bot', 'support'];
 const POS_FILE = { top: 'top', jungle: 'jungle', mid: 'middle', bot: 'bottom', support: 'utility' };
@@ -72,7 +159,7 @@ function rankTip(r) {
   const [tier, div, lp] = r;
   return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
 }
-let mh = { pin: 0, ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+let mh = { open: new Set(), pin: 0, ranks: {}, filter: { puuid: '', queue: '' }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440].includes(g.q) ? ' ' + t('mh.ranked') : '');
@@ -314,6 +401,7 @@ function gameRow(g, as) {
         ${MULTI[me.multi] ? `<span class="mh-badge">${t(MULTI[me.multi])}</span>` : ''}</div>
     </div>
     <div class="mh-teams">${teamsTable(g, mine)}</div>
+    ${mh.open.has(String(g.id)) ? detailsHtml(g, as, mine) : ''}
   </div>`;
 }
 
@@ -349,6 +437,14 @@ $('viewMatches').addEventListener('click', async e => {
   if (r && r.ok) mh.limit = (mh.limit || 80) + 80;
   if (r && r.ok && !r.added) toast(t('mh.noOlder'));
   loadMatches();
+});
+$('mhList').addEventListener('click', e => {
+  if (e.target.closest('[data-player], [data-pin], [data-goto], button, a, input, .mh-det')) return;
+  const row = e.target.closest('.mh-row');
+  if (!row) return;
+  const id = row.dataset.gid;
+  if (mh.open.has(id)) mh.open.delete(id); else mh.open.add(id);
+  renderMatches();
 });
 // a player's name: "open with" menu (op.gg, Porofessor …), region of the owning account
 $('mhList').addEventListener('click', e => {

@@ -844,9 +844,22 @@ async fn fetch_games(ids: Vec<String>) -> usize {
     let mut got = 0;
     for id in ids {
         let g = riot::lcu(&format!("/lol-match-history/v1/games/{id}"), 6000, "GET").await;
-        match g.as_ref().and_then(matches::compact) {
-            Some(g) => {
-                if with(|c| c.mh.insert(&g)) {
+        match g
+            .as_ref()
+            .and_then(|g| matches::compact(g).map(|c| (c, matches::participant_ids(g))))
+        {
+            Some((mut c, pids)) => {
+                // the gold of every player per minute (for the details view)
+                if let Some(tl) = riot::lcu(
+                    &format!("/lol-match-history/v1/game-timelines/{id}"),
+                    6000,
+                    "GET",
+                )
+                .await
+                {
+                    matches::add_timeline(&mut c, &tl, &pids);
+                }
+                if with(|c2| c2.mh.insert(&c)) {
                     got += 1;
                 }
             }
