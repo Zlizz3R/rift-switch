@@ -1133,3 +1133,7 @@ li.now .sw-dot { border-color: var(--gold); border-top-color: transparent; anima
 .ch em { font-style: normal; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .ch.skin { border-color: rgba(200,170,110,.45); }
 .ch.champShard, .ch.skinShard { border-style: dashed; }
+
+/* sign-in needs a hand: what to do in the Riot Client */
+.login-manual { text-align: left; margin: 4px 0 14px; display: grid; gap: 10px; justify-items: center; }
+.login-manual ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 13px; color: var(--text); justify-self: stretch; }

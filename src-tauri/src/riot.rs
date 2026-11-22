@@ -903,6 +903,16 @@ pub async fn close_league_only() {
     taskkill(&["LeagueClient.exe".into(), "LeagueClientUx.exe".into()]).await;
     tokio::time::sleep(Duration::from_millis(1500)).await;
 }
+/// Brings up the Riot Client window (started without arguments it just shows itself).
+pub fn show_riot_client() {
+    use std::os::windows::process::CommandExt;
+    let _ = std::process::Command::new(riot_client_exe())
+        .creation_flags(0x0000_0008 | 0x0000_0200)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
 pub fn launch_league(pl: &str) {
     use std::os::windows::process::CommandExt;
     let pl = if pl == "pbe" { "pbe" } else { "live" };

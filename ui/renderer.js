@@ -759,8 +759,8 @@ $('swHide').onclick = () => { swHidden = S.switching ? S.switching.n : 0; render
 $('swCancel').onclick = () => api.cancelSwitch();
 
 function renderLogin(l) {
-  // while the steps screen runs, only a failure needs its own box
-  if (l && l.stage !== 'failed' && S.switching && S.switching.n !== swHidden) l = null;
+  // while the steps screen runs, only a failure or a question of the Riot Client (code, captcha) needs its own box
+  if (l && l.stage !== 'failed' && l.stage !== 'check' && S.switching && S.switching.n !== swHidden) l = null;
   $('loginBox').hidden = !l;
   if (!l) return;
   const failed = l.stage === 'failed';
@@ -770,7 +770,12 @@ function renderLogin(l) {
   $('loginSpin').hidden = failed || l.stage === 'check';
   $('loginFail').hidden = !failed;
   $('loginDismiss').textContent = failed ? t('common.close') : t('common.hide');
+  // a code, a captcha or a wrong password: what to do by hand – the app keeps waiting and goes on by itself
+  const manual = l.stage === 'check' || (failed && l.msgKey !== 'm.timeout');
+  $('loginManual').hidden = !manual;
+  if (manual) $('loginSteps').innerHTML = ['login.step1', 'login.step2', failed ? 'login.step3f' : 'login.step3'].map(k => `<li>${esc(t(k))}</li>`).join('');
 }
+$('loginRc').onclick = () => api.showRiotClient();
 
 // ---------- actions ----------
 let toastTimer;
@@ -844,9 +849,15 @@ async function switchTo(id) {
   if (id === S.active && S.live && S.live.puuid === id) return toast(t('sw.already'));
   const a = S.accounts.find(x => x.puuid === id);
   const p = S.live && S.live.phase;
+  const pen = a && !a.placeholder && (a.lowPrio ? { low: a.lowPrio } : tilePenalty(a));
   if (RISKY.includes(p)) {
     // in champ select / in game: always ask, with the warning
     if (!(await guardRunningGame())) return;
+  } else if (pen) {
+    // a locked account: always asked, whatever the setting – games only start after the penalty
+    const what = pen.low ? t('sw.penLowPrio', { what: lowPrioText(pen.low) || t('pen.lowPrio') })
+      : t('sw.penLock', { reason: reasonText({ code: pen.code, args: pen.args }), left: pen.until ? leftText(pen.until) : '–' });
+    if (!(await confirmBox(t('sw.penTitle', { name: fullName(a) }), what, t('sw.penBtn')))) return;
   } else if (!S.settings || S.settings.confirmSwitch !== false) {
     const name = a ? fullName(a) : t('sw.this');
     const ok = await confirmBox(t('sw.confirm', { name }), S.live && S.live.clientUp ? t('sw.restart') : t('sw.start'), t('sw.btn'));
@@ -1090,7 +1101,7 @@ $('settingsClose').onclick = () => openSettings(false);
 $('search').addEventListener('input', render);
 $('sort').onchange = () => api.setSetting('sort', $('sort').value);
 api.onTraySwitch(id => stateReady.then(() => switchTo(id)));   // a freshly opened window loads its state first
-api.onToast(key => toast(t(key)));
+api.onToast(k => (typeof k === 'string' ? toast(t(k)) : toast(t(k.key, k.vars), !!k.err)));
 $('addAcc').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
 $('navAdd').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
 $('emptyAdd').onclick = () => openDrawer(true);

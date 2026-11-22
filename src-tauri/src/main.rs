@@ -777,15 +777,33 @@ async fn tick_inner(my_gen: u64) {
     };
     let id = cur_id.unwrap();
     let now = now_ms();
-    // first login of an account that was only saved so far
-    with(|c| {
-        if let Some(e) = c.expecting.clone() {
-            if is_placeholder(&e) && c.st.has(&e) {
-                resolve_placeholder(c, &e, &id);
-            }
+    // first login of an account that was only saved so far; and: is it the one that was picked?
+    let wrong = with(|c| {
+        let e = c.expecting.take()?;
+        let want = c.st.account(&e).cloned()?;
+        let got = format!("{}#{}", str_of(&cur, "gameName"), str_of(&cur, "tagLine"));
+        let want_name = format!("{}#{}", str_of(&want, "gameName"), str_of(&want, "tagLine"));
+        let differs = if is_placeholder(&e) {
+            // a saved login with a Riot ID: the login belongs to another account
+            truthy(want.get("tagLine")) && !want_name.eq_ignore_ascii_case(&got)
+        } else {
+            e != id
+        };
+        if is_placeholder(&e) {
+            resolve_placeholder(c, &e, &id);
         }
-        c.expecting = None;
+        differs.then_some((got, want_name))
     });
+    if let Some((got, want)) = wrong {
+        log_error(
+            "login",
+            &format!("signed in as another account than picked ({got} / {want})"),
+        );
+        emit(
+            "toast",
+            json!({ "key": "login.wrong", "vars": { "got": got, "want": want }, "err": true }),
+        );
+    }
     let (known, pending_add) = with(|c| (c.st.has(&id), c.pending_add));
     if known || pending_add {
         upsert(cur.clone());
@@ -2100,6 +2118,10 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 c.login = Value::Null;
             });
             push();
+            Value::Null
+        }
+        "show-riot-client" => {
+            riot::show_riot_client();
             Value::Null
         }
         "dismiss-login" => {

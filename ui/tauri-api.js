@@ -21,6 +21,7 @@
     addSaved: data => call('add-saved', data),
     addNew: cred => call('add-new', cred || null),
     dismissLogin: () => call('dismiss-login'),
+    showRiotClient: () => call('show-riot-client'),
     cancelSwitch: () => call('cancel-switch'),
     getCredUser: puuid => call('get-cred-user', puuid),
     setCred: (puuid, cred) => call('set-cred', puuid, cred),

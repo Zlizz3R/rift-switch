@@ -609,6 +609,44 @@ test('collection: numbers per account, a search finds champions, skins and shard
   assert.match(app.$('#collBody').textContent, /None of your accounts/);
 }));
 
+// ---------- safeguards around logging in ----------
+test('a locked account asks before logging in, even with the question switched off', () => {
+  const st = sampleState();
+  st.settings.confirmSwitch = false;
+  st.accounts[1].penalties = { at: 1, list: [{ code: 'LEAVER_BUSTER', until: Date.now() + 3600000 }] };
+  st.accounts[2].lowPrio = { games: 2, perGame: 300, at: 1 };
+  return withApp({ state: st }, async (app) => {
+    await app.click(tile(app, 2));
+    await app.click(tile(app, 2));
+    assert.ok(!app.$('#confirm').hidden);
+    assert.match(app.$('#confirm').textContent, /penalty/);
+    await app.click('#confirmNo');
+    assert.equal(app.called('switch').length, 0);
+    await app.click(tile(app, 3));
+    await app.click(tile(app, 3));
+    assert.match(app.$('#confirm').textContent, /Low priority queue: 2 games/);
+    await app.click('#confirmYes');
+    assert.deepEqual(lastCall(app, 'switch').args, [P(3)]);
+  });
+});
+
+test('sign-in waiting for a code or captcha: what to do by hand, and a button to the Riot Client', () => withApp({}, async (app) => {
+  await app.push({ ...app.S.state, login: { name: 'Player2', stage: 'check' } });
+  assert.ok(!app.$('#loginBox').hidden);
+  assert.ok(!app.$('#loginManual').hidden);
+  assert.equal(app.$$('#loginSteps li').length, 3);
+  await app.click('#loginRc');
+  assert.equal(app.called('show-riot-client').length, 1);
+  await app.push({ ...app.S.state, login: { name: 'Player2', stage: 'typing' } });
+  assert.ok(app.$('#loginManual').hidden);
+}));
+
+test('signed in as another account than picked: a red note with both names', () => withApp({}, async (app) => {
+  await app.emit('toast', { key: 'login.wrong', vars: { got: 'Other#EUW', want: 'Player2#EUW' }, err: true });
+  assert.match(app.$('#toast').textContent, /Signed in as Other#EUW – not Player2#EUW/);
+  assert.ok(app.$('#toast').classList.contains('err'));
+}));
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;
