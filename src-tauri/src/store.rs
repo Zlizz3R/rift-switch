@@ -21,9 +21,18 @@ pub struct State {
 impl State {
     pub fn to_json(&self) -> Value {
         let mut o = Obj::new();
-        o.insert("accounts".into(), Value::Array(self.accounts.iter().cloned().map(Value::Object).collect()));
-        o.insert("categories".into(), Value::Array(self.categories.iter().cloned().map(Value::Object).collect()));
-        o.insert("active".into(), self.active.clone().map_or(Value::Null, Value::String));
+        o.insert(
+            "accounts".into(),
+            Value::Array(self.accounts.iter().cloned().map(Value::Object).collect()),
+        );
+        o.insert(
+            "categories".into(),
+            Value::Array(self.categories.iter().cloned().map(Value::Object).collect()),
+        );
+        o.insert(
+            "active".into(),
+            self.active.clone().map_or(Value::Null, Value::String),
+        );
         o.insert("settings".into(), Value::Object(self.settings.clone()));
         if let Some(l) = &self.lock {
             o.insert("lock".into(), l.clone());
@@ -46,7 +55,11 @@ impl State {
         truthy(self.settings.get(k))
     }
     pub fn lang(&self) -> String {
-        self.settings.get("lang").and_then(Value::as_str).unwrap_or("en").to_string()
+        self.settings
+            .get("lang")
+            .and_then(Value::as_str)
+            .unwrap_or("en")
+            .to_string()
     }
 }
 
@@ -54,7 +67,11 @@ impl State {
 pub fn normalize(raw: Value) -> State {
     let mut o = raw.as_object().cloned().unwrap_or_default();
     let objs = |v: Option<Value>| -> Vec<Obj> {
-        v.and_then(|v| v.as_array().cloned()).unwrap_or_default().into_iter().filter_map(|x| x.as_object().cloned()).collect()
+        v.and_then(|v| v.as_array().cloned())
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|x| x.as_object().cloned())
+            .collect()
     };
     let mut accounts = objs(o.remove("accounts"));
     for a in &mut accounts {
@@ -66,7 +83,9 @@ pub fn normalize(raw: Value) -> State {
         }
     }
     let categories = objs(o.remove("categories"));
-    let active = o.remove("active").and_then(|v| v.as_str().map(String::from));
+    let active = o
+        .remove("active")
+        .and_then(|v| v.as_str().map(String::from));
     let mut settings = defaults();
     if let Some(Value::Object(s)) = o.remove("settings") {
         for (k, v) in s {
@@ -84,49 +103,135 @@ pub fn normalize(raw: Value) -> State {
         settings.insert("autoPlayDefault".into(), json!(true));
     }
     let lock = o.remove("lock").filter(|l| l.is_object());
-    State { accounts, categories, active, settings, lock, extra: o }
+    State {
+        accounts,
+        categories,
+        active,
+        settings,
+        lock,
+        extra: o,
+    }
 }
 
-/// Reads the file (or file.bak if the real one is missing). A damaged file is copied aside first,
-/// never silently overwritten. Err(text) = it was damaged (for the log).
-pub fn read_state(file: &Path) -> (State, Option<String>) {
+pub enum Loaded {
+    /// read fine (or no file yet)
+    Ok(State),
+    /// the file is not valid JSON: it was copied aside, the app starts empty
+    Damaged(State, String),
+    /// the file could not be read at all (locked by a virus scanner …): the app must not save,
+    /// or it would replace the real file with an empty one
+    Unreadable(String),
+}
+
+/// Reads the file (or file.bak if the real one is missing or broken). A damaged file is copied
+/// aside first, never silently overwritten. A good file is kept as file.bak once per start.
+pub fn read_state(file: &Path) -> Loaded {
     let bak = file.with_extension("json.bak");
-    let src = if file.exists() { file.to_path_buf() } else if bak.exists() { bak } else { return (normalize(Value::Null), None) };
-    let text = fs::read_to_string(&src).unwrap_or_default();
-    match serde_json::from_str::<Value>(text.trim_start_matches('\u{feff}')) {
-        Ok(v) => (normalize(v), None),
+    let parse = |p: &Path| -> Result<Option<Value>, String> {
+        if !p.exists() {
+            return Ok(None);
+        }
+        // a locked file (virus scanner, backup tool) usually frees up within a moment
+        let mut last = String::new();
+        for i in 0..10 {
+            match fs::read(p) {
+                Ok(b) => {
+                    let t = String::from_utf8_lossy(&b);
+                    return serde_json::from_str::<Value>(t.trim_start_matches('\u{feff}'))
+                        .map(Some)
+                        .map_err(|e| format!("damaged: {e}"));
+                }
+                Err(e) => last = e.to_string(),
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100 * (i + 1)));
+        }
+        Err(format!("unreadable: {last}"))
+    };
+    match parse(file) {
+        Ok(Some(v)) => {
+            let _ = fs::copy(file, &bak);
+            Loaded::Ok(normalize(v))
+        }
+        Ok(None) => match parse(&bak) {
+            Ok(Some(v)) => Loaded::Ok(normalize(v)),
+            _ => Loaded::Ok(normalize(Value::Null)),
+        },
+        Err(e) if e.starts_with("unreadable") => Loaded::Unreadable(e),
         Err(e) => {
-            let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis());
-            let _ = fs::copy(&src, file.with_file_name(format!("accounts.damaged-{ts}.json")));
-            (normalize(Value::Null), Some(e.to_string()))
+            let ts = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_millis());
+            let _ = fs::copy(
+                file,
+                file.with_file_name(format!("accounts.damaged-{ts}.json")),
+            );
+            // the copy from the last good start is better than nothing
+            match parse(&bak) {
+                Ok(Some(v)) => Loaded::Damaged(normalize(v), e),
+                _ => Loaded::Damaged(normalize(Value::Null), e),
+            }
         }
     }
 }
 
-/// Write to file.tmp, then rename: a crash mid-write never leaves half a file.
+/// Write to file.tmp, flush it to the disk, then rename over the old file: a crash or power cut
+/// mid-write never leaves half a file. A rename blocked for a moment (virus scanner) is retried.
 pub fn write_atomic(file: &Path, text: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
     if let Some(d) = file.parent() {
         fs::create_dir_all(d)?;
     }
     let tmp = file.with_extension("tmp");
-    fs::write(&tmp, text)?;
-    if fs::rename(&tmp, file).is_err() {
-        fs::write(file, text)?;
-        let _ = fs::remove_file(&tmp);
+    {
+        let mut f = fs::File::create(&tmp)?;
+        f.write_all(text)?;
+        f.sync_all()?;
     }
-    Ok(())
+    let mut last = None;
+    for i in 0..8 {
+        match fs::rename(&tmp, file) {
+            Ok(()) => return Ok(()),
+            Err(e) => last = Some(e),
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25 * (i + 1)));
+    }
+    let _ = fs::remove_file(&tmp);
+    Err(last.unwrap())
 }
 
 // ---------- export / import ----------
 
-const EXPORT_FIELDS: [&str; 16] = ["puuid", "gameName", "tagLine", "region", "note", "category", "addedAt", "iconId", "level",
-    "solo", "flex", "r5", "classic", "lastPlayed", "history", "rankedGames"];
+const EXPORT_FIELDS: [&str; 16] = [
+    "puuid",
+    "gameName",
+    "tagLine",
+    "region",
+    "note",
+    "category",
+    "addedAt",
+    "iconId",
+    "level",
+    "solo",
+    "flex",
+    "r5",
+    "classic",
+    "lastPlayed",
+    "history",
+    "rankedGames",
+];
 
 fn pick_fields(x: &Obj) -> Obj {
-    EXPORT_FIELDS.iter().filter_map(|k| x.get(*k).map(|v| (k.to_string(), v.clone()))).collect()
+    EXPORT_FIELDS
+        .iter()
+        .filter_map(|k| x.get(*k).map(|v| (k.to_string(), v.clone())))
+        .collect()
 }
 fn is_cat_id(s: &str) -> bool {
-    s.starts_with('c') && (2..=41).contains(&s.len()) && s[1..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    s.starts_with('c')
+        && (2..=41).contains(&s.len())
+        && s[1..]
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
 pub fn build_export(st: &State, secrets: Option<Value>, now: i64) -> Value {
@@ -145,21 +250,41 @@ pub fn build_export(st: &State, secrets: Option<Value>, now: i64) -> Value {
 
 /// A parsed file -> Some(file) if it is one of ours.
 pub fn check_file(d: Value) -> Option<Value> {
-    (d.get("app").and_then(Value::as_str) == Some("rift-switch") && d.get("accounts").map_or(false, Value::is_array)).then_some(d)
+    (d.get("app").and_then(Value::as_str) == Some("rift-switch")
+        && d.get("accounts").is_some_and(Value::is_array))
+    .then_some(d)
 }
 
 /// Merges the file into state (this PC's data wins, only gaps are filled); returns (added, updated).
 pub fn apply_import(st: &mut State, d: &Value, new_cat_name: &str, now: i64) -> (u32, u32) {
-    for c in d.get("categories").and_then(Value::as_array).into_iter().flatten() {
-        let Some(id) = c.get("id").and_then(Value::as_str) else { continue };
+    for c in d
+        .get("categories")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let Some(id) = c.get("id").and_then(Value::as_str) else {
+            continue;
+        };
         if is_cat_id(id) && !st.categories.iter().any(|x| str_of(x, "id") == id) {
-            let name: String = c.get("name").and_then(Value::as_str).unwrap_or("").chars().take(32).collect();
+            let name: String = c
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .chars()
+                .take(32)
+                .collect();
             st.categories.push(json!({ "id": id, "name": if name.is_empty() { new_cat_name.to_string() } else { name },
                 "collapsed": truthy(c.get("collapsed")) }).as_object().unwrap().clone());
         }
     }
     let (mut added, mut updated) = (0, 0);
-    for x in d.get("accounts").and_then(Value::as_array).into_iter().flatten() {
+    for x in d
+        .get("accounts")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         let Some(x) = x.as_object() else { continue };
         if !is_puuid(str_of(x, "puuid")) {
             continue;
@@ -196,17 +321,36 @@ pub fn apply_import(st: &mut State, d: &Value, new_cat_name: &str, now: i64) -> 
 
 /// Sealed logins -> [(account id, user, password)] to store; adds placeholder tiles for logins that
 /// only existed as "saved, never signed in". A login already on this PC wins.
-pub fn logins_to_restore(st: &mut State, logins: &[Value], now: i64) -> Vec<(String, String, String)> {
+pub fn logins_to_restore(
+    st: &mut State,
+    logins: &[Value],
+    now: i64,
+) -> Vec<(String, String, String)> {
     let mut out = vec![];
     for l in logins {
-        let Some((u, p)) = valid_cred(l) else { continue };
+        let Some((u, p)) = valid_cred(l) else {
+            continue;
+        };
         let id = l.get("puuid").and_then(Value::as_str).unwrap_or("");
         if !is_id(id) {
             continue;
         }
         if !st.has(id) && truthy(l.get("placeholder")) {
-            let name: String = l.get("gameName").and_then(Value::as_str).map(String::from).unwrap_or_else(|| mask_login(&u)).chars().take(32).collect();
-            let tag: String = l.get("tagLine").and_then(Value::as_str).unwrap_or("").chars().take(8).collect();
+            let name: String = l
+                .get("gameName")
+                .and_then(Value::as_str)
+                .map(String::from)
+                .unwrap_or_else(|| mask_login(&u))
+                .chars()
+                .take(32)
+                .collect();
+            let tag: String = l
+                .get("tagLine")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .chars()
+                .take(8)
+                .collect();
             st.accounts.push(json!({ "puuid": id, "placeholder": true, "note": "", "addedAt": now, "gameName": name, "tagLine": tag })
                 .as_object().unwrap().clone());
         }
@@ -231,20 +375,43 @@ mod tests {
         assert_eq!(s.settings["sort"], "level");
         assert_eq!(s.settings["autoPlay"], true);
         assert!(s.accounts.is_empty());
-        assert_eq!(normalize(json!({ "settings": { "sort": "name", "sortLevelDefault": true } })).settings["sort"], "name");
+        assert_eq!(
+            normalize(json!({ "settings": { "sort": "name", "sortLevelDefault": true } })).settings
+                ["sort"],
+            "name"
+        );
         assert_eq!(normalize(json!({ "accounts": [{ "gameName": "\u{2066}A\u{2069}", "tagLine": "\u{2066}187\u{2069}" }] })).accounts[0]["tagLine"], "187");
 
         let dir = std::env::temp_dir().join(format!("rs-store-test-{}", std::process::id()));
         let file = dir.join("accounts.json");
-        write_atomic(&file, json!({ "accounts": [{ "puuid": P1 }], "keepMe": 1 }).to_string().as_bytes()).unwrap();
-        let (st, err) = read_state(&file);
-        assert!(err.is_none());
+        write_atomic(
+            &file,
+            json!({ "accounts": [{ "puuid": P1 }], "keepMe": 1 })
+                .to_string()
+                .as_bytes(),
+        )
+        .unwrap();
+        let Loaded::Ok(st) = read_state(&file) else {
+            panic!()
+        };
         assert_eq!(st.accounts[0]["puuid"], P1);
         assert_eq!(st.to_json()["keepMe"], 1);
+        assert!(dir.join("accounts.json.bak").exists()); // the good file is kept as .bak
         fs::write(&file, "{ broken").unwrap();
-        let (st, err) = read_state(&file);
-        assert!(st.accounts.is_empty() && err.is_some());
-        assert!(fs::read_dir(&dir).unwrap().any(|f| f.unwrap().file_name().to_string_lossy().starts_with("accounts.damaged-")));
+        let Loaded::Damaged(st, _) = read_state(&file) else {
+            panic!()
+        };
+        assert_eq!(st.accounts[0]["puuid"], P1); // back from the .bak
+        assert!(fs::read_dir(&dir).unwrap().any(|f| f
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("accounts.damaged-")));
+        fs::remove_file(&file).unwrap();
+        let Loaded::Ok(st) = read_state(&file) else {
+            panic!()
+        };
+        assert_eq!(st.accounts[0]["puuid"], P1); // missing file: the .bak
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -261,20 +428,37 @@ mod tests {
         assert!(check_file(file.clone()).is_some());
         assert!(check_file(json!({ "app": "other", "accounts": [] })).is_none());
 
-        let mut here = normalize(json!({ "accounts": [{ "puuid": P1, "note": "", "gameName": "A" }], "settings": { "lang": "en" } }));
+        let mut here = normalize(
+            json!({ "accounts": [{ "puuid": P1, "note": "", "gameName": "A" }], "settings": { "lang": "en" } }),
+        );
         let mut f2 = file.clone();
-        f2["accounts"].as_array_mut().unwrap().extend([json!({ "puuid": "../evil" }), json!({ "puuid": P2, "gameName": "B", "note": "x".repeat(50) })]);
+        f2["accounts"].as_array_mut().unwrap().extend([
+            json!({ "puuid": "../evil" }),
+            json!({ "puuid": P2, "gameName": "B", "note": "x".repeat(50) }),
+        ]);
         assert_eq!(apply_import(&mut here, &f2, "New", 1), (1, 1));
         assert_eq!(here.accounts[0]["note"], "main");
         assert_eq!(here.accounts[1]["note"].as_str().unwrap().len(), 24);
         assert_eq!(here.categories[0]["id"], "c1");
         assert_eq!(here.settings["lang"], "de");
 
-        let logins = logins_to_restore(&mut here, &[
-            json!({ "puuid": P1, "u": "a", "p": "b" }),
-            json!({ "puuid": format!("new-{P1}"), "u": "c", "p": "d", "placeholder": true, "gameName": "c•••" }),
-            json!({ "puuid": "bad", "u": "e", "p": "f" }), json!({ "puuid": P2, "u": "", "p": "x" })], 1);
-        assert_eq!(logins.iter().map(|l| l.0.clone()).collect::<Vec<_>>(), vec![P1.to_string(), format!("new-{P1}")]);
-        assert!(here.accounts.iter().any(|a| a["puuid"] == format!("new-{P1}") && a["placeholder"] == true));
+        let logins = logins_to_restore(
+            &mut here,
+            &[
+                json!({ "puuid": P1, "u": "a", "p": "b" }),
+                json!({ "puuid": format!("new-{P1}"), "u": "c", "p": "d", "placeholder": true, "gameName": "c•••" }),
+                json!({ "puuid": "bad", "u": "e", "p": "f" }),
+                json!({ "puuid": P2, "u": "", "p": "x" }),
+            ],
+            1,
+        );
+        assert_eq!(
+            logins.iter().map(|l| l.0.clone()).collect::<Vec<_>>(),
+            vec![P1.to_string(), format!("new-{P1}")]
+        );
+        assert!(here
+            .accounts
+            .iter()
+            .any(|a| a["puuid"] == format!("new-{P1}") && a["placeholder"] == true));
     }
 }

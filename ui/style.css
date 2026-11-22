@@ -753,3 +753,15 @@ body.locked #passBox { background: var(--bg); }
 #confirm.danger #confirmYes { background: #c42b1c; border-color: #c42b1c; color: #fff; }
 #confirm.danger #confirmYes:hover { background: #d9352a; }
 #confirm.danger .card { border-color: rgba(229,72,77,.55); }
+
+/* penalties & waiting times (live page, title bar) */
+.pen-card { border-color: rgba(229,72,77,.4); }
+.pen-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.pen-row:first-of-type { border-top: 0; }
+.pen-av { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; background: #1c2331; flex: none; }
+.pen-av img { width: 100%; height: 100%; }
+.pen-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pen-name small { color: #ef8a8e; }
+.pen-left { font-variant-numeric: tabular-nums; font-weight: 700; color: #ff8a8e; white-space: nowrap; }
+.pen-left.none { color: var(--muted); font-weight: 500; }
+.live .wait { color: #ff8a8e; font-weight: 700; font-variant-numeric: tabular-nums; }

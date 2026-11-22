@@ -11,7 +11,7 @@ pub fn truthy(v: Option<&Value>) -> bool {
     match v {
         None | Some(Value::Null) => false,
         Some(Value::Bool(b)) => *b,
-        Some(Value::Number(n)) => n.as_f64().map_or(false, |x| x != 0.0 && !x.is_nan()),
+        Some(Value::Number(n)) => n.as_f64().is_some_and(|x| x != 0.0 && !x.is_nan()),
         Some(Value::String(s)) => !s.is_empty(),
         Some(_) => true,
     }
@@ -26,7 +26,9 @@ pub fn num_of(v: Option<&Value>) -> f64 {
 /// Riot IDs copied from the client can carry invisible direction marks (U+2066 …): remove them.
 pub fn clean_text(s: &str) -> String {
     s.chars()
-        .filter(|c| !matches!(*c as u32, 0x200B..=0x200F | 0x202A..=0x202E | 0x2066..=0x2069 | 0xFEFF))
+        .filter(
+            |c| !matches!(*c as u32, 0x200B..=0x200F | 0x202A..=0x202E | 0x2066..=0x2069 | 0xFEFF),
+        )
         .collect::<String>()
         .trim()
         .to_string()
@@ -37,7 +39,11 @@ pub fn parse_riot_id(s: &str) -> Option<(String, String)> {
     let s = clean_text(s);
     let (name, tag) = s.rsplit_once('#')?;
     let (nl, tl) = (name.chars().count(), tag.chars().count());
-    if !(2..=16).contains(&nl) || !(2..=5).contains(&tl) || tag.chars().any(char::is_whitespace) || name.contains('\n') {
+    if !(2..=16).contains(&nl)
+        || !(2..=5).contains(&tl)
+        || tag.chars().any(char::is_whitespace)
+        || name.contains('\n')
+    {
         return None;
     }
     Some((name.trim().to_string(), tag.to_string()))
@@ -74,7 +80,7 @@ pub fn mask_login(u: &str) -> String {
 
 /// The match history sometimes returns only a few games: never let a short answer lower a count.
 pub fn best_normals(prev: Option<&Value>, n: &Value) -> Value {
-    let has_ranked = truthy(n.get("hasRanked")) || prev.map_or(false, |p| truthy(p.get("hasRanked")));
+    let has_ranked = truthy(n.get("hasRanked")) || prev.is_some_and(|p| truthy(p.get("hasRanked")));
     let count = |v: &Value| num_of(v.get("count"));
     let sample = |v: &Value| num_of(v.get("sample"));
     let mut out = match prev {
@@ -94,7 +100,11 @@ pub fn merge_ranked_games(a: &mut Obj, games: &[Value]) {
     if games.is_empty() {
         return;
     }
-    let mut list: Vec<Value> = a.get("rankedGames").and_then(Value::as_array).cloned().unwrap_or_default();
+    let mut list: Vec<Value> = a
+        .get("rankedGames")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     for g in games {
         match list.iter_mut().find(|x| x.get("id") == g.get("id")) {
             Some(x) => *x = g.clone(),
@@ -122,7 +132,12 @@ pub fn keep_wl(q: Value, prev: Option<&Value>) -> Value {
 
 fn rank_key(q: Option<&Value>) -> String {
     match q {
-        Some(q) if !q.is_null() => format!("{}|{}|{}", q.get("tier").unwrap_or(&Value::Null), q.get("division").unwrap_or(&Value::Null), q.get("lp").unwrap_or(&Value::Null)),
+        Some(q) if !q.is_null() => format!(
+            "{}|{}|{}",
+            q.get("tier").unwrap_or(&Value::Null),
+            q.get("division").unwrap_or(&Value::Null),
+            q.get("lp").unwrap_or(&Value::Null)
+        ),
         _ => "-".into(),
     }
 }
@@ -133,7 +148,9 @@ pub fn record_history(a: &mut Obj, now: i64) {
         return;
     }
     let pick = |q: Option<&Value>| match q {
-        Some(q) if q.is_object() => json!({ "tier": q.get("tier"), "division": q.get("division"), "lp": q.get("lp") }),
+        Some(q) if q.is_object() => {
+            json!({ "tier": q.get("tier"), "division": q.get("division"), "lp": q.get("lp") })
+        }
         _ => Value::Null,
     };
     let e = json!({ "t": now, "solo": pick(a.get("solo")), "flex": pick(a.get("flex")) });
@@ -143,7 +160,9 @@ pub fn record_history(a: &mut Obj, now: i64) {
     }
     let h = h.as_array_mut().unwrap();
     if let Some(last) = h.last() {
-        if rank_key(last.get("solo")) == rank_key(e.get("solo")) && rank_key(last.get("flex")) == rank_key(e.get("flex")) {
+        if rank_key(last.get("solo")) == rank_key(e.get("solo"))
+            && rank_key(last.get("flex")) == rank_key(e.get("flex"))
+        {
             return;
         }
     }
@@ -213,7 +232,10 @@ mod tests {
         assert!(is_id(&format!("new-{P1}")));
         assert!(!is_id("../etc"));
         assert!(is_placeholder(&format!("new-{P1}")));
-        assert_eq!(valid_cred(&json!({ "u": " me ", "p": "pw" })), Some(("me".into(), "pw".into())));
+        assert_eq!(
+            valid_cred(&json!({ "u": " me ", "p": "pw" })),
+            Some(("me".into(), "pw".into()))
+        );
         assert_eq!(valid_cred(&json!({ "u": "me", "p": "" })), None);
         assert_eq!(mask_login("zlizzer"), "zl•••r");
         assert_eq!(mask_login("ab"), "a•••");
@@ -223,22 +245,47 @@ mod tests {
     #[test]
     fn normals_never_lowered() {
         let prev = json!({ "count": 8, "sample": 50, "hasRanked": false });
-        let short = best_normals(Some(&prev), &json!({ "count": 2, "sample": 5, "hasRanked": false, "at": 9 }));
+        let short = best_normals(
+            Some(&prev),
+            &json!({ "count": 2, "sample": 5, "hasRanked": false, "at": 9 }),
+        );
         assert_eq!(short["count"], 8);
         assert_eq!(short["at"], 9);
-        assert_eq!(best_normals(Some(&prev), &json!({ "count": 9, "sample": 50, "hasRanked": false }))["count"], 9);
-        let r = best_normals(Some(&json!({ "count": 1, "sample": 50, "hasRanked": true })), &json!({ "count": 1, "sample": 50, "hasRanked": false }));
+        assert_eq!(
+            best_normals(
+                Some(&prev),
+                &json!({ "count": 9, "sample": 50, "hasRanked": false })
+            )["count"],
+            9
+        );
+        let r = best_normals(
+            Some(&json!({ "count": 1, "sample": 50, "hasRanked": true })),
+            &json!({ "count": 1, "sample": 50, "hasRanked": false }),
+        );
         assert_eq!(r["hasRanked"], true);
     }
 
     #[test]
     fn ranked_games_merged() {
         let mut a = obj(json!({ "rankedGames": [{ "id": 1, "t": 1 }] }));
-        merge_ranked_games(&mut a, &[json!({ "id": 2, "t": 5 }), json!({ "id": 1, "t": 1, "win": true })]);
-        let ids: Vec<i64> = a["rankedGames"].as_array().unwrap().iter().map(|g| g["id"].as_i64().unwrap()).collect();
+        merge_ranked_games(
+            &mut a,
+            &[
+                json!({ "id": 2, "t": 5 }),
+                json!({ "id": 1, "t": 1, "win": true }),
+            ],
+        );
+        let ids: Vec<i64> = a["rankedGames"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|g| g["id"].as_i64().unwrap())
+            .collect();
         assert_eq!(ids, vec![2, 1]);
         assert_eq!(a["rankedGames"][1]["win"], true);
-        let many: Vec<Value> = (0..400).map(|i| json!({ "id": 100 + i, "t": 100 + i })).collect();
+        let many: Vec<Value> = (0..400)
+            .map(|i| json!({ "id": 100 + i, "t": 100 + i }))
+            .collect();
         merge_ranked_games(&mut a, &many);
         assert_eq!(a["rankedGames"].as_array().unwrap().len(), 300);
     }
@@ -246,8 +293,20 @@ mod tests {
     #[test]
     fn upsert_keeps_ranks_and_history() {
         let mut list = vec![];
-        upsert_into(&mut list, obj(json!({ "puuid": P1, "solo": { "tier": "GOLD", "division": "II", "lp": 10, "wins": 5, "losses": 5, "wl": true } })), 1);
-        upsert_into(&mut list, obj(json!({ "puuid": P1, "solo": { "tier": "GOLD", "division": "II", "lp": 30, "wins": 7, "losses": 0, "wl": false } })), 2);
+        upsert_into(
+            &mut list,
+            obj(
+                json!({ "puuid": P1, "solo": { "tier": "GOLD", "division": "II", "lp": 10, "wins": 5, "losses": 5, "wl": true } }),
+            ),
+            1,
+        );
+        upsert_into(
+            &mut list,
+            obj(
+                json!({ "puuid": P1, "solo": { "tier": "GOLD", "division": "II", "lp": 30, "wins": 7, "losses": 0, "wl": false } }),
+            ),
+            2,
+        );
         assert_eq!(list[0]["solo"]["losses"], 5);
         assert_eq!(list[0]["solo"]["wlStale"], true);
         assert_eq!(list[0]["solo"]["lp"], 30);
@@ -259,7 +318,9 @@ mod tests {
     #[test]
     fn unchanged_poll_changes_nothing() {
         let mut list = vec![];
-        let cur = |at: i64, days: i64| obj(json!({ "puuid": P1, "level": 40, "decay": { "q": { "flex": days }, "at": at } }));
+        let cur = |at: i64, days: i64| {
+            obj(json!({ "puuid": P1, "level": 40, "decay": { "q": { "flex": days }, "at": at } }))
+        };
         upsert_into(&mut list, cur(1, 28), 1);
         let before = Value::Object(list[0].clone()).to_string();
         upsert_into(&mut list, cur(2, 28), 2);
@@ -270,8 +331,14 @@ mod tests {
 
     #[test]
     fn riot_ids_cleaned() {
-        assert_eq!(parse_riot_id("\u{2066}Zlizz3Rnotpbe\u{2069}#\u{2066}187\u{2069}"), Some(("Zlizz3Rnotpbe".into(), "187".into())));
-        assert_eq!(parse_riot_id(" Name With Space#EUW "), Some(("Name With Space".into(), "EUW".into())));
+        assert_eq!(
+            parse_riot_id("\u{2066}Zlizz3Rnotpbe\u{2069}#\u{2066}187\u{2069}"),
+            Some(("Zlizz3Rnotpbe".into(), "187".into()))
+        );
+        assert_eq!(
+            parse_riot_id(" Name With Space#EUW "),
+            Some(("Name With Space".into(), "EUW".into()))
+        );
         assert_eq!(parse_riot_id("NoTag"), None);
     }
 }

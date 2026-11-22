@@ -14,13 +14,18 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-pub const QUEUE_GROUPS: [(&str, &[i64]); 5] =
-    [("solo", &[420]), ("flex", &[440]), ("normal", &[400, 430, 490, 480]), ("aram", &[450, 2400]), ("arena", &[1700, 1710])];
+pub const QUEUE_GROUPS: [(&str, &[i64]); 5] = [
+    ("solo", &[420]),
+    ("flex", &[440]),
+    ("normal", &[400, 430, 490, 480]),
+    ("aram", &[450, 2400]),
+    ("arena", &[1700, 1710]),
+];
 const RANK_TTL: i64 = 12 * 3600 * 1000;
 const RANK_KEEP: i64 = 14 * 24 * 3600 * 1000;
 
 #[derive(Clone, Copy)]
-struct Entry {
+pub struct Entry {
     t: i64,
     q: i64,
     off: u64,
@@ -47,14 +52,29 @@ fn id_str(v: &Value) -> String {
 impl Matches {
     pub fn load(data_dir: &Path) -> Self {
         let dir = data_dir.join("matches");
-        let mut m = Matches { dir, index: HashMap::new(), by: vec![], ranks: Obj::new() };
+        let mut m = Matches {
+            dir,
+            index: HashMap::new(),
+            by: vec![],
+            ranks: Obj::new(),
+        };
         if !m.dir.join("games.jsonl").exists() {
             m.migrate_old(&data_dir.join("matches.json"));
         }
         m.read_index();
         if let Ok(t) = fs::read_to_string(m.dir.join("by.json")) {
             if let Ok(Value::Object(o)) = serde_json::from_str::<Value>(&t) {
-                m.by = o.into_iter().map(|(k, v)| (k, v.as_array().map(|a| a.iter().map(id_str).collect()).unwrap_or_default())).collect();
+                m.by = o
+                    .into_iter()
+                    .map(|(k, v)| {
+                        (
+                            k,
+                            v.as_array()
+                                .map(|a| a.iter().map(id_str).collect())
+                                .unwrap_or_default(),
+                        )
+                    })
+                    .collect();
             }
         }
         if let Ok(t) = fs::read_to_string(m.dir.join("ranks.json")) {
@@ -65,27 +85,47 @@ impl Matches {
 
     /// The old version kept everything in one matches.json (at most 1500 games): carried over once.
     fn migrate_old(&mut self, old: &Path) {
-        let Ok(t) = fs::read_to_string(old) else { return };
-        let Ok(d) = serde_json::from_str::<Value>(&t) else { return };
-        let _ = fs::create_dir_all(&self.dir);
-        let mut games: Vec<&Value> = d["games"].as_object().map(|o| o.values().collect()).unwrap_or_default();
+        let Ok(t) = fs::read_to_string(old) else {
+            return;
+        };
+        let Ok(d) = serde_json::from_str::<Value>(&t) else {
+            return;
+        };
+        if fs::create_dir_all(&self.dir).is_err() {
+            return;
+        }
+        let mut games: Vec<&Value> = d["games"]
+            .as_object()
+            .map(|o| o.values().collect())
+            .unwrap_or_default();
         games.sort_by_key(|g| num_of(g.get("t")) as i64);
         let mut out = String::new();
         for g in games {
             out.push_str(&g.to_string());
             out.push('\n');
         }
-        let _ = fs::write(self.dir.join("games.jsonl"), out);
+        // games last: only a complete games.jsonl marks the move as done (else it runs again next start)
         if let Some(by) = d["by"].as_object() {
-            let _ = fs::write(self.dir.join("by.json"), Value::Object(by.clone()).to_string());
+            let _ = crate::store::write_atomic(
+                &self.dir.join("by.json"),
+                Value::Object(by.clone()).to_string().as_bytes(),
+            );
         }
         if let Some(r) = d["ranks"].as_object() {
-            let _ = fs::write(self.dir.join("ranks.json"), Value::Object(r.clone()).to_string());
+            let _ = crate::store::write_atomic(
+                &self.dir.join("ranks.json"),
+                Value::Object(r.clone()).to_string().as_bytes(),
+            );
+        }
+        if crate::store::write_atomic(&self.dir.join("games.jsonl"), out.as_bytes()).is_ok() {
+            let _ = fs::rename(old, old.with_extension("json.migrated"));
         }
     }
 
     fn read_index(&mut self) {
-        let Ok(f) = File::open(self.dir.join("games.jsonl")) else { return };
+        let Ok(f) = File::open(self.dir.join("games.jsonl")) else {
+            return;
+        };
         let mut r = BufReader::new(f);
         let (mut off, mut line) = (0u64, String::new());
         #[derive(serde::Deserialize)]
@@ -103,7 +143,15 @@ impl Matches {
                 break;
             }
             if let Ok(h) = serde_json::from_str::<Head>(line.trim_end()) {
-                self.index.insert(id_str(&h.id), Entry { t: h.t as i64, q: h.q as i64, off, len: line.trim_end().len() as u32 });
+                self.index.insert(
+                    id_str(&h.id),
+                    Entry {
+                        t: h.t as i64,
+                        q: h.q as i64,
+                        off,
+                        len: line.trim_end().len() as u32,
+                    },
+                );
             }
             off += n as u64;
         }
@@ -112,11 +160,17 @@ impl Matches {
     fn save_by(&self) {
         let o: Obj = self.by.iter().map(|(k, v)| (k.clone(), json!(v))).collect();
         let _ = fs::create_dir_all(&self.dir);
-        let _ = crate::store::write_atomic(&self.dir.join("by.json"), Value::Object(o).to_string().as_bytes());
+        let _ = crate::store::write_atomic(
+            &self.dir.join("by.json"),
+            Value::Object(o).to_string().as_bytes(),
+        );
     }
     fn save_ranks(&self) {
         let _ = fs::create_dir_all(&self.dir);
-        let _ = crate::store::write_atomic(&self.dir.join("ranks.json"), Value::Object(self.ranks.clone()).to_string().as_bytes());
+        let _ = crate::store::write_atomic(
+            &self.dir.join("ranks.json"),
+            Value::Object(self.ranks.clone()).to_string().as_bytes(),
+        );
     }
 
     /// list = [{ id, t, q }] from an account's match list. Returns true if something new was noted.
@@ -133,7 +187,11 @@ impl Matches {
         };
         let ids = &mut self.by[pos].1;
         let have: HashSet<String> = ids.iter().cloned().collect();
-        let new: Vec<String> = list.iter().map(|g| id_str(&g["id"])).filter(|id| !id.is_empty() && id != "null" && !have.contains(id)).collect();
+        let new: Vec<String> = list
+            .iter()
+            .map(|g| id_str(&g["id"]))
+            .filter(|id| !id.is_empty() && id != "null" && !have.contains(id))
+            .collect();
         if new.is_empty() {
             return false;
         }
@@ -146,7 +204,13 @@ impl Matches {
 
     /// Ids noted for some account whose details aren't stored yet, newest first.
     pub fn missing(&self) -> Vec<String> {
-        let mut out: Vec<String> = self.by.iter().flat_map(|(_, ids)| ids.iter()).filter(|id| !self.index.contains_key(*id)).cloned().collect();
+        let mut out: Vec<String> = self
+            .by
+            .iter()
+            .flat_map(|(_, ids)| ids.iter())
+            .filter(|id| !self.index.contains_key(*id))
+            .cloned()
+            .collect();
         out.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
         out.dedup();
         out
@@ -159,13 +223,27 @@ impl Matches {
             return false;
         }
         let _ = fs::create_dir_all(&self.dir);
-        let Ok(mut f) = OpenOptions::new().create(true).append(true).open(self.dir.join("games.jsonl")) else { return false };
+        let Ok(mut f) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(self.dir.join("games.jsonl"))
+        else {
+            return false;
+        };
         let off = f.metadata().map(|m| m.len()).unwrap_or(0);
         let line = g.to_string();
         if f.write_all(format!("{line}\n").as_bytes()).is_err() {
             return false;
         }
-        self.index.insert(id, Entry { t: num_of(g.get("t")) as i64, q: num_of(g.get("q")) as i64, off, len: line.len() as u32 });
+        self.index.insert(
+            id,
+            Entry {
+                t: num_of(g.get("t")) as i64,
+                q: num_of(g.get("q")) as i64,
+                off,
+                len: line.len() as u32,
+            },
+        );
         true
     }
 
@@ -180,11 +258,19 @@ impl Matches {
     }
     fn rewrite_without_orphans(&mut self) {
         let used: HashSet<&String> = self.by.iter().flat_map(|(_, ids)| ids.iter()).collect();
-        let keep: Vec<String> = self.index.keys().filter(|id| used.contains(id)).cloned().collect();
+        let keep: Vec<String> = self
+            .index
+            .keys()
+            .filter(|id| used.contains(id))
+            .cloned()
+            .collect();
         if keep.len() == self.index.len() {
             return;
         }
         let games = self.read_games(&keep);
+        if games.len() < keep.len() {
+            return; // couldn't read them all: better keep a few unused games than lose some
+        }
         let mut out = String::new();
         for g in &games {
             out.push_str(&g.to_string());
@@ -197,49 +283,89 @@ impl Matches {
     }
 
     fn read_games(&self, ids: &[String]) -> Vec<Value> {
-        let Ok(mut f) = File::open(self.dir.join("games.jsonl")) else { return vec![] };
-        let mut out = Vec::with_capacity(ids.len());
-        let mut buf = vec![];
-        for id in ids {
-            let Some(e) = self.index.get(id) else { continue };
-            buf.resize(e.len as usize, 0);
-            if f.seek(SeekFrom::Start(e.off)).is_ok() && f.read_exact(&mut buf).is_ok() {
-                if let Ok(v) = serde_json::from_slice::<Value>(&buf) {
-                    out.push(v);
-                }
-            }
-        }
-        out
+        read_entries(
+            &self.games_file(),
+            &ids.iter()
+                .filter_map(|id| self.index.get(id).copied())
+                .collect::<Vec<_>>(),
+        )
+    }
+    pub fn games_file(&self) -> PathBuf {
+        self.dir.join("games.jsonl")
     }
 
-    /// Newest first; a game played together by two own accounts shows once, with both as owners.
-    pub fn list(&self, accounts: &[String], puuid: Option<&str>, queue: Option<&str>, limit: usize) -> Vec<Value> {
-        let group: Option<&[i64]> = queue.and_then(|q| QUEUE_GROUPS.iter().find(|(k, _)| *k == q).map(|(_, v)| *v));
-        let mut rows: Vec<(String, i64, Vec<String>)> = vec![];
+    /// The page's list: [id, time, queue, owners…] of every game (newest first) – small, so the
+    /// page only asks for the games it doesn't have yet (see entries + read_entries).
+    pub fn index_list(
+        &self,
+        accounts: &[String],
+        puuid: Option<&str>,
+        queue: Option<&str>,
+    ) -> Vec<Value> {
+        self.rows(accounts, puuid, queue)
+            .into_iter()
+            .map(|(id, t, q, owners)| {
+                let mut v = vec![json!(id), json!(t), json!(q)];
+                v.extend(owners.into_iter().map(Value::String));
+                Value::Array(v)
+            })
+            .collect()
+    }
+    /// Where these games are in games.jsonl (read with read_entries, outside any lock).
+    pub fn entries(&self, ids: &[String]) -> Vec<Entry> {
+        ids.iter()
+            .filter_map(|id| self.index.get(id).copied())
+            .collect()
+    }
+
+    fn rows(
+        &self,
+        accounts: &[String],
+        puuid: Option<&str>,
+        queue: Option<&str>,
+    ) -> Vec<(String, i64, i64, Vec<String>)> {
+        let group: Option<&[i64]> =
+            queue.and_then(|q| QUEUE_GROUPS.iter().find(|(k, _)| *k == q).map(|(_, v)| *v));
+        let mut rows: Vec<(String, i64, i64, Vec<String>)> = vec![];
         let mut pos: HashMap<String, usize> = HashMap::new();
         for (owner, ids) in &self.by {
-            if !accounts.contains(owner) || puuid.map_or(false, |p| p != owner) {
+            if !accounts.contains(owner) || puuid.is_some_and(|p| p != owner) {
                 continue;
             }
             for id in ids {
-                let Some(e) = self.index.get(id) else { continue };
-                if group.map_or(false, |g| !g.contains(&e.q)) {
+                let Some(e) = self.index.get(id) else {
+                    continue;
+                };
+                if group.is_some_and(|g| !g.contains(&e.q)) {
                     continue;
                 }
                 match pos.get(id) {
-                    Some(&i) => rows[i].2.push(owner.clone()),
+                    Some(&i) => rows[i].3.push(owner.clone()),
                     None => {
                         pos.insert(id.clone(), rows.len());
-                        rows.push((id.clone(), e.t, vec![owner.clone()]));
+                        rows.push((id.clone(), e.t, e.q, vec![owner.clone()]));
                     }
                 }
             }
         }
         rows.sort_by_key(|r| std::cmp::Reverse(r.1));
+        rows
+    }
+
+    /// Newest first; a game played together by two own accounts shows once, with both as owners.
+    #[cfg(test)]
+    pub fn list(
+        &self,
+        accounts: &[String],
+        puuid: Option<&str>,
+        queue: Option<&str>,
+        limit: usize,
+    ) -> Vec<Value> {
+        let mut rows = self.rows(accounts, puuid, queue);
         rows.truncate(limit);
         let ids: Vec<String> = rows.iter().map(|r| r.0.clone()).collect();
         let games = self.read_games(&ids);
-        let owners: HashMap<&String, &Vec<String>> = rows.iter().map(|r| (&r.0, &r.2)).collect();
+        let owners: HashMap<&String, &Vec<String>> = rows.iter().map(|r| (&r.0, &r.3)).collect();
         games
             .into_iter()
             .map(|mut g| {
@@ -251,21 +377,35 @@ impl Matches {
     }
 
     pub fn known(&self, puuid: &str) -> usize {
-        self.by.iter().find(|(p, _)| p == puuid).map_or(0, |(_, ids)| ids.len())
+        self.by
+            .iter()
+            .find(|(p, _)| p == puuid)
+            .map_or(0, |(_, ids)| ids.len())
     }
     pub fn count(&self) -> usize {
         self.index.len()
     }
     /// Bytes on disk of the stored history.
     pub fn size(&self) -> u64 {
-        fs::read_dir(&self.dir).map(|rd| rd.flatten().filter_map(|e| e.metadata().ok()).map(|m| m.len()).sum()).unwrap_or(0)
-            + fs::metadata(self.dir.with_file_name("matches.json")).map_or(0, |m| m.len())
+        fs::read_dir(&self.dir)
+            .map(|rd| {
+                rd.flatten()
+                    .filter_map(|e| e.metadata().ok())
+                    .map(|m| m.len())
+                    .sum()
+            })
+            .unwrap_or(0)
+            + ["matches.json", "matches.json.migrated"]
+                .iter()
+                .map(|f| fs::metadata(self.dir.with_file_name(f)).map_or(0, |m| m.len()))
+                .sum::<u64>()
     }
     /// Deletes the whole stored history (the user confirmed it). Games still in the client's
     /// recent list come back on their own the next time League runs.
     pub fn clear(&mut self) {
         let _ = fs::remove_dir_all(&self.dir);
         let _ = fs::remove_file(self.dir.with_file_name("matches.json"));
+        let _ = fs::remove_file(self.dir.with_file_name("matches.json.migrated"));
         self.index.clear();
         self.by.clear();
         self.ranks.clear();
@@ -274,29 +414,69 @@ impl Matches {
     // ---------- ranks of the players ----------
 
     pub fn ranks_for(&self, puuids: &[String]) -> Obj {
-        puuids.iter().filter_map(|p| self.ranks.get(p).map(|r| (p.clone(), r.clone()))).collect()
+        puuids
+            .iter()
+            .filter_map(|p| self.ranks.get(p).map(|r| (p.clone(), r.clone())))
+            .collect()
     }
     pub fn stale_ranks(&self, puuids: &[String], now: i64) -> Vec<String> {
         let mut seen = HashSet::new();
         puuids
             .iter()
             .filter(|p| !p.is_empty() && seen.insert(p.as_str()))
-            .filter(|p| self.ranks.get(*p).map_or(true, |r| now - num_of(r.get("at")) as i64 > RANK_TTL))
+            .filter(|p| {
+                self.ranks
+                    .get(*p)
+                    .is_none_or(|r| now - num_of(r.get("at")) as i64 > RANK_TTL)
+            })
             .cloned()
             .collect()
     }
     /// r = { solo, flex } of one player
     pub fn set_rank(&mut self, puuid: &str, r: &Obj, now: i64) {
         let pack = |q: Option<&Value>| match q {
-            Some(q) if q.is_object() => json!([q["tier"], q.get("division").filter(|d| !d.is_null()).cloned().unwrap_or(json!("")), q.get("lp").filter(|d| !d.is_null()).cloned().unwrap_or(json!(0))]),
+            Some(q) if q.is_object() => json!([
+                q["tier"],
+                q.get("division")
+                    .filter(|d| !d.is_null())
+                    .cloned()
+                    .unwrap_or(json!("")),
+                q.get("lp")
+                    .filter(|d| !d.is_null())
+                    .cloned()
+                    .unwrap_or(json!(0))
+            ]),
             _ => Value::Null,
         };
-        self.ranks.insert(puuid.into(), json!({ "s": pack(r.get("solo")), "f": pack(r.get("flex")), "at": now }));
+        self.ranks.insert(
+            puuid.into(),
+            json!({ "s": pack(r.get("solo")), "f": pack(r.get("flex")), "at": now }),
+        );
     }
     pub fn ranks_done(&mut self, now: i64) {
-        self.ranks.retain(|_, r| now - num_of(r.get("at")) as i64 <= RANK_KEEP);
+        self.ranks
+            .retain(|_, r| now - num_of(r.get("at")) as i64 <= RANK_KEEP);
         self.save_ranks();
     }
+}
+
+/// Reads games from games.jsonl by their place in the file (no lock needed: lines never move
+/// while the app runs, a rewrite only happens when an account is removed).
+pub fn read_entries(file: &Path, entries: &[Entry]) -> Vec<Value> {
+    let Ok(mut f) = File::open(file) else {
+        return vec![];
+    };
+    let mut out = Vec::with_capacity(entries.len());
+    let mut buf = vec![];
+    for e in entries {
+        buf.resize(e.len as usize, 0);
+        if f.seek(SeekFrom::Start(e.off)).is_ok() && f.read_exact(&mut buf).is_ok() {
+            if let Ok(v) = serde_json::from_slice::<Value>(&buf) {
+                out.push(v);
+            }
+        }
+    }
+    out
 }
 
 fn num(v: &Value) -> Value {
@@ -307,7 +487,10 @@ fn num(v: &Value) -> Value {
 pub fn compact(g: &Value) -> Option<Value> {
     let parts = g.get("participants")?.as_array()?;
     let ids = g.get("participantIdentities")?.as_array()?;
-    let who: HashMap<i64, &Value> = ids.iter().map(|x| (x["participantId"].as_i64().unwrap_or(-1), &x["player"])).collect();
+    let who: HashMap<i64, &Value> = ids
+        .iter()
+        .map(|x| (x["participantId"].as_i64().unwrap_or(-1), &x["player"]))
+        .collect();
     let players: Vec<Value> = parts
         .iter()
         .map(|p| {
@@ -330,8 +513,10 @@ pub fn compact(g: &Value) -> Option<Value> {
         return None;
     }
     let dur = num_of(g.get("gameDuration")) as i64;
-    Some(json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
-        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players }))
+    Some(
+        json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
+        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players }),
+    )
 }
 
 #[cfg(test)]
@@ -395,9 +580,18 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let g = compact(&detail(7)).unwrap();
-        fs::write(dir.join("matches.json"), json!({ "games": { "7": g }, "by": { "p0": ["7"] }, "ranks": {} }).to_string()).unwrap();
+        fs::write(
+            dir.join("matches.json"),
+            json!({ "games": { "7": g }, "by": { "p0": ["7"] }, "ranks": {} }).to_string(),
+        )
+        .unwrap();
         let m = Matches::load(&dir);
         assert_eq!(m.list(&["p0".to_string()], None, None, 10).len(), 1);
+        assert!(!dir.join("matches.json").exists() && dir.join("matches.json.migrated").exists());
+        let idx = m.index_list(&["p0".to_string()], None, None);
+        assert_eq!(idx[0], json!(["7", 7000, 420, "p0"]));
+        let games = read_entries(&m.games_file(), &m.entries(&["7".to_string()]));
+        assert_eq!(games[0]["id"], "7");
         let _ = fs::remove_dir_all(&dir);
     }
 }

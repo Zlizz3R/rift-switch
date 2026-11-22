@@ -634,8 +634,10 @@ function renderMain() {
   const cur = accs.find(a => a.puuid === live.puuid);
   const el = $('live');
   el.className = 'live' + (live.clientUp ? ' on' : '');
+  const wait = (live.waits || []).filter(w => w.until > Date.now()).sort((a, b) => b.until - a.until)[0];
   el.innerHTML = live.clientUp
-    ? `<span><span class="dot"></span>${esc(cur ? dispName(cur) : t('app.unknownAccount'))} · ${esc(phaseName(live.phase))}</span>`
+    ? `<span><span class="dot"></span>${esc(cur ? dispName(cur) : t('app.unknownAccount'))} · ${esc(phaseName(live.phase))}`
+      + (wait ? ` · <b class="wait" data-until="${wait.until}" data-fmt="wait" title="${esc(reasonText({ code: wait.code }))}">${esc(t('pen.wait', { t: leftText(wait.until) }))}</b>` : '') + '</span>'
     : `<span><span class="dot"></span>${S.busy ? t('app.switching') : t('app.closed')}</span>`;
 
   const unknownLive = live.clientUp && !cur;
@@ -948,7 +950,10 @@ $('board').addEventListener('drop', e => {
 });
 
 $('min').onclick = () => api.win('min');
-$('toTray').onclick = () => api.win('tray');
+$('toTray').onclick = async () => {
+  const r = await api.win('tray');
+  if (r && r.hint) { toast(t('tray.balloon')); setTimeout(() => api.win('tray'), 2600); }
+};
 // quitting: a short notice that closes the app by itself (nothing to click away)
 let quitting = false;
 $('close').onclick = () => {

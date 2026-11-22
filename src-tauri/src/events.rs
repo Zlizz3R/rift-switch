@@ -34,7 +34,10 @@ pub fn parse_event(raw: &str) -> Option<Event> {
         return None;
     }
     let p = a.get(2)?;
-    Some(Event { uri: p.get("uri")?.as_str()?.to_string(), data: p.get("data").cloned().unwrap_or(Value::Null) })
+    Some(Event {
+        uri: p.get("uri")?.as_str()?.to_string(),
+        data: p.get("data").cloned().unwrap_or(Value::Null),
+    })
 }
 
 static CONNECTED: AtomicBool = AtomicBool::new(false);
@@ -48,6 +51,7 @@ pub fn connected() -> bool {
 pub fn connect(lf: Option<Lock>, tx: UnboundedSender<Event>) {
     let Some(lf) = lf else {
         *PORT.lock().unwrap() = None;
+        CONNECTED.store(false, Ordering::Relaxed);
         return;
     };
     {
@@ -60,26 +64,47 @@ pub fn connect(lf: Option<Lock>, tx: UnboundedSender<Event>) {
     tauri::async_runtime::spawn(async move {
         let port = lf.port.clone();
         let _ = run(lf, tx).await;
-        CONNECTED.store(false, Ordering::Relaxed);
         let mut p = PORT.lock().unwrap();
         if p.as_deref() == Some(port.as_str()) {
             *p = None; // the next poll tries again
+            CONNECTED.store(false, Ordering::Relaxed);
         }
     });
 }
 
 async fn run(lf: Lock, tx: UnboundedSender<Event>) -> Option<()> {
     use base64::{engine::general_purpose::STANDARD as B64, Engine};
-    let mut req = format!("wss://127.0.0.1:{}/", lf.port).into_client_request().ok()?;
+    let mut req = format!("wss://127.0.0.1:{}/", lf.port)
+        .into_client_request()
+        .ok()?;
     let h = req.headers_mut();
-    h.insert("Authorization", format!("Basic {}", B64.encode(format!("riot:{}", lf.password))).parse().ok()?);
+    h.insert(
+        "Authorization",
+        format!("Basic {}", B64.encode(format!("riot:{}", lf.password)))
+            .parse()
+            .ok()?,
+    );
     h.insert("Sec-WebSocket-Protocol", "wamp".parse().ok()?);
     // the client uses its own self-signed certificate
-    let tls = native_tls::TlsConnector::builder().danger_accept_invalid_certs(true).danger_accept_invalid_hostnames(true).build().ok()?;
-    let conn = tokio_tungstenite::connect_async_tls_with_config(req, None, false, Some(tokio_tungstenite::Connector::NativeTls(tls)));
-    let (mut ws, _) = tokio::time::timeout(std::time::Duration::from_secs(4), conn).await.ok()?.ok()?;
+    let tls = native_tls::TlsConnector::builder()
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
+        .build()
+        .ok()?;
+    let conn = tokio_tungstenite::connect_async_tls_with_config(
+        req,
+        None,
+        false,
+        Some(tokio_tungstenite::Connector::NativeTls(tls)),
+    );
+    let (mut ws, _) = tokio::time::timeout(std::time::Duration::from_secs(4), conn)
+        .await
+        .ok()?
+        .ok()?;
     for t in TOPICS {
-        ws.send(Message::text(json!([5, event_name(t)]).to_string())).await.ok()?;
+        ws.send(Message::text(json!([5, event_name(t)]).to_string()))
+            .await
+            .ok()?;
     }
     CONNECTED.store(true, Ordering::Relaxed);
     while let Some(msg) = ws.next().await {
@@ -112,6 +137,9 @@ mod tests {
         assert_eq!(e.data, "ReadyCheck");
         assert!(parse_event(r#"[0,"welcome"]"#).is_none());
         assert!(parse_event("not json").is_none());
-        assert_eq!(event_name("/lol-gameflow/v1/gameflow-phase"), "OnJsonApiEvent_lol-gameflow_v1_gameflow-phase");
+        assert_eq!(
+            event_name("/lol-gameflow/v1/gameflow-phase"),
+            "OnJsonApiEvent_lol-gameflow_v1_gameflow-phase"
+        );
     }
 }

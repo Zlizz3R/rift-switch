@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'pen.title': "惩罚与等待时间", 'pen.left': "还剩 {t}", 'pen.until': "至 {date}", 'pen.noEnd': "未给出结束时间", 'pen.asOf': "截至 {date}", 'pen.wait': "等待 {t}", 'pen.note': "来自每个账号最近一次登录——其他账号在你登录时检查。", 'restrict.LowPriorityQueue': "低优先级队列（排队前需等待）", 'restrict.QUEUE_DODGER': "秒退惩罚", 'restrict.LEAVER_BUSTED': "LeaverBuster 锁定",
     'mh.storeTitle': "已保存对局记录占用的空间", 'mh.storeGames': "{n} 场对局", 'mh.clear': "删除已保存的对局记录", 'mh.clearTitle': "删除全部对局记录？", 'mh.clearText': "你所有账号保存的 {n} 场对局（{size}）将从这台电脑上删除。仍在英雄联盟客户端中的对局会在下次运行时回来；更早的将永久消失。", 'mh.clearYes': "全部删除", 'mh.clearWarn': "此操作无法撤销！", 'mh.cleared': "对局记录已删除。",
     'mh.otherGames': "其他对局", 'mh.unpin': "恢复正常显示",
     'mh.rCustom': "自定义时间 …", 'mh.rankNow': "当前段位 – Riot 不保存对局时的段位",

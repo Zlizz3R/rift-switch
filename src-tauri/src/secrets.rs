@@ -1,8 +1,8 @@
 //! Encryption.
 //! - Files on this PC (saved logins, Riot Client sessions): Windows DPAPI, only this Windows
-//!   user can read them. Files written by the old Electron version ("v10" + AES-GCM with the key
-//!   kept in "Local State") are read too, and new files use that format while its key exists,
-//!   so going back to the old version keeps working.
+//!   user can read them. Files of the old Electron version ("v10" + AES-GCM with a key kept in
+//!   its "Local State" file) are still read, and main.rs re-encrypts them with DPAPI once, so
+//!   nothing depends on that leftover file any more.
 //! - Password-based, independent of this PC: logins inside an export file (scrypt + AES-256-GCM)
 //!   and the app lock (salted scrypt hash, constant-time compare). Same format as before.
 
@@ -20,8 +20,13 @@ use subtle::ConstantTimeEq;
 #[cfg(windows)]
 fn dpapi(data: &[u8], protect: bool) -> Option<Vec<u8>> {
     use windows::Win32::Foundation::{LocalFree, HLOCAL};
-    use windows::Win32::Security::Cryptography::{CryptProtectData, CryptUnprotectData, CRYPT_INTEGER_BLOB};
-    let input = CRYPT_INTEGER_BLOB { cbData: data.len() as u32, pbData: data.as_ptr() as *mut u8 };
+    use windows::Win32::Security::Cryptography::{
+        CryptProtectData, CryptUnprotectData, CRYPT_INTEGER_BLOB,
+    };
+    let input = CRYPT_INTEGER_BLOB {
+        cbData: data.len() as u32,
+        pbData: data.as_ptr() as *mut u8,
+    };
     let mut out = CRYPT_INTEGER_BLOB::default();
     unsafe {
         let r = if protect {
@@ -54,17 +59,12 @@ fn electron_key(data_dir: &Path) -> Option<&'static [u8; 32]> {
     .as_ref()
 }
 
-pub fn encrypt_local(data_dir: &Path, plain: &[u8]) -> Option<Vec<u8>> {
-    if let Some(key) = electron_key(data_dir) {
-        let mut nonce = [0u8; 12];
-        rand::thread_rng().fill_bytes(&mut nonce);
-        let ct = Aes256Gcm::new(key.into()).encrypt(Nonce::from_slice(&nonce), plain).ok()?;
-        let mut out = b"v10".to_vec();
-        out.extend_from_slice(&nonce);
-        out.extend(ct);
-        return Some(out);
-    }
+pub fn encrypt_local(plain: &[u8]) -> Option<Vec<u8>> {
     dpapi(plain, true)
+}
+/// Written by the old Electron version (needs its "Local State" key to read)?
+pub fn is_legacy(blob: &[u8]) -> bool {
+    blob.starts_with(b"v10")
 }
 
 pub fn decrypt_local(data_dir: &Path, blob: &[u8]) -> Option<Vec<u8>> {
@@ -73,7 +73,9 @@ pub fn decrypt_local(data_dir: &Path, blob: &[u8]) -> Option<Vec<u8>> {
         if rest.len() < 12 + 16 {
             return None;
         }
-        return Aes256Gcm::new(key.into()).decrypt(Nonce::from_slice(&rest[..12]), &rest[12..]).ok();
+        return Aes256Gcm::new(key.into())
+            .decrypt(Nonce::from_slice(&rest[..12]), &rest[12..])
+            .ok();
     }
     dpapi(blob, false)
 }
@@ -99,7 +101,10 @@ pub fn seal(obj: &Value, pass: &str) -> Value {
     let (salt, iv) = (random::<16>(), random::<12>());
     let key = scrypt_key(pass, &salt, SEAL_LOG_N);
     let mut ct = Aes256Gcm::new(&key.into())
-        .encrypt(Nonce::from_slice(&iv), Payload::from(obj.to_string().as_bytes()))
+        .encrypt(
+            Nonce::from_slice(&iv),
+            Payload::from(obj.to_string().as_bytes()),
+        )
         .expect("encrypt");
     let tag = ct.split_off(ct.len() - 16);
     json!({ "kdf": "scrypt", "N": 1u32 << SEAL_LOG_N, "salt": B64.encode(salt), "iv": B64.encode(iv),
@@ -119,7 +124,9 @@ pub fn open(bx: &Value, pass: &str) -> Option<Value> {
     let key = scrypt_key(pass, &salt, SEAL_LOG_N);
     let mut ct = data;
     ct.extend(tag);
-    let plain = Aes256Gcm::new(&key.into()).decrypt(Nonce::from_slice(&iv), ct.as_slice()).ok()?;
+    let plain = Aes256Gcm::new(&key.into())
+        .decrypt(Nonce::from_slice(&iv), ct.as_slice())
+        .ok()?;
     serde_json::from_slice(&plain).ok()
 }
 
@@ -128,10 +135,16 @@ pub fn make_lock(pass: &str) -> Value {
     json!({ "salt": B64.encode(salt), "hash": B64.encode(scrypt_key(pass, &salt, LOCK_LOG_N)) })
 }
 pub fn lock_matches(lock: Option<&Value>, pass: Option<&str>) -> bool {
-    let (Some(lock), Some(pass)) = (lock, pass) else { return false };
+    let (Some(lock), Some(pass)) = (lock, pass) else {
+        return false;
+    };
     let (Some(salt), Some(hash)) = (
-        lock.get("salt").and_then(Value::as_str).and_then(|s| B64.decode(s).ok()),
-        lock.get("hash").and_then(Value::as_str).and_then(|s| B64.decode(s).ok()),
+        lock.get("salt")
+            .and_then(Value::as_str)
+            .and_then(|s| B64.decode(s).ok()),
+        lock.get("hash")
+            .and_then(Value::as_str)
+            .and_then(|s| B64.decode(s).ok()),
     ) else {
         return false;
     };
@@ -144,8 +157,14 @@ mod tests {
     use super::*;
     #[test]
     fn sealed_logins() {
-        let bx = seal(&json!({ "logins": [{ "u": "a", "p": "b" }] }), "correct horse");
-        assert_eq!(open(&bx, "correct horse"), Some(json!({ "logins": [{ "u": "a", "p": "b" }] })));
+        let bx = seal(
+            &json!({ "logins": [{ "u": "a", "p": "b" }] }),
+            "correct horse",
+        );
+        assert_eq!(
+            open(&bx, "correct horse"),
+            Some(json!({ "logins": [{ "u": "a", "p": "b" }] }))
+        );
         assert_eq!(open(&bx, "wrong"), None);
         let mut bad = bx.clone();
         let d = bad["data"].as_str().unwrap().to_string();
@@ -165,13 +184,18 @@ mod tests {
     #[test]
     fn node_compatible_box() {
         // made by the old version (Node crypto.scryptSync + aes-256-gcm), see test/fixtures
-        let bx: Value = serde_json::from_str(include_str!("../../test/fixtures/sealed.json")).unwrap();
-        assert_eq!(open(&bx, "correct horse"), Some(json!({ "logins": [{ "u": "a", "p": "b" }] })));
+        let bx: Value =
+            serde_json::from_str(include_str!("../../test/fixtures/sealed.json")).unwrap();
+        assert_eq!(
+            open(&bx, "correct horse"),
+            Some(json!({ "logins": [{ "u": "a", "p": "b" }] }))
+        );
     }
     #[test]
     fn dpapi_round_trip() {
         let dir = std::env::temp_dir().join("rs-secrets-test-none");
-        let enc = encrypt_local(&dir, b"rift-switch").unwrap();
+        let enc = encrypt_local(b"rift-switch").unwrap();
+        assert!(!is_legacy(&enc));
         assert_eq!(decrypt_local(&dir, &enc).unwrap(), b"rift-switch");
     }
 }

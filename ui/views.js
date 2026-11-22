@@ -221,12 +221,53 @@ function playerRow(p) {
     ${p.gameName ? `<button class="chip" data-opgg="${esc(p.gameName + '#' + p.tagLine)}">op.gg</button>` : ''}
   </div>`;
 }
+// "4:32", "2 h 05 min", or a date for long ones
+function leftText(until) {
+  const s = Math.max(0, Math.round((until - Date.now()) / 1000));
+  if (s < 3600) return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  if (s < 86400) return Math.floor(s / 3600) + ' h ' + String(Math.floor(s % 3600 / 60)).padStart(2, '0') + ' min';
+  return t('pen.until', { date: new Date(until).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) });
+}
+// every account's known penalties (from its own last login) that haven't run out
+function activePenalties() {
+  const now = Date.now();
+  const out = [];
+  for (const a of S.accounts || []) {
+    const list = (a.penalties && a.penalties.list) || [];
+    for (const p of list) if (!p.until || p.until > now) out.push({ a, p, asOf: a.penalties.at });
+  }
+  return out.sort((x, y) => (x.p.until || Infinity) - (y.p.until || Infinity));
+}
+function penaltiesHtml() {
+  const list = activePenalties();
+  if (!list.length) return '';
+  return `<div class="live-card pen-card"><div class="lc-head"><h3>${t('pen.title')}</h3></div>
+    ${list.map(({ a, p, asOf }) => `<div class="pen-row">
+      <span class="pen-av">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}</span>
+      <div class="pen-name"><b>${esc(dispName(a))}</b><small>${esc(reasonText({ code: p.code, args: p.args }))}</small></div>
+      ${p.until ? `<span class="pen-left" data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</span>`
+        : `<span class="pen-left none" title="${esc(t('pen.asOf', { date: fmtDate(asOf) }))}">${t('pen.noEnd')}</span>`}
+    </div>`).join('')}
+    <p class="fine">${t('pen.note')}</p></div>`;
+}
+// running countdowns (live page, title bar) tick every second while there is one
+setInterval(() => {
+  for (const el of document.querySelectorAll('[data-until]')) {
+    const u = Number(el.dataset.until);
+    if (u <= Date.now()) { el.textContent = '✓'; continue; }
+    el.textContent = el.dataset.fmt === 'wait' ? t('pen.wait', { t: leftText(u) })
+      : u - Date.now() < 86400000 ? t('pen.left', { t: leftText(u) }) : leftText(u);
+  }
+}, 1000);
+
 function renderLive(force) {
   if (!force && document.activeElement && document.activeElement.closest && document.activeElement.closest('#liveBody input')) return;
   const d = liveData || {};
   $('liveSub').textContent = !d.clientUp ? t('app.closed') : phaseName(d.phase);
   $('liveDot').hidden = !(d.clash && d.clash.opponents && d.clash.opponents.length) && !d.champSelect && !d.lobby && !d.inGame;
   const parts = [];
+  const pens = penaltiesHtml();
+  if (pens) parts.push(pens);
   if (d.clash && d.clash.opponents && d.clash.opponents.length) {
     const ids = d.clash.opponents.filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
     parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.clash')} – ${esc(d.clash.teamName || '')} ${d.clash.teamTag ? '[' + esc(d.clash.teamTag) + ']' : ''}</h3>
@@ -256,7 +297,7 @@ function renderLive(force) {
     const opp = cs.enemies.find(e => e.championId && cs.myPosition && e.position === cs.myPosition) || (cs.enemies.filter(e => e.championId).length === 1 ? cs.enemies.find(e => e.championId) : null);
     if (opp && !helper.enemy) { helper.enemy = opp.championId; helper.autoEnemy = true; }
   } else if (helper.autoEnemy) { helper.enemy = 0; helper.autoEnemy = false; helper.results = null; }
-  if (!parts.length) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
+  if (!parts.length || (parts.length === 1 && pens)) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
   parts.push(helperHtml());
   // keep focus/scroll of the helper's inputs: only replace when something changed
   const html = parts.join('');

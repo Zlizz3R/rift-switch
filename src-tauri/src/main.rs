@@ -16,7 +16,10 @@ mod store;
 mod updater;
 mod winsys;
 
-use accounts::{is_id, is_placeholder, mask_login, num_of, parse_riot_id, str_of, truthy, upsert_into, valid_cred, Obj, RANK_QUEUES};
+use accounts::{
+    is_id, is_placeholder, mask_login, num_of, parse_riot_id, str_of, truthy, upsert_into,
+    valid_cred, Obj, RANK_QUEUES,
+};
 use riot::now_ms;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -35,6 +38,8 @@ struct Live {
     puuid: Option<String>,
     phase: Option<String>,
     client_up: bool,
+    /// waiting times the client gave for queueing right now: [{ code, until }]
+    waits: Vec<Value>,
 }
 
 struct Core {
@@ -68,6 +73,11 @@ struct Core {
     jump_key: String,
     after_load_switch: Option<String>,
     failed_games: HashMap<String, u8>,
+    expecting_since: i64,
+    /// accounts.json couldn't be read at start: never write it (that would empty the real file)
+    read_only: bool,
+    /// signed in without "Stay signed in": nothing to save until the next login
+    no_persist: Option<String>,
 }
 
 static CORE: OnceLock<Mutex<Core>> = OnceLock::new();
@@ -77,9 +87,14 @@ static TRAY: Mutex<Option<TrayIcon>> = Mutex::new(None);
 static KICK: tokio::sync::Notify = tokio::sync::Notify::const_new();
 static SOON: Mutex<bool> = Mutex::new(false);
 static EVENTS: OnceLock<tokio::sync::mpsc::UnboundedSender<events::Event>> = OnceLock::new();
+static UNLOCKING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+const APP_ID: &str = "com.zlizz3r.riftswitch";
 
 fn core() -> MutexGuard<'static, Core> {
-    CORE.get().expect("core").lock().unwrap_or_else(|e| e.into_inner())
+    CORE.get()
+        .expect("core")
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
 }
 fn with<R>(f: impl FnOnce(&mut Core) -> R) -> R {
     f(&mut core())
@@ -110,7 +125,11 @@ fn obj(v: Value) -> Obj {
 fn log_error(place: &str, e: &str) {
     use std::io::Write;
     let line = format!("{} {place}: {e}\n", now_ms());
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(data().join("error.log")) {
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(data().join("error.log"))
+    {
         let _ = f.write_all(line.as_bytes());
     }
 }
@@ -121,7 +140,7 @@ fn window() -> Option<WebviewWindow> {
     app().get_webview_window("main")
 }
 fn win_shown() -> bool {
-    window().map_or(false, |w| w.is_visible().unwrap_or(false))
+    window().is_some_and(|w| w.is_visible().unwrap_or(false))
 }
 fn emit(ev: &str, payload: Value) {
     if let Some(w) = window() {
@@ -138,18 +157,25 @@ fn snapshot(c: &Core) -> Value {
             "live": { "clientUp": false }, "version": version, "update": updater::get() });
     }
     // LP history can be long: the profile window asks for it when it opens
-    let accounts: Vec<Value> = c.st.accounts.iter().map(|a| {
-        let mut a = a.clone();
-        let n = a.remove("history").and_then(|h| h.as_array().map(Vec::len)).unwrap_or(0);
-        a.insert("historyLen".into(), json!(n));
-        Value::Object(a)
-    }).collect();
+    let accounts: Vec<Value> =
+        c.st.accounts
+            .iter()
+            .map(|a| {
+                let mut a = a.clone();
+                let n = a
+                    .remove("history")
+                    .and_then(|h| h.as_array().map(Vec::len))
+                    .unwrap_or(0);
+                a.insert("historyLen".into(), json!(n));
+                Value::Object(a)
+            })
+            .collect();
     let mut o = c.st.to_json();
     let m = o.as_object_mut().unwrap();
     m.remove("lock");
     m.insert("accounts".into(), Value::Array(accounts));
     m.insert("hasLock".into(), json!(c.st.lock.is_some()));
-    m.insert("live".into(), json!({ "puuid": c.live.puuid, "phase": c.live.phase, "clientUp": c.live.client_up }));
+    m.insert("live".into(), json!({ "puuid": c.live.puuid, "phase": c.live.phase, "clientUp": c.live.client_up, "waits": c.live.waits }));
     m.insert("pendingAdd".into(), json!(c.pending_add));
     m.insert("busy".into(), json!(c.busy));
     m.insert("login".into(), c.login.clone());
@@ -186,6 +212,10 @@ fn set_login(l: Value) {
 /// Writes accounts.json only when something really changed, and refreshes the tray then.
 fn save() {
     let changed = with(|c| {
+        if c.read_only {
+            c.save_error = Some("accounts.json unreadable".into());
+            return false;
+        }
         let text = c.st.to_json().to_string();
         if text == c.last_saved {
             c.save_error = None;
@@ -222,9 +252,38 @@ fn cred_file(id: &str) -> PathBuf {
     data().join("creds").join(format!("{id}.bin"))
 }
 fn write_secret(file: &Path, text: &str) -> bool {
-    let Some(b) = secrets::encrypt_local(data(), text.as_bytes()) else { return false };
-    let _ = std::fs::create_dir_all(file.parent().unwrap());
-    std::fs::write(file, b).is_ok()
+    let Some(b) = secrets::encrypt_local(text.as_bytes()) else {
+        return false;
+    };
+    store::write_atomic(file, &b).is_ok()
+}
+/// Files of the old Electron version ("v10", key in its "Local State" file) are re-encrypted
+/// with DPAPI once, so deleting that leftover file can never lose a login.
+fn migrate_secrets() {
+    let mut files = vec![data().join("keycheck.bin")];
+    for dir in ["creds", "sessions"] {
+        files.extend(
+            std::fs::read_dir(data().join(dir))
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|e| e.path()),
+        );
+    }
+    for f in files {
+        let Ok(b) = std::fs::read(&f) else { continue };
+        if !secrets::is_legacy(&b) {
+            continue;
+        }
+        match secrets::decrypt_local(data(), &b).and_then(|p| secrets::encrypt_local(&p)) {
+            Some(n) => {
+                if let Err(e) = store::write_atomic(&f, &n) {
+                    log_error("migrate", &format!("{}: {e}", f.display()));
+                }
+            }
+            None => log_error("migrate", &format!("cannot re-encrypt {}", f.display())),
+        }
+    }
 }
 fn read_secret(file: &Path) -> Option<String> {
     let b = std::fs::read(file).ok()?;
@@ -237,7 +296,10 @@ fn check_crypto() {
     let exists = f.exists();
     let broken = exists && read_secret(&f).as_deref() != Some("rift-switch");
     if broken {
-        log_error("crypto", "saved data was encrypted with a key this start cannot read");
+        log_error(
+            "crypto",
+            "saved data was encrypted with a key this start cannot read",
+        );
     }
     with(|c| c.crypto_broken = broken);
     if !exists || broken {
@@ -248,8 +310,11 @@ fn check_crypto() {
 /// Saves the Riot Client's session for this account – only a usable one: it must hold a
 /// remembered login and (unless verified) the client must be signed in as this very account.
 async fn store_session(id: &str, verified: bool) -> bool {
-    let Some(json) = riot::capture_session() else { return false };
+    let Some(json) = riot::capture_session() else {
+        return false;
+    };
     if !riot::session_persisted(&json) {
+        with(|c| c.no_persist = Some(id.to_string()));
         return false;
     }
     if !verified {
@@ -274,7 +339,12 @@ fn load_cred(id: &str) -> Option<(String, String)> {
     Some((v["u"].as_str()?.to_string(), v["p"].as_str()?.to_string()))
 }
 fn check_creds() {
-    let ids: Vec<String> = with(|c| c.st.accounts.iter().map(|a| str_of(a, "puuid").to_string()).collect());
+    let ids: Vec<String> = with(|c| {
+        c.st.accounts
+            .iter()
+            .map(|a| str_of(a, "puuid").to_string())
+            .collect()
+    });
     for id in ids {
         let has = cred_file(&id).exists();
         let broken = has && load_cred(&id).is_none();
@@ -293,7 +363,11 @@ fn check_creds() {
 fn recover_orphans() {
     let mut ids = std::collections::BTreeSet::new();
     for dir in ["creds", "sessions"] {
-        for e in std::fs::read_dir(data().join(dir)).into_iter().flatten().flatten() {
+        for e in std::fs::read_dir(data().join(dir))
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
             if let Some(id) = e.file_name().to_string_lossy().strip_suffix(".bin") {
                 if is_id(id) {
                     ids.insert(id.to_string());
@@ -306,9 +380,12 @@ fn recover_orphans() {
         if with(|c| c.st.has(&id)) {
             continue;
         }
-        let mut acc = obj(json!({ "puuid": id, "note": "", "addedAt": now_ms(), "gameName": "…", "tagLine": "", "needsInfo": true }));
+        let mut acc = obj(
+            json!({ "puuid": id, "note": "", "addedAt": now_ms(), "gameName": "…", "tagLine": "", "needsInfo": true }),
+        );
         if is_placeholder(&id) {
-            let name = load_cred(&id).map_or("Gespeicherter Login".to_string(), |c| mask_login(&c.0)); // the window translates this marker
+            let name =
+                load_cred(&id).map_or("Gespeicherter Login".to_string(), |c| mask_login(&c.0)); // the window translates this marker
             acc.insert("placeholder".into(), json!(true));
             acc.insert("gameName".into(), json!(name));
             acc.remove("needsInfo");
@@ -329,8 +406,18 @@ fn move_file(from: &Path, to: &Path) {
 }
 /// Placeholder old_id turned out to be new_id.
 fn resolve_placeholder(c: &mut Core, old_id: &str, new_id: &str) {
-    let Some(oi) = c.st.accounts.iter().position(|a| str_of(a, "puuid") == old_id) else { return };
-    if let Some(ri) = c.st.accounts.iter().position(|a| str_of(a, "puuid") == new_id) {
+    let Some(oi) =
+        c.st.accounts
+            .iter()
+            .position(|a| str_of(a, "puuid") == old_id)
+    else {
+        return;
+    };
+    if let Some(ri) =
+        c.st.accounts
+            .iter()
+            .position(|a| str_of(a, "puuid") == new_id)
+    {
         // already saved: keep the real tile, take over the login if it had none
         let old = c.st.accounts[oi].clone();
         let real = &mut c.st.accounts[ri];
@@ -366,6 +453,10 @@ fn upsert(acc: Obj) {
 
 // ---------- watcher: keeps tiles fresh while League is open ----------
 
+fn stale_in(c: &Core, my_gen: u64) -> bool {
+    c.busy || c.gen != my_gen
+}
+
 async fn tick() {
     let my_gen = {
         let mut c = core();
@@ -377,6 +468,19 @@ async fn tick() {
     };
     tick_inner(my_gen).await;
     with(|c| c.ticking = false);
+}
+
+/// An account's known penalties (from its own last login): kept until they ran out.
+fn set_penalties(a: &mut Obj, list: Vec<Value>, now: i64) {
+    let list: Vec<Value> = list
+        .into_iter()
+        .filter(|p| p["until"].as_i64().is_none_or(|u| u == 0 || u > now))
+        .collect();
+    if list.is_empty() {
+        a.remove("penalties");
+    } else {
+        a.insert("penalties".into(), json!({ "at": now, "list": list }));
+    }
 }
 
 fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
@@ -396,13 +500,43 @@ fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
     });
 }
 
+const IN_GAME: [&str; 3] = ["GameStart", "InProgress", "Reconnect"];
+
 async fn tick_inner(my_gen: u64) {
     let stale = || with(|c| c.busy || c.gen != my_gen);
     if let Some(tx) = EVENTS.get() {
         events::connect(riot::lockfile(), tx.clone());
     }
-    let cur = riot::current_account().await;
-    let phase = if cur.is_some() { riot::gameflow_phase().await } else { None };
+    // While a game runs, the League client is asked one single thing (the phase) – nothing that
+    // could cost a frame. Ranks, history and the other accounts follow when the game is over.
+    let first = riot::gameflow_phase().await;
+    if let Some(p) = first.as_deref().filter(|p| IN_GAME.contains(p)) {
+        let changed = with(|c| {
+            if c.live.puuid.is_none() || stale_in(c, my_gen) {
+                return None;
+            }
+            let ch = c.live.phase.as_deref() != Some(p);
+            c.live.phase = Some(p.to_string());
+            c.live.client_up = true;
+            Some(ch)
+        });
+        if let Some(ch) = changed {
+            if ch {
+                push();
+            }
+            return;
+        }
+    }
+    let cur = if first.is_some() {
+        riot::current_account().await
+    } else {
+        None
+    };
+    let phase = if cur.is_some() {
+        riot::gameflow_phase().await
+    } else {
+        None
+    };
     if stale() {
         return;
     }
@@ -410,7 +544,17 @@ async fn tick_inner(my_gen: u64) {
     let (new_puuid, changed) = with(|c| {
         let np = cur_id != c.live.puuid;
         let ch = np || phase != c.live.phase;
-        c.live = Live { puuid: cur_id.clone(), phase: phase.clone(), client_up: cur.is_some() };
+        let waits = if cur_id == c.live.puuid {
+            std::mem::take(&mut c.live.waits)
+        } else {
+            vec![]
+        };
+        c.live = Live {
+            puuid: cur_id.clone(),
+            phase: phase.clone(),
+            client_up: cur.is_some(),
+            waits,
+        };
         (np, ch)
     });
     let Some(cur) = cur else {
@@ -434,26 +578,45 @@ async fn tick_inner(my_gen: u64) {
     if known || pending_add {
         upsert(cur.clone());
         with(|c| c.st.active = Some(id.clone()));
-        if pending_add || new_puuid || !session_file(&id).exists() {
+        if new_puuid {
+            with(|c| c.no_persist = None);
+        }
+        let skip = with(|c| c.no_persist.as_deref() == Some(id.as_str()));
+        if pending_add || new_puuid || (!skip && !session_file(&id).exists()) {
             store_session(&id, false).await;
         }
-        if let Some((u, p)) = with(|c| if c.pending_add { c.pending_cred.clone() } else { None }) {
+        if let Some((u, p)) = with(|c| {
+            if c.pending_add {
+                c.pending_cred.clone()
+            } else {
+                None
+            }
+        }) {
             store_cred(&id, &u, &p);
         }
         // profile details of the signed-in account, every 5 minutes
         if new_puuid || with(|c| now - c.last_profile_at > 300_000) {
             with(|c| c.last_profile_at = now);
-            let (p, hs, elig) = tokio::join!(riot::profile_data(&cur), riot::history_summary(&id), riot::ranked_eligibility());
+            let (p, hs, elig) = tokio::join!(
+                riot::profile_data(&cur),
+                riot::history_summary(&id),
+                riot::ranked_eligibility()
+            );
             if stale() {
                 return;
             }
             with(|c| {
                 if let Some(a) = c.st.account_mut(&id) {
-                    let mut prof = a.get("profile").and_then(Value::as_object).cloned().unwrap_or_default();
+                    let mut prof = a
+                        .get("profile")
+                        .and_then(Value::as_object)
+                        .cloned()
+                        .unwrap_or_default();
                     prof.extend(p);
                     a.insert("profile".into(), Value::Object(prof));
-                    if let Some(e) = elig {
-                        a.insert("rankedCheck".into(), e);
+                    if let Some((check, pens)) = elig {
+                        a.insert("rankedCheck".into(), check);
+                        set_penalties(a, pens, now);
                     }
                 }
             });
@@ -474,9 +637,38 @@ async fn tick_inner(my_gen: u64) {
         push();
     }
 
+    // lobby / queue: the low priority queue or a dodge timer shows up here
+    if matches!(phase.as_deref(), Some("Lobby" | "Matchmaking")) {
+        let waits = riot::queue_wait_now().await;
+        let changed = with(|c| {
+            let ch = c.live.waits != waits;
+            if ch {
+                c.live.waits = waits.clone();
+                if let Some(a) = c.st.account_mut(&id) {
+                    let mut list: Vec<Value> = a
+                        .get("penalties")
+                        .and_then(|p| p["list"].as_array().cloned())
+                        .unwrap_or_default();
+                    list.retain(|p| !waits.iter().any(|w| w["code"] == p["code"]));
+                    list.extend(waits.iter().cloned());
+                    set_penalties(a, list, now);
+                }
+            }
+            ch
+        });
+        if changed {
+            save();
+        }
+    } else if with(|c| !c.live.waits.is_empty()) {
+        with(|c| c.live.waits.clear());
+        push();
+    }
+
     // the other saved accounts of the same region: every 2 minutes, 5 when hidden
     let every = if win_shown() { 120_000 } else { 300_000 };
-    let due = with(|c| now - c.last_rank_sweep > every || c.st.accounts.iter().any(|a| truthy(a.get("needsInfo"))));
+    let due = with(|c| {
+        now - c.last_rank_sweep > every || c.st.accounts.iter().any(|a| truthy(a.get("needsInfo")))
+    });
     if due {
         with(|c| c.last_rank_sweep = now);
         let region = str_of(&cur, "region").to_string();
@@ -495,7 +687,9 @@ async fn tick_inner(my_gen: u64) {
                 if !truthy(a.get("tagLine")) {
                     continue;
                 }
-                if let Some(hit) = riot::lookup_riot_id(str_of(&a, "gameName"), str_of(&a, "tagLine")).await {
+                if let Some(hit) =
+                    riot::lookup_riot_id(str_of(&a, "gameName"), str_of(&a, "tagLine")).await
+                {
                     if !stale() && with(|c| c.st.has(&aid)) {
                         let hid = str_of(&hit, "puuid").to_string();
                         with(|c| resolve_placeholder(c, &aid, &hid));
@@ -519,8 +713,14 @@ async fn tick_inner(my_gen: u64) {
                 if let Some(s) = s {
                     u.insert("iconId".into(), s["profileIconId"].clone());
                     u.insert("level".into(), s["summonerLevel"].clone());
-                    let gn = s["gameName"].as_str().filter(|x| !x.is_empty()).unwrap_or(str_of(&a, "gameName"));
-                    let tl = s["tagLine"].as_str().filter(|x| !x.is_empty()).unwrap_or(str_of(&a, "tagLine"));
+                    let gn = s["gameName"]
+                        .as_str()
+                        .filter(|x| !x.is_empty())
+                        .unwrap_or(str_of(&a, "gameName"));
+                    let tl = s["tagLine"]
+                        .as_str()
+                        .filter(|x| !x.is_empty())
+                        .unwrap_or(str_of(&a, "tagLine"));
                     u.insert("gameName".into(), json!(gn));
                     u.insert("tagLine".into(), json!(tl));
                 }
@@ -545,7 +745,11 @@ async fn tick_inner(my_gen: u64) {
 async fn fill_games(max: usize) -> usize {
     let ids: Vec<String> = with(|c| {
         let failed = &c.failed_games;
-        c.mh.missing().into_iter().filter(|id| failed.get(id).copied().unwrap_or(0) < 2).take(max).collect()
+        c.mh.missing()
+            .into_iter()
+            .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
+            .take(max)
+            .collect()
     });
     let mut got = 0;
     for id in ids {
@@ -564,7 +768,14 @@ async fn fill_games(max: usize) -> usize {
 
 // ---------- auto-login ----------
 
-const AUTOFILL_ERR: [&str; 6] = ["noform", "nowindow", "nofocus", "lostfocus", "badinput", "error"];
+const AUTOFILL_ERR: [&str; 6] = [
+    "noform",
+    "nowindow",
+    "nofocus",
+    "lostfocus",
+    "badinput",
+    "error",
+];
 
 /// Waits for the Riot Client; if it shows the login screen, types the login.
 /// settle_ms: how long the client must stay signed out before typing.
@@ -596,8 +807,14 @@ async fn auto_login(u: String, p: String, name: String, settle_ms: i64, since: O
                     return;
                 }
                 if r != "ok" && r != "ok-nopersist" {
-                    let k = if AUTOFILL_ERR.contains(&r.as_str()) { r.as_str() } else { "error" };
-                    return set_login(json!({ "name": name, "stage": "failed", "msgKey": format!("af.{k}") }));
+                    let k = if AUTOFILL_ERR.contains(&r.as_str()) {
+                        r.as_str()
+                    } else {
+                        "error"
+                    };
+                    return set_login(
+                        json!({ "name": name, "stage": "failed", "msgKey": format!("af.{k}") }),
+                    );
                 }
                 if r == "ok-nopersist" {
                     log_error("autofill", "\"Stay signed in\" could not be ticked");
@@ -624,7 +841,11 @@ async fn auto_login(u: String, p: String, name: String, settle_ms: i64, since: O
 // login). Once it is signed in and League hasn't started, press Play for the user.
 
 fn pl_of(a: Option<&Obj>) -> &'static str {
-    if a.map_or(false, |a| str_of(a, "region") == "PBE") { "pbe" } else { "live" }
+    if a.is_some_and(|a| str_of(a, "region") == "PBE") {
+        "pbe"
+    } else {
+        "live"
+    }
 }
 async fn auto_play(pl: &'static str) {
     let token = with(|c| {
@@ -634,7 +855,8 @@ async fn auto_play(pl: &'static str) {
     });
     let alive = || with(|c| c.play_token == token);
     let t0 = now_ms();
-    let (mut signed_in_since, mut presses, mut checked): (Option<i64>, u32, bool) = (None, 0, false);
+    let (mut signed_in_since, mut presses, mut checked): (Option<i64>, u32, bool) =
+        (None, 0, false);
     while alive() && now_ms() - t0 < 180_000 {
         let st = riot::rc_login_state().await;
         if let Some(subject) = st.subject {
@@ -648,7 +870,11 @@ async fn auto_play(pl: &'static str) {
                 if let Some(rc) = rc.filter(|r| !r.region.is_empty()) {
                     checked = true;
                     let changed = with(|c| {
-                        let id = if c.st.has(&subject) { Some(subject.clone()) } else { c.expecting.clone() };
+                        let id = if c.st.has(&subject) {
+                            Some(subject.clone())
+                        } else {
+                            c.expecting.clone()
+                        };
                         match id.and_then(|id| c.st.account_mut(&id)) {
                             Some(a) if str_of(a, "region") != rc.region => {
                                 a.insert("region".into(), json!(rc.region));
@@ -710,7 +936,13 @@ async fn save_active_before_leaving() -> bool {
     if riot::leave_lobby().await {
         sleep(1200).await;
     }
-    let who = with(|c| c.live.puuid.clone().or(c.st.active.clone()).filter(|w| c.st.has(w)));
+    let who = with(|c| {
+        c.live
+            .puuid
+            .clone()
+            .or(c.st.active.clone())
+            .filter(|w| c.st.has(w))
+    });
     let signed_in_as_who = match &who {
         Some(w) => riot::rc_login_state().await.subject.as_deref() == Some(w.as_str()),
         None => false,
@@ -751,13 +983,22 @@ async fn do_switch(id: String) -> Value {
     let session = read_secret(&session_file(&id));
     let cred = load_cred(&id);
     if session.is_none() && cred.is_none() {
-        return err_key(if acc.as_ref().map_or(false, |a| truthy(a.get("credBroken"))) { "m.credBroken" } else { "m.noSession" });
+        return err_key(
+            if acc.as_ref().is_some_and(|a| truthy(a.get("credBroken"))) {
+                "m.credBroken"
+            } else {
+                "m.noSession"
+            },
+        );
     }
     with(|c| {
         c.login_token += 1;
         c.login = Value::Null;
     });
-    let name = |cred: &(String, String)| acc.as_ref().map_or(cred.0.clone(), |a| str_of(a, "gameName").to_string());
+    let name = |cred: &(String, String)| {
+        acc.as_ref()
+            .map_or(cred.0.clone(), |a| str_of(a, "gameName").to_string())
+    };
     let pl = pl_of(acc.as_ref());
 
     // a full restart is only needed when another account is signed in or League is running
@@ -771,7 +1012,12 @@ async fn do_switch(id: String) -> Value {
             });
             save();
             let rca = riot::rc_account().await;
-            riot::press_play(if rca.map_or(false, |r| r.region == "PBE") || pl == "pbe" { "pbe" } else { "live" }).await;
+            riot::press_play(if rca.is_some_and(|r| r.region == "PBE") || pl == "pbe" {
+                "pbe"
+            } else {
+                "live"
+            })
+            .await;
             return json!({ "ok": true, "fast": "play" });
         }
         if rc.subject.is_none() {
@@ -781,10 +1027,17 @@ async fn do_switch(id: String) -> Value {
                     c.gen += 1;
                     c.st.active = Some(id.clone());
                     c.expecting = Some(id.clone());
+                    c.expecting_since = now_ms();
                     c.live = Live::default();
                 });
                 save();
-                tauri::async_runtime::spawn(auto_login(cr.0.clone(), cr.1.clone(), name(cr), 1500, None));
+                tauri::async_runtime::spawn(auto_login(
+                    cr.0.clone(),
+                    cr.1.clone(),
+                    name(cr),
+                    1500,
+                    None,
+                ));
                 tauri::async_runtime::spawn(auto_play(pl));
                 return json!({ "ok": true, "fast": "login" });
             }
@@ -800,13 +1053,20 @@ async fn do_switch(id: String) -> Value {
     with(|c| {
         c.st.active = Some(id.clone());
         c.expecting = Some(id.clone());
+        c.expecting_since = now_ms();
         c.live = Live::default();
     });
     save();
     let started = now_ms();
     riot::launch_league(pl);
     if let Some(cr) = &cred {
-        tauri::async_runtime::spawn(auto_login(cr.0.clone(), cr.1.clone(), name(cr), if session.is_some() { 4000 } else { 1500 }, Some(started)));
+        tauri::async_runtime::spawn(auto_login(
+            cr.0.clone(),
+            cr.1.clone(),
+            name(cr),
+            if session.is_some() { 4000 } else { 1500 },
+            Some(started),
+        ));
     }
     tauri::async_runtime::spawn(auto_play(pl));
     json!({ "ok": true })
@@ -842,15 +1102,23 @@ async fn do_add_new(c_in: Value) -> Value {
 /// Save a login for later – nothing is closed or logged in now.
 async fn do_add_saved(c_in: Value) -> Value {
     with(|c| c.gen += 1);
-    let Some((u, p)) = valid_cred(&c_in) else { return err_key("m.fill") };
+    let Some((u, p)) = valid_cred(&c_in) else {
+        return err_key("m.fill");
+    };
     let rid = c_in["riotId"].as_str().unwrap_or("").trim().to_string();
     let (mut gn, mut tl) = (String::new(), String::new());
     if !rid.is_empty() {
-        let Some((g, t)) = parse_riot_id(&rid) else { return err_key("m.riotIdFormat") };
+        let Some((g, t)) = parse_riot_id(&rid) else {
+            return err_key("m.riotIdFormat");
+        };
         gn = g;
         tl = t;
     }
-    let hit = if gn.is_empty() { None } else { riot::lookup_riot_id(&gn, &tl).await };
+    let hit = if gn.is_empty() {
+        None
+    } else {
+        riot::lookup_riot_id(&gn, &tl).await
+    };
     let id = match &hit {
         Some(h) => {
             let id = str_of(h, "puuid").to_string();
@@ -864,8 +1132,14 @@ async fn do_add_saved(c_in: Value) -> Value {
         }
         None => {
             let id = format!("new-{}", uuid4());
-            let name = if gn.is_empty() { mask_login(&u) } else { gn.clone() };
-            upsert(obj(json!({ "puuid": id, "placeholder": true, "gameName": name, "tagLine": tl })));
+            let name = if gn.is_empty() {
+                mask_login(&u)
+            } else {
+                gn.clone()
+            };
+            upsert(obj(
+                json!({ "puuid": id, "placeholder": true, "gameName": name, "tagLine": tl }),
+            ));
             id
         }
     };
@@ -881,11 +1155,20 @@ fn uuid4() -> String {
     b[6] = (b[6] & 0x0f) | 0x40;
     b[8] = (b[8] & 0x3f) | 0x80;
     let h: String = b.iter().map(|x| format!("{x:02x}")).collect();
-    format!("{}-{}-{}-{}-{}", &h[0..8], &h[8..12], &h[12..16], &h[16..20], &h[20..32])
+    format!(
+        "{}-{}-{}-{}-{}",
+        &h[0..8],
+        &h[8..12],
+        &h[12..16],
+        &h[16..20],
+        &h[20..32]
+    )
 }
 
 async fn do_set_cred(id: String, c_in: Value) -> Value {
-    let Some(a) = with(|c| c.st.account(&id).cloned()) else { return err_key("m.userMissing") };
+    let Some(a) = with(|c| c.st.account(&id).cloned()) else {
+        return err_key("m.userMissing");
+    };
     let u = c_in["u"].as_str().unwrap_or("").trim().to_string();
     if u.is_empty() {
         return err_key("m.userMissing");
@@ -900,8 +1183,16 @@ async fn do_set_cred(id: String, c_in: Value) -> Value {
         return err_key("m.passMissing");
     }
     // Riot ID for a saved account that had none yet
-    let rid = if truthy(a.get("placeholder")) && !truthy(a.get("tagLine")) { c_in["riotId"].as_str().unwrap_or("").trim().to_string() } else { String::new() };
-    let m = if rid.is_empty() { None } else { parse_riot_id(&rid) };
+    let rid = if truthy(a.get("placeholder")) && !truthy(a.get("tagLine")) {
+        c_in["riotId"].as_str().unwrap_or("").trim().to_string()
+    } else {
+        String::new()
+    };
+    let m = if rid.is_empty() {
+        None
+    } else {
+        parse_riot_id(&rid)
+    };
     if !rid.is_empty() && m.is_none() {
         return err_key("m.riotIdFormat");
     }
@@ -937,7 +1228,14 @@ async fn do_tool(what: String) -> Value {
             if !save_active_before_leaving().await {
                 return json!({ "ok": false });
             }
-            let pl = with(|c| pl_of(c.st.active.clone().and_then(|a| c.st.account(&a).cloned()).as_ref()));
+            let pl = with(|c| {
+                pl_of(
+                    c.st.active
+                        .clone()
+                        .and_then(|a| c.st.account(&a).cloned())
+                        .as_ref(),
+                )
+            });
             riot::launch_league(pl);
             tauri::async_runtime::spawn(auto_play(pl));
             json!({ "ok": true })
@@ -967,14 +1265,30 @@ fn open_path(target: &str) -> bool {
     use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
     let w: Vec<u16> = target.encode_utf16().chain(Some(0)).collect();
     let op: Vec<u16> = "open".encode_utf16().chain(Some(0)).collect();
-    let r = unsafe { ShellExecuteW(None, PCWSTR(op.as_ptr()), PCWSTR(w.as_ptr()), PCWSTR::null(), PCWSTR::null(), SW_SHOWNORMAL) };
+    let r = unsafe {
+        ShellExecuteW(
+            None,
+            PCWSTR(op.as_ptr()),
+            PCWSTR(w.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
     r.0 as isize > 32
 }
 const SUPPORT_URL: &str = "https://buymeacoffee.com/zlizz3r";
 fn allowed_url(u: &str) -> bool {
-    ["op.gg/", "u.gg/", "leagueofgraphs.com/", "porofessor.gg/", "mobalytics.gg/", "buymeacoffee.com/"]
-        .iter()
-        .any(|d| u.starts_with(&format!("https://{d}")) || u.starts_with(&format!("https://www.{d}")))
+    [
+        "op.gg/",
+        "u.gg/",
+        "leagueofgraphs.com/",
+        "porofessor.gg/",
+        "mobalytics.gg/",
+        "buymeacoffee.com/",
+    ]
+    .iter()
+    .any(|d| u.starts_with(&format!("https://{d}")) || u.starts_with(&format!("https://www.{d}")))
 }
 
 // ---------- export / import ----------
@@ -987,9 +1301,10 @@ async fn pick_file(save: bool) -> Option<PathBuf> {
         d = d.set_parent(&w);
     }
     if save {
-        d.set_file_name("rift-switch-backup.json").save_file(move |p| {
-            let _ = tx.send(p);
-        });
+        d.set_file_name("rift-switch-backup.json")
+            .save_file(move |p| {
+                let _ = tx.send(p);
+            });
     } else {
         d.pick_file(move |p| {
             let _ = tx.send(p);
@@ -999,7 +1314,9 @@ async fn pick_file(save: bool) -> Option<PathBuf> {
 }
 
 async fn do_export(pass: Value) -> Value {
-    let Some(file) = pick_file(true).await else { return json!({ "ok": false }) };
+    let Some(file) = pick_file(true).await else {
+        return json!({ "ok": false });
+    };
     let secrets = match pass.as_str() {
         Some(p) if p.chars().count() >= 8 => {
             let accs: Vec<Obj> = with(|c| c.st.accounts.clone());
@@ -1020,14 +1337,23 @@ async fn do_export(pass: Value) -> Value {
                 }
             }
             let p = p.to_string();
-            Some(tokio::task::spawn_blocking(move || secrets::seal(&json!({ "logins": logins }), &p)).await.unwrap_or(Value::Null))
+            Some(
+                tokio::task::spawn_blocking(move || {
+                    secrets::seal(&json!({ "logins": logins }), &p)
+                })
+                .await
+                .unwrap_or(Value::Null),
+            )
         }
         _ => None,
     };
     let f = with(|c| store::build_export(&c.st, secrets, now_ms()));
     let n = f["accounts"].as_array().map_or(0, Vec::len);
     let mut buf = vec![];
-    let mut ser = serde_json::Serializer::with_formatter(&mut buf, serde_json::ser::PrettyFormatter::with_indent(b" "));
+    let mut ser = serde_json::Serializer::with_formatter(
+        &mut buf,
+        serde_json::ser::PrettyFormatter::with_indent(b" "),
+    );
     let _ = serde::Serialize::serialize(&f, &mut ser);
     match std::fs::write(&file, buf) {
         Ok(()) => json!({ "ok": true, "n": n }),
@@ -1041,18 +1367,29 @@ fn read_import(f: &Path) -> Option<Value> {
 /// pass: null = pick a file; a string = the password for the file picked before; "skip" = without logins
 async fn do_import(pass: Value) -> Value {
     if pass.is_null() {
-        let Some(f) = pick_file(false).await else { return json!({ "ok": false }) };
+        let Some(f) = pick_file(false).await else {
+            return json!({ "ok": false });
+        };
         with(|c| c.import_file = Some(f));
     }
-    let Some(d) = with(|c| c.import_file.clone()).and_then(|f| read_import(&f)) else { return json!({ "ok": false, "error": "format" }) };
-    let has_secrets = d.get("secrets").map_or(false, |s| !s.is_null());
+    let Some(d) = with(|c| c.import_file.clone()).and_then(|f| read_import(&f)) else {
+        return json!({ "ok": false, "error": "format" });
+    };
+    let has_secrets = d.get("secrets").is_some_and(|s| !s.is_null());
     if has_secrets && pass.is_null() {
         return json!({ "needPass": true, "logins": "" });
     }
     let mut logins = vec![];
     if has_secrets && pass.as_str() != Some("skip") {
-        let (bx, p) = (d["secrets"].clone(), pass.as_str().unwrap_or("").to_string());
-        let Some(s) = tokio::task::spawn_blocking(move || secrets::open(&bx, &p)).await.ok().flatten() else {
+        let (bx, p) = (
+            d["secrets"].clone(),
+            pass.as_str().unwrap_or("").to_string(),
+        );
+        let Some(s) = tokio::task::spawn_blocking(move || secrets::open(&bx, &p))
+            .await
+            .ok()
+            .flatten()
+        else {
             return json!({ "ok": false, "error": "pass" });
         };
         logins = s["logins"].as_array().cloned().unwrap_or_default();
@@ -1088,7 +1425,12 @@ async fn call(ch: String, args: Vec<Value>) -> Value {
 
 async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
     let a = |i: usize| args.get(i).cloned().unwrap_or(Value::Null);
-    let s = |i: usize| args.get(i).and_then(Value::as_str).unwrap_or("").to_string();
+    let s = |i: usize| {
+        args.get(i)
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
     match ch {
         "get-state" => {
             let pending = with(|c| {
@@ -1104,10 +1446,15 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             with(|c| snapshot(c))
         }
         "unlock" => {
+            let _one = UNLOCKING.lock().await;
             let fails = with(|c| c.unlock_fails);
             sleep((400 * fails as u64).min(5000)).await; // slows down guessing
             let (lock, pass) = (with(|c| c.st.lock.clone()), s(0));
-            let ok = tokio::task::spawn_blocking(move || secrets::lock_matches(lock.as_ref(), Some(&pass))).await.unwrap_or(false);
+            let ok = tokio::task::spawn_blocking(move || {
+                secrets::lock_matches(lock.as_ref(), Some(&pass))
+            })
+            .await
+            .unwrap_or(false);
             with(|c| {
                 if ok {
                     c.unlock_fails = 0;
@@ -1131,10 +1478,20 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     json!(true)
                 }
                 "set" => {
-                    let Some(p) = pass.as_str().filter(|p| p.chars().count() >= 4).map(String::from) else { return json!(false) };
+                    let Some(p) = pass
+                        .as_str()
+                        .filter(|p| p.chars().count() >= 4)
+                        .map(String::from)
+                    else {
+                        return json!(false);
+                    };
                     let lock = with(|c| c.st.lock.clone());
                     let made = tokio::task::spawn_blocking(move || {
-                        if lock.is_some() && !secrets::lock_matches(lock.as_ref(), old.as_str()) { None } else { Some(secrets::make_lock(&p)) }
+                        if lock.is_some() && !secrets::lock_matches(lock.as_ref(), old.as_str()) {
+                            None
+                        } else {
+                            Some(secrets::make_lock(&p))
+                        }
                     })
                     .await
                     .ok()
@@ -1150,7 +1507,12 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 }
                 "off" => {
                     let lock = with(|c| c.st.lock.clone());
-                    let ok = lock.is_none() || tokio::task::spawn_blocking(move || secrets::lock_matches(lock.as_ref(), pass.as_str())).await.unwrap_or(false);
+                    let ok = lock.is_none()
+                        || tokio::task::spawn_blocking(move || {
+                            secrets::lock_matches(lock.as_ref(), pass.as_str())
+                        })
+                        .await
+                        .unwrap_or(false);
                     if ok {
                         with(|c| c.st.lock = None);
                         save();
@@ -1160,21 +1522,35 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 _ => json!(false),
             }
         }
-        "get-history" => with(|c| c.st.account(&s(0)).and_then(|a| a.get("history").cloned()).unwrap_or(json!([]))),
-        "ranked-games" => with(|c| c.st.account(&s(0)).and_then(|a| a.get("rankedGames").cloned()).unwrap_or(json!([]))),
+        "get-history" => with(|c| {
+            c.st.account(&s(0))
+                .and_then(|a| a.get("history").cloned())
+                .unwrap_or(json!([]))
+        }),
+        "ranked-games" => with(|c| {
+            c.st.account(&s(0))
+                .and_then(|a| a.get("rankedGames").cloned())
+                .unwrap_or(json!([]))
+        }),
         "switch" => with_busy(do_switch(s(0))).await,
         "add-new" => with_busy(do_add_new(a(0))).await,
         "add-saved" => do_add_saved(a(0)).await,
         "add-current" => {
             with_busy(async {
                 with(|c| c.gen += 1);
-                let Some(cur) = riot::current_account().await else { return err_key("m.notLoggedIn") };
+                let Some(cur) = riot::current_account().await else {
+                    return err_key("m.notLoggedIn");
+                };
                 let id = str_of(&cur, "puuid").to_string();
                 upsert(cur);
                 with(|c| c.st.active = Some(id.clone()));
                 let stored = store_session(&id, false).await;
                 save();
-                if stored { json!({ "ok": true, "puuid": id }) } else { err_key("m.noSessionFound") }
+                if stored {
+                    json!({ "ok": true, "puuid": id })
+                } else {
+                    err_key("m.noSessionFound")
+                }
             })
             .await
         }
@@ -1194,7 +1570,14 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             Value::Null
         }
         // the password never goes back to the window – only the username, for the edit form
-        "get-cred-user" => json!(load_cred(&s(0)).map(|c| c.0).unwrap_or_default()),
+        "get-cred-user" => {
+            let id = s(0);
+            json!(if is_id(&id) {
+                load_cred(&id).map(|c| c.0).unwrap_or_default()
+            } else {
+                String::new()
+            })
+        }
         "set-cred" => do_set_cred(s(0), a(1)).await,
         "del-cred" => {
             let id = s(0);
@@ -1235,23 +1618,42 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             .chars()
             .take(24)
             .collect();
-            if with(|c| c.st.account_mut(&s(0)).map(|a| a.insert("note".into(), json!(note))).is_some()) {
+            if with(|c| {
+                c.st.account_mut(&s(0))
+                    .map(|a| a.insert("note".into(), json!(note)))
+                    .is_some()
+            }) {
                 save();
             }
             Value::Null
         }
         "cat-add" => {
             let def = tr("cat.new", &[]);
-            let name: String = a(0).as_str().unwrap_or("").trim().chars().take(32).collect();
+            let name: String = a(0)
+                .as_str()
+                .unwrap_or("")
+                .trim()
+                .chars()
+                .take(32)
+                .collect();
             let id = format!("c{}", &uuid4()[..8]);
-            with(|c| c.st.categories.push(obj(json!({ "id": id, "name": if name.is_empty() { def } else { name }, "collapsed": false }))));
+            with(|c| {
+                c.st.categories.push(obj(json!({ "id": id, "name": if name.is_empty() { def } else { name }, "collapsed": false })))
+            });
             save();
             json!(id)
         }
         "cat-rename" => {
             let n: String = s(1).trim().chars().take(32).collect();
             let id = s(0);
-            let ok = !n.is_empty() && with(|c| c.st.categories.iter_mut().find(|x| str_of(x, "id") == id).map(|x| x.insert("name".into(), json!(n))).is_some());
+            let ok = !n.is_empty()
+                && with(|c| {
+                    c.st.categories
+                        .iter_mut()
+                        .find(|x| str_of(x, "id") == id)
+                        .map(|x| x.insert("name".into(), json!(n)))
+                        .is_some()
+                });
             if ok {
                 save()
             } else {
@@ -1262,10 +1664,13 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         "cat-toggle" => {
             let id = s(0);
             let hit = with(|c| {
-                c.st.categories.iter_mut().find(|x| str_of(x, "id") == id).map(|x| {
-                    let v = !truthy(x.get("collapsed"));
-                    x.insert("collapsed".into(), json!(v));
-                })
+                c.st.categories
+                    .iter_mut()
+                    .find(|x| str_of(x, "id") == id)
+                    .map(|x| {
+                        let v = !truthy(x.get("collapsed"));
+                        x.insert("collapsed".into(), json!(v));
+                    })
             });
             if hit.is_some() {
                 save();
@@ -1275,8 +1680,14 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         "cat-move" => {
             let (id, dir) = (s(0), num_of(args.get(1)));
             let moved = with(|c| {
-                let Some(i) = c.st.categories.iter().position(|x| str_of(x, "id") == id) else { return false };
-                let j = if dir < 0.0 { i.checked_sub(1) } else { Some(i + 1) };
+                let Some(i) = c.st.categories.iter().position(|x| str_of(x, "id") == id) else {
+                    return false;
+                };
+                let j = if dir < 0.0 {
+                    i.checked_sub(1)
+                } else {
+                    Some(i + 1)
+                };
                 match j.filter(|j| *j < c.st.categories.len()) {
                     Some(j) => {
                         c.st.categories.swap(i, j);
@@ -1306,19 +1717,32 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         // new order (+ category with "arrange") of every tile: drag & drop, "move to"
         "arrange" | "reorder" => {
             let list = a(0);
-            let Some(list) = list.as_array() else { return Value::Null };
+            let Some(list) = list.as_array() else {
+                return Value::Null;
+            };
             let arrange = ch == "arrange";
             with(|c| {
                 c.gen += 1;
                 let mut next: Vec<Obj> = vec![];
                 for item in list {
-                    let (id, cat) = if arrange { (item["puuid"].as_str().unwrap_or(""), item["category"].as_str()) } else { (item.as_str().unwrap_or(""), None) };
+                    let (id, cat) = if arrange {
+                        (
+                            item["puuid"].as_str().unwrap_or(""),
+                            item["category"].as_str(),
+                        )
+                    } else {
+                        (item.as_str().unwrap_or(""), None)
+                    };
                     if next.iter().any(|a| str_of(a, "puuid") == id) {
                         continue;
                     }
-                    let Some(mut acc) = c.st.account(id).cloned() else { continue };
+                    let Some(mut acc) = c.st.account(id).cloned() else {
+                        continue;
+                    };
                     if arrange {
-                        match cat.filter(|k| !k.is_empty() && c.st.categories.iter().any(|x| str_of(x, "id") == *k)) {
+                        match cat.filter(|k| {
+                            !k.is_empty() && c.st.categories.iter().any(|x| str_of(x, "id") == *k)
+                        }) {
                             Some(k) => {
                                 acc.insert("category".into(), json!(k));
                             }
@@ -1330,7 +1754,10 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     next.push(acc);
                 }
                 for a in &c.st.accounts {
-                    if !next.iter().any(|x| str_of(x, "puuid") == str_of(a, "puuid")) {
+                    if !next
+                        .iter()
+                        .any(|x| str_of(x, "puuid") == str_of(a, "puuid"))
+                    {
                         next.push(a.clone());
                     }
                 }
@@ -1345,13 +1772,41 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         "tool" => with_busy(do_tool(s(0))).await,
         "open-multi" => {
             // op.gg multisearch for up to 5 Riot IDs (Clash opponents)
-            let list: Vec<String> = a(1).as_array().into_iter().flatten().take(5)
-                .map(|x| x.as_str().unwrap_or("").chars().filter(|c| c.is_alphanumeric() || " #_.-".contains(*c)).collect())
+            let list: Vec<String> = a(1)
+                .as_array()
+                .into_iter()
+                .flatten()
+                .take(5)
+                .map(|x| {
+                    x.as_str()
+                        .unwrap_or("")
+                        .chars()
+                        .filter(|c| c.is_alphanumeric() || " #_.-".contains(*c))
+                        .collect()
+                })
                 .collect();
             if !list.is_empty() {
-                let reg: String = s(0).to_lowercase().chars().filter(char::is_ascii_lowercase).collect();
-                let reg = if reg.is_empty() { "euw".to_string() } else { reg };
-                let q: String = list.join(",").bytes().map(|b| if b.is_ascii_alphanumeric() { (b as char).to_string() } else { format!("%{b:02X}") }).collect();
+                let reg: String = s(0)
+                    .to_lowercase()
+                    .chars()
+                    .filter(char::is_ascii_lowercase)
+                    .collect();
+                let reg = if reg.is_empty() {
+                    "euw".to_string()
+                } else {
+                    reg
+                };
+                let q: String = list
+                    .join(",")
+                    .bytes()
+                    .map(|b| {
+                        if b.is_ascii_alphanumeric() {
+                            (b as char).to_string()
+                        } else {
+                            format!("%{b:02X}")
+                        }
+                    })
+                    .collect();
                 open_path(&format!("https://op.gg/multisearch/{reg}?summoners={q}"));
             }
             Value::Null
@@ -1365,15 +1820,43 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             push();
             json!({ "ok": true })
         }
+        // the page's list: [id, time, queue, owners…] of every game – it asks only for games it lacks
         "matches" => {
             let f = a(0);
-            let accs: Vec<String> = with(|c| c.st.accounts.iter().map(|a| str_of(a, "puuid").to_string()).collect());
+            let accs: Vec<String> = with(|c| {
+                c.st.accounts
+                    .iter()
+                    .map(|a| str_of(a, "puuid").to_string())
+                    .collect()
+            });
             let puuid = f["puuid"].as_str().filter(|p| is_id(p)).map(String::from);
-            let queue = f["queue"].as_str().filter(|q| matches::QUEUE_GROUPS.iter().any(|(k, _)| k == q)).map(String::from);
-            let limit = (num_of(f.get("limit")) as usize).clamp(20, 100_000);
-            let (games, waiting, older, up) = with(|c| (c.mh.list(&accs, puuid.as_deref(), queue.as_deref(), limit), c.mh.missing().len(), c.loading_older, c.live.client_up));
-            json!({ "games": games, "waiting": waiting, "loadingOlder": older, "assets": live::game_assets(data()).await, "clientUp": up })
+            let queue = f["queue"]
+                .as_str()
+                .filter(|q| matches::QUEUE_GROUPS.iter().any(|(k, _)| k == q))
+                .map(String::from);
+            with(|c| {
+                json!({ "index": c.mh.index_list(&accs, puuid.as_deref(), queue.as_deref()), "waiting": c.mh.missing().len(),
+                "loadingOlder": c.loading_older, "clientUp": c.live.client_up })
+            })
         }
+        // up to 500 games by id, read from disk outside the lock
+        "matches-get" => {
+            let ids: Vec<String> = a(0)
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .take(500)
+                .map(String::from)
+                .collect();
+            let (file, entries) = with(|c| (c.mh.games_file(), c.mh.entries(&ids)));
+            json!(
+                tokio::task::spawn_blocking(move || matches::read_entries(&file, &entries))
+                    .await
+                    .unwrap_or_default()
+            )
+        }
+        "mh-assets" => live::game_assets(data()).await,
         "mh-storage" => with(|c| json!({ "bytes": c.mh.size(), "games": c.mh.count() })),
         "mh-clear" => {
             with(|c| {
@@ -1385,16 +1868,31 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         // ranks of the players in the shown games: cached ones right away, missing ones fetched
         "player-ranks" => {
-            let ids: Vec<String> = a(0).as_array().into_iter().flatten().filter_map(Value::as_str)
+            let ids: Vec<String> = a(0)
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
                 .filter(|p| p.len() == 36 && p.chars().all(|c| c.is_ascii_hexdigit() || c == '-'))
-                .take(500).map(String::from).collect();
+                .take(500)
+                .map(String::from)
+                .collect();
             let up = with(|c| c.live.client_up);
             let mut pending = 0;
-            let todo = with(|c| if up && !c.fetching_ranks { c.mh.stale_ranks(&ids, now_ms()) } else { vec![] });
+            let todo = with(|c| {
+                if up && !c.fetching_ranks {
+                    c.mh.stale_ranks(&ids, now_ms())
+                } else {
+                    vec![]
+                }
+            });
             if !todo.is_empty() {
                 with(|c| c.fetching_ranks = true);
                 for part in todo.chunks(4).take(8) {
-                    let res = futures_util::future::join_all(part.iter().map(|p| riot::ranked_for(p, false))).await;
+                    let res = futures_util::future::join_all(
+                        part.iter().map(|p| riot::ranked_for(p, false)),
+                    )
+                    .await;
                     with(|c| {
                         for (p, r) in part.iter().zip(res) {
                             if let Some(r) = r {
@@ -1409,7 +1907,9 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     c.mh.stale_ranks(&ids, now_ms()).len()
                 });
             }
-            with(|c| json!({ "ranks": c.mh.ranks_for(&ids), "pending": if up { pending } else { 0 } }))
+            with(
+                |c| json!({ "ranks": c.mh.ranks_for(&ids), "pending": if up { pending } else { 0 } }),
+            )
         }
         // "Load older games": the next 20 games of every account the running client can see
         "matches-more" => {
@@ -1424,13 +1924,20 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 return json!({ "ok": false, "offline": !with(|c| c.live.client_up) });
             }
             let (accs, region) = with(|c| {
-                let region = c.live.puuid.clone().and_then(|p| c.st.account(&p).map(|a| str_of(a, "region").to_string())).unwrap_or_default();
+                let region = c
+                    .live
+                    .puuid
+                    .clone()
+                    .and_then(|p| c.st.account(&p).map(|a| str_of(a, "region").to_string()))
+                    .unwrap_or_default();
                 (c.st.accounts.clone(), region)
             });
             let mut added = 0;
             for acc in accs {
                 let (id, r) = (str_of(&acc, "puuid"), str_of(&acc, "region"));
-                if truthy(acc.get("placeholder")) || (!region.is_empty() && !r.is_empty() && r != region) {
+                if truthy(acc.get("placeholder"))
+                    || (!region.is_empty() && !r.is_empty() && r != region)
+                {
                     continue;
                 }
                 let beg = with(|c| c.mh.known(id));
@@ -1475,7 +1982,20 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         let _ = w.minimize();
                     }
                 }
-                "tray" => to_tray(),
+                "tray" => {
+                    let first = with(|c| {
+                        let seen = c.st.set_bool("trayHintShown");
+                        if !seen {
+                            c.st.settings.insert("trayHintShown".into(), json!(true));
+                        }
+                        !seen
+                    });
+                    if first && !test_mode() {
+                        save();
+                        return json!({ "hint": true }); // the window shows the hint, then asks again
+                    }
+                    to_tray();
+                }
                 "quit" | "close" => quit(),
                 _ => {}
             }
@@ -1505,9 +2025,15 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         "data-export" => do_export(a(0)).await,
         "data-import" => do_import(a(0)).await,
         "check-import-pass" => {
-            let Some(d) = with(|c| c.import_file.clone()).and_then(|f| read_import(&f)) else { return json!(false) };
+            let Some(d) = with(|c| c.import_file.clone()).and_then(|f| read_import(&f)) else {
+                return json!(false);
+            };
             let p = s(0);
-            json!(tokio::task::spawn_blocking(move || secrets::open(&d["secrets"], &p).is_some()).await.unwrap_or(false))
+            json!(
+                tokio::task::spawn_blocking(move || secrets::open(&d["secrets"], &p).is_some())
+                    .await
+                    .unwrap_or(false)
+            )
         }
         _ => Value::Null,
     }
@@ -1531,7 +2057,13 @@ fn lock_now() {
 // ---------- window ----------
 
 fn apply_scale() {
-    let z = with(|c| c.st.settings.get("uiScale").and_then(Value::as_str).and_then(|s| s.parse::<f64>().ok()).unwrap_or(100.0));
+    let z = with(|c| {
+        c.st.settings
+            .get("uiScale")
+            .and_then(Value::as_str)
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(100.0)
+    });
     if let Some(w) = window() {
         let _ = w.set_zoom(z / 100.0);
     }
@@ -1567,11 +2099,18 @@ fn show_window() {
 /// (measured: one process less, about half the CPU) (RS_WV_ARGS replaces them in test copies).
 fn browser_args() -> String {
     let def = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-gpu --disable-gpu-compositing --in-process-gpu --disable-extensions --disable-component-update --disable-background-networking";
-    if test_mode() { std::env::var("RS_WV_ARGS").unwrap_or_else(|_| def.into()) } else { def.into() }
+    if test_mode() {
+        std::env::var("RS_WV_ARGS").unwrap_or_else(|_| def.into())
+    } else {
+        def.into()
+    }
 }
 fn create_window() {
     let shot = shot_mode();
-    let width = std::env::var("RS_W").ok().and_then(|w| w.parse().ok()).unwrap_or(1040.0);
+    let width = std::env::var("RS_W")
+        .ok()
+        .and_then(|w| w.parse().ok())
+        .unwrap_or(1040.0);
     let mut b = WebviewWindowBuilder::new(app(), "main", WebviewUrl::App("index.html".into()))
         .title(tr("app.name", &[]))
         .inner_size(width, 640.0)
@@ -1617,7 +2156,13 @@ fn quit() {
     app().exit(0);
 }
 fn switch_from_outside(argv: &[String]) {
-    let id = with(|c| if c.locked { None } else { menu::switch_arg(argv, &c.st) });
+    let id = with(|c| {
+        if c.locked {
+            None
+        } else {
+            menu::switch_arg(argv, &c.st)
+        }
+    });
     switch_in_window(id);
 }
 /// Opens the window and lets it ask "switch to …?" (the window shows its usual confirmation).
@@ -1638,7 +2183,11 @@ fn switch_in_window(id: Option<String>) {
 fn run_shot(w: WebviewWindow) {
     tauri::async_runtime::spawn(async move {
         sleep(5000).await;
-        for js in std::env::var("RS_JS").unwrap_or_default().split(";;").filter(|s| !s.trim().is_empty()) {
+        for js in std::env::var("RS_JS")
+            .unwrap_or_default()
+            .split(";;")
+            .filter(|s| !s.trim().is_empty())
+        {
             let _ = w.eval(js);
             sleep(1500).await;
         }
@@ -1669,7 +2218,13 @@ fn update_tray() {
         let jk = format!("{jump:?}");
         let jump_changed = jk != c.jump_key;
         c.jump_key = jk;
-        (changed.then_some(items), accept, streamer, tip, jump_changed.then_some(jump))
+        (
+            changed.then_some(items),
+            accept,
+            streamer,
+            tip,
+            jump_changed.then_some(jump),
+        )
     });
     if let Some(items) = items {
         if let Err(e) = build_tray_menu(items, accept, streamer, &tip) {
@@ -1685,28 +2240,78 @@ fn update_tray() {
     }
 }
 
-fn build_tray_menu(items: Vec<menu::Item>, accept: bool, streamer: bool, tip: &str) -> tauri::Result<()> {
+fn build_tray_menu(
+    items: Vec<menu::Item>,
+    accept: bool,
+    streamer: bool,
+    tip: &str,
+) -> tauri::Result<()> {
     let app = app();
     let mut parts: Vec<Box<dyn IsMenuItem<Wry>>> = vec![];
     for it in items {
         match it {
-            menu::Item::Account { puuid, label, checked } => {
-                parts.push(Box::new(CheckMenuItem::with_id(app, format!("acc:{puuid}"), label, true, checked, None::<&str>)?))
+            menu::Item::Account {
+                puuid,
+                label,
+                checked,
+            } => parts.push(Box::new(CheckMenuItem::with_id(
+                app,
+                format!("acc:{puuid}"),
+                label,
+                true,
+                checked,
+                None::<&str>,
+            )?)),
+            menu::Item::Header(l) | menu::Item::Locked(l) => {
+                parts.push(Box::new(MenuItem::new(app, l, false, None::<&str>)?))
             }
-            menu::Item::Header(l) | menu::Item::Locked(l) => parts.push(Box::new(MenuItem::new(app, l, false, None::<&str>)?)),
             menu::Item::Separator => parts.push(Box::new(PredefinedMenuItem::separator(app)?)),
         }
     }
-    parts.push(Box::new(CheckMenuItem::with_id(app, "accept", tr("tray.accept", &[]), true, accept, None::<&str>)?));
-    parts.push(Box::new(CheckMenuItem::with_id(app, "streamer", tr("tray.streamer", &[]), true, streamer, None::<&str>)?));
+    parts.push(Box::new(CheckMenuItem::with_id(
+        app,
+        "accept",
+        tr("tray.accept", &[]),
+        true,
+        accept,
+        None::<&str>,
+    )?));
+    parts.push(Box::new(CheckMenuItem::with_id(
+        app,
+        "streamer",
+        tr("tray.streamer", &[]),
+        true,
+        streamer,
+        None::<&str>,
+    )?));
     parts.push(Box::new(PredefinedMenuItem::separator(app)?));
-    parts.push(Box::new(MenuItem::with_id(app, "support", tr("tray.support", &[]), true, None::<&str>)?));
+    parts.push(Box::new(MenuItem::with_id(
+        app,
+        "support",
+        tr("tray.support", &[]),
+        true,
+        None::<&str>,
+    )?));
     parts.push(Box::new(PredefinedMenuItem::separator(app)?));
-    parts.push(Box::new(MenuItem::with_id(app, "open", tr("tray.open", &[]), true, None::<&str>)?));
-    parts.push(Box::new(MenuItem::with_id(app, "quit", tr("tray.quit", &[]), true, None::<&str>)?));
+    parts.push(Box::new(MenuItem::with_id(
+        app,
+        "open",
+        tr("tray.open", &[]),
+        true,
+        None::<&str>,
+    )?));
+    parts.push(Box::new(MenuItem::with_id(
+        app,
+        "quit",
+        tr("tray.quit", &[]),
+        true,
+        None::<&str>,
+    )?));
     let refs: Vec<&dyn IsMenuItem<Wry>> = parts.iter().map(|b| b.as_ref()).collect();
     let m = Menu::with_items(app, &refs)?;
-    if let Some(t) = TRAY.lock().unwrap().as_ref() {
+    // a copy of the handle: set_menu waits for the main thread, which may itself want TRAY (menu click)
+    let tray = TRAY.lock().unwrap().clone();
+    if let Some(t) = tray {
         t.set_menu(Some(m))?;
         t.set_tooltip(Some(tip))?;
     }
@@ -1728,7 +2333,11 @@ fn on_menu(id: &str) {
     }
     match id {
         "accept" | "streamer" => {
-            let k = if id == "accept" { "autoAccept" } else { "streamer" };
+            let k = if id == "accept" {
+                "autoAccept"
+            } else {
+                "streamer"
+            };
             with(|c| {
                 let v = !c.st.set_bool(k);
                 c.st.settings.insert(k.into(), json!(v));
@@ -1753,7 +2362,12 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|_app, ev| on_menu(ev.id().as_ref()))
         .on_tray_icon_event(|_t, ev| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = ev {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = ev
+            {
                 show_window();
             }
         })
@@ -1826,13 +2440,27 @@ async fn tick_loop() {
     loop {
         tick().await;
         let (waiting, queue) = with(|c| {
-            let wait = c.pending_add || !c.login.is_null() || c.expecting.is_some();
-            let queue = c.st.set_bool("autoAccept") && matches!(c.live.phase.as_deref(), Some("Lobby" | "Matchmaking" | "ReadyCheck"));
+            // a switch that never led to a login is forgotten after 3 minutes
+            if c.expecting.is_some() && now_ms() - c.expecting_since > 180_000 {
+                c.expecting = None;
+            }
+            let login_waits = !c.login.is_null() && c.login["stage"] != "failed";
+            let wait =
+                c.pending_add || login_waits || c.expecting.is_some() || !c.live.waits.is_empty();
+            let queue = c.st.set_bool("autoAccept")
+                && matches!(
+                    c.live.phase.as_deref(),
+                    Some("Lobby" | "Matchmaking" | "ReadyCheck")
+                );
             (wait, queue)
         });
         let ev = events::connected();
         let ms = if waiting || queue || win_shown() {
-            if ev && !waiting { 10_000 } else { 4_000 }
+            if ev && !waiting {
+                10_000
+            } else {
+                4_000
+            }
         } else if ev {
             60_000
         } else {
@@ -1863,14 +2491,27 @@ async fn accept_loop() {
 fn main() {
     let data_dir = std::env::var_os("RS_DATA")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("rift-switch"));
+        .unwrap_or_else(|| {
+            PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("rift-switch")
+        });
     let _ = std::fs::create_dir_all(&data_dir);
     let _ = DATA.set(data_dir.clone());
 
-    let (st, damaged) = store::read_state(&data_dir.join("accounts.json"));
-    if let Some(e) = damaged {
-        log_error("load", &e);
+    let (st, read_only) = match store::read_state(&data_dir.join("accounts.json")) {
+        store::Loaded::Ok(st) => (st, false),
+        store::Loaded::Damaged(st, e) => {
+            log_error("load", &e);
+            (st, false)
+        }
+        store::Loaded::Unreadable(e) => {
+            log_error("load", &e);
+            (store::normalize(Value::Null), true)
+        }
+    };
+    if !test_mode() {
+        winsys::set_app_id(APP_ID);
     }
+    updater::set_dir(data_dir.join("updates"));
     let locked = st.lock.is_some();
     let _ = CORE.set(Mutex::new(Core {
         st,
@@ -1903,12 +2544,17 @@ fn main() {
         jump_key: String::new(),
         after_load_switch: None,
         failed_games: HashMap::new(),
+        expecting_since: 0,
+        read_only,
+        no_persist: None,
     }));
 
     let mut builder = tauri::Builder::default();
     if !test_mode() {
         // only one copy may work on the data folder; a second start hands over its arguments
-        builder = builder.plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| switch_from_outside(&argv)));
+        builder = builder.plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| {
+            switch_from_outside(&argv)
+        }));
     }
     let app = builder
         .plugin(tauri_plugin_dialog::init())
@@ -1936,13 +2582,18 @@ fn main() {
                 }
             }
             apply_autostart();
+            migrate_secrets();
             check_crypto();
             recover_orphans();
             check_creds();
             save();
             update_tray();
             // test copies: RS_TRAY_AFTER=<s> sends the window to the tray after that time
-            if let Some(secs) = std::env::var("RS_TRAY_AFTER").ok().filter(|_| test_mode()).and_then(|v| v.parse::<u64>().ok()) {
+            if let Some(secs) = std::env::var("RS_TRAY_AFTER")
+                .ok()
+                .filter(|_| test_mode())
+                .and_then(|v| v.parse::<u64>().ok())
+            {
                 tauri::async_runtime::spawn(async move {
                     sleep(secs * 1000).await;
                     to_tray();

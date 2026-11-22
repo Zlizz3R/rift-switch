@@ -98,6 +98,7 @@
     'nav.live': "En vivo",
     'nav.tools': "Herramientas",
     'set.theme': "Apariencia",
+    'pen.title': "Sanciones y esperas", 'pen.left': "quedan {t}", 'pen.until': "hasta {date}", 'pen.noEnd': "sin fin indicado", 'pen.asOf': "a {date}", 'pen.wait': "Espera {t}", 'pen.note': "Del último inicio de sesión de cada cuenta: las demás se comprueban al entrar en ellas.", 'restrict.LowPriorityQueue': "Cola de baja prioridad (espera antes de buscar)", 'restrict.QUEUE_DODGER': "Penalización por dodge", 'restrict.LEAVER_BUSTED': "Bloqueo de LeaverBuster",
     'mh.storeTitle': "Espacio usado por el historial guardado", 'mh.storeGames': "{n} partidas", 'mh.clear': "Borrar el historial guardado", 'mh.clearTitle': "¿Borrar todo el historial?", 'mh.clearText': "Se borran de este PC las {n} partidas guardadas ({size}) de todas tus cuentas. Las que aún están en el cliente de League vuelven la próxima vez; las más antiguas se pierden para siempre.", 'mh.clearYes': "Borrar todo", 'mh.clearWarn': "¡Esto NO se puede deshacer!", 'mh.cleared': "Historial borrado.",
     'mh.otherGames': "Otras partidas", 'mh.unpin': "Mostrar normal de nuevo",
     'mh.rCustom': "Periodo propio …", 'mh.rankNow': "rango actual: Riot no guarda el rango del momento de la partida",

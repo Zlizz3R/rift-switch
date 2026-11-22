@@ -41,6 +41,7 @@ windows = { version = "0.58", features = [
   "Win32_Storage_EnhancedStorage",
   "Win32_UI_WindowsAndMessaging",
 ] }
+sha2 = "0.11.1"
 
 [profile.release]
 opt-level = "s"

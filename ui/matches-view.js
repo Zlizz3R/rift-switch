@@ -43,21 +43,36 @@ $('mhClear').onclick = async () => {
     t('mh.clearYes'), t('mh.clearWarn'));
   if (!ok) return;
   await api.matchesClear();
-  mh.pin = 0; mh.ranks = {};
+  mh.pin = 0; mh.ranks = {}; mh.cache.clear();
   toast(t('mh.cleared'));
   loadMatches();
 };
 
+// The page keeps every game it has seen (mh.cache, by id). It asks the app for the small list of
+// all games ([id, time, queue, owners…]) and then only for the games it doesn't have yet –
+// so even years of history load once, and a new game is one small request.
+mh.cache = new Map();
+let assets = null;
 async function loadMatches() {
   loadStorage();
-  if (mh.loading) return;
+  if (mh.loading) { mh.again = true; return; }
   mh.loading = true;
   try {
     if (!champs.length) champs = (await api.champions()) || [];   // names for the champion filter
-    mh.data = await api.matches({ puuid: mh.filter.puuid || null, queue: mh.filter.queue || null, limit: 100000 });
+    if (!assets || !Object.keys(assets.items || {}).length) assets = (await api.matchesAssets()) || null;
+    const d = await api.matches({ puuid: mh.filter.puuid || null, queue: mh.filter.queue || null });
+    if (d) {
+      const lack = d.index.map(r => r[0]).filter(id => !mh.cache.has(id));
+      for (let i = 0; i < lack.length; i += 500) {
+        for (const g of (await api.matchesGet(lack.slice(i, i + 500))) || []) mh.cache.set(String(g.id), g);
+      }
+      const games = d.index.filter(r => mh.cache.has(r[0])).map(r => ({ ...mh.cache.get(r[0]), owners: r.slice(3) }));
+      mh.data = { games, waiting: d.waiting, loadingOlder: d.loadingOlder, clientUp: d.clientUp, assets: assets || {} };
+    }
   } catch (e) { console.warn('matches', e); }
   mh.loading = false;
   renderMatches();
+  if (mh.again) { mh.again = false; loadMatches(); }
 }
 
 function renderMatches() {
@@ -302,4 +317,8 @@ $('mhList').addEventListener('click', e => {
   m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 8) + 'px';
   m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
 });
-api.onMatchesChanged(() => { if (view === 'matches') loadMatches(); });
+let mhChanged = null;
+api.onMatchesChanged(() => {
+  clearTimeout(mhChanged);
+  mhChanged = setTimeout(() => { if (view === 'matches') loadMatches(); }, 1200);
+});
