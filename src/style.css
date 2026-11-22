@@ -671,3 +671,5 @@ body.locked #passBox { background: var(--bg); }
 
 .nav.coffee:hover { color: #ffdd00; background: rgba(255,221,0,.08); }
 .q-rank > span:last-child { line-height: 1.5; padding-right: 2px; }
+.mh-filter .grow { flex: 1; }
+#mhMore:disabled { opacity: .5; cursor: default; }

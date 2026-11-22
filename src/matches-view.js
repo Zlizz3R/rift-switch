@@ -32,14 +32,15 @@ function renderMatches() {
     + accs.map(a => `<option value="${esc(a.puuid)}">${esc(dispName(a))}</option>`).join('');
   $('mhAccount').value = mh.filter.puuid;
   document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq === mh.filter.queue));
+  // "Load older games": always at the top; greyed out (with the reason) while League is closed
+  const more = $('mhMore');
+  more.textContent = d && d.loadingOlder ? t('mh.loadingOlder') : t('mh.more');
+  more.disabled = !d || !d.clientUp || !!d.loadingOlder;
+  more.title = d && !d.clientUp ? t('mh.moreOffline') : '';
   if (!d) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.loading')}</div>`; return; }
   $('mhSub').textContent = d.waiting && d.clientUp ? t('mh.fetching', { n: d.waiting }) : !d.clientUp ? t('mh.offline') : t('mh.sub');
-  if (!d.games.length) { $('mhList').innerHTML = `<div class="mh-empty">${t(d.clientUp ? 'mh.empty' : 'mh.emptyOffline')}</div>` + (d.clientUp ? moreButton(d) : ''); return; }
-  $('mhList').innerHTML = d.games.map(g => gameRow(g, d.assets || {})).join('') + moreButton(d);
-}
-function moreButton(d) {
-  if (!d.clientUp) return `<div class="mh-more"><span class="fine">${t('mh.moreOffline')}</span></div>`;
-  return `<div class="mh-more"><button class="btn" id="mhMore" ${d.loadingOlder ? 'disabled' : ''}>${d.loadingOlder ? t('mh.loadingOlder') : t('mh.more')}</button></div>`;
+  if (!d.games.length) { $('mhList').innerHTML = `<div class="mh-empty">${t(d.clientUp ? 'mh.empty' : 'mh.emptyOffline')}</div>`; return; }
+  $('mhList').innerHTML = d.games.map(g => gameRow(g, d.assets || {})).join('');
 }
 
 function icon(map, id, cls) {
@@ -100,9 +101,10 @@ function gameRow(g, as) {
 $('mhAccount').onchange = () => { mh.filter.puuid = $('mhAccount').value; loadMatches(); };
 document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => { mh.filter.queue = b.dataset.mhq; loadMatches(); }));
 // older games: every account, one timeline
-$('mhList').addEventListener('click', async e => {
+$('viewMatches').addEventListener('click', async e => {
   if (!e.target.closest('#mhMore')) return;
   e.target.closest('#mhMore').disabled = true;
+  e.target.closest('#mhMore').textContent = t('mh.loadingOlder');
   const r = await api.matchesMore();
   if (r && r.ok) mh.limit = (mh.limit || 80) + 80;
   if (r && r.ok && !r.added) toast(t('mh.noOlder'));
