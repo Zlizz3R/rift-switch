@@ -46,20 +46,21 @@ function teamsTable(g, mine) {
   // one player = 5 cells: Solo, Flex (wide), chips (narrow), name, champion – mirrored on the right
   const player = (p, side) => {
     const r = side === 'r';
-    if (!p) return ['w', 'w', 'n', 'nm', 'im'].map(c => `<span class="mh-c ${c} ${side}"></span>`)[r ? 'reverse' : 'slice']().join('');
+    if (!p) return (r ? ['im', 'nm', 'n', 'w', 'w'] : ['w', 'w', 'n', 'nm', 'im']).map(c => `<span class="mh-c ${c} ${side}"></span>`).join('');
     const rk = mh.ranks[p.puuid];
     const tip = p.name + (p.tag ? '#' + p.tag : '') + (rk ? `\nSolo/Duo: ${rankTip(rk.s)}\nFlex: ${rankTip(rk.f)}\n(${t('mh.rankNow')})` : '');
     const at = `data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(tip)}"`;
     const cells = [
       `<span class="mh-c w rk ${side}" ${at}>${rankCell(rk && rk.s)}</span>`,
       `<span class="mh-c w rk ${side}" ${at}>${rankCell(rk && rk.f)}</span>`,
-      `<span class="mh-c n ${side}" ${at}>${rk ? (r ? rankChip(rk.f, 'flex') + rankChip(rk.s, 'solo') : rankChip(rk.s, 'solo') + rankChip(rk.f, 'flex')) : ''}</span>`,
+      `<span class="mh-c n ${side}" ${at}>${rk ? rankChip(rk.s, 'solo') + rankChip(rk.f, 'flex') : ''}</span>`,
       `<span class="mh-c nm ${side}${mine.has(p.puuid) ? ' me' : ''}" ${at}>${esc(shownName(p))}</span>`,
       `<span class="mh-c im ${side}" ${at}><img src="${CHAMP_ICON(p.champ)}" alt=""></span>`,
     ];
-    return (r ? cells.reverse() : cells).join('');
+    // right side: champion, name | Solo/Duo, Flex (the ranks keep their order on both sides)
+    return (r ? [cells[4], cells[3], cells[2], cells[0], cells[1]] : cells).join('');
   };
-  const head = ['Solo/Duo', 'Flex', '', '', '', '', '', 'Flex', 'Solo/Duo'].map((x, i) => `<span class="mh-h w${i > 4 ? ' r' : ''}">${x}</span>`).join('');
+  const head = ['Solo/Duo', 'Flex', '', '', '', '', '', 'Solo/Duo', 'Flex'].map((x, i) => `<span class="mh-h w${i > 4 ? ' r' : ''}">${x}</span>`).join('');
   let html = head;
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     const role = roles ? `<img src="${posIcon(roles[i])}" alt="" title="${esc(t('pos.' + roles[i]))}">` : '';

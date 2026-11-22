@@ -777,14 +777,12 @@ body.locked #passBox { background: var(--bg); }
 .mh-c.role { justify-content: center; }
 .mh-c.role img { width: 16px; height: 16px; opacity: .6; }
 .mh-c.rk { cursor: pointer; }
-.mh-c.rk.r { justify-content: flex-end; }
 .rk-cell { display: flex; align-items: center; gap: 4px; font-style: normal; min-width: 0; white-space: nowrap; }
 .rk-cell img { width: 16px; height: 16px; flex: none; }
 .rk-cell b { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
 .rk-cell small { color: var(--muted); font-size: 10.5px; }
 .rk-cell.none { color: #4a5468; }
 .mh-h { font-size: 9px; letter-spacing: .05em; text-transform: uppercase; color: #5d6780; height: 14px; }
-.mh-h.r { text-align: right; }
 /* wide: both queues written out, and the table takes all the room the row has */
 @container (min-width: 1250px) {
   /* the table keeps its natural width; the game itself (champion, KDA, stats, items) spreads over the rest */
