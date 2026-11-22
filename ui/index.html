@@ -25,6 +25,9 @@
       <button class="nav active" id="navAccounts" data-i18n-title="nav.accounts">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="9" rx="1.5"/><rect x="3" y="14" width="7.5" height="7" rx="1.5"/><rect x="13.5" y="14" width="7.5" height="7" rx="1.5"/></svg>
       </button>
+      <button class="nav" id="navDash" data-i18n-title="nav.dash">
+        <svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M4 16l5-5 4 3 7-8"/><path d="M16 6h4v4"/></svg>
+      </button>
       <button class="nav" id="navLive" data-i18n-title="nav.live">
         <svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span class="live-dot" id="liveDot" hidden></span>
       </button>
@@ -76,6 +79,15 @@
         <button class="btn gold" id="emptyAdd" data-i18n="empty.btn"></button>
       </div>
       </div>
+
+      <section id="viewDash" hidden>
+        <div class="head"><h1><span data-i18n="dash.title"></span></h1><p class="sub" data-i18n="dash.sub"></p></div>
+        <div class="mh-filter">
+          <div class="seg"><button data-dq="solo">Solo/Duo</button><button data-dq="flex">Flex</button></div>
+          <div class="seg"><button data-dd="7" data-i18n="dash.d7"></button><button data-dd="30" data-i18n="dash.d30"></button><button data-dd="90" data-i18n="dash.d90"></button><button data-dd="0" data-i18n="dash.all"></button></div>
+        </div>
+        <div id="dashBody"></div>
+      </section>
 
       <section id="viewLive" hidden>
         <div class="head"><h1><span data-i18n="live.title"></span> <button class="help-btn" data-help="live" data-i18n-title="help.open">?</button></h1><p class="sub" id="liveSub"></p></div>
@@ -433,5 +445,6 @@
 <script src="views.js"></script>
 <script src="matchfilter.js"></script>
 <script src="matches-view.js"></script>
+<script src="dashboard.js"></script>
 </body>
 </html>

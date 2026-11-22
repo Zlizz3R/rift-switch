@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'nav.dash': "Vue d'ensemble", 'dash.title': "Vue d'ensemble", 'dash.sub': "Tous tes comptes dans un graphique – et où en est chacun", 'dash.d7': "7 jours", 'dash.d30': "30 jours", 'dash.d90': "90 jours", 'dash.all': "Tout", 'dash.games': "Parties classées", 'dash.wl': "Victoires – défaites", 'dash.wr': "Taux de victoire", 'dash.lp': "LP", 'dash.climber': "Meilleure progression", 'dash.account': "Compte", 'dash.rank': "Rang actuel", 'dash.goal': "Objectif", 'dash.noGoal': "Fixer un objectif …", 'dash.goalLeft': "encore {n} LP", 'dash.goalDone': "Atteint ✓", 'dash.active': "Dernière partie", 'dash.empty': "Pas encore de données classées. Rangs et LP sont enregistrés pour chaque compte tant que League est ouvert – connecte-toi une fois à chacun.", 'dash.chartEmpty': "Aucun changement de LP sur cette période – choisis-en une plus longue ou affiche plus de comptes.",
     'm.credSaveFailed': "Les identifiants n'ont pas pu être enregistrés (chiffrement ou disque). Rien n'a été modifié.",
     'sw.title': "Connexion", 'sw.close': "Sauvegarde de la connexion, fermeture de League", 'sw.client': "Démarrage du client Riot", 'sw.signin': "Connexion au compte", 'sw.signin_typing': "Saisie des identifiants", 'sw.signin_verify': "Confirmation de la connexion", 'sw.play': "Clic sur Jouer", 'sw.launch': "League démarre",
     'live.likelyLaner': "probablement sur ta voie ({n} % de ses parties) – Riot cache les positions adverses",

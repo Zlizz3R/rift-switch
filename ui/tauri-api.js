@@ -12,6 +12,8 @@
     champions: () => call('champions'),
     counters: (enemy, lane) => call('counters', enemy, lane),
     rankedGames: puuid => call('ranked-games', puuid),
+    dashboard: () => call('dashboard'),
+    setGoal: (puuid, goal) => call('goal', puuid, goal),
     tool: what => call('tool', what),
     openMulti: (region, ids) => call('open-multi', region, ids),
     switchTo: puuid => call('switch', puuid),

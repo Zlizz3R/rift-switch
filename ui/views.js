@@ -29,18 +29,22 @@ function showView(v) {
   openDrawer(false); openSettings(false);
   $('viewAccounts').hidden = v !== 'accounts';
   $('viewLive').hidden = v !== 'live';
+  $('viewDash').hidden = v !== 'dash';
   $('viewTools').hidden = v !== 'tools';
   $('viewMatches').hidden = v !== 'matches';
   $('detail').hidden = v !== 'accounts';
   $('navAccounts').classList.toggle('active', v === 'accounts');
   $('navLive').classList.toggle('active', v === 'live');
+  $('navDash').classList.toggle('active', v === 'dash');
   $('navTools').classList.toggle('active', v === 'tools');
   $('navMatches').classList.toggle('active', v === 'matches');
   if (v === 'live') pollLive(true);
   if (v === 'matches') { renderMatches(); loadMatches(); }
+  if (v === 'dash') { renderDash(); loadDash(); }
 }
 $('navAccounts').onclick = () => showView('accounts');
 $('navLive').onclick = () => showView('live');
+$('navDash').onclick = () => showView('dash');
 $('navTools').onclick = () => showView('tools');
 $('navMatches').onclick = () => showView('matches');
 

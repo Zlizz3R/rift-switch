@@ -96,6 +96,7 @@
     'nav.live': "लाइव",
     'nav.tools': "टूल्स",
     'set.theme': "रूप",
+    'nav.dash': "अवलोकन", 'dash.title': "अवलोकन", 'dash.sub': "आपके सभी अकाउंट एक ग्राफ़ में – और हर एक का हाल", 'dash.d7': "7 दिन", 'dash.d30': "30 दिन", 'dash.d90': "90 दिन", 'dash.all': "सब", 'dash.games': "रैंक्ड गेम", 'dash.wl': "जीत – हार", 'dash.wr': "जीत दर", 'dash.lp': "LP", 'dash.climber': "सबसे बड़ी चढ़ाई", 'dash.account': "अकाउंट", 'dash.rank': "अभी रैंक", 'dash.goal': "लक्ष्य", 'dash.noGoal': "लक्ष्य चुनें …", 'dash.goalLeft': "{n} LP बाकी", 'dash.goalDone': "हासिल ✓", 'dash.active': "आख़िरी गेम", 'dash.empty': "अभी कोई रैंक्ड डेटा नहीं। League खुला रहने पर हर अकाउंट की रैंक और LP सहेजे जाते हैं – हर एक में एक बार लॉग इन करें।", 'dash.chartEmpty': "इस अवधि में LP में कोई बदलाव नहीं – लंबी अवधि चुनें या और अकाउंट दिखाएँ।",
     'm.credSaveFailed': "लॉगिन सहेजा नहीं जा सका (एन्क्रिप्शन या डिस्क)। कुछ नहीं बदला।",
     'sw.title': "लॉग इन हो रहा है", 'sw.close': "साइन-इन सहेजना, League बंद करना", 'sw.client': "Riot Client शुरू हो रहा है", 'sw.signin': "साइन इन", 'sw.signin_typing': "लॉगिन डाला जा रहा है", 'sw.signin_verify': "साइन-इन की पुष्टि", 'sw.play': "“Play” दबाना", 'sw.launch': "League शुरू हो रहा है",
     'live.likelyLaner': "शायद आपकी लेन में ({n}% गेम वहीं) – Riot दुश्मन की पोज़िशन छिपाता है",

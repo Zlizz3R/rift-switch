@@ -2011,6 +2011,38 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 .and_then(|a| a.get("history").cloned())
                 .unwrap_or(json!([]))
         }),
+        // the overview page: LP history and ranked games of every real account at once
+        "dashboard" => with(|c| {
+            let list: Vec<Value> =
+                c.st.accounts
+                    .iter()
+                    .filter(|a| !truthy(a.get("placeholder")))
+                    .map(|a| {
+                        json!({ "puuid": str_of(a, "puuid"),
+                        "history": a.get("history").cloned().unwrap_or(json!([])),
+                        "games": a.get("rankedGames").cloned().unwrap_or(json!([])) })
+                    })
+                    .collect();
+            Value::Array(list)
+        }),
+        "goal" => {
+            let goal = ops::goal_of(&a(1));
+            if with(|c| {
+                c.st.account_mut(&s(0))
+                    .map(|a| match goal {
+                        Some(g) => {
+                            a.insert("goal".into(), g);
+                        }
+                        None => {
+                            a.remove("goal");
+                        }
+                    })
+                    .is_some()
+            }) {
+                save();
+            }
+            Value::Null
+        }
         "ranked-games" => with(|c| {
             c.st.account(&s(0))
                 .and_then(|a| a.get("rankedGames").cloned())

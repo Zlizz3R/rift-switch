@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'nav.dash': "Visão geral", 'dash.title': "Visão geral", 'dash.sub': "Todas as suas contas em um gráfico – e como vai cada uma", 'dash.d7': "7 dias", 'dash.d30': "30 dias", 'dash.d90': "90 dias", 'dash.all': "Tudo", 'dash.games': "Partidas ranqueadas", 'dash.wl': "Vitórias – derrotas", 'dash.wr': "Taxa de vitória", 'dash.lp': "PDL", 'dash.climber': "Melhor subida", 'dash.account': "Conta", 'dash.rank': "Elo atual", 'dash.goal': "Meta", 'dash.noGoal': "Definir meta …", 'dash.goalLeft': "faltam {n} PDL", 'dash.goalDone': "Alcançada ✓", 'dash.active': "Última partida", 'dash.empty': "Ainda não há dados ranqueados. Elo e PDL são salvos para cada conta enquanto o League está aberto – entre uma vez em cada uma.", 'dash.chartEmpty': "Sem mudanças de PDL neste período – escolha um maior ou mostre mais contas.",
     'm.credSaveFailed': "Não foi possível salvar o login (criptografia ou disco). Nada foi alterado.",
     'sw.title': "Entrando", 'sw.close': "Salvando o login, fechando o League", 'sw.client': "Iniciando o Riot Client", 'sw.signin': "Entrando na conta", 'sw.signin_typing': "Digitando o login", 'sw.signin_verify': "Confirmando o login", 'sw.play': "Clicando em Jogar", 'sw.launch': "O League está iniciando",
     'live.likelyLaner': "provavelmente na sua rota ({n} % das partidas dele) – a Riot esconde as posições inimigas",

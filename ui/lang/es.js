@@ -98,6 +98,7 @@
     'nav.live': "En vivo",
     'nav.tools': "Herramientas",
     'set.theme': "Apariencia",
+    'nav.dash': "Resumen", 'dash.title': "Resumen", 'dash.sub': "Todas tus cuentas en un gráfico – y cómo va cada una", 'dash.d7': "7 días", 'dash.d30': "30 días", 'dash.d90': "90 días", 'dash.all': "Todo", 'dash.games': "Partidas clasificatorias", 'dash.wl': "Victorias – derrotas", 'dash.wr': "Winrate", 'dash.lp': "LP", 'dash.climber': "Mejor subida", 'dash.account': "Cuenta", 'dash.rank': "Rango actual", 'dash.goal': "Objetivo", 'dash.noGoal': "Fijar objetivo …", 'dash.goalLeft': "faltan {n} LP", 'dash.goalDone': "Conseguido ✓", 'dash.active': "Última partida", 'dash.empty': "Aún no hay datos de clasificatoria. Los rangos y LP se guardan para cada cuenta mientras League está abierto – inicia sesión una vez en cada una.", 'dash.chartEmpty': "Sin cambios de LP en este periodo – elige uno más largo o muestra más cuentas.",
     'm.credSaveFailed': "No se pudieron guardar los datos de acceso (cifrado o disco). No se cambió nada.",
     'sw.title': "Iniciando sesión", 'sw.close': "Guardando la sesión, cerrando League", 'sw.client': "Iniciando el cliente de Riot", 'sw.signin': "Iniciando sesión", 'sw.signin_typing': "Escribiendo los datos", 'sw.signin_verify': "Confirmando el inicio de sesión", 'sw.play': "Pulsando Jugar", 'sw.launch': "League se está iniciando",
     'live.likelyLaner': "probablemente en tu línea ({n} % de sus partidas) – Riot oculta las posiciones rivales",

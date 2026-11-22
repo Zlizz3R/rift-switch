@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'nav.dash': "نظرة عامة", 'dash.title': "نظرة عامة", 'dash.sub': "كل حساباتك في رسم واحد – وحال كل منها", 'dash.d7': "7 أيام", 'dash.d30': "30 يومًا", 'dash.d90': "90 يومًا", 'dash.all': "الكل", 'dash.games': "مباريات مصنفة", 'dash.wl': "فوز – خسارة", 'dash.wr': "نسبة الفوز", 'dash.lp': "LP", 'dash.climber': "أفضل صعود", 'dash.account': "الحساب", 'dash.rank': "الرتبة الآن", 'dash.goal': "الهدف", 'dash.noGoal': "حدد هدفًا …", 'dash.goalLeft': "متبقٍ {n} LP", 'dash.goalDone': "تحقق ✓", 'dash.active': "آخر لعب", 'dash.empty': "لا توجد بيانات مصنفة بعد. تُحفظ الرتب ونقاط LP لكل حساب ما دام League مفتوحًا – سجّل الدخول إلى كل حساب مرة.", 'dash.chartEmpty': "لا تغييرات في LP خلال هذه الفترة – اختر فترة أطول أو أظهر حسابات أكثر.",
     'm.credSaveFailed': "تعذر حفظ بيانات الدخول (التشفير أو القرص). لم يتغير شيء.",
     'sw.title': "جارٍ تسجيل الدخول", 'sw.close': "حفظ تسجيل الدخول وإغلاق League", 'sw.client': "تشغيل عميل Riot", 'sw.signin': "تسجيل الدخول", 'sw.signin_typing': "إدخال بيانات الدخول", 'sw.signin_verify': "تأكيد تسجيل الدخول", 'sw.play': "الضغط على «لعب»", 'sw.launch': "League يبدأ",
     'live.likelyLaner': "غالبًا في مسارك ({n}% من مبارياته هناك) – Riot تخفي مراكز الخصوم",

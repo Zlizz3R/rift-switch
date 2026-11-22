@@ -262,6 +262,27 @@ pub fn allowed_url(u: &str) -> bool {
     .any(|d| u.starts_with(&format!("https://{d}")) || u.starts_with(&format!("https://www.{d}")))
 }
 
+// ---------- rank goal ----------
+
+/// A rank goal from the window: { tier, division } up to Master (Grandmaster and Challenger have
+/// no fixed LP line). None = not a valid goal (the goal is removed).
+pub fn goal_of(v: &Value) -> Option<Value> {
+    const TIERS: [&str; 8] = [
+        "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND", "MASTER",
+    ];
+    let tier = v.get("tier")?.as_str()?;
+    if !TIERS.contains(&tier) {
+        return None;
+    }
+    if tier == "MASTER" {
+        return Some(json!({ "tier": tier }));
+    }
+    let div = v.get("division").and_then(Value::as_str).unwrap_or("IV");
+    ["I", "II", "III", "IV"]
+        .contains(&div)
+        .then(|| json!({ "tier": tier, "division": div }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -430,5 +451,24 @@ mod tests {
         set_low_prio(&mut a, Some(60), None, 5);
         assert!(set_low_prio(&mut a, Some(0), None, 6));
         assert!(!a.contains_key("lowPrio"));
+    }
+
+    #[test]
+    fn goals_only_real_ranks() {
+        assert_eq!(
+            goal_of(&json!({ "tier": "DIAMOND" })),
+            Some(json!({ "tier": "DIAMOND", "division": "IV" }))
+        );
+        assert_eq!(
+            goal_of(&json!({ "tier": "GOLD", "division": "II" })),
+            Some(json!({ "tier": "GOLD", "division": "II" }))
+        );
+        assert_eq!(
+            goal_of(&json!({ "tier": "MASTER", "division": "I" })),
+            Some(json!({ "tier": "MASTER" }))
+        );
+        assert_eq!(goal_of(&json!({ "tier": "CHALLENGER" })), None);
+        assert_eq!(goal_of(&json!({ "tier": "GOLD", "division": "V" })), None);
+        assert_eq!(goal_of(&Value::Null), None);
     }
 }

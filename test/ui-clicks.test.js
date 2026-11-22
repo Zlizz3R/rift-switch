@@ -525,10 +525,55 @@ test('match history: progress on the button while everything loads', () => withA
   assert.ok(app.$('#mhMore').disabled);
 }));
 
+// ---------- overview page ----------
+function dashReplies() {
+  const now = Date.now(), D = 86400000;
+  const r = (tier, division, lp) => ({ tier, division, lp });
+  return {
+    dashboard: [
+      { puuid: P(1), history: [{ t: now - 40 * D, solo: r('GOLD', 'IV', 50) }, { t: now - 20 * D, solo: r('GOLD', 'III', 20) }, { t: now - 2 * D, solo: r('GOLD', 'II', 0) }],
+        games: [{ id: 1, t: now - 3 * D, q: 'solo', win: true }, { id: 2, t: now - 2 * D, q: 'solo', win: true }, { id: 3, t: now - D, q: 'solo', win: false }] },
+      { puuid: P(2), history: [{ t: now - 25 * D, solo: r('SILVER', 'I', 80) }], games: [{ id: 4, t: now - 5 * D, q: 'solo', win: true }] },
+      { puuid: P(3), history: [], games: [] },
+    ],
+  };
+}
+test('overview: every account in one LP chart, the period in numbers, a goal per account', () => withApp({ replies: dashReplies() }, async (app) => {
+  await app.click('#navDash');
+  assert.ok(!app.$('#viewDash').hidden);
+  assert.equal(app.$$('.dash-chip').length, 3);
+  assert.equal(app.$$('.dash-chart path.acc').length, 3);
+  assert.equal(app.$$('.dash-table tbody tr').length, 3);
+  // 30 days: Player1 3 games 2–1, from Gold IV 50 (the last record before the period) to Gold II 10 = +160
+  const row = app.$(`tr[data-dacc="${P(1)}"]`);
+  assert.match(row.textContent, /2–1/);
+  assert.match(row.textContent, /67 %/);
+  assert.match(row.textContent, /\+160/);
+  assert.match(row.textContent, /G4 → G2/);
+  assert.match(app.$('.dash-stats').textContent, /4/);   // 4 ranked games together
+  // a chip hides that account's line
+  await app.click(`[data-dchip="${P(2)}"]`);
+  assert.equal(app.$$('.dash-chart path.acc').length, 2);
+  // goal: saved and shown with the LP left
+  await app.type(`select[data-goal="${P(1)}"]`, 'PLATINUM:IV');
+  assert.deepEqual(app.called('goal').pop().args, [P(1), { tier: 'PLATINUM', division: 'IV' }]);
+  assert.match(app.$(`tr[data-dacc="${P(1)}"]`).textContent, /190 LP to go/);
+  // 7 days: only the last games count
+  await app.click('[data-dd="7"]');
+  assert.match(app.$(`tr[data-dacc="${P(2)}"]`).textContent, /1–0/);
+  // Flex: nobody has a Flex rank
+  await app.click('[data-dq="flex"]');
+  assert.match(app.$('#dashBody').textContent, /No ranked data yet/);
+  // a row opens the profile
+  await app.click('[data-dq="solo"]');
+  await app.click(app.$(`tr[data-dacc="${P(1)}"] td`));
+  assert.ok(!app.$('#profileBox').hidden);
+}));
+
 // ---------- everything clickable ----------
 test('every button of every page can be clicked without a script error', () => withApp({ replies: mhReplies([game(1)]) }, async (app) => {
   const skip = '#close, #toTray, #min, #updBtn, #supportBtn, #navCoffee, #exportBtn, #importBtn';
-  for (const nav of ['#navAccounts', '#navLive', '#navMatches', '#navTools', '#navSettings']) {
+  for (const nav of ['#navAccounts', '#navDash', '#navLive', '#navMatches', '#navTools', '#navSettings']) {
     await app.click(nav);
     for (const b of app.$$('button:not([hidden])').filter((b) => !b.matches(skip) && !b.closest('[hidden]'))) {
       await app.click(b);

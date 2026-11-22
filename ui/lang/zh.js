@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'nav.dash': "总览", 'dash.title': "总览", 'dash.sub': "所有账号在一张图中——以及每个账号的近况", 'dash.d7': "7 天", 'dash.d30': "30 天", 'dash.d90': "90 天", 'dash.all': "全部", 'dash.games': "排位场次", 'dash.wl': "胜 – 负", 'dash.wr': "胜率", 'dash.lp': "LP", 'dash.climber': "最佳上分", 'dash.account': "账号", 'dash.rank': "当前段位", 'dash.goal': "目标", 'dash.noGoal': "设定目标 …", 'dash.goalLeft': "还差 {n} LP", 'dash.goalDone': "已达成 ✓", 'dash.active': "上次游戏", 'dash.empty': "还没有排位数据。League 打开时会保存每个账号的段位和 LP——每个账号登录一次即可。", 'dash.chartEmpty': "此期间没有 LP 变化——选择更长的时间或显示更多账号。",
     'm.credSaveFailed': "无法保存登录信息（加密或磁盘问题），未做任何更改。",
     'sw.title': "正在登录", 'sw.close': "保存登录状态，关闭英雄联盟", 'sw.client': "启动 Riot 客户端", 'sw.signin': "登录中", 'sw.signin_typing': "正在输入登录信息", 'sw.signin_verify': "正在确认登录", 'sw.play': "点击“开始”", 'sw.launch': "英雄联盟启动中",
     'live.likelyLaner': "可能在你这条线（他 {n}% 的对局在这里）——Riot 隐藏了敌方位置",

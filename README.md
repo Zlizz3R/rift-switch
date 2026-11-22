@@ -20,6 +20,9 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
   restrictions (e.g. LeaverBuster). Lobby-only reasons (party size, rank spread) are ignored.
 - **Penalties on the tile** – leaver locks and dodge timers with the time left; a low priority queue with the games
   left and the wait per game, until it is over.
+- **Overview** – the LP history of all accounts in one chart (Solo/Duo or Flex, 7/30/90 days or everything; hover
+  shows every account on that day), ranked games, win rate and LP won or lost per account and in total, a rank goal per
+  account with the LP still to go, and when each one was last played.
 - **Decay warning** – Riot's own "decays in X days" for the signed-in account, an inactivity hint for the others.
 - **Profile & LP history** – Blue Essence, RP, champions, skins, honor, mastery, last played and an LP chart; before
   the first recorded point the chart estimates your past LP from the ranked games it has seen (±20 LP per game, dashed).
@@ -114,7 +117,7 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
   `updater.rs` GitHub releases; `winsys.rs` autostart and jump list
 - `src-tauri/scripts/` – typing a login into the Riot Client (UI Automation, picture scan as fallback), closing the PBE dialog
 - `ui/` – the window: `tauri-api.js` (its link to the background part), `renderer.js`, `views.js`,
-  `matches-view.js`, `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
+  `matches-view.js`, `dashboard.js`, `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
 - Tray and jump-list texts are copied from the window's texts: `npm run strings` after changing one
 - Tests: `npm test` (window logic with Node's test runner + `cargo test` for the background part); they run on every push
 - Releases: push a tag `vX.Y.Z` matching the version in `src-tauri/tauri.conf.json` – GitHub Actions builds and

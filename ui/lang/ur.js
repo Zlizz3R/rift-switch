@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'nav.dash': "جائزہ", 'dash.title': "جائزہ", 'dash.sub': "آپ کے تمام اکاؤنٹس ایک گراف میں – اور ہر ایک کا حال", 'dash.d7': "7 دن", 'dash.d30': "30 دن", 'dash.d90': "90 دن", 'dash.all': "سب", 'dash.games': "رینکڈ گیمز", 'dash.wl': "جیت – ہار", 'dash.wr': "جیت کی شرح", 'dash.lp': "LP", 'dash.climber': "بہترین ترقی", 'dash.account': "اکاؤنٹ", 'dash.rank': "موجودہ رینک", 'dash.goal': "ہدف", 'dash.noGoal': "ہدف مقرر کریں …", 'dash.goalLeft': "ابھی {n} LP باقی", 'dash.goalDone': "حاصل ✓", 'dash.active': "آخری گیم", 'dash.empty': "ابھی رینکڈ ڈیٹا نہیں۔ League کھلا ہو تو ہر اکاؤنٹ کا رینک اور LP محفوظ ہوتا ہے – ہر ایک میں ایک بار لاگ اِن کریں۔", 'dash.chartEmpty': "اس مدت میں LP میں کوئی تبدیلی نہیں – لمبی مدت چنیں یا مزید اکاؤنٹس دکھائیں۔",
     'm.credSaveFailed': "لاگ اِن محفوظ نہیں ہو سکا (انکرپشن یا ڈسک)۔ کچھ نہیں بدلا۔",
     'sw.title': "لاگ اِن ہو رہا ہے", 'sw.close': "سائن اِن محفوظ، League بند", 'sw.client': "Riot Client شروع ہو رہا ہے", 'sw.signin': "سائن اِن", 'sw.signin_typing': "لاگ اِن درج ہو رہا ہے", 'sw.signin_verify': "سائن اِن کی تصدیق", 'sw.play': "“Play” دبانا", 'sw.launch': "League شروع ہو رہا ہے",
     'live.likelyLaner': "شاید آپ کی لین میں ({n}% گیمز وہیں) – Riot مخالف پوزیشنز چھپاتا ہے",

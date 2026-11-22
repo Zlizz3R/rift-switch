@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'nav.dash': "সারসংক্ষেপ", 'dash.title': "সারসংক্ষেপ", 'dash.sub': "আপনার সব অ্যাকাউন্ট এক গ্রাফে – আর প্রতিটির অবস্থা", 'dash.d7': "৭ দিন", 'dash.d30': "৩০ দিন", 'dash.d90': "৯০ দিন", 'dash.all': "সব", 'dash.games': "র‍্যাঙ্কড গেম", 'dash.wl': "জয় – হার", 'dash.wr': "জয়ের হার", 'dash.lp': "LP", 'dash.climber': "সেরা উত্থান", 'dash.account': "অ্যাকাউন্ট", 'dash.rank': "এখন র‍্যাঙ্ক", 'dash.goal': "লক্ষ্য", 'dash.noGoal': "লক্ষ্য ঠিক করুন …", 'dash.goalLeft': "আরও {n} LP", 'dash.goalDone': "অর্জিত ✓", 'dash.active': "শেষ খেলা", 'dash.empty': "এখনও কোনো র‍্যাঙ্কড ডেটা নেই। League খোলা থাকলে প্রতিটি অ্যাকাউন্টের র‍্যাঙ্ক ও LP সংরক্ষিত হয় – প্রতিটিতে একবার লগ ইন করুন।", 'dash.chartEmpty': "এই সময়ে LP-তে কোনো পরিবর্তন নেই – আরও লম্বা সময় বা আরও অ্যাকাউন্ট দেখান।",
     'm.credSaveFailed': "লগইন সংরক্ষণ করা যায়নি (এনক্রিপশন বা ডিস্ক)। কিছুই বদলায়নি।",
     'sw.title': "লগ ইন হচ্ছে", 'sw.close': "সাইন-ইন সংরক্ষণ, League বন্ধ", 'sw.client': "Riot Client চালু হচ্ছে", 'sw.signin': "সাইন ইন", 'sw.signin_typing': "লগইন লেখা হচ্ছে", 'sw.signin_verify': "সাইন-ইন নিশ্চিত হচ্ছে", 'sw.play': "“Play” চাপা", 'sw.launch': "League চালু হচ্ছে",
     'live.likelyLaner': "সম্ভবত আপনার লেনে (তার {n}% গেম সেখানে) – Riot প্রতিপক্ষের পজিশন লুকায়",
