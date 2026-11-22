@@ -1082,3 +1082,30 @@ api.onState(s => {
 document.addEventListener('focusout', () => setTimeout(() => { if (renderLater && !editing()) { renderLater = false; render(); } }, 0));
 $('board').addEventListener('dragend', () => { if (renderLater) { renderLater = false; render(); } });
 const stateReady = api.getState().then(s => { S = s; render(); });
+
+// ---------- settings: groups fold open on click, one at a time ----------
+(function foldSettings() {
+  const drawer = $('settingsDrawer');
+  for (const head of [...drawer.querySelectorAll('.set-g')]) {
+    const body = document.createElement('div');
+    body.className = 'set-body';
+    let n = head.nextElementSibling;
+    while (n && !n.classList.contains('set-g') && !n.classList.contains('legal')) { const next = n.nextElementSibling; body.appendChild(n); n = next; }
+    head.after(body);
+    head.setAttribute('role', 'button');
+    head.tabIndex = 0;
+    // the text moves into its own span (the translation only replaces that), the arrow next to it
+    const key = head.dataset.i18n;
+    head.removeAttribute('data-i18n');
+    head.innerHTML = '<span></span><svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+    head.firstChild.dataset.i18n = key;
+    head.firstChild.textContent = t(key);
+    const toggle = () => {
+      const open = !head.classList.contains('open');
+      drawer.querySelectorAll('.set-g.open').forEach(h => h.classList.remove('open'));
+      if (open) head.classList.add('open');
+    };
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  }
+})();
