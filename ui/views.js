@@ -389,7 +389,7 @@ function helperHtml() {
   const p = pool();
   const opts = champs.map(c => `<option value="${esc(c.name)}">`).join('');
   const res = helper.results;
-  return `<datalist id="champList">${opts}</datalist><div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')}</h3>
+  return `<datalist id="champList">${opts}</datalist><div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')} <button class="help-btn" data-help="helper" title="${esc(t('help.open'))}">?</button></h3>
       <select id="hLane">${['top', 'jungle', 'mid', 'adc', 'support'].map(l => `<option value="${l}" ${((S.settings && S.settings.lane) || 'top') === l ? 'selected' : ''}>${t('lane.' + l)}</option>`).join('')}</select></div>
     ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
       <input id="hAdd" list="champList" placeholder="+ ${esc(t('live.addChamp'))}" spellcheck="false"></div>

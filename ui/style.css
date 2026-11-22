@@ -828,3 +828,20 @@ body.locked #passBox { background: var(--bg); }
 .set-g.open .chev { transform: rotate(180deg); }
 .set-body { display: none; flex-direction: column; gap: 10px; padding: 2px 0 14px; }
 .set-g.open + .set-body { display: flex; }
+
+/* "?" help buttons and the help page */
+.help-btn { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line);
+  background: transparent; color: var(--muted); font: 700 11px/1 system-ui, sans-serif; cursor: pointer; vertical-align: 4px; margin-left: 6px;
+  letter-spacing: 0; text-transform: none; }
+.help-btn:hover { color: var(--bg); background: var(--gold); border-color: var(--gold); }
+h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; }
+.help-card { width: min(560px, 92vw); max-height: 86vh; display: flex; flex-direction: column; text-align: left; }
+.help-body { overflow-y: auto; margin: 6px 0 16px; padding-right: 6px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+.help-body h3 { color: var(--gold2); font-size: 13px; margin: 14px 0 4px; letter-spacing: .02em; }
+.help-body h3:first-child { margin-top: 0; }
+.help-body p { margin: 0 0 6px; }
+.help-body ul { margin: 0 0 6px 18px; }
+.help-body li { margin: 2px 0; }
+.help-body::-webkit-scrollbar { width: 8px; }
+.help-body::-webkit-scrollbar-track { background: transparent; }
+.help-body::-webkit-scrollbar-thumb { background: #2a3346; border-radius: 4px; }

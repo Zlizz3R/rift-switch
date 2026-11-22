@@ -1134,3 +1134,29 @@ const stateReady = api.getState().then(s => { S = s; render(); });
     head.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
   }
 })();
+
+// ---------- help pages ("?"): "## " heading, "- " list item, other lines paragraphs ----------
+const HELP_TITLES = { helper: 'live.helper', tools: 'tools.title', live: 'live.title', mh: 'mh.title' };
+function openHelp(topic) {
+  const lines = t('help.' + topic).split('\n');
+  let html = '', list = false;
+  for (const l of lines) {
+    const li = l.startsWith('- ');
+    if (list && !li) { html += '</ul>'; list = false; }
+    if (l.startsWith('## ')) html += `<h3>${esc(l.slice(3))}</h3>`;
+    else if (li) { if (!list) { html += '<ul>'; list = true; } html += `<li>${esc(l.slice(2))}</li>`; }
+    else if (l.trim()) html += `<p>${esc(l)}</p>`;
+  }
+  if (list) html += '</ul>';
+  $('helpTitle').textContent = t(HELP_TITLES[topic] || 'help.open');
+  $('helpBody').innerHTML = html;
+  $('helpBox').hidden = false;
+  $('helpClose').focus();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-help]');
+  if (b) { e.preventDefault(); e.stopPropagation(); openHelp(b.dataset.help); }
+}, true);
+$('helpClose').onclick = () => ($('helpBox').hidden = true);
+$('helpBox').addEventListener('click', e => { if (e.target === $('helpBox')) $('helpBox').hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('helpBox').hidden) { e.stopPropagation(); $('helpBox').hidden = true; } }, true);

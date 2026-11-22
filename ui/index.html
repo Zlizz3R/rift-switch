@@ -78,12 +78,12 @@
       </div>
 
       <section id="viewLive" hidden>
-        <div class="head"><h1 data-i18n="live.title"></h1><p class="sub" id="liveSub"></p></div>
+        <div class="head"><h1><span data-i18n="live.title"></span> <button class="help-btn" data-help="live" data-i18n-title="help.open">?</button></h1><p class="sub" id="liveSub"></p></div>
         <div id="liveBody"></div>
       </section>
 
       <section id="viewMatches" hidden>
-        <div class="head"><h1 data-i18n="mh.title"></h1><p class="sub" id="mhSub"></p></div>
+        <div class="head"><h1><span data-i18n="mh.title"></span> <button class="help-btn" data-help="mh" data-i18n-title="help.open">?</button></h1><p class="sub" id="mhSub"></p></div>
         <div class="mh-filter">
           <select id="mhAccount"></select>
           <div class="seg">
@@ -132,7 +132,7 @@
       </section>
 
       <section id="viewTools" hidden>
-        <div class="head"><h1><span data-i18n="tools.title"></span> <span class="info" data-i18n-title="tools.sub">?</span></h1></div>
+        <div class="head"><h1><span data-i18n="tools.title"></span> <button class="help-btn" data-help="tools" data-i18n-title="help.open">?</button></h1></div>
         <div class="tools-grid">
           <button class="tool-card" id="toolRefresh"><b data-i18n="tools.refresh"></b><span data-i18n="tools.refreshT"></span></button>
           <button class="tool-card" data-tool="closeAll"><b data-i18n="tools.closeAll"></b><span data-i18n="tools.closeAllT"></span></button>
@@ -296,6 +296,14 @@
     <h2 id="loginTitle"></h2>
     <p id="loginText"></p>
     <button class="btn" id="loginDismiss"></button>
+  </div>
+</div>
+
+<div class="overlay" id="helpBox" hidden>
+  <div class="card help-card">
+    <h2 id="helpTitle"></h2>
+    <div class="help-body" id="helpBody"></div>
+    <div class="row"><span class="grow"></span><button class="btn gold" id="helpClose" data-i18n="common.close"></button></div>
   </div>
 </div>
 
