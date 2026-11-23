@@ -1269,3 +1269,5 @@ span.mh-ch { cursor: default; }
 .mh-more { padding: 5px 11px; border-radius: 999px; border: 1px dashed var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .mh-more:hover { color: var(--text); border-color: #3a4560; }
 .mh-det .pg-wrap { margin: 4px 0 8px; }
+.pg-place { display: grid; justify-items: center; gap: 3px; }
+.pg-lane { font-size: 10.5px; color: var(--muted); } .pg-lane.up { color: #4cc38a; } .pg-lane.down { color: #e5737a; }

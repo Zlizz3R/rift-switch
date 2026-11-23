@@ -494,6 +494,9 @@ test('match history: a click opens the details (not on a name); names open "open
   assert.ok(app.$('.mh-det'), 'details open');
   assert.equal(app.$$('.mh-det .pg-row').length, 10, 'players open at first, as the post-game table');
   assert.ok(app.$('.mh-det .pg-pl.mvp') && app.$('.mh-det .pg-pl.ace'), 'MVP and ACE');
+  const lanes = app.$$('.mh-det .pg-lane');
+  assert.equal(lanes.length, 10, 'a lane factor for everyone with a position');
+  assert.ok(lanes[0].classList.contains('down') && lanes[5].classList.contains('up'), 'top N0 (0 kills) lost his lane to N5');
   assert.equal(app.$('.det-h2h'), null, 'other sections folded');
   assert.deepEqual(app.$$('.det-g').map((h) => h.dataset.sec), ['players', 'h2h', 'compare'], 'no gold section without a timeline');
   await app.click('[data-sec="h2h"]');
