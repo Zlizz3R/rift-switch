@@ -10,6 +10,8 @@ async function loadColl() {
   if (Array.isArray(ch)) coll.champs = new Map(ch.map(c => [c.id, c.name]));
   if (view === 'coll') renderColl();
 }
+// a skin's own picture: the client's tilePath ("/lol-game-data/assets/…") at CommunityDragon
+const collTile = p => (p ? `${CDRAGON}/rcp-be-lol-game-data/global/default/${p.toLowerCase().replace('/lol-game-data/assets/', '')}` : '');
 const collChamp = id => (coll.champs && coll.champs.get(id)) || '#' + id;
 // a skin id is champion id * 1000 + skin number
 const collSkinChamp = id => Math.floor(id / 1000);
@@ -19,11 +21,11 @@ const collNorm = s => String(s || '').toLocaleLowerCase().normalize('NFD').repla
 function collEntries(c) {
   const out = [];
   for (const id of c.champs || []) out.push({ k: 'champ', id, name: collChamp(id), champ: id });
-  for (const [id, name] of c.skins || []) out.push({ k: 'skin', id, name: name || collChamp(collSkinChamp(id)), champ: collSkinChamp(id) });
-  for (const [kind, id, n, name] of c.shards || []) {
+  for (const [id, name, tile] of c.skins || []) out.push({ k: 'skin', id, name: name || collChamp(collSkinChamp(id)), champ: collSkinChamp(id), tile: collTile(tile) });
+  for (const [kind, id, n, name, tile] of c.shards || []) {
     const isSkin = kind === 's' || kind === 'S';
     const champ = isSkin ? collSkinChamp(id) : id;
-    out.push({ k: isSkin ? 'skinShard' : 'champShard', id, n, perm: kind === 'C' || kind === 'S', name: name || collChamp(champ), champ });
+    out.push({ k: isSkin ? 'skinShard' : 'champShard', id, n, perm: kind === 'C' || kind === 'S', name: name || collChamp(champ), champ, tile: isSkin ? collTile(tile) : '' });
   }
   return out;
 }
@@ -66,7 +68,7 @@ function renderColl() {
   el.innerHTML = `<div class="coll-hits">${rows.map(({ a, hits }) => `<div class="coll-acc" data-cacc="${esc(a.puuid)}">
       <div class="ca-head"><b>${esc(dispName(a))}</b><span>${t('coll.hits', { n: hits.length })}</span></div>
       <div class="ca-list">${hits.sort((x, y) => x.k.localeCompare(y.k) || x.name.localeCompare(y.name)).slice(0, 60).map(h =>
-        `<span class="cl-chip ${h.k}" title="${esc(t(COLL_LABEL[h.k]))}"><img src="${CHAMP_ICON(h.champ)}" alt="" loading="lazy">${esc(h.name)}${h.n > 1 ? ` <i>×${h.n}</i>` : ''}${h.k.endsWith('Shard') ? ` <em>${t(h.perm ? 'coll.perm' : 'coll.shard')}</em>` : ''}</span>`).join('')}</div></div>`).join('')}</div>${foot}`;
+        `<span class="cl-chip ${h.k}" title="${esc(t(COLL_LABEL[h.k]))}"><img src="${h.tile || CHAMP_ICON(h.champ)}" alt="" loading="lazy">${esc(h.name)}${h.n > 1 ? ` <i>×${h.n}</i>` : ''}${h.k.endsWith('Shard') ? ` <em>${t(h.perm ? 'coll.perm' : 'coll.shard')}</em>` : ''}</span>`).join('')}</div></div>`).join('')}</div>${foot}`;
 }
 
 $('collSearch').addEventListener('input', () => { coll.q = $('collSearch').value; renderColl(); });

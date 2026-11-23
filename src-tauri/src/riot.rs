@@ -377,8 +377,9 @@ pub async fn lookup_riot_id(game_name: &str, tag: &str) -> Option<Obj> {
     Some(o)
 }
 
-/// Owned champions (ids), owned skins ([id, name]) and the shards / permanents in the loot
-/// ([kind, id, count, name]: "c" champion shard, "C" champion permanent, "s" skin shard, "S" skin permanent).
+/// Owned champions (ids), owned skins ([id, name, picture]) and the shards / permanents in the loot
+/// ([kind, id, count, name, picture]: "c" champion shard, "C" champion permanent, "s" skin shard,
+/// "S" skin permanent). The picture is the client's tilePath (shown via CommunityDragon).
 pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
     let owned = |x: &&Value| x["ownership"]["owned"] == true;
     let champs: Vec<Value> = champs
@@ -397,7 +398,7 @@ pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
             s.iter()
                 .filter(owned)
                 .filter(|x| x["isBase"] != true)
-                .map(|x| json!([x["id"], x["name"]]))
+                .map(|x| json!([x["id"], x["name"], x["tilePath"].as_str().unwrap_or("")]))
                 .collect()
         })
         .unwrap_or_default();
@@ -421,7 +422,8 @@ pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
                         .into_iter()
                         .find_map(|v| v.as_str().filter(|s| !s.is_empty()))
                         .unwrap_or("");
-                    Some(json!([kind, x["storeItemId"], n, name]))
+                    let tile = x["tilePath"].as_str().unwrap_or("");
+                    Some(json!([kind, x["storeItemId"], n, name, tile]))
                 })
                 .collect()
         })
@@ -1208,7 +1210,7 @@ mod tests {
         let c = collection_of(
             &json!([{ "id": 103, "ownership": { "owned": true } }, { "id": 1, "ownership": { "owned": false } }, { "id": -1, "ownership": { "owned": true } }]),
             &json!([{ "id": 103000, "isBase": true, "name": "Ahri", "ownership": { "owned": true } },
-                    { "id": 103001, "isBase": false, "name": "Dynasty Ahri", "ownership": { "owned": true } },
+                    { "id": 103001, "isBase": false, "name": "Dynasty Ahri", "tilePath": "/t/1.jpg", "ownership": { "owned": true } },
                     { "id": 103002, "isBase": false, "name": "Midnight Ahri", "ownership": { "owned": false } }]),
             &json!([{ "type": "CHAMPION_RENTAL", "storeItemId": 22, "count": 2, "itemDesc": "Ashe" },
                     { "type": "SKIN_RENTAL", "storeItemId": 103015, "count": 1, "itemDesc": "Arcade Ahri" },
@@ -1216,10 +1218,13 @@ mod tests {
                     { "type": "CHAMPION", "storeItemId": 1, "count": 0, "itemDesc": "Annie" }]),
         );
         assert_eq!(c["champs"], json!([103]));
-        assert_eq!(c["skins"], json!([[103001, "Dynasty Ahri"]]));
+        assert_eq!(c["skins"], json!([[103001, "Dynasty Ahri", "/t/1.jpg"]]));
         assert_eq!(
             c["shards"],
-            json!([["c", 22, 2, "Ashe"], ["s", 103015, 1, "Arcade Ahri"]])
+            json!([
+                ["c", 22, 2, "Ashe", ""],
+                ["s", 103015, 1, "Arcade Ahri", ""]
+            ])
         );
     }
 }

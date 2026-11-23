@@ -1,86 +1,181 @@
+<div align="center">
+
+<img src="src-tauri/icons/128x128.png" width="96" alt="Rift Switch">
+
 # Rift Switch
 
-A small, good-looking account switcher and companion for **League of Legends** on Windows.
-Pick an account, press **Log in**, and League restarts with it – no typing, no logging out by hand.
+**A small, fast account switcher and companion for League of Legends on Windows.**<br>
+Pick an account, press **Log in** – League restarts with it. No typing, no logging out by hand.
 
-*German UI name: „Kluft Wechsler“. Available in 11 languages: English, Deutsch, 中文, हिन्दी, Español, Français,
-العربية, বাংলা, Português, Русский, اردو.*
+[![Download](https://img.shields.io/github/v/release/Zlizz3R/rift-switch?label=download&color=c8aa6e)](https://github.com/Zlizz3R/rift-switch/releases/latest)
+[![Tests](https://github.com/Zlizz3R/rift-switch/actions/workflows/ci.yml/badge.svg)](https://github.com/Zlizz3R/rift-switch/actions/workflows/ci.yml)
+![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0ac8b9)
+![Size](https://img.shields.io/badge/installer-2%20MB-0ac8b9)
+[![License: MIT](https://img.shields.io/badge/license-MIT-8a93a6)](LICENSE)
 
-## Features
+<img src="docs/demo.gif" width="860" alt="Rift Switch in action: accounts, logging in, overview, collection, match history, champ select helper">
 
-### Accounts
-- **One-click login** – checks first where the Riot Client is (already signed in → just presses *Play*; login
-  screen open → signs in without a restart), otherwise leaves your lobby/queue, closes League, swaps the session and
-  presses *Play* for you. A progress screen shows every step (saving the sign-in, Riot Client, signing in, Play,
-  League starting) and can cancel it.
-- **Safe logins** – an account with a leaver lock, low priority queue or dodge timer asks before logging in; after the
-  login the app checks that the account you picked is the one signed in; a code or captcha gets clear steps and an
-  *Open Riot Client* button, and the app goes on by itself afterwards.
-- **Add many at once** – paste a list: `user:password`, `user--Name#TAG--password` (LeagueAccounts),
-  `;`/tab/`|` separated with Riot ID and note, a Riot ID alone, or blocks of `Username: …` / `Password: …` lines –
-  with a preview of what was understood and a category for all of them.
-- **Tiles + detail panel** – every account shows Riot ID, icon, level and ranks (Solo/Duo, Flex, Ranked 5v5,
-  Classic 5v5), win rate. The panel on the right has *Log in* (greyed out when already signed
-  in), profile, login details, *Open with* (op.gg, Porofessor, League of Graphs, Mobalytics, u.gg), note, move and remove.
-- **Ranked readiness** – what a fresh account still needs (level 30, 20 champions, 10 normal games) plus Riot's own
-  restrictions (e.g. LeaverBuster). Lobby-only reasons (party size, rank spread) are ignored.
+<sub>Every account in the pictures is made up (`tools/screens/demo.js`).</sub>
+
+</div>
+
+## Why Rift Switch
+
+- **One click per account** – it saves the Riot Client's *Stay signed in* session of every account and swaps it back
+  in. Passwords are optional.
+- **Everything about your accounts in one window** – ranks, LP history, penalties, collection, match history.
+- **Light** – about **8 MB** in the tray with no window and almost no CPU, a **2 MB** installer. Rust + the WebView2
+  that comes with Windows; no Electron.
+- **Private** – logins and sessions never leave your PC (encrypted for your Windows user). No account, no tracking, no ads.
+- **11 languages** – English, Deutsch, 中文, हिन्दी, Español, Français, العربية, বাংলা, Português, Русский, اردو.
+
+## Download
+
+**[⬇ Latest release](https://github.com/Zlizz3R/rift-switch/releases/latest)** → `Rift Switch_x.y.z_x64-setup.exe`
+
+Start menu shortcut, uninstall via Windows settings, and it updates itself. The app isn't code-signed (that costs a
+few hundred euros a year), so Windows SmartScreen may say *“Windows protected your PC”* – click **More info → Run
+anyway**. The full source is right here.
+
+---
+
+## The pages
+
+### 👤 Accounts
+
+<img src="docs/screens/accounts.png" alt="Accounts page with tiles and the detail panel">
+
+- **Log in** with a double click, the button in the panel, the tray menu or the Windows jump list. The app checks
+  where the Riot Client is first: already signed in → it just presses *Play*; login screen open → it signs in
+  without a restart; otherwise it leaves your lobby, closes League, swaps the session and presses *Play* for you.
+- **Every tile** shows Riot ID, icon, level, server and ranks (Solo/Duo, Flex, Ranked 5v5, Classic 5v5) with win
+  rate – which of these you see is up to you (the slider button).
+- **The panel** on the right: ranks, last played, decay warning, LP chart, profile, saved login, *Open with* (op.gg,
+  Porofessor, League of Graphs, Mobalytics, u.gg), note, move and remove.
 - **Penalties on the tile** – leaver locks and dodge timers with the time left; a low priority queue with the games
-  left and the wait per game, until it is over.
-- **Overview** – the LP history of all accounts in one chart (Solo/Duo or Flex, 7/30/90 days or everything; hover
-  shows every account on that day), ranked games, win rate and LP won or lost per account and in total, a rank goal per
-  account with the LP still to go, and when each one was last played.
-- **Decay warning** – Riot's own "decays in X days" for the signed-in account, an inactivity hint for the others.
-- **Profile & LP history** – Blue Essence, RP, champions, skins, honor, mastery, last played and an LP chart; before
-  the first recorded point the chart estimates your past LP from the ranked games it has seen (±20 LP per game, dashed).
-- **Categories**, search, sorting (level, rank, last played, name, custom), drag & drop, customisable tiles.
-- **Three layouts** – tiles, small tiles or a list (the list shows what the tile options switch on).
-- **Several at once** – Ctrl+click, Shift+click or draw a box: note, category, *Open with* and remove for all picked accounts.
-- **Keyboard** – Ctrl+F search, Ctrl+1…6 pages, Ctrl+N add (Ctrl+Shift+N many), arrow keys + Enter to log in,
-  E note, P profile, Del remove, Ctrl+A pick all; `?` lists them all.
-- **Collection** – owned champions, skins and loot shards of every account (read while you're logged in to it) and one
-  search across all of them: who has Ahri, a Star Guardian skin or an Ashe shard?
-- **Streamer mode** – hides names, tags, icons, ranks … (you choose what).
+  left and the wait per game.
+- **Ranked readiness** – what a fresh account still needs (level 30, 20 champions, 10 normal games) plus Riot's own
+  restrictions.
+- **Categories**, search, sorting, drag & drop, and **several at once**: Ctrl+click, Shift+click or draw a box – then
+  note, category, *Open with* or remove for all of them.
 
-### While you play (Live page)
-- **Clash** – your next opponents with their ranks and a **Multi op.gg** button for all five.
-- **Lobby check** – ranks of your party, and of your team in champion select where Riot shows the names.
-- **Champ select helper** – keep a pool of your champions; in champion select the enemy picks appear as pictures – click
-  the one you expect in your lane (or type it; Riot hides the enemies' positions, so the app marks the likely laner by
-  how often each champion plays your lane) and see your champions ranked by win rate and counter rating against it
-  (counterstats.net). Every enemy pick is loaded in the background; "Pre-load all matchups" fetches every opponent your
-  pool meets on that lane while you queue (kept for a day).
+<details>
+<summary><b>Three layouts</b> – tiles, small tiles or a list</summary>
 
-### Tools & comfort
+<img src="docs/screens/list.png" alt="Accounts as a list">
+
+The list shows what the tile options switch on; clicking, the menu, dragging and picking work just like on tiles.
+</details>
+
+<details>
+<summary><b>Logging in, step by step</b></summary>
+
+<img src="docs/screens/login-steps.png" alt="Login steps screen">
+
+Saving the sign-in, Riot Client, entering the login, *Play*, League starting – you can hide it or cancel.
+
+- An account with a **penalty** (leaver lock, low priority, dodge timer) always asks first.
+- After the login the app checks that the **account you picked** is the one that signed in.
+- **Code or captcha?** You get clear steps and an *Open Riot Client* button – the app notices the sign-in and goes on
+  by itself.
+</details>
+
+<details>
+<summary><b>Adding many accounts at once</b></summary>
+
+<img src="docs/screens/bulk-add.png" alt="Adding many accounts from a pasted list">
+
+Paste a list – one account per line: `user:password`, `user--Name#TAG--password` (LeagueAccounts format),
+`user;password;Name#TAG;note` (also tab or `|`), a Riot ID alone, or blocks of `Username: …` / `Password: …` /
+`Riot ID: …` lines. You see what was understood (and what wasn't) before anything is saved, and you can put them all
+into one category.
+</details>
+
+### 📈 Overview
+
+<img src="docs/screens/overview.png" alt="Overview: LP history of all accounts in one chart">
+
+- **The LP history of every account in one chart**, on coloured tier bands. Hover: every account's rank on that day.
+- **Any combination of queues** – Solo/Duo, Flex, Ranked 5v5, Classic 5v5: one colour per account, one line style
+  per queue.
+- **7 / 30 / 90 days or everything** – ranked games, wins and losses, LP won or lost and the best climb, for all
+  accounts together and for each one.
+- **A goal per account and queue** (e.g. Diamond II) with a progress bar and the LP still to go.
+
+### 🧰 Collection
+
+<img src="docs/screens/collection.png" alt="Collection: search across all accounts">
+
+Owned champions, skins and loot shards of every account – and **one search across all of them**: which account has
+Ahri, a K/DA skin or an Ashe shard? Without a search: champions, skins, shards and Blue Essence per account. (Read
+while you are logged in to that account.)
+
+### 📊 Match history
+
+<img src="docs/screens/matches.png" alt="Match history with a game opened">
+
+- **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed.
+  *Load older games* fetches everything the client still has.
+- **Filters**: account, any combination of queues, time or your own dates, wins/losses, champion, sorting, and more
+  (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,
+  damage, streaks and records.
+- **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each
+  minute), and any two players side by side.
+
+### ⚡ Live
+
+<img src="docs/screens/live.png" alt="Live page in champion select">
+
+- **Lobby, champion select and in game** – everyone's Solo/Duo and Flex rank, and a **Multi op.gg** button for the
+  enemy team.
+- **Clash** – your next opponents with their ranks as soon as the bracket is out.
+- **Penalties & waiting times** of all your accounts.
+
+<details>
+<summary><b>Champ select helper</b></summary>
+
+<img src="docs/screens/helper.png" alt="Champ select helper: best picks against the enemy laner">
+
+Keep a pool of your champions. In champion select the enemy picks appear as pictures – Riot hides their positions,
+so the app marks the likely laner (by how often each champion plays your lane). Your pool is ranked by win rate and
+counter rating against him (counterstats.net). Every enemy pick loads in the background; *Pre-load all matchups*
+fetches your whole lane while you queue.
+</details>
+
+### 🔧 Tools & settings
+
 - **Tools** – refresh ranks, close all Riot processes, restart League, clear the Riot Client cache (sign-ins stay),
-  open the logs or the app's data folder, save a diagnostics file for a bug report (names, ids and your user folder
-  are taken out).
-- **Export / import** – without logins (safe backup), or with logins encrypted by a password of their own
+  open the logs or the app's data folder, **save a diagnostics file** for a bug report (names, ids and your user
+  folder are taken out).
+- **Keyboard** – Ctrl+F search, Ctrl+1…6 pages, Ctrl+N add (Ctrl+Shift+N many), arrow keys + Enter to log in,
+  E note, P profile, Del remove, Ctrl+A pick all – `?` shows them all.
+- **Auto-accept** in the title bar, **streamer mode** (hide names, ranks … – you choose), system / light / dark,
+  interface size, app lock with a password (and Windows Hello to show a saved password).
+- **Export / import** – without logins (a safe backup), or with logins encrypted by a password of their own
   (scrypt + AES-256). Riot Client sign-ins, the app password and the match history are never in the file.
-- **What's new** – after an update the app shows once what changed (Settings → About; also the release text on GitHub).
-- **Auto-accept** switch in the title bar, **System / Light / Dark** appearance.
-- **Tray app** – the ⬇ button keeps it running in the tray (switch from the tray menu), ✕ quits; can start with Windows.
-- **Light on resources** – in the tray one process with about 8 MB RAM and almost no CPU (measured: 0.03 % of one core); about 90 MB while the window is open, all of it freed again when it goes back to the tray.
+- **What's new** after every update, **tray app** (⬇ keeps it in the tray, ✕ quits), start with Windows.
 
-## How it works (and what it stores)
+---
 
-- **No passwords needed.** An account is a snapshot of the Riot Client's *“Stay signed in”* session
-  (`%LOCALAPPDATA%\Riot Games\Riot Client\Data`). Switching restores that snapshot.
-- **Optional password** for automatic re-login when a session has expired. It is typed into the Riot Client
-  window (`src-tauri/scripts/autofill.ps1`) and "Stay signed in" is ticked – the app never talks to Riot's servers itself.
-  It only types when it recognised the login form, only while the Riot Client is the front window, and it checks
-  that every click really lands on the Riot Client.
-- Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI**
-  : only your Windows user on your PC can decrypt them. Your logins and sessions never leave your PC.
-- Outside requests – no account data is sent anywhere (the same list is in the app: Settings → About → *Data sources*):
-  - **CommunityDragon** – icons, rank emblems, champion and item data.
+## How it works – and what it stores
+
+- **An account is a snapshot** of the Riot Client's *Stay signed in* session
+  (`%LOCALAPPDATA%\Riot Games\Riot Client\Data`). Logging in restores that snapshot.
+- **A password is optional** – for when a session has expired. It is typed into the Riot Client window
+  (`src-tauri/scripts/autofill.ps1`, *Stay signed in* ticked); the app never talks to Riot's servers itself. It only
+  types when it recognised the login form, only while the Riot Client is the front window, and it checks that every
+  click lands on the Riot Client.
+- Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI** – only
+  your Windows user on your PC can read them.
+- **Outside connections** (the same list is in the app: Settings → About → *Data sources*) – no account data is sent
+  anywhere:
+  - **CommunityDragon** – icons, rank emblems, champion, skin and item pictures.
   - **counterstats.net** – champion names only, for the champ select helper.
-  - **GitHub** – every 6 hours: is there a newer release? A new installer is downloaded in the background and checked
-    (size, SHA-256); it only runs when you say so.
-  - Sites like op.gg only when you open a profile there yourself (with that player's Riot ID in the address).
-- On your PC only: the Riot Client and League Client API (`127.0.0.1`, their own certificate – accepted only for these
-  local addresses).
-- Ranks, icons etc. come from the **local League Client API** (the same one the client uses itself); icons and
-  rank emblems are loaded from [CommunityDragon](https://communitydragon.org).
+  - **GitHub** – every 6 hours: is there a newer version? The installer is checked (size, SHA-256) and only runs when
+    you say so.
+  - op.gg and the other sites only when you open a profile there yourself.
+- **On your PC only**: the Riot Client and League Client API (`127.0.0.1`) – the same local interface the client uses
+  itself.
 
 > ⚠️ The local client API is used by many community tools but is not officially supported by Riot.
 > Automatic login and auto-accept only do what you would do by hand – use them at your own discretion.
@@ -93,24 +188,11 @@ Pick an account, press **Log in**, and League restarts with it – no typing, no
 | The login screen or sign-in wasn't ready in time | Open the Riot Client once by hand – it may be updating – then log in again. |
 | League doesn't start after logging in | Make sure *Start League automatically* is on (Settings → Logging in). The app presses *Play* as soon as the Riot Client accepts it. |
 | "Log in once by hand" | The account has no saved sign-in yet (or it expired and no password is saved): log in once in the Riot Client with *Stay signed in*. |
-| Ranks or the match history stay empty | They come from the League client: open League on that account once. Accounts of another server are filled in when League runs on that server. |
-| The Riot Client window is blank or broken | Tools → *Clear Riot Client cache* (sign-ins stay), then restart League. |
 | A code or captcha while signing in | Click *Open Riot Client* in the box, enter the code or solve the captcha – the app notices the sign-in and goes on. |
 | Signed in as another account than picked | The saved login of that account belongs to another Riot ID: open *Login* on the tile and fix it. |
+| Ranks, collection or match history stay empty | They come from the League client: open League on that account once. Accounts of another server are filled in when League runs on that server. |
+| The Riot Client window is blank or broken | Tools → *Clear Riot Client cache* (sign-ins stay), then restart League. |
 | Anything else | Tools → *Save diagnostics* and attach the file to an [issue](https://github.com/Zlizz3R/rift-switch/issues). |
-
-## Download
-
-Grab the latest version from [Releases](https://github.com/Zlizz3R/rift-switch/releases):
-
-- **Rift Switch_x.y.z_x64-setup.exe** – installer (Start menu shortcut, uninstall via Windows settings, updates itself)
-
-Light on purpose: the app is a small native program (Rust + the WebView2 that comes with Windows). While it
-sits in the tray there is no window at all – one process, a few MB of memory, and it asks League a handful of
-questions every 15–60 seconds (the client's own events wake it up when something happens).
-
-The app isn't code-signed (that costs a few hundred euros a year), so Windows SmartScreen may show
-*“Windows protected your PC”* – click **More info → Run anyway**. The full source is right here if you want to check it.
 
 ## Build from source
 
@@ -124,25 +206,29 @@ npm run dev      # run it
 npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 ```
 
-## Development notes
+<details>
+<summary><b>Development notes</b></summary>
 
 - `src-tauri/src/` – the background part (Rust, Tauri 2):
-  `main.rs` window, tray, the one `call` command the window uses, switching, polling;
+  `main.rs` window, tray, the one `call` command the window uses, logging in, polling;
   `riot.rs` Riot Client / League Client API, sessions, processes; `events.rs` client events (WebSocket);
   `live.rs` live page data, champion data, matchups; `matches.rs` the match history store (no limit:
   `matches/games.jsonl`, only an index stays in memory);
-  `accounts.rs`, `settings.rs`, `store.rs`, `secrets.rs`, `menu.rs` – pure logic with tests;
+  `accounts.rs`, `ops.rs`, `settings.rs`, `store.rs`, `secrets.rs`, `menu.rs` – pure logic with tests;
   `updater.rs` GitHub releases; `winsys.rs` autostart and jump list
 - `src-tauri/scripts/` – typing a login into the Riot Client (UI Automation, picture scan as fallback), closing the PBE dialog
 - `ui/` – the window: `tauri-api.js` (its link to the background part), `renderer.js`, `views.js`,
-  `matches-view.js`, `dashboard.js`, `collection.js`, `bulk.js` + `bulkparse.js`, `keys.js`, `changelog.js`, `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
+  `dashboard.js`, `collection.js`, `matches-view.js`, `bulk.js` + `bulkparse.js`, `keys.js`, `changelog.js`,
+  `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
 - Tray and jump-list texts are copied from the window's texts: `npm run strings` after changing one
-- Tests: `npm test` (window logic with Node's test runner + `cargo test` for the background part); they run on every push
+- Tests: `npm test` (the real window in jsdom with a fake background part + `cargo test`); they run on every push
+- Pictures and the demo video: `node tools/screens/demo.js`, then `python tools/screens/capture.py` (headless Edge, ffmpeg)
 - Releases: add the version's notes to `ui/changelog.js` (the app's *What's new* and the release text,
   `node tools/release-notes.js vX.Y.Z`), then push a tag `vX.Y.Z` matching the version in `src-tauri/tauri.conf.json` –
   GitHub Actions builds and publishes the installer, installed copies update themselves
 - Test copy on its own data folder: `$env:RS_DATA='<folder>'; .\src-tauri\target\debug\rift-switch.exe`
   (never touches autostart, the jump list or the real data)
+</details>
 
 ## Support
 

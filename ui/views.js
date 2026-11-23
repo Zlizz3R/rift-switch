@@ -627,4 +627,5 @@ window.afterRender = () => {
 applyTheme();
 
 // "What's new" once after an update (renderer.js has the state by then)
-stateReady.then(() => setTimeout(notesOnce, 600));
+// the first state can arrive before this file is loaded: draw once more (detail panel)
+stateReady.then(() => { render(); setTimeout(notesOnce, 600); });

@@ -8,3 +8,5 @@ src-tauri/target/
 src-tauri/gen/
 src-tauri/target-dist/
 ki-export/
+tools/screens/site/
+tools/screens/frames/
