@@ -715,6 +715,22 @@ test('app behaviour: start minimized only with Windows, Discord only when set up
   assert.deepEqual(lastCall(app, 'set-setting').args, ['discordDetails', true]);
 }));
 
+test('login interrupted by another window: hands-off hint while typing, then a clear message and "Log in again"', () => withApp({}, async (app) => {
+  await app.click(tile(app, 2));
+  await app.click(tile(app, 2));
+  await app.click('#confirmYes');
+  await app.push({ ...app.S.state, switching: { id: P(2), n: 1, steps: ['close', 'client', 'signin', 'play', 'launch'], step: 'signin', detail: 'typing' } });
+  assert.ok(app.visible('#swHint'));
+  await app.push({ ...app.S.state, switching: null, login: { name: 'Player2', stage: 'failed', msgKey: 'af.lostfocus' } });
+  assert.equal(app.$('#loginTitle').textContent, 'Login interrupted');
+  assert.match(app.$('#loginText').textContent, /Please don't click anything/);
+  assert.ok(app.visible('#loginRetry'));
+  await app.click('#loginRetry');
+  assert.equal(app.called('dismiss-login').length, 1);
+  await app.click('#confirmYes');
+  assert.equal(app.called('switch').length, 2);
+}));
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;   // Player3 also plays Ranked 5v5 (see dashState)

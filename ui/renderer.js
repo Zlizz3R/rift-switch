@@ -802,6 +802,8 @@ function renderSwitching(sw) {
   $('swAv').innerHTML = a && a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : '';
   const cur = sw.step === 'done' ? sw.steps.length : sw.steps.indexOf(sw.step);
   $('swBar').style.width = Math.round(100 * (cur + (sw.step === 'done' ? 0 : 0.5)) / sw.steps.length) + '%';
+  // while the login is typed: hands off – a click elsewhere stops the typing
+  $('swHint').hidden = !(sw.step === 'signin' && sw.detail === 'typing');
   $('swSteps').innerHTML = sw.steps.map((k, i) => {
     const st = i < cur ? 'done' : i === cur ? 'now' : '';
     const label = k === 'signin' && sw.detail && i === cur ? t('sw.signin_' + sw.detail) : t(SW_KEYS[k] || k);
@@ -818,7 +820,10 @@ function renderLogin(l) {
   if (!l) return;
   const failed = l.stage === 'failed';
   const stage = ['wait', 'typing', 'verify', 'check'].includes(l.stage) ? l.stage : 'wait';
-  $('loginTitle').textContent = failed ? t('login.failed') : t('login.' + stage, { name: l.name || '' });
+  // another window came to the front while typing: its own title, and a way to try again at once
+  const interrupted = failed && l.msgKey === 'af.lostfocus';
+  $('loginTitle').textContent = interrupted ? t('login.interrupted') : failed ? t('login.failed') : t('login.' + stage, { name: l.name || '' });
+  $('loginRetry').hidden = !(interrupted && lastLoginId && S.accounts.some(a => a.puuid === lastLoginId));
   $('loginText').textContent = failed ? (l.msgKey ? t(l.msgKey) : (l.msg || '')) + t('login.manual') : t('login.' + stage + 'T', { name: l.name || '' });
   $('loginSpin').hidden = failed || l.stage === 'check';
   $('loginFail').hidden = !failed;
@@ -829,6 +834,7 @@ function renderLogin(l) {
   if (manual) $('loginSteps').innerHTML = ['login.step1', 'login.step2', failed ? 'login.step3f' : 'login.step3'].map(k => `<li>${esc(t(k))}</li>`).join('');
 }
 $('loginRc').onclick = () => api.showRiotClient();
+$('loginRetry').onclick = async () => { await api.dismissLogin(); switchTo(lastLoginId); };
 
 // ---------- actions ----------
 let toastTimer;
@@ -897,8 +903,10 @@ async function guardRunningGame() {
   return confirmBox(t('sw.risky', { phase: t('phase.' + p) }), p === 'ChampSelect' ? t('sw.dodge') : t('sw.abort'));
 }
 
+let lastLoginId = null;   // for "Log in again" after an interrupted login
 async function switchTo(id) {
   if (S.busy) return;
+  lastLoginId = id;
   if (id === S.active && S.live && S.live.puuid === id) return toast(t('sw.already'));
   const a = S.accounts.find(x => x.puuid === id);
   const p = S.live && S.live.phase;
