@@ -101,6 +101,8 @@ into one category.
 - **7 / 30 / 90 days or everything** – ranked games, wins and losses, LP won or lost and the best climb, for all
   accounts together and for each one.
 - **A goal per account and queue** (e.g. Diamond II) with a progress bar and the LP still to go.
+- **Key figures** across all accounts (games, win rate, LP, best climb, most played champion, busiest account) and each
+  account's **season peak** and last season's rank, straight from the client.
 
 ### 🧰 Collection
 
@@ -119,6 +121,8 @@ while you are logged in to that account.)
 - **Filters**: account, any combination of queues, time or your own dates, wins/losses, champion, sorting, and more
   (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,
   damage, streaks and records.
+- **Most played**: your top five champions, games and **play time per account**, and the teammates you played with
+  most – each with its win rate. **Clash** games have their own filter.
 - **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each
   minute), and any two players side by side.
 
@@ -165,7 +169,7 @@ fetches your whole lane while you queue.
   (`src-tauri/scripts/autofill.ps1`, *Stay signed in* ticked); the app never talks to Riot's servers itself. It only
   types when it recognised the login form, only while the Riot Client is the front window, and it checks that every
   click lands on the Riot Client.
-- Everything is stored in `%APPDATA%\rift-switch`. Sessions and passwords are **encrypted with Windows DPAPI** – only
+- Everything is stored in `%APPDATA%\rift-switch`, with a daily backup of your accounts for the last 5 days (`backups\`). Sessions and passwords are **encrypted with Windows DPAPI** – only
   your Windows user on your PC can read them.
 - **Outside connections** (the same list is in the app: Settings → About → *Data sources*) – no account data is sent
   anywhere:
