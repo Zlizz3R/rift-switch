@@ -55,7 +55,7 @@ pub fn newer(a: &str, b: &str) -> bool {
     p(a) > p(b)
 }
 
-pub fn init(on_change: impl Fn() + Send + Sync + 'static) {
+pub fn init(on_change: impl Fn() + Send + Sync + 'static, enabled: fn() -> bool) {
     if !installed() || std::env::var_os("RS_DATA").is_some() {
         return;
     }
@@ -63,7 +63,9 @@ pub fn init(on_change: impl Fn() + Send + Sync + 'static) {
     let on_change = std::sync::Arc::new(on_change);
     tauri::async_runtime::spawn(async move {
         loop {
-            check(on_change.clone()).await;
+            if enabled() {
+                check(on_change.clone()).await;
+            }
             tokio::time::sleep(Duration::from_secs(6 * 3600)).await;
         }
     });

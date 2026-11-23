@@ -770,6 +770,13 @@ function renderMain() {
   renderLogin(S.login);
   const st = S.settings || {};
   document.querySelectorAll('[data-setting]').forEach(cb => (cb.checked = !!st[cb.dataset.setting]));
+  // Discord status: only when the app has its Discord application; "details" only with the status on
+  const dOk = !!S.discordReady;
+  $('discordSoon').hidden = dOk;
+  document.querySelector('[data-setting="discordStatus"]').disabled = !dOk;
+  document.querySelector('[data-setting="discordDetails"]').disabled = !dOk || !st.discordStatus;
+  // "stay in the tray" belongs to starting with Windows
+  document.querySelector('[data-setting="startMinimized"]').disabled = !st.autostart;
   renderStreamOptions();
   renderUpdate();
   renderLock();

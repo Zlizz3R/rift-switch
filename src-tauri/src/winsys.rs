@@ -30,7 +30,7 @@ pub fn set_autostart(on: bool, exe: &Path) {
         let _ = key.delete_value(name);
     }
     if on {
-        let _ = key.set_value(RUN_NAME, &format!("\"{}\" --hidden", exe.display()));
+        let _ = key.set_value(RUN_NAME, &format!("\"{}\" --autostart", exe.display()));
     } else {
         let _ = key.delete_value(RUN_NAME);
     }

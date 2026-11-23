@@ -701,6 +701,20 @@ test('live page: stands at once, even while the client and the champion list sti
   assert.ok(app.$('#liveBody .helper'), 'the champ select helper is there right away');
 }));
 
+// ---------- app behaviour ----------
+test('app behaviour: start minimized only with Windows, Discord only when set up, details only with the status', () => withApp({}, async (app) => {
+  const box = k => app.$(`[data-setting="${k}"]`);
+  assert.ok(box('startMinimized').disabled, 'needs "Start with Windows"');
+  assert.ok(box('discordStatus').disabled && box('discordDetails').disabled);
+  assert.ok(!app.$('#discordSoon').hidden);
+  await app.push({ ...app.S.state, discordReady: true, settings: { ...app.S.state.settings, autostart: true, discordStatus: true } });
+  assert.ok(!box('startMinimized').disabled && !box('discordStatus').disabled && !box('discordDetails').disabled);
+  assert.ok(app.$('#discordSoon').hidden);
+  box('discordDetails').checked = true;
+  box('discordDetails').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+  assert.deepEqual(lastCall(app, 'set-setting').args, ['discordDetails', true]);
+}));
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;   // Player3 also plays Ranked 5v5 (see dashState)
