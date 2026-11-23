@@ -273,7 +273,21 @@ pub fn pick_queue(stats: &Value, q: &str, own: bool) -> Value {
         return Value::Null;
     }
     let wl = own || !(losses == 0.0 && wins > 0.0);
-    json!({ "tier": tier, "division": x.get("division"), "lp": x.get("leaguePoints"), "wins": x.get("wins"), "losses": x.get("losses"), "wl": wl })
+    let mut o = json!({ "tier": tier, "division": x.get("division"), "lp": x.get("leaguePoints"), "wins": x.get("wins"), "losses": x.get("losses"), "wl": wl });
+    // the highest rank this season, and where the last season ended (the client's own numbers)
+    let rank_of = |t: &str, d: &str| {
+        let tier = x.get(t).and_then(Value::as_str).unwrap_or("");
+        KNOWN_TIERS.contains(&tier).then(
+            || json!({ "tier": tier, "division": x.get(d).and_then(Value::as_str).unwrap_or("") }),
+        )
+    };
+    if let Some(p) = rank_of("highestTier", "highestDivision") {
+        o["peak"] = p;
+    }
+    if let Some(p) = rank_of("previousSeasonEndTier", "previousSeasonEndDivision") {
+        o["lastSeason"] = p;
+    }
+    o
 }
 
 /// Riot's own decay counter (signed-in account only, Solo/Duo and Flex).
@@ -1117,6 +1131,14 @@ mod tests {
         let s = json!({ "queueMap": { "RANKED_SOLO_5x5": { "tier": "GOLD", "division": "I", "leaguePoints": 50, "wins": 10, "losses": 0 } } });
         assert_eq!(pick_queue(&s, "RANKED_SOLO_5x5", false)["wl"], false);
         assert_eq!(pick_queue(&s, "RANKED_SOLO_5x5", true)["wl"], true);
+        let peak = json!({ "queueMap": { "RANKED_SOLO_5x5": { "tier": "GOLD", "division": "II", "leaguePoints": 5, "wins": 1, "losses": 1,
+            "highestTier": "PLATINUM", "highestDivision": "IV", "previousSeasonEndTier": "SILVER", "previousSeasonEndDivision": "I" } } });
+        let p = pick_queue(&peak, "RANKED_SOLO_5x5", true);
+        assert_eq!(p["peak"], json!({ "tier": "PLATINUM", "division": "IV" }));
+        assert_eq!(
+            p["lastSeason"],
+            json!({ "tier": "SILVER", "division": "I" })
+        );
         assert!(pick_queue(&s, "RANKED_FLEX_SR", false).is_null());
         let salt = json!({ "queueMap": { "JADE_RANKED_SOLO_5x5": { "tier": "SALT", "division": "IV", "wins": 0, "losses": 0 } } });
         assert!(pick_queue(&salt, "JADE_RANKED_SOLO_5x5", true).is_null());

@@ -429,6 +429,9 @@ function summaryHtml(list) {
       ${acc && acc.iconId != null && !hides('icon') ? `<img src="${iconUrl(acc.iconId)}" alt="">` : ''}<span class="mh-ch-n">${esc(acc ? dispName(acc) : '?')}</span>
       <b>${a.games}</b><span class="${a.winrate >= 50 ? 'good' : 'bad'}">${a.winrate}% WR</span><span class="muted">${a.share}%</span><span class="muted">⏱ ${playTime(a.time)}</span></button>`;
     }).join('')}</div>` : ''}
+    ${s.duos.length ? `<div class="mh-champs mh-duos"><span class="mh-ch-t">${t('mh.duos')}</span>${s.duos.map(d => `<span class="mh-ch" title="${esc(t('mh.duosT'))}">
+      <img src="${CHAMP_ICON(d.champ)}" alt=""><span class="mh-ch-n">${esc(S.accounts.some(a => a.puuid === d.puuid) ? dispName(S.accounts.find(a => a.puuid === d.puuid)) : d.name)}</span>
+      <b>${d.games}</b><span class="${d.winrate >= 50 ? 'good' : 'bad'}">${d.winrate}% WR</span></span>`).join('')}</div>` : ''}
     ${(s.champs.length > 1 || mh.f.champ) ? `<div class="mh-champs"><span class="mh-ch-t">${t('mh.topChamps')}</span>${s.champs.map(c => `<button class="mh-ch${mh.f.champ === c.champ ? ' on' : ''}" data-mhchamp="${c.champ}" title="${esc(t('mh.topChampT'))}">
       <img src="${CHAMP_ICON(c.champ)}" alt=""><span class="mh-ch-n">${esc(champName(c.champ) || '#' + c.champ)}</span>
       <b>${c.games}</b><span class="${c.winrate >= 50 ? 'good' : 'bad'}">${c.winrate}% WR</span><span class="muted">${c.playrate}% ${t('mh.playrate')}</span>

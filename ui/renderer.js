@@ -484,6 +484,13 @@ function historyChart(h, est = {}, small = false) {
     <div class="chart-legend"><span class="k solo"></span>Solo/Duo <span class="k flex"></span>Flex${hasEst ? ` <span class="k est"></span>${t('p.estimated')}` : ''} <i>${fmtDate(t0)} – ${fmtDate(t1)}</i></div>`;
 }
 
+// "Season peak Solo/Duo: Platinum IV · last season Silver I" for each queue the client told
+function peaksHtml(a) {
+  const name = r => tierName(r.tier) + (APEX.includes(r.tier) ? '' : ' ' + r.division);
+  const lines = QUEUES.filter(([k]) => a[k] && (a[k].peak || a[k].lastSeason)).map(([k, n]) =>
+    `<div><b>${n}</b> ${a[k].peak ? esc(t('p.peak', { r: name(a[k].peak) })) : ''}${a[k].peak && a[k].lastSeason ? ' · ' : ''}${a[k].lastSeason ? esc(t('dash.lastSeason', { r: name(a[k].lastSeason) })) : ''}</div>`);
+  return lines.length ? `<div class="peaks">${lines.join('')}</div>` : '';
+}
 function renderProfile() {
   const a = S.accounts.find(x => x.puuid === profileFor);
   if (!a) { $('profileBox').hidden = true; return; }
@@ -501,6 +508,7 @@ function renderProfile() {
       </div>
     </div>
     ${hides('ranks') ? `<div class="chart-empty">${t('stream.ranksHidden')}</div>` : `<div class="ranks two">${QUEUES.map(([k, n]) => rankRow(n, a[k])).join('')}</div>
+    ${peaksHtml(a)}
     ${rankedChecklist(a)}
     <h3>${t('p.history')}</h3>
     ${historyChart(profileHistory, profileEst)}`}

@@ -37,6 +37,8 @@ const accounts = ACC.map(([name, tag, icon, level, solo, flex, cat, note, played
     topMastery: [{ id: 103, level: 42, points: 512340 }, { id: 222, level: 18, points: 210400 }, { id: 412, level: 12, points: 140220 }] },
 }));
 accounts[0].goal = { tier: 'DIAMOND', division: 'II' };
+accounts[0].solo.peak = { tier: 'DIAMOND', division: 'III' }; accounts[0].solo.lastSeason = { tier: 'EMERALD', division: 'I' };
+accounts[1].solo.peak = { tier: 'EMERALD', division: 'IV' }; accounts[1].solo.lastSeason = { tier: 'PLATINUM', division: 'II' };
 accounts[2].lowPrio = { games: 2, perGame: 300, at: now };
 accounts.push({ puuid: 'new-' + P(9), placeholder: true, gameName: 'sm•••01', tagLine: '', note: 'from the list', hasCred: true, category: 'c2' });
 

@@ -1211,3 +1211,7 @@ button.link:hover { color: var(--gold2); }
 .tagline { margin: -4px 0 10px; font-size: 12.5px; color: var(--muted); }
 .start-card { width: min(440px, 92vw); text-align: left; }
 .start-card .fine { margin: 2px 0 12px; }
+
+.peaks { display: grid; gap: 2px; margin: -4px 0 8px; font-size: 12px; color: var(--muted); }
+.peaks b { color: var(--text); font-weight: 600; margin-right: 4px; }
+span.mh-ch { cursor: default; }

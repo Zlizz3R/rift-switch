@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'dash.peak': "赛季最高", 'dash.peakSeen': "记录中最高", 'dash.lastSeason': "上赛季 {r}", 'p.peak': "赛季最高 {r}", 'mh.duos': "一起玩过", 'mh.duosT': "在这些对局中同队 2 次以上的队友：共同对局数和与其一起的胜率",
     'app.tagline': "本地的英雄联盟多账号助手。", 'first.title': "随 Windows 启动？", 'first.text': "这样段位、LP 和对局会保持最新，登录只需一次点击。可随时在设置中更改。", 'first.tray': "是，在托盘中静默运行", 'first.trayT': "启动时不开窗口——打开前约占 8 MB 内存。", 'first.window': "是，并打开窗口", 'first.windowT': "登录 Windows 后立即打开 Rift Switch。", 'first.no': "否", 'first.noT': "需要时自行启动 Rift Switch。", 'first.doneTray': "Rift Switch 现在会随 Windows 在托盘中启动。", 'first.doneWindow': "Rift Switch 现在会随 Windows 启动。",
     'sw.hands': "请勿点击任何内容——正在输入你的登录信息。", 'login.interrupted': "登录被中断", 'login.retry': "重新登录",
     'mh.time': "游戏时长", 'mh.timeT': "所示对局的总时长（按对局时长计算）", 'mh.perAccount': "按账号", 'mh.perAccountT': "点击：只看该账号的对局",

@@ -68,6 +68,8 @@ test('match history filters, sorting and summary', () => {
   // play time of everything shown (remakes too), and games per account
   assert.equal(s.time, games.reduce((n, g) => n + (g.dur || 0), 0));
   assert.equal(s.accounts.reduce((n, a) => n + a.games, 0), 4);
+  // teammates of 2+ games (none in these few games of different players)
+  assert.ok(Array.isArray(s.duos));
   // most played champions: games, win rate, play rate (share of the shown games)
   assert.equal(s.champs[0].games, s.champs.reduce((m, c) => Math.max(m, c.games), 0));
   assert.equal(s.champs.reduce((n, c) => n + c.games, 0), 4);
@@ -102,4 +104,14 @@ test('every call of the window exists in the background part', () => {
   for (const k of used) assert.match(shim, new RegExp('\\b' + k + ':'), 'api.' + k + ' missing in tauri-api.js');
   // every channel the shim calls -> handled in main.rs dispatch
   for (const m of shim.matchAll(/call\('([\w-]+)'/g)) assert.ok(main.includes('"' + m[1] + '"'), m[1] + ' not handled in main.rs');
+});
+
+test('match history: teammates of 2+ games with the win rate together; games and time per account', () => {
+  const pl = (puuid, team, win, champ = 1) => ({ puuid, name: puuid, team, win, champ, k: 1, d: 1, a: 1, cs: 100, dmg: 1000 });
+  const game = (id, win, mate, owner = 'me') => ({ id, t: id, dur: 1200, q: 420, owners: [owner],
+    players: [pl(owner, 100, win, 103), pl(mate, 100, win, 412), pl('foe' + id, 200, !win)] });
+  const s = MF.summarize([game(1, true, 'buddy'), game(2, false, 'buddy'), game(3, true, 'buddy'), game(4, true, 'once')]);
+  assert.deepEqual(s.duos.map(d => [d.name, d.games, d.winrate, d.champ]), [['buddy', 3, 67, 412]]);
+  assert.equal(s.time, 4800);
+  assert.deepEqual(s.accounts.map(a => [a.puuid, a.games, a.time]), [['me', 4, 4800]]);
 });

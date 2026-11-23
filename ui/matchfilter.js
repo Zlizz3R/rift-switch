@@ -73,9 +73,27 @@
       streak: streakOf(games),
       champs: topChamps(ps, n),
       accounts: perAccount(ps, n),
+      duos: duos(ps),
       // time in these games (seconds), remakes included – they were played too
       time: games.reduce((s, g) => s + (g.dur || 0), 0),
     };
+  }
+  // the players you were on a team with most often (2+ games), with the win rate together
+  function duos(ps, max = 5) {
+    const by = new Map();
+    for (const { g, p } of ps) {
+      for (const o of g.players) {
+        if (o.team !== p.team || o.puuid === p.puuid || !o.puuid || !o.name) continue;
+        const d = by.get(o.puuid) || { puuid: o.puuid, name: o.name, tag: o.tag || '', games: 0, wins: 0, champs: new Map() };
+        d.games++; d.wins += p.win ? 1 : 0;
+        d.champs.set(o.champ, (d.champs.get(o.champ) || 0) + 1);
+        by.set(o.puuid, d);
+      }
+    }
+    return [...by.values()].filter(d => d.games >= 2)
+      .sort((x, y) => y.games - x.games || y.wins - x.wins).slice(0, max)
+      .map(d => ({ puuid: d.puuid, name: d.name, tag: d.tag, games: d.games, wins: d.wins, winrate: Math.round((100 * d.wins) / d.games),
+        champ: [...d.champs.entries()].sort((x, y) => y[1] - x[1])[0][0] }));
   }
   // games per own account: games, win rate, share of all games, time played – most games first
   function perAccount(ps, n) {

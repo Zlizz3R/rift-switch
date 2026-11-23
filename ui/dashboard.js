@@ -132,6 +132,16 @@ function dashRows(series, t0) {
   });
 }
 
+// the season's highest rank: the client's own if known, else the highest recorded in the period
+function peakCell(r) {
+  const q = r.a[r.q] || {};
+  if (q.peak && q.peak.tier) {
+    const apex = APEX.includes(q.peak.tier);
+    return `${esc(tierName(q.peak.tier) + (apex ? '' : ' ' + q.peak.division))}${q.lastSeason && q.lastSeason.tier ? `<small>${esc(t('dash.lastSeason', { r: tierName(q.lastSeason.tier) + (APEX.includes(q.lastSeason.tier) ? '' : ' ' + q.lastSeason.division) }))}</small>` : ''}`;
+  }
+  const seen = r.pts.filter(p => p.t >= dash.t0).map(p => p.v);
+  return seen.length ? `${esc(shortRank(Math.max(...seen)))}<small>${t('dash.peakSeen')}</small>` : '–';
+}
 function goalCell(r) {
   const g = r.goal, gs = goalScore(g);
   const opts = [`<option value="">${esc(t('dash.noGoal'))}</option>`];
@@ -165,6 +175,7 @@ function renderDash() {
   const now = Date.now();
   const first = Math.min(...series.flatMap(s => s.pts.map(p => p.t)), now - DAY);
   const t0 = dash.days ? now - dash.days * DAY : first, t1 = now;
+  dash.t0 = t0;
   const rows = dashRows(series, t0);
   // the period at a glance: all accounts together
   const n = rows.reduce((k, r) => k + r.n, 0), w = rows.reduce((k, r) => k + r.wins, 0);
@@ -200,13 +211,14 @@ function renderDash() {
       ${stat(t('dash.topAcc'), topAccA ? `${esc(dispName(topAccA))} <small>${t('dash.nGames', { n: topAcc[1] })}</small>` : '–')}
     </div>
     <div class="dash-card">${dashChart(series, t0, t1)}<div class="dash-chips">${chips}${key}</div></div>
-    <table class="dash-table"><thead><tr><th>${t('dash.account')}</th><th>${t('dash.rank')}</th><th>${t('dash.games')}</th><th>${t('dash.wr')}</th><th>${t('dash.lp')}</th><th>${t('dash.goal')}</th><th>${t('dash.active')}</th></tr></thead><tbody>
+    <table class="dash-table"><thead><tr><th>${t('dash.account')}</th><th>${t('dash.rank')}</th><th>${t('dash.peak')}</th><th>${t('dash.games')}</th><th>${t('dash.wr')}</th><th>${t('dash.lp')}</th><th>${t('dash.goal')}</th><th>${t('dash.active')}</th></tr></thead><tbody>
     ${list.map(r => {
       const moved = r.start != null && r.cur != null && shortRank(r.start) !== shortRank(r.cur);
       const idle = decayWarning(r.a);
       return `<tr data-dacc="${esc(r.a.puuid)}">
         <td><span class="dash-name"><i style="background:${r.color}"></i>${esc(dispName(r.a))}</span>${dash.qs.size > 1 ? `<small>${esc(dashQName(r.q))}</small>` : ''}</td>
         <td>${r.cur != null ? esc(rankText(r.cur)) : `<i class="muted">${t('tile.unranked')}</i>`}</td>
+        <td>${peakCell(r)}</td>
         <td>${r.n ? `${r.wins}–${r.losses}` : '–'}</td>
         <td class="${r.n && r.wins / r.n >= 0.5 ? 'up' : r.n ? 'down' : ''}">${r.n ? Math.round((100 * r.wins) / r.n) + ' %' : '–'}</td>
         <td class="${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}">${r.delta == null ? '–' : sgn(r.delta)}${moved ? `<small>${shortRank(r.start)} → ${shortRank(r.cur)}</small>` : ''}</td>
