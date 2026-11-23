@@ -8,7 +8,7 @@
     'head.title': 'Cuentas', 'head.sub': 'Haz clic en una tarjeta para cambiar.', 'head.addCat': 'Categoría', 'head.addAcc': "Cuenta", 'head.addCatTitle': 'Añadir categoría',
     'head.search': 'Buscar …', 'head.editTiles': 'Personalizar tarjetas',
     'sort.level': 'Nivel', 'sort.custom': 'Orden propio', 'sort.rank': 'Rango Solo/Dúo', 'sort.flex': 'Rango Flexible', 'sort.played': 'Última partida', 'sort.name': 'Nombre',
-    'empty.title': 'Aún no hay cuentas', 'empty.text': 'Añade tu primera cuenta desde la barra lateral.', 'empty.btn': 'Añadir cuenta', 'noHits': 'Ninguna cuenta coincide con la búsqueda.',
+    'empty.title': 'Aún no hay cuentas', 'empty.text': "Añade tu primera cuenta con el + de arriba.", 'empty.btn': 'Añadir cuenta', 'noHits': 'Ninguna cuenta coincide con la búsqueda.',
     'phase.Lobby': 'Sala', 'phase.Matchmaking': 'En cola', 'phase.ReadyCheck': 'Partida encontrada', 'phase.ChampSelect': 'Selección de campeón',
     'phase.InProgress': 'En partida', 'phase.GameStart': 'Iniciando partida', 'phase.Reconnect': 'Reconectar', 'phase.WaitingForStats': 'Tras la partida',
     'phase.PreEndOfGame': 'Tras la partida', 'phase.EndOfGame': 'Tras la partida', 'phase.None': 'En el cliente',

@@ -8,7 +8,7 @@
     'head.title': 'الحسابات', 'head.sub': 'انقر على بطاقة للتبديل.', 'head.addCat': 'فئة', 'head.addAcc': "حساب", 'head.addCatTitle': 'إضافة فئة',
     'head.search': 'بحث …', 'head.editTiles': 'تخصيص البطاقات',
     'sort.level': 'المستوى', 'sort.custom': 'ترتيب مخصص', 'sort.rank': 'رتبة Solo/Duo', 'sort.flex': 'رتبة Flex', 'sort.played': 'آخر لعب', 'sort.name': 'الاسم',
-    'empty.title': 'لا توجد حسابات بعد', 'empty.text': 'أضف حسابك الأول من الشريط الجانبي.', 'empty.btn': 'إضافة حساب', 'noHits': 'لا يوجد حساب يطابق البحث.',
+    'empty.title': 'لا توجد حسابات بعد', 'empty.text': "أضف حسابك الأول بزر + في الأعلى.", 'empty.btn': 'إضافة حساب', 'noHits': 'لا يوجد حساب يطابق البحث.',
     'phase.Lobby': 'الردهة', 'phase.Matchmaking': 'في الطابور', 'phase.ReadyCheck': 'تم العثور على مباراة', 'phase.ChampSelect': 'اختيار البطل',
     'phase.InProgress': 'في اللعبة', 'phase.GameStart': 'بدء اللعبة', 'phase.Reconnect': 'إعادة الاتصال', 'phase.WaitingForStats': 'بعد اللعبة',
     'phase.PreEndOfGame': 'بعد اللعبة', 'phase.EndOfGame': 'بعد اللعبة', 'phase.None': 'في العميل',

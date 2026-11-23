@@ -8,7 +8,7 @@
     'head.title': 'Comptes', 'head.sub': 'Clique sur une tuile pour changer de compte.', 'head.addCat': 'Catégorie', 'head.addAcc': "Compte", 'head.addCatTitle': 'Ajouter une catégorie',
     'head.search': 'Rechercher …', 'head.editTiles': 'Personnaliser les tuiles',
     'sort.level': 'Niveau', 'sort.custom': 'Ordre personnalisé', 'sort.rank': 'Rang Solo/Duo', 'sort.flex': 'Rang Flex', 'sort.played': 'Dernière partie', 'sort.name': 'Nom',
-    'empty.title': 'Aucun compte pour l’instant', 'empty.text': 'Ajoute ton premier compte depuis la barre latérale.', 'empty.btn': 'Ajouter un compte', 'noHits': 'Aucun compte ne correspond à la recherche.',
+    'empty.title': 'Aucun compte pour l’instant', 'empty.text': "Ajoute ton premier compte avec le + en haut.", 'empty.btn': 'Ajouter un compte', 'noHits': 'Aucun compte ne correspond à la recherche.',
     'phase.Lobby': 'Salon', 'phase.Matchmaking': 'En file', 'phase.ReadyCheck': 'Partie trouvée', 'phase.ChampSelect': 'Sélection des champions',
     'phase.InProgress': 'En partie', 'phase.GameStart': 'Lancement de la partie', 'phase.Reconnect': 'Reconnexion', 'phase.WaitingForStats': 'Après la partie',
     'phase.PreEndOfGame': 'Après la partie', 'phase.EndOfGame': 'Après la partie', 'phase.None': 'Dans le client',

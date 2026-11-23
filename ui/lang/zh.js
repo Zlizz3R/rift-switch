@@ -8,7 +8,7 @@
     'head.title': '账号', 'head.sub': '点击卡片即可切换。', 'head.addCat': '分类', 'head.addAcc': "账号", 'head.addCatTitle': '添加分类',
     'head.search': '搜索 …', 'head.editTiles': '自定义卡片',
     'sort.level': '等级', 'sort.custom': '自定义顺序', 'sort.rank': '单双排段位', 'sort.flex': '灵活排位段位', 'sort.played': '最近游戏', 'sort.name': '名称',
-    'empty.title': '还没有账号', 'empty.text': '通过侧边栏添加你的第一个账号。', 'empty.btn': '添加账号', 'noHits': '没有匹配的账号。',
+    'empty.title': '还没有账号', 'empty.text': "用顶部的 + 添加你的第一个账号。", 'empty.btn': '添加账号', 'noHits': '没有匹配的账号。',
     'phase.Lobby': '房间', 'phase.Matchmaking': '匹配中', 'phase.ReadyCheck': '已找到对局', 'phase.ChampSelect': '英雄选择',
     'phase.InProgress': '游戏中', 'phase.GameStart': '游戏开始', 'phase.Reconnect': '重新连接', 'phase.WaitingForStats': '赛后',
     'phase.PreEndOfGame': '赛后', 'phase.EndOfGame': '赛后', 'phase.None': '客户端中',

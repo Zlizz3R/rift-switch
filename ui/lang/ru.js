@@ -8,7 +8,7 @@
     'head.title': 'Аккаунты', 'head.sub': 'Нажми на плитку, чтобы переключиться.', 'head.addCat': 'Категория', 'head.addAcc': "Аккаунт", 'head.addCatTitle': 'Добавить категорию',
     'head.search': 'Поиск …', 'head.editTiles': 'Настроить плитки',
     'sort.level': 'Уровень', 'sort.custom': 'Свой порядок', 'sort.rank': 'Ранг Одиночная/Парная', 'sort.flex': 'Ранг Гибкая', 'sort.played': 'Последняя игра', 'sort.name': 'Имя',
-    'empty.title': 'Аккаунтов пока нет', 'empty.text': 'Добавь первый аккаунт через боковую панель.', 'empty.btn': 'Добавить аккаунт', 'noHits': 'Ни один аккаунт не подходит под поиск.',
+    'empty.title': 'Аккаунтов пока нет', 'empty.text': "Добавьте первый аккаунт кнопкой + вверху.", 'empty.btn': 'Добавить аккаунт', 'noHits': 'Ни один аккаунт не подходит под поиск.',
     'phase.Lobby': 'Лобби', 'phase.Matchmaking': 'В очереди', 'phase.ReadyCheck': 'Игра найдена', 'phase.ChampSelect': 'Выбор чемпиона',
     'phase.InProgress': 'В игре', 'phase.GameStart': 'Запуск игры', 'phase.Reconnect': 'Переподключение', 'phase.WaitingForStats': 'После игры',
     'phase.PreEndOfGame': 'После игры', 'phase.EndOfGame': 'После игры', 'phase.None': 'В клиенте',

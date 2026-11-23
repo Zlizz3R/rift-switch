@@ -8,7 +8,7 @@
     'head.title': 'अकाउंट', 'head.sub': 'बदलने के लिए किसी टाइल पर क्लिक करें।', 'head.addCat': 'कैटेगरी', 'head.addAcc': "अकाउंट", 'head.addCatTitle': 'कैटेगरी जोड़ें',
     'head.search': 'खोजें …', 'head.editTiles': 'टाइल बदलें',
     'sort.level': 'लेवल', 'sort.custom': 'अपना क्रम', 'sort.rank': 'रैंक Solo/Duo', 'sort.flex': 'रैंक Flex', 'sort.played': 'आख़िरी बार खेला', 'sort.name': 'नाम',
-    'empty.title': 'अभी कोई अकाउंट नहीं', 'empty.text': 'साइडबार से अपना पहला अकाउंट जोड़ें।', 'empty.btn': 'अकाउंट जोड़ें', 'noHits': 'खोज से कोई अकाउंट नहीं मिला।',
+    'empty.title': 'अभी कोई अकाउंट नहीं', 'empty.text': "ऊपर + से अपना पहला अकाउंट जोड़ें।", 'empty.btn': 'अकाउंट जोड़ें', 'noHits': 'खोज से कोई अकाउंट नहीं मिला।',
     'phase.Lobby': 'लॉबी', 'phase.Matchmaking': 'क्यू में', 'phase.ReadyCheck': 'मैच मिला', 'phase.ChampSelect': 'चैंपियन चुनाव',
     'phase.InProgress': 'गेम में', 'phase.GameStart': 'गेम शुरू हो रहा है', 'phase.Reconnect': 'फिर से जुड़ें', 'phase.WaitingForStats': 'गेम के बाद',
     'phase.PreEndOfGame': 'गेम के बाद', 'phase.EndOfGame': 'गेम के बाद', 'phase.None': 'क्लाइंट में',

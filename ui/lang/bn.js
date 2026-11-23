@@ -8,7 +8,7 @@
     'head.title': 'অ্যাকাউন্ট', 'head.sub': 'বদলাতে একটি টাইলে ক্লিক করুন।', 'head.addCat': 'ক্যাটাগরি', 'head.addAcc': "অ্যাকাউন্ট", 'head.addCatTitle': 'ক্যাটাগরি যোগ করুন',
     'head.search': 'খুঁজুন …', 'head.editTiles': 'টাইল সাজান',
     'sort.level': 'লেভেল', 'sort.custom': 'নিজের ক্রম', 'sort.rank': 'র‍্যাঙ্ক Solo/Duo', 'sort.flex': 'র‍্যাঙ্ক Flex', 'sort.played': 'শেষ খেলা', 'sort.name': 'নাম',
-    'empty.title': 'এখনও কোনো অ্যাকাউন্ট নেই', 'empty.text': 'সাইডবার থেকে প্রথম অ্যাকাউন্ট যোগ করুন।', 'empty.btn': 'অ্যাকাউন্ট যোগ করুন', 'noHits': 'খোঁজার সাথে কোনো অ্যাকাউন্ট মেলেনি।',
+    'empty.title': 'এখনও কোনো অ্যাকাউন্ট নেই', 'empty.text': "উপরের + দিয়ে আপনার প্রথম অ্যাকাউন্ট যোগ করুন।", 'empty.btn': 'অ্যাকাউন্ট যোগ করুন', 'noHits': 'খোঁজার সাথে কোনো অ্যাকাউন্ট মেলেনি।',
     'phase.Lobby': 'লবি', 'phase.Matchmaking': 'কিউতে', 'phase.ReadyCheck': 'ম্যাচ পাওয়া গেছে', 'phase.ChampSelect': 'চ্যাম্পিয়ন বাছাই',
     'phase.InProgress': 'গেমে', 'phase.GameStart': 'গেম শুরু হচ্ছে', 'phase.Reconnect': 'আবার সংযোগ', 'phase.WaitingForStats': 'গেমের পরে',
     'phase.PreEndOfGame': 'গেমের পরে', 'phase.EndOfGame': 'গেমের পরে', 'phase.None': 'ক্লায়েন্টে',

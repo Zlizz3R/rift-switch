@@ -8,7 +8,7 @@
     'head.title': 'Contas', 'head.sub': 'Clique em um card para trocar.', 'head.addCat': 'Categoria', 'head.addAcc': "Conta", 'head.addCatTitle': 'Adicionar categoria',
     'head.search': 'Buscar …', 'head.editTiles': 'Personalizar cards',
     'sort.level': 'Nível', 'sort.custom': 'Ordem própria', 'sort.rank': 'Elo Solo/Duo', 'sort.flex': 'Elo Flex', 'sort.played': 'Última partida', 'sort.name': 'Nome',
-    'empty.title': 'Nenhuma conta ainda', 'empty.text': 'Adicione sua primeira conta pela barra lateral.', 'empty.btn': 'Adicionar conta', 'noHits': 'Nenhuma conta corresponde à busca.',
+    'empty.title': 'Nenhuma conta ainda', 'empty.text': "Adicione sua primeira conta com o + no topo.", 'empty.btn': 'Adicionar conta', 'noHits': 'Nenhuma conta corresponde à busca.',
     'phase.Lobby': 'Saguão', 'phase.Matchmaking': 'Na fila', 'phase.ReadyCheck': 'Partida encontrada', 'phase.ChampSelect': 'Seleção de campeões',
     'phase.InProgress': 'Em partida', 'phase.GameStart': 'Iniciando partida', 'phase.Reconnect': 'Reconectar', 'phase.WaitingForStats': 'Pós-partida',
     'phase.PreEndOfGame': 'Pós-partida', 'phase.EndOfGame': 'Pós-partida', 'phase.None': 'No cliente',

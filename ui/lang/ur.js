@@ -8,7 +8,7 @@
     'head.title': 'اکاؤنٹس', 'head.sub': 'تبدیل کرنے کے لیے کسی ٹائل پر کلک کریں۔', 'head.addCat': 'زمرہ', 'head.addAcc': "اکاؤنٹ", 'head.addCatTitle': 'زمرہ شامل کریں',
     'head.search': 'تلاش …', 'head.editTiles': 'ٹائلیں ترتیب دیں',
     'sort.level': 'لیول', 'sort.custom': 'اپنی ترتیب', 'sort.rank': 'رینک Solo/Duo', 'sort.flex': 'رینک Flex', 'sort.played': 'آخری بار کھیلا', 'sort.name': 'نام',
-    'empty.title': 'ابھی کوئی اکاؤنٹ نہیں', 'empty.text': 'سائیڈبار سے اپنا پہلا اکاؤنٹ شامل کریں۔', 'empty.btn': 'اکاؤنٹ شامل کریں', 'noHits': 'تلاش سے کوئی اکاؤنٹ نہیں ملا۔',
+    'empty.title': 'ابھی کوئی اکاؤنٹ نہیں', 'empty.text': "اوپر + سے اپنا پہلا اکاؤنٹ شامل کریں۔", 'empty.btn': 'اکاؤنٹ شامل کریں', 'noHits': 'تلاش سے کوئی اکاؤنٹ نہیں ملا۔',
     'phase.Lobby': 'لابی', 'phase.Matchmaking': 'قطار میں', 'phase.ReadyCheck': 'میچ مل گیا', 'phase.ChampSelect': 'چیمپئن کا انتخاب',
     'phase.InProgress': 'گیم میں', 'phase.GameStart': 'گیم شروع ہو رہا ہے', 'phase.Reconnect': 'دوبارہ جڑیں', 'phase.WaitingForStats': 'گیم کے بعد',
     'phase.PreEndOfGame': 'گیم کے بعد', 'phase.EndOfGame': 'گیم کے بعد', 'phase.None': 'کلائنٹ میں',

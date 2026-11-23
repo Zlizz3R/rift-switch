@@ -14,7 +14,7 @@
     'head.title': 'Accounts', 'head.sub': 'Click a tile to switch.', 'head.addCat': 'Category', 'head.addAcc': "Account", 'head.addCatTitle': 'Add category',
     'head.search': 'Search …', 'head.editTiles': 'Customise tiles',
     'sort.level': 'Level', 'sort.custom': 'Custom order', 'sort.rank': 'Rank Solo/Duo', 'sort.flex': 'Rank Flex', 'sort.played': 'Last played', 'sort.name': 'Name',
-    'empty.title': 'No accounts yet', 'empty.text': 'Add your first account from the sidebar.', 'empty.btn': 'Add account',
+    'empty.title': 'No accounts yet', 'empty.text': "Add your first account with the + at the top.", 'empty.btn': 'Add account',
     'noHits': 'No account matches your search.',
     // phases
     'phase.Lobby': 'Lobby', 'phase.Matchmaking': 'In queue', 'phase.ReadyCheck': 'Match found', 'phase.ChampSelect': 'Champ select',
@@ -246,7 +246,7 @@
     'head.title': 'Accounts', 'head.sub': 'Klick auf eine Kachel, um zu wechseln.', 'head.addCat': 'Kategorie', 'head.addAcc': "Account", 'head.addCatTitle': 'Kategorie hinzufügen',
     'head.search': 'Suchen …', 'head.editTiles': 'Kacheln anpassen',
     'sort.level': 'Level', 'sort.custom': 'Eigene Reihenfolge', 'sort.rank': 'Rang Solo/Duo', 'sort.flex': 'Rang Flex', 'sort.played': 'Zuletzt gespielt', 'sort.name': 'Name',
-    'empty.title': 'Noch keine Accounts', 'empty.text': 'Füge über die Seitenleiste deinen ersten Account hinzu.', 'empty.btn': 'Account hinzufügen',
+    'empty.title': 'Noch keine Accounts', 'empty.text': "Füge deinen ersten Account mit dem + oben hinzu.", 'empty.btn': 'Account hinzufügen',
     'noHits': 'Kein Account passt zur Suche.',
     'phase.Lobby': 'Lobby', 'phase.Matchmaking': 'Suche läuft', 'phase.ReadyCheck': 'Match gefunden', 'phase.ChampSelect': 'Champion-Auswahl',
     'phase.InProgress': 'Im Spiel', 'phase.GameStart': 'Spiel startet', 'phase.Reconnect': 'Reconnect', 'phase.WaitingForStats': 'Nach dem Spiel',
