@@ -65,6 +65,10 @@ test('match history filters, sorting and summary', () => {
   assert.equal(s.records.kills.p.k, 15);
   assert.equal(s.pentas, 1);
   assert.deepEqual(s.streak, { win: true, n: 1 });
+  // most played champions: games, win rate, play rate (share of the shown games)
+  assert.equal(s.champs[0].games, s.champs.reduce((m, c) => Math.max(m, c.games), 0));
+  assert.equal(s.champs.reduce((n, c) => n + c.games, 0), 4);
+  assert.ok(s.champs.every(c => c.playrate === Math.round(100 * c.games / 4) && c.winrate === Math.round(100 * c.wins / c.games)));
   assert.equal(MF.summarize([]), null);
 });
 

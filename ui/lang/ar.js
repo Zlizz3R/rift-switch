@@ -95,6 +95,8 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'dash.topChamp': "البطل الأكثر لعبًا", 'dash.topAcc': "أكثر المباريات", 'dash.nGames': "{n} مباريات",
+    'mh.topChamps': "الأكثر لعبًا", 'mh.topChampT': "انقر: مباريات هذا البطل فقط (مرة أخرى: الكل)", 'mh.playrate': "نسبة اللعب",
     'set.minimized': "التشغيل مصغرًا", 'set.minimizedT': "مع Windows يبدأ في شريط المهام دون فتح النافذة.", 'set.updates': "التحقق من التحديثات", 'set.updatesT': "يبحث عن إصدار جديد عند التشغيل وكل 6 ساعات. متوقف: فقط عند الضغط على \"تحقق\".", 'set.discord': "حالة Discord", 'set.discordT': "يعرض على ملفك في Discord ما تفعله، مثل \"في اختيار الأبطال\". لا يعرض أسماء الحسابات أبدًا.", 'set.discordSoon': "قريبًا: تطبيق Discord الخاص بذلك غير مسجل بعد.", 'set.discordDetails': "الرتبة والبطل في Discord", 'set.discordDetailsT': "يضيف رتبتك في الفردي/الثنائي مع شعارها، وفي المباراة بطلك والطابور.", 'discord.lobby': "في الردهة", 'discord.queue': "في الطابور", 'discord.champSelect': "في اختيار الأبطال", 'discord.inGame': "في المباراة", 'discord.afterGame': "بعد المباراة", 'discord.client': "في عميل League",
     'set.notify': "إشعار عند العثور على مباراة", 'set.notifyT': "إشعار Windows عند العثور على مباراة – مفيد عندما تكون في نافذة أخرى.", 'tray.matchFound': "تم العثور على مباراة!", 'tray.matchAccept': "اقبلها في League.", 'tray.matchAuto': "سيقبلها Rift Switch عنك.",
     'coll.readNow': "اقرأ الآن", 'coll.reading': "جارٍ القراءة …", 'coll.readFor': "{name} مسجّل الدخول – تُقرأ البقية عند تسجيل دخولك إليها.", 'coll.readClosed': "League مغلق – شغّله لقراءة الحساب المسجّل.", 'coll.readDone': "تمت قراءة المجموعة.", 'coll.notRead': "لم يُقرأ بعد – سجّل الدخول لهذا الحساب مرة (وLeague مفتوح).",

@@ -72,7 +72,9 @@ const collections = [
 const CH = [[103, 'Ahri', 'mid'], [64, 'Lee Sin', 'jungle'], [222, 'Jinx', 'bot'], [412, 'Thresh', 'support'], [86, 'Garen', 'top'], [24, 'Jax', 'top'], [266, 'Aatrox', 'jungle'], [238, 'Zed', 'mid'], [51, 'Caitlyn', 'bot'], [117, 'Lulu', 'support']];
 const NAMES = ['Moonlit Fox', 'Jungle Diff', 'Crit Happens', 'Hookline', 'Demacia Main', 'Split Push Sam', 'Gank Plank', 'Shadow Step', 'Headshot Hero', 'Pocket Healer'];
 function game(n, win, owner = P(1)) {
-  const players = CH.map(([champ, , pos], i) => {
+  const mine = [103, 238, 103, 517, 103, 157, 91, 103, 238][n % 9];   // the own account plays a few champions
+  const players = CH.map(([c0, , pos], i) => {
+    const champ = i === 0 ? mine : c0;
     const blue = i < 5, won = blue === win;
     return { puuid: i === 0 ? owner : 'x' + n + i, name: i === 0 ? accounts.find(a => a.puuid === owner).gameName : NAMES[i], tag: 'EUW', champ, team: blue ? 100 : 200, pos, win: won,
       k: Math.floor(rnd() * 12) + (won ? 3 : 0), d: Math.floor(rnd() * 8) + 1, a: Math.floor(rnd() * 14) + 2, cs: 120 + Math.floor(rnd() * 140), gold: 8000 + Math.floor(rnd() * 6000),
@@ -86,7 +88,7 @@ function game(n, win, owner = P(1)) {
   return { id: String(7000 + n), v: 3, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
     players, gold, teams: [{ id: 100, towers: win ? 9 : 3, drakes: win ? 3 : 1, barons: win ? 1 : 0 }, { id: 200, towers: win ? 2 : 8, drakes: win ? 1 : 3 }], owners: [owner] };
 }
-const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2))];
+const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true)];
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 const appData = process.env.APPDATA ? path.join(process.env.APPDATA, 'rift-switch') : '';
 // public CommunityDragon data the app caches (item / spell / rune pictures, champion names)

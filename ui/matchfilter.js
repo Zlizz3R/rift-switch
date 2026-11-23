@@ -71,7 +71,21 @@
       // games by their biggest multikill: { 2: doubles, 3: triples, 4: quadras, 5: pentas }
       multis: Object.fromEntries([2, 3, 4, 5].map(m => [m, ps.filter(x => Math.min(5, x.p.multi || 0) === m).length])),
       streak: streakOf(games),
+      champs: topChamps(ps, n),
     };
+  }
+  // the most played champions: games, win rate, share of all games (play rate), KDA – most games first
+  function topChamps(ps, n, max = 5) {
+    const by = new Map();
+    for (const { p } of ps) {
+      const c = by.get(p.champ) || { champ: p.champ, games: 0, wins: 0, k: 0, d: 0, a: 0 };
+      c.games++; c.wins += p.win ? 1 : 0; c.k += p.k; c.d += p.d; c.a += p.a;
+      by.set(p.champ, c);
+    }
+    return [...by.values()]
+      .sort((x, y) => y.games - x.games || y.wins - x.wins)
+      .slice(0, max)
+      .map(c => ({ ...c, winrate: Math.round((100 * c.wins) / c.games), playrate: Math.round((100 * c.games) / n), kda: c.d ? (c.k + c.a) / c.d : null }));
   }
   // current win/loss streak, newest first (by time, remakes skipped)
   function streakOf(games) {

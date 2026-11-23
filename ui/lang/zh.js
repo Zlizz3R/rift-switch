@@ -94,6 +94,8 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'dash.topChamp': "最常用英雄", 'dash.topAcc': "对局最多", 'dash.nGames': "{n} 局",
+    'mh.topChamps': "最常用", 'mh.topChampT': "点击：只看该英雄的对局（再点：全部）", 'mh.playrate': "出场率",
     'set.minimized': "最小化启动", 'set.minimizedT': "随 Windows 启动时留在托盘中，不打开窗口。", 'set.updates': "检查更新", 'set.updatesT': "启动时及每 6 小时查找新版本。关闭：仅在你点击\"检查\"时。", 'set.discord': "Discord 状态", 'set.discordT': "在你的 Discord 资料上显示你正在做什么，例如\"英雄选择中\"。从不显示账号名称。", 'set.discordSoon': "即将推出：对应的 Discord 应用尚未注册。", 'set.discordDetails': "在 Discord 中显示段位和英雄", 'set.discordDetailsT': "在 Discord 状态中加入单/双排段位徽章，以及游戏中的英雄和队列。", 'discord.lobby': "在房间中", 'discord.queue': "排队中", 'discord.champSelect': "英雄选择中", 'discord.inGame': "游戏中", 'discord.afterGame': "赛后", 'discord.client': "在 League 客户端中",
     'set.notify': "找到对局通知", 'set.notifyT': "找到对局时显示 Windows 通知——在其他窗口时很方便。", 'tray.matchFound': "找到对局！", 'tray.matchAccept': "请在 League 中接受。", 'tray.matchAuto': "Rift Switch 会替你接受。",
     'coll.readNow': "立即读取", 'coll.reading': "读取中 …", 'coll.readFor': "{name} 已登录——其他账号会在你登录时读取。", 'coll.readClosed': "League 未运行——启动后才能读取已登录的账号。", 'coll.readDone': "收藏已读取。", 'coll.notRead': "尚未读取——请登录该账号一次（League 需打开）。",

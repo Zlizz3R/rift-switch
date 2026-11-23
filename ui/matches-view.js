@@ -417,6 +417,10 @@ function summaryHtml(list) {
     </div>
     ${[5, 4, 3, 2].some(m => s.multis[m]) ? `<div class="mh-multis">${[5, 4, 3, 2].filter(m => s.multis[m]).map(m =>
       `<button class="mh-multi m${m}${mh.pin === m ? ' on' : ''}" data-pin="${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</button>`).join('')}</div>` : ''}
+    ${(s.champs.length > 1 || mh.f.champ) ? `<div class="mh-champs"><span class="mh-ch-t">${t('mh.topChamps')}</span>${s.champs.map(c => `<button class="mh-ch${mh.f.champ === c.champ ? ' on' : ''}" data-mhchamp="${c.champ}" title="${esc(t('mh.topChampT'))}">
+      <img src="${CHAMP_ICON(c.champ)}" alt=""><span class="mh-ch-n">${esc(champName(c.champ) || '#' + c.champ)}</span>
+      <b>${c.games}</b><span class="${c.winrate >= 50 ? 'good' : 'bad'}">${c.winrate}% WR</span><span class="muted">${c.playrate}% ${t('mh.playrate')}</span>
+      <span class="muted">${c.kda == null ? t('mh.perfect') : c.kda.toFixed(1) + ' KDA'}</span></button>`).join('')}</div>` : ''}
     <div class="mh-recs">
       ${rec('kills', t('mh.recKills'), r.kills, r.kills && r.kills.p.k)}
       ${rec('deaths', t('mh.recDeaths'), r.deaths, r.deaths && r.deaths.p.d)}
@@ -491,6 +495,9 @@ document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => {
 // "show more" and jumping to a record's game
 $('viewMatches').addEventListener('click', e => {
   if (e.target.closest('#mhShowMore')) { mh.show += 40; renderMatches(); return; }
+  // a champion of the top list: only his games (again: all games)
+  const ch = e.target.closest('[data-mhchamp]');
+  if (ch) { const id = +ch.dataset.mhchamp; setFilter({ champ: mh.f.champ === id ? 0 : id }); return; }
   const pin = e.target.closest('[data-pin]');
   if (pin) {
     mh.pin = mh.pin === Number(pin.dataset.pin) ? 0 : Number(pin.dataset.pin);
@@ -518,7 +525,7 @@ $('viewMatches').addEventListener('click', async e => {
   loadMatches();
 });
 $('mhList').addEventListener('click', e => {
-  if (e.target.closest('[data-player], [data-pin], [data-goto], button, a, input, .mh-det')) return;
+  if (e.target.closest('[data-player], [data-pin], [data-goto], [data-mhchamp], button, a, input, .mh-det')) return;
   const row = e.target.closest('.mh-row');
   if (!row) return;
   const id = row.dataset.gid;

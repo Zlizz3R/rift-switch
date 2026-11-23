@@ -24,6 +24,8 @@ const goalScore = g => (g ? rankScore({ tier: g.tier, division: g.division || 'I
 
 async function loadDash() {
   dash.histLen = S.accounts.reduce((n, a) => n + (a.historyLen || 0), 0);
+  // champion names for the key figures (the live page usually has them already)
+  if (!champs.length) { const c = await api.champions(); if (Array.isArray(c) && c.length) champs = c; }
   const d = await api.dashboard();
   dash.data = Array.isArray(d) ? d : [];
   if (view === 'dash') renderDash();
@@ -168,6 +170,19 @@ function renderDash() {
   const n = rows.reduce((k, r) => k + r.n, 0), w = rows.reduce((k, r) => k + r.wins, 0);
   const net = rows.reduce((k, r) => k + (r.delta || 0), 0);
   const best = rows.filter(r => r.delta).sort((p, q) => q.delta - p.delta)[0];
+  // across all accounts in the period: the most played champion and the busiest account
+  const champCount = new Map(), accGames = new Map();
+  for (const r of rows) {
+    for (const g of r.games) {
+      if (g.t < t0) continue;
+      if (g.champ) { const c = champCount.get(g.champ) || { n: 0, w: 0 }; c.n++; c.w += g.win ? 1 : 0; champCount.set(g.champ, c); }
+      accGames.set(r.a.puuid, (accGames.get(r.a.puuid) || 0) + 1);
+    }
+  }
+  const topChamp = [...champCount.entries()].sort((p, q) => q[1].n - p[1].n)[0];
+  const topAcc = [...accGames.entries()].sort((p, q) => q[1] - p[1])[0];
+  const topAccA = topAcc && S.accounts.find(a => a.puuid === topAcc[0]);
+  const champLabel = id => ((typeof champById === 'function' && champById(id)) || {}).name || '#' + id;
   const sgn = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v);
   const stat = (label, val, cls = '') => `<div class="stat ${cls}"><b>${val}</b><span>${label}</span></div>`;
   // one chip per account (it hides all its lines); with several queues a key for the line styles
@@ -181,6 +196,8 @@ function renderDash() {
       ${stat(t('dash.wl'), n ? `${w}–${n - w} <small>${Math.round((100 * w) / n)} %</small>` : '–')}
       ${stat(t('dash.lp'), rows.some(r => r.delta != null) ? sgn(net) : '–', net > 0 ? 'up' : net < 0 ? 'down' : '')}
       ${stat(t('dash.climber'), best && best.delta > 0 ? `${esc(dispName(best.a))} <small>${sgn(best.delta)}</small>` : '–')}
+      ${stat(t('dash.topChamp'), topChamp ? `<img class="st-ic" src="${CHAMP_ICON(topChamp[0])}" alt="">${esc(champLabel(topChamp[0]))} <small>${topChamp[1].n} · ${Math.round((100 * topChamp[1].w) / topChamp[1].n)} %</small>` : '–')}
+      ${stat(t('dash.topAcc'), topAccA ? `${esc(dispName(topAccA))} <small>${t('dash.nGames', { n: topAcc[1] })}</small>` : '–')}
     </div>
     <div class="dash-card">${dashChart(series, t0, t1)}<div class="dash-chips">${chips}${key}</div></div>
     <table class="dash-table"><thead><tr><th>${t('dash.account')}</th><th>${t('dash.rank')}</th><th>${t('dash.games')}</th><th>${t('dash.wr')}</th><th>${t('dash.lp')}</th><th>${t('dash.goal')}</th><th>${t('dash.active')}</th></tr></thead><tbody>
