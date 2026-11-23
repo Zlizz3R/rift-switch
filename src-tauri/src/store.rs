@@ -130,8 +130,55 @@ pub enum Loaded {
     Unreadable(String),
 }
 
-/// Reads the file (or file.bak if the real one is missing or broken). A damaged file is copied
-/// aside first, never silently overwritten. A good file is kept as file.bak once per start.
+const KEEP_DAYS: usize = 5;
+
+/// "2026-11-23" for a time in ms (UTC), without a date library.
+fn day_name(ms: i64) -> String {
+    // days since 1970-01-01 -> civil date (Howard Hinnant's algorithm)
+    let z = ms.div_euclid(86_400_000) + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!("{y:04}-{m:02}-{d:02}")
+}
+/// The daily copies in backups/, newest first.
+fn daily_backups(file: &Path) -> Vec<std::path::PathBuf> {
+    let dir = file.with_file_name("backups");
+    let mut list: Vec<std::path::PathBuf> = fs::read_dir(&dir)
+        .map(|d| {
+            d.flatten()
+                .map(|e| e.path())
+                .filter(|p| {
+                    p.file_name()
+                        .is_some_and(|n| n.to_string_lossy().starts_with("accounts-"))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    list.sort();
+    list.reverse(); // the date in the name sorts them
+    list
+}
+/// A good file: one copy per day in backups/ (the newest 5 days stay), next to file.bak.
+fn keep_daily(file: &Path, now: i64) {
+    let dir = file.with_file_name("backups");
+    if fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let _ = fs::copy(file, dir.join(format!("accounts-{}.json", day_name(now))));
+    for old in daily_backups(file).into_iter().skip(KEEP_DAYS) {
+        let _ = fs::remove_file(old);
+    }
+}
+
+/// Reads the file (or file.bak, then the daily backups, if the real one is missing or broken).
+/// A damaged file is copied aside first, never silently overwritten. A good file is kept as
+/// file.bak once per start and once per day in backups/ (the last 5 days).
 pub fn read_state(file: &Path) -> Loaded {
     let bak = file.with_extension("json.bak");
     let parse = |p: &Path| -> Result<Option<Value>, String> {
@@ -154,14 +201,24 @@ pub fn read_state(file: &Path) -> Loaded {
         }
         Err(format!("unreadable: {last}"))
     };
+    // the newest good copy: file.bak, then the daily backups
+    let fallback = || {
+        std::iter::once(bak.clone())
+            .chain(daily_backups(file))
+            .find_map(|p| parse(&p).ok().flatten())
+    };
     match parse(file) {
         Ok(Some(v)) => {
             let _ = fs::copy(file, &bak);
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_millis() as i64);
+            keep_daily(file, now);
             Loaded::Ok(normalize(v))
         }
-        Ok(None) => match parse(&bak) {
-            Ok(Some(v)) => Loaded::Ok(normalize(v)),
-            _ => Loaded::Ok(normalize(Value::Null)),
+        Ok(None) => match fallback() {
+            Some(v) => Loaded::Ok(normalize(v)),
+            None => Loaded::Ok(normalize(Value::Null)),
         },
         Err(e) if e.starts_with("unreadable") => Loaded::Unreadable(e),
         Err(e) => {
@@ -173,7 +230,7 @@ pub fn read_state(file: &Path) -> Loaded {
                 file.with_file_name(format!("accounts.damaged-{ts}.json")),
             );
             // the copy from the last good start is better than nothing
-            match parse(&bak) {
+            match fallback().map(Ok::<_, String>).transpose() {
                 Ok(Some(v)) => Loaded::Damaged(normalize(v), e),
                 _ => Loaded::Damaged(normalize(Value::Null), e),
             }
@@ -422,7 +479,41 @@ mod tests {
             panic!()
         };
         assert_eq!(st.accounts[0]["puuid"], P1); // missing file: the .bak
+                                                 // .bak gone too: the daily copy in backups/
+        fs::remove_file(dir.join("accounts.json.bak")).unwrap();
+        assert_eq!(daily_backups(&file).len(), 1);
+        let Loaded::Ok(st) = read_state(&file) else {
+            panic!()
+        };
+        assert_eq!(st.accounts[0]["puuid"], P1);
+        // only the newest 5 days stay
+        for d in 1..=7 {
+            fs::write(
+                dir.join(format!("backups/accounts-2020-01-0{d}.json")),
+                "{}",
+            )
+            .unwrap();
+        }
+        write_atomic(&file, json!({ "accounts": [] }).to_string().as_bytes()).unwrap();
+        let _ = read_state(&file);
+        let left = daily_backups(&file);
+        assert_eq!(left.len(), 5);
+        assert!(left[0].to_string_lossy().contains(&day_name(now_ms_test())));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    fn now_ms_test() -> i64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64
+    }
+
+    #[test]
+    fn day_names() {
+        assert_eq!(day_name(0), "1970-01-01");
+        assert_eq!(day_name(1_795_400_000_000), "2026-11-23");
+        assert_eq!(day_name(951_782_400_000), "2000-02-29");
     }
 
     #[test]
