@@ -3,6 +3,17 @@
 (function (root) {
   const CHANGELOG = [
     {
+      v: '1.2.2',
+      en: [
+        'Logging in runs by itself: a Riot Client that is not open or not ready yet is brought up and the login typed again; Play is pressed until the client takes it; an update is shown and waited for.',
+        'The Riot Client and League on different accounts: Rift Switch notices it, says so and restarts League for the right account (never during champion select or a game).',
+      ],
+      de: [
+        'Einloggen läuft von selbst: Ein Riot Client, der noch nicht offen oder bereit ist, wird geöffnet und der Login neu eingegeben; Play wird gedrückt, bis der Client es annimmt; ein Update wird angezeigt und abgewartet.',
+        'Riot Client und League auf verschiedenen Accounts: Rift Switch merkt es, sagt es und startet League für den richtigen Account neu (nie in Championauswahl oder Spiel).',
+      ],
+    },
+    {
       v: '1.2.1',
       en: [
         'The pages are now a bar at the top with their names.',

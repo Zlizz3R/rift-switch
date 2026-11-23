@@ -105,7 +105,7 @@ const live = { clientUp: true, phase: 'ChampSelect', region: 'EUW', me: P(1), ch
 const counters = { Zed: { share: 88, list: [{ name: 'Ahri', wr: 51.8, rating: 6.4 }, { name: 'Lulu', wr: 50.9, rating: 5.6 }, { name: 'Galio', wr: 53.2, rating: 7.1 }, { name: 'Malzahar', wr: 54.0, rating: 7.6 }, { name: 'Syndra', wr: 48.7, rating: 4.2 }] } };
 
 const state = {
-  accounts, categories: [{ id: 'c1', name: 'Smurfs', collapsed: false }, { id: 'c2', name: 'Other servers', collapsed: false }], active: P(1),
+  accounts, categories: [{ id: 'c1', name: 'Duo & Flex', collapsed: false }, { id: 'c2', name: 'Other servers', collapsed: false }], active: P(1),
   settings: { lang: process.env.DEMO_LANG || 'en', theme: 'dark', uiScale: '100', confirmSwitch: true, autoPlay: true, sort: 'custom', tile: null, layout: 'tiles',
     champPool: [103, 238, 517, 157, 91], lane: 'mid', seenVersion: '1.2.0', askedStart: true },
   live: { clientUp: true, puuid: P(1), phase: 'ChampSelect', waits: [] }, hasLock: false, sealLogins: false, pendingAdd: false, busy: false, login: null,

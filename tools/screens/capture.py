@@ -92,7 +92,7 @@ def screenshots(page):
     settle(page, 0.8)
     shot("helper")
     show(page, "accounts")
-    js(page, "openBulk(true); const b = document.getElementById('bulkText'); b.value = 'smurf01:hunter2\\nsmurf02--Shadow Step#EUW--pa55word\\nsmurf03;secret;Pocket Healer#EUW;support\\nsmurf04\\nCrit Happens#EUW'; b.dispatchEvent(new Event('input'));")
+    js(page, "openBulk(true); const b = document.getElementById('bulkText'); b.value = 'account01:hunter2\\naccount02--Shadow Step#EUW--pa55word\\naccount03;secret;Pocket Healer#EUW;support\\naccount04\\nCrit Happens#EUW'; b.dispatchEvent(new Event('input'));")
     settle(page, 0.6)
     shot("bulk-add")
     js(page, "openBulk(false);")

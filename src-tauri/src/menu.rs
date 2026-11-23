@@ -189,9 +189,9 @@ mod tests {
     #[test]
     fn tray_and_jump_list() {
         let mut st = normalize(
-            json!({ "active": P1, "categories": [{ "id": "c1", "name": "Smurfs" }],
+            json!({ "active": P1, "categories": [{ "id": "c1", "name": "Friends" }],
             "accounts": [{ "puuid": P1, "gameName": "Main", "tagLine": "EUW", "solo": { "tier": "DIAMOND", "division": "II" } },
-                         { "puuid": P2, "gameName": "Smurf", "tagLine": "EUW", "category": "c1" }] }),
+                         { "puuid": P2, "gameName": "Second", "tagLine": "EUW", "category": "c1" }] }),
         );
         let items = account_items(&st, false);
         match &items[0] {
@@ -201,7 +201,7 @@ mod tests {
             }
             _ => panic!(),
         }
-        assert!(items.contains(&Item::Header("Smurfs".into())));
+        assert!(items.contains(&Item::Header("Friends".into())));
         assert_eq!(account_items(&st, true).len(), 2);
         st.settings.insert("streamer".into(), json!(true));
         match &account_items(&st, false)[0] {

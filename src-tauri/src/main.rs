@@ -41,6 +41,8 @@ struct Live {
     client_up: bool,
     /// waiting times the client gave for queueing right now: [{ code, until }]
     waits: Vec<Value>,
+    /// the account the Riot Client is signed in to – normally the same as League's
+    rc: Option<String>,
 }
 
 struct Core {
@@ -230,7 +232,7 @@ fn snapshot(c: &Core) -> Value {
     m.insert("accounts".into(), Value::Array(accounts));
     m.insert("hasLock".into(), json!(c.st.lock.is_some()));
     m.insert("sealLogins".into(), json!(sealed_on(c)));
-    m.insert("live".into(), json!({ "puuid": c.live.puuid, "phase": c.live.phase, "clientUp": c.live.client_up, "waits": c.live.waits }));
+    m.insert("live".into(), json!({ "puuid": c.live.puuid, "phase": c.live.phase, "clientUp": c.live.client_up, "waits": c.live.waits, "rc": c.live.rc }));
     m.insert("pendingAdd".into(), json!(c.pending_add));
     m.insert("busy".into(), json!(c.busy));
     m.insert("login".into(), c.login.clone());
@@ -744,6 +746,14 @@ fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
 }
 
 const IN_GAME: [&str; 3] = ["GameStart", "InProgress", "Reconnect"];
+/// League must not be closed now (champion select or a game)
+const RISKY_PHASES: [&str; 5] = [
+    "ChampSelect",
+    "GameStart",
+    "InProgress",
+    "Reconnect",
+    "ReadyCheck",
+];
 
 async fn tick_inner(my_gen: u64) {
     let stale = || with(|c| c.busy || c.gen != my_gen);
@@ -775,10 +785,12 @@ async fn tick_inner(my_gen: u64) {
     } else {
         None
     };
-    let phase = if cur.is_some() {
-        riot::gameflow_phase().await
+    let (phase, rc) = if cur.is_some() {
+        tokio::join!(riot::gameflow_phase(), async {
+            riot::rc_login_state().await.subject
+        })
     } else {
-        None
+        (None, None)
     };
     if stale() {
         return;
@@ -791,7 +803,7 @@ async fn tick_inner(my_gen: u64) {
     }
     let (new_puuid, changed) = with(|c| {
         let np = cur_id != c.live.puuid;
-        let ch = np || phase != c.live.phase;
+        let ch = np || phase != c.live.phase || rc != c.live.rc;
         let waits = if cur_id == c.live.puuid {
             std::mem::take(&mut c.live.waits)
         } else {
@@ -802,6 +814,7 @@ async fn tick_inner(my_gen: u64) {
             phase: phase.clone(),
             client_up: cur.is_some(),
             waits,
+            rc: rc.clone(),
         };
         (np, ch)
     });
@@ -1272,6 +1285,7 @@ async fn auto_play(pl: &'static str) {
     let t0 = now_ms();
     let (mut signed_in_since, mut presses, mut checked): (Option<i64>, u32, bool) =
         (None, 0, false);
+    let mut reopened = false;
     // an update in the Riot Client extends the wait (up to 30 minutes)
     let mut deadline = t0 + 180_000;
     while alive() && now_ms() < deadline {
@@ -1327,6 +1341,26 @@ async fn auto_play(pl: &'static str) {
                 }
             }
             if riot::league_running() {
+                // a League left over from another account (the Riot Client was signed in anew
+                // while it ran): close just League, the Play below starts it for this account
+                if !reopened {
+                    let lol = riot::current_account()
+                        .await
+                        .map(|a| str_of(&a, "puuid").to_string());
+                    let busy = riot::gameflow_phase()
+                        .await
+                        .is_some_and(|p| RISKY_PHASES.contains(&p.as_str()));
+                    if !busy && lol.as_deref().is_some_and(|l| l != subject) {
+                        reopened = true;
+                        log_error(
+                            "play",
+                            "League ran for another account than the Riot Client – restarted",
+                        );
+                        riot::close_league_only().await;
+                        presses = 0;
+                        continue;
+                    }
+                }
                 sw_done();
                 return;
             }
@@ -2282,6 +2316,22 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             });
             push();
             Value::Null
+        }
+        "fix-mismatch" => {
+            let (phase, rc) = with(|c| (c.live.phase.clone(), c.live.rc.clone()));
+            if phase.as_deref().is_some_and(|p| RISKY_PHASES.contains(&p)) {
+                return json!({ "ok": false, "risky": true });
+            }
+            let Some(rc) = rc else {
+                return json!({ "ok": false });
+            };
+            let pl = with(|c| pl_of(c.st.account(&rc)));
+            with_busy(async move {
+                riot::close_league_only().await;
+                tauri::async_runtime::spawn(auto_play(pl));
+                json!({ "ok": true })
+            })
+            .await
         }
         "show-riot-client" => {
             riot::show_riot_client();
@@ -3260,7 +3310,7 @@ mod tests {
         let _ = DATA.set(dir.clone());
         let st = store::normalize(json!({
             "accounts": [{ "puuid": P1, "gameName": "A", "history": [{ "t": 1 }, { "t": 2 }] },
-                         { "puuid": format!("new-{P2}"), "placeholder": true, "gameName": "x•••", "note": "smurf" }] }));
+                         { "puuid": format!("new-{P2}"), "placeholder": true, "gameName": "x•••", "note": "duo" }] }));
         let _ = CORE.set(Mutex::new(Core::new(
             st,
             matches::Matches::load(&dir),

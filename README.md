@@ -7,8 +7,8 @@
 **The local multi-account companion for League of Legends.**<br>
 Pick an account, press **Log in** – League restarts with it. No typing, no logging out by hand.
 
-[![Download](https://img.shields.io/github/v/release/Zlizz3R/rift-switch?label=download&color=c8aa6e)](https://github.com/Zlizz3R/rift-switch/releases/latest)
-[![Tests](https://github.com/Zlizz3R/rift-switch/actions/workflows/ci.yml/badge.svg)](https://github.com/Zlizz3R/rift-switch/actions/workflows/ci.yml)
+[![Download](https://img.shields.io/github/v/release/Zlizz3R/rift-switch?label=download&color=c8aa6e&cacheSeconds=3600)](https://github.com/Zlizz3R/rift-switch/releases/latest)
+[![Tests](https://github.com/Zlizz3R/rift-switch/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Zlizz3R/rift-switch/actions/workflows/ci.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0ac8b9)
 ![Size](https://img.shields.io/badge/installer-2%20MB-0ac8b9)
 [![License: MIT](https://img.shields.io/badge/license-MIT-8a93a6)](LICENSE)

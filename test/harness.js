@@ -13,7 +13,7 @@ function sampleState(extra = {}) {
     hasCred: true, solo: { tier: 'GOLD', division: 'II', lp: 10 * i, wins: 10, losses: 8, wl: true }, flex: null, historyLen: 0, addedAt: i, ...o });
   return {
     accounts: [acc(1), acc(2, { category: 'c1' }), acc(3), acc(4, { placeholder: true, gameName: 'ab•••c', tagLine: '', hasCred: true, solo: null, level: null })],
-    categories: [{ id: 'c1', name: 'Smurfs', collapsed: false }],
+    categories: [{ id: 'c1', name: 'Friends', collapsed: false }],
     active: P(1), settings: { lang: 'en', theme: 'dark', uiScale: '100', confirmSwitch: true, autoPlay: true, sort: 'custom', tile: null, seenVersion: '1.1.0', askedStart: true },
     live: { clientUp: true, puuid: P(1), phase: 'Lobby', waits: [] }, hasLock: false, sealLogins: false, pendingAdd: false, busy: false, login: null,
     version: '1.1.0', update: { status: 'off' }, ...extra,

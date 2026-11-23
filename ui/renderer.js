@@ -747,6 +747,18 @@ $('lockOff').onclick = async () => {
   if (p !== null) toast((await api.lock('off', p)) ? t('lock.removed') : t('pw.wrong'));
 };
 
+// the Riot Client and League signed in to different accounts: say so, offer to restart League
+function renderMismatch() {
+  const l = S.live || {};
+  const off = !(l.clientUp && l.rc && l.puuid && l.rc !== l.puuid);
+  $('mismatch').hidden = off;
+  if (off) return;
+  const nm = id => { const a = S.accounts.find(x => x.puuid === id); return a ? fullName(a) : t('mm.other'); };
+  const risky = RISKY.includes(l.phase);
+  $('mmText').textContent = t('mm.text', { rc: nm(l.rc), lol: nm(l.puuid) }) + (risky ? ' ' + t('mm.later') : '');
+  $('mmFix').textContent = t('mm.fix', { name: nm(l.rc) });
+  $('mmFix').disabled = risky;
+}
 function render() {
   try { renderMain(); } finally { if (window.afterRender) window.afterRender(); }
 }
@@ -754,6 +766,7 @@ function renderMain() {
   applyStaticTexts();
   document.querySelectorAll('[data-layout]').forEach(b => b.classList.toggle('on', b.dataset.layout === layout()));
   $('cryptoWarn').hidden = !S.cryptoBroken;
+  renderMismatch();
   const accs = S.accounts;
   $('empty').hidden = accs.length > 0;
   renderBoard();

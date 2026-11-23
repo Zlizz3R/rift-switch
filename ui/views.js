@@ -618,6 +618,12 @@ $('liveBody').addEventListener('change', e => {
   if (e.target.id === 'hLane') { S.settings = { ...S.settings, lane: e.target.value }; api.setSetting('lane', e.target.value); if (helper.enemy) want([helper.enemy]); renderLive(); }
 });
 
+$('mmFix').onclick = async () => {
+  const r = await api.fixMismatch();
+  if (r && r.ok) toast(t('mm.started'));
+  else if (r && r.risky) toast(t('mm.later'), true);
+};
+
 // ---------- after every render ----------
 window.afterRender = () => {
   applyTheme();
