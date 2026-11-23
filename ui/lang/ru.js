@@ -97,6 +97,7 @@
     'nav.live': "Live",
     'nav.tools': "Инструменты",
     'set.theme': "Оформление",
+    'add.safe': "Хранится только на этом ПК, зашифрованным для вашего пользователя Windows. Никуда не отправляется – Rift Switch лишь вводит его за вас в Riot Client.",
     'dash.peak': "Пик сезона", 'dash.peakSeen': "макс. замеченный", 'dash.lastSeason': "прошлый сезон {r}", 'p.peak': "пик сезона {r}", 'mh.duos': "Играли с", 'mh.duosT': "Союзники в 2+ из этих игр: игры вместе и ваш винрейт с ними",
     'app.tagline': "Локальный помощник для нескольких аккаунтов League of Legends.", 'first.title': "Запускать вместе с Windows?", 'first.text': "Тогда ранги, LP и игры будут актуальны, а вход — в один клик. Можно изменить в любое время в настройках.", 'first.tray': "Да, тихо в трее", 'first.trayT': "Без окна при запуске – около 8 МБ памяти, пока вы его не откроете.", 'first.window': "Да, с окном", 'first.windowT': "Открывает Rift Switch сразу после входа в Windows.", 'first.no': "Нет", 'first.noT': "Запускайте Rift Switch сами, когда нужно.", 'first.doneTray': "Теперь Rift Switch запускается с Windows, в трее.", 'first.doneWindow': "Теперь Rift Switch запускается с Windows.",
     'sw.hands': "Сейчас ничего не нажимайте – ввожу ваши данные.", 'login.interrupted': "Вход прерван", 'login.retry': "Войти снова",

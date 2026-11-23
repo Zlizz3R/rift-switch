@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'add.safe': "يُحفظ على هذا الجهاز فقط، مشفرًا لمستخدم Windows الخاص بك. لا يُرسل إلى أي مكان – يكتبه Rift Switch لك في Riot Client فقط.",
     'dash.peak': "أعلى رتبة في الموسم", 'dash.peakSeen': "الأعلى المسجل", 'dash.lastSeason': "الموسم الماضي {r}", 'p.peak': "أعلى رتبة في الموسم {r}", 'mh.duos': "لعبت مع", 'mh.duosT': "زملاء في مباراتين أو أكثر من هذه المباريات: المباريات معًا ونسبة فوزك معهم",
     'app.tagline': "الرفيق المحلي متعدد الحسابات لـ League of Legends.", 'first.title': "التشغيل مع Windows؟", 'first.text': "هكذا تبقى الرتب وLP والمباريات محدثة، وتسجيل الدخول بنقرة واحدة. يمكنك تغيير ذلك في أي وقت من الإعدادات.", 'first.tray': "نعم، بهدوء في شريط المهام", 'first.trayT': "لا نافذة عند البدء – نحو 8 ميغابايت من الذاكرة حتى تفتحها.", 'first.window': "نعم، مع النافذة", 'first.windowT': "يفتح Rift Switch مباشرة بعد تسجيل الدخول إلى Windows.", 'first.no': "لا", 'first.noT': "شغّل Rift Switch بنفسك عند الحاجة.", 'first.doneTray': "يبدأ Rift Switch الآن مع Windows في شريط المهام.", 'first.doneWindow': "يبدأ Rift Switch الآن مع Windows.",
     'sw.hands': "من فضلك لا تنقر على شيء الآن – أدخل بيانات دخولك.", 'login.interrupted': "تم إيقاف تسجيل الدخول", 'login.retry': "تسجيل الدخول مجددًا",

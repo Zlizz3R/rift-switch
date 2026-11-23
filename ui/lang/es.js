@@ -98,6 +98,7 @@
     'nav.live': "En vivo",
     'nav.tools': "Herramientas",
     'set.theme': "Apariencia",
+    'add.safe': "Se guarda solo en este PC, cifrado para tu usuario de Windows. Nunca se envía a ningún sitio: Rift Switch solo lo escribe por ti en el Riot Client.",
     'dash.peak': "Pico de temporada", 'dash.peakSeen': "más alto visto", 'dash.lastSeason': "temporada pasada {r}", 'p.peak': "pico de temporada {r}", 'mh.duos': "Jugado con", 'mh.duosT': "Compañeros en 2 o más de estas partidas: partidas juntos y tu winrate con ellos",
     'app.tagline': "El compañero local multicuenta para League of Legends.", 'first.title': "¿Iniciar con Windows?", 'first.text': "Así rangos, LP y partidas se mantienen al día e iniciar sesión está a un clic. Puedes cambiarlo cuando quieras en los ajustes.", 'first.tray': "Sí, en silencio en la bandeja", 'first.trayT': "Sin ventana al iniciar: unos 8 MB de memoria hasta que la abras.", 'first.window': "Sí, con la ventana", 'first.windowT': "Abre Rift Switch nada más iniciar sesión en Windows.", 'first.no': "No", 'first.noT': "Abre Rift Switch tú mismo cuando lo necesites.", 'first.doneTray': "Rift Switch ahora se inicia con Windows, en la bandeja.", 'first.doneWindow': "Rift Switch ahora se inicia con Windows.",
     'sw.hands': "No hagas clic en nada ahora: estoy escribiendo tu acceso.", 'login.interrupted': "Inicio de sesión interrumpido", 'login.retry': "Volver a iniciar sesión",

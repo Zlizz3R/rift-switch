@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'add.safe': "صرف اسی PC پر، آپ کے Windows یوزر کے لیے انکرپٹ کر کے محفوظ ہوتا ہے۔ کہیں نہیں بھیجا جاتا – Rift Switch اسے صرف آپ کے لیے Riot Client میں لکھتا ہے۔",
     'dash.peak': "سیزن پیک", 'dash.peakSeen': "سب سے اونچا دیکھا", 'dash.lastSeason': "پچھلا سیزن {r}", 'p.peak': "سیزن پیک {r}", 'mh.duos': "ساتھ کھیلے", 'mh.duosT': "ان گیمز میں 2 یا زیادہ بار ساتھی: ساتھ گیمز اور ان کے ساتھ آپ کی جیت کی شرح",
     'app.tagline': "League of Legends کے لیے مقامی ملٹی اکاؤنٹ ساتھی۔", 'first.title': "Windows کے ساتھ شروع کریں؟", 'first.text': "تب رینک، LP اور گیمز تازہ رہتے ہیں اور لاگ اِن ایک کلک پر۔ ترتیبات میں کبھی بھی بدل سکتے ہیں۔", 'first.tray': "ہاں، خاموشی سے ٹرے میں", 'first.trayT': "شروع میں کوئی ونڈو نہیں – کھولنے تک تقریباً 8 MB میموری۔", 'first.window': "ہاں، ونڈو کے ساتھ", 'first.windowT': "Windows میں سائن اِن کے فوراً بعد Rift Switch کھولتا ہے۔", 'first.no': "نہیں", 'first.noT': "ضرورت ہو تو Rift Switch خود شروع کریں۔", 'first.doneTray': "Rift Switch اب Windows کے ساتھ ٹرے میں شروع ہوگا۔", 'first.doneWindow': "Rift Switch اب Windows کے ساتھ شروع ہوگا۔",
     'sw.hands': "ابھی کچھ کلک نہ کریں – میں آپ کا لاگ اِن لکھ رہا ہوں۔", 'login.interrupted': "لاگ اِن رک گیا", 'login.retry': "دوبارہ لاگ اِن",
