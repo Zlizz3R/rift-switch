@@ -7,10 +7,12 @@
       en: [
         'Logging in runs by itself: a Riot Client that is not open or not ready yet is brought up and the login typed again; Play is pressed until the client takes it; an update is shown and waited for.',
         'The Riot Client and League on different accounts: Rift Switch notices it, says so and restarts League for the right account (never during champion select or a game).',
+        'Live: right after a game the whole match at a glance – both teams with K/D/A, items, runes, ranks, bans and objectives, damage dealt and taken and gold as bars (best player = 100 %), and a placement of all ten with MVP and ACE.',
       ],
       de: [
         'Einloggen läuft von selbst: Ein Riot Client, der noch nicht offen oder bereit ist, wird geöffnet und der Login neu eingegeben; Play wird gedrückt, bis der Client es annimmt; ein Update wird angezeigt und abgewartet.',
         'Riot Client und League auf verschiedenen Accounts: Rift Switch merkt es, sagt es und startet League für den richtigen Account neu (nie in Championauswahl oder Spiel).',
+        'Live: Direkt nach einem Spiel das ganze Match auf einen Blick – beide Teams mit K/D/A, Items, Runen, Rängen, Bans und Objectives, ausgeteiltem und erlittenem Schaden und Gold als Balken (bester Spieler = 100 %) und eine Platzierung aller zehn mit MVP und ACE.',
       ],
     },
     {

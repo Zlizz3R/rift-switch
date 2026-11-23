@@ -572,7 +572,8 @@ fn extra(s: &Value) -> Value {
 /// A team's objectives.
 fn team(t: &Value) -> Value {
     json!({ "id": t["teamId"], "towers": num(&t["towerKills"]), "inhibs": num(&t["inhibitorKills"]), "drakes": num(&t["dragonKills"]),
-        "barons": num(&t["baronKills"]), "heralds": num(&t["riftHeraldKills"]), "grubs": num(&t["hordeKills"]) })
+        "barons": num(&t["baronKills"]), "heralds": num(&t["riftHeraldKills"]), "grubs": num(&t["hordeKills"]),
+        "bans": t["bans"].as_array().map(|b| b.iter().map(|x| num(&x["championId"])).filter(|c| c.as_i64().unwrap_or(0) > 0).collect::<Vec<_>>()).unwrap_or_default() })
 }
 /// The client's game timeline -> "gold": one list per minute with every player's total gold
 /// (in the order of "players"). Kept as long as the details view needs it (~1–2 KB).
@@ -745,6 +746,15 @@ mod tests {
         m3.clear();
         assert_eq!(Matches::load(&dir).count(), 0);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn team_keeps_its_bans() {
+        let t = team(
+            &json!({ "teamId": 100, "towerKills": 3, "bans": [{ "championId": 157 }, { "championId": -1 }, { "championId": 64 }] }),
+        );
+        assert_eq!(t["bans"], json!([157, 64]));
+        assert_eq!(team(&json!({ "teamId": 200 }))["bans"], json!([]));
     }
 
     #[test]

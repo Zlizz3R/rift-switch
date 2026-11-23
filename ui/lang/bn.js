@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'pg.title': "শেষ গেম", 'pg.blue': "ব্লু টিম", 'pg.red': "রেড টিম", 'pg.dealt': "দেওয়া ক্ষতি", 'pg.taken': "নেওয়া ক্ষতি", 'pg.bans': "ব্যান", 'pg.open': "ম্যাচ ইতিহাসে", 'pg.placeT': "Rift Switch-এর হিসাব: KDA, কিল অংশগ্রহণ, ক্ষতি, গোল্ড, নেওয়া ক্ষতি, ভিশন ও CS থেকে। MVP = বিজয়ীদের সেরা, ACE = পরাজিতদের সেরা।", 'pg.note': "বার: দশজনের সেরা = 100 %। স্থান ও MVP / ACE Rift Switch হিসাব করে।",
     'mm.text': "Riot Client {rc} হিসেবে সাইন ইন, কিন্তু League চলছে {lol} হিসেবে।", 'mm.fix': "{name} হিসেবে League আবার চালু করুন", 'mm.later': "চ্যাম্পিয়ন সিলেক্ট বা গেমের সময় নয় – পরে।", 'mm.other': "অন্য অ্যাকাউন্ট", 'mm.started': "League Riot Client-এর অ্যাকাউন্ট দিয়ে আবার চালু হচ্ছে।",
     'sw.play_update': "League আপডেট হচ্ছে – এরপরই Play",
     'add.safe': "শুধু এই PC-তে, আপনার Windows ইউজারের জন্য এনক্রিপ্ট করে রাখা হয়। কোথাও পাঠানো হয় না – Rift Switch শুধু আপনার হয়ে Riot Client-এ লেখে।",

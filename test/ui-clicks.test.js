@@ -351,6 +351,33 @@ test('live page: only real penalties, with time left; a queue wait shows in the 
   assert.ok(app.visible('#helpBox'));
 }));
 
+test('live page after a game: the last game with both teams, MVP / ACE, bars with the best = 100 %; opens in the match history', () => {
+  const pl = (i) => ({ puuid: i === 0 ? P(1) : 'x' + i, name: 'N' + i, tag: 'EUW', team: i < 5 ? 100 : 200, win: i < 5, champ: i + 1, lvl: 12, k: i, d: 2, a: 3, cs: 150 + i,
+    gold: 9000 + i * 100, dmg: 10000 + i * 1000, vis: 20, spells: [4, 14], keystone: 8112, sub: 8300, items: [3031, 0, 0, 0, 0, 0, 3340], x: { taken: 20000 + i * 500 } });
+  const game = { id: '77', t: Date.now() - 40 * 60000, dur: 1800, q: 420, players: Array.from({ length: 10 }, (_, i) => pl(i)),
+    teams: [{ id: 100, towers: 8, bans: [157, 238] }, { id: 200, towers: 3, bans: [] }] };
+  const st = sampleState({ live: { clientUp: true, puuid: P(1), phase: 'EndOfGame', waits: [] } });
+  return withApp({ state: st, replies: { live: { clientUp: true, phase: 'EndOfGame' }, matches: { index: [['77', game.t, 420, P(1)]], waiting: 0 }, 'matches-get': [game] } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 60));
+    await app.settle();
+    assert.ok(app.$('.pg-card'), 'the card shows');
+    const rows = app.$$('.pg-row');
+    assert.equal(rows.length, 10);
+    assert.ok(rows[0].classList.contains('me'), 'my own row is marked');
+    assert.equal(app.$$('.pg-pl.mvp').length, 1);
+    assert.ok(rows.slice(0, 5).some((r) => r.querySelector('.pg-pl.mvp')), 'MVP is on the winning side');
+    assert.ok(rows.slice(5).some((r) => r.querySelector('.pg-pl.ace')), 'ACE is on the losing side');
+    assert.equal(app.$$('.pg-bans img').length, 2);
+    assert.doesNotMatch(app.$('#liveBody').textContent, /Nothing going on/i);
+    // the best damage (the last player) fills its bar
+    const widths = app.$$('.pg-bar.red i').map((i) => i.style.width);
+    assert.equal(widths[widths.length - 1], '100%');
+    await app.click('#pgOpen');
+    assert.equal(app.w.eval('view'), 'matches');
+  });
+});
+
 test('champ select helper: one counters page per enemy ranks the pool; pre-load scans the pool; enemy picks are clickable', () => {
   const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Malphite' }, { id: 5, name: "Cho'Gath" }];
   // counterstats: who does well against <enemy>

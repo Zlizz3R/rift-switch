@@ -380,8 +380,11 @@ async function pollLive() {
   try {
     const d = await api.live();
     if (run !== liveRun || view !== 'live') return;
+    // a game just ended: look for it right away
+    const ended = liveData && ['InProgress', 'GameStart', 'Reconnect', 'WaitingForStats', 'PreEndOfGame'].includes(liveData.phase) && d && !['InProgress', 'GameStart', 'Reconnect'].includes(d.phase);
     liveData = d;
     renderLive();
+    if (typeof loadPostgame === 'function') loadPostgame(ended);
   } catch (e) { console.warn('live', e); }
   if (run === liveRun) liveTimer = setTimeout(pollLive, 3000);
 }
@@ -474,8 +477,10 @@ function renderLive(force) {
     // every enemy pick, ahead of time (the laner first)
     want(cs.enemies.map(e => e.championId).filter(Boolean));
   } else if (helper.autoEnemy && !d.inGame) { helper.enemy = 0; helper.autoEnemy = false; }
+  const post = !d.champSelect && !d.inGame && typeof postgameHtml === 'function' ? postgameHtml() : '';
+  if (post) parts.push(post);
   if (!liveData) parts.push(`<div class="live-card"><p class="fine">${t('live.loading')}</p></div>`);
-  else if (!parts.length || (parts.length === 1 && pens)) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
+  else if (!post && (!parts.length || (parts.length === 1 && pens))) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
   parts.push(helperHtml());
   // keep focus/scroll of the helper's inputs: only replace when something changed
   const html = parts.join('');
