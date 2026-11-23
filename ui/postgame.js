@@ -2,6 +2,7 @@
 // with K/D/A, items, runes, ranks, damage dealt and taken and gold as bars (best player = 100 %),
 // and a placement of every player worked out by Rift Switch (MVP = best winner, ACE = best loser).
 // Shown for two hours after the game, while no champion select or game is on.
+// The same table is the "Players" part of a game's details in the match history (pgTableHtml).
 // Uses the globals of renderer.js / views.js / matches-view.js.
 
 const pg = { game: null, checked: 0, busy: false, key: '' };
@@ -30,7 +31,7 @@ async function loadPostgame(force) {
   if (view === 'live') renderLive();
 }
 async function pgRanks(g) {
-  const owner = S.accounts.find(a => a.puuid === g.owners[0]);
+  const owner = S.accounts.find(a => a.puuid === (g.owners || [])[0]);
   const ids = g.players.map(p => p.puuid).filter(Boolean).filter(id => !mh.ranks[id]);
   if (!ids.length) return;
   const r = await api.playerRanks([{ region: (owner && owner.region) || '', ids }]);
@@ -58,24 +59,19 @@ function pgPlacements(g) {
   const max = Object.fromEntries(Object.keys(W).map(k => [k, Math.max(1e-9, ...vals.map(v => v[k]))]));
   const score = vals.map(v => Object.keys(W).reduce((s, k) => s + W[k] * (v[k] / max[k]), 0));
   const order = ps.map((p, i) => i).sort((a, b) => score[b] - score[a]);
-  const place = new Map(order.map((i, n) => [ps[i].puuid + '|' + i, n + 1]));
+  const place = new Map(order.map((i, n) => [i, n + 1]));
   const best = win => order.find(i => ps[i].win === win);
-  return { place: (p, i) => place.get(p.puuid + '|' + i), mvp: best(true), ace: best(false) };
+  return { place: i => place.get(i), mvp: best(true), ace: best(false) };
 }
 
-function postgameHtml() {
-  const g = pg.game;
-  if (!g || g.remake || !g.players || g.players.length < 10) return '';
-  const ended = g.t + (g.dur || 0) * 1000;
-  if (Date.now() - ended > PG_FRESH) return '';
-  const as = assets || {};
-  const mine = new Set(S.accounts.map(a => a.puuid));
+// both teams as one table: header per team, a row per player (mine = own accounts, marked)
+function pgTableHtml(g, as, mine) {
+  as = as || {};
   const mins = Math.max(1, g.dur / 60);
   const { place, mvp, ace } = pgPlacements(g);
   const all = g.players;
   const max = k => Math.max(1, ...all.map(k));
   const maxDmg = max(p => p.dmg || 0), maxTaken = max(p => (p.x && p.x.taken) || 0), maxGold = max(p => p.gold || 0);
-  const ownTeam = (all.find(p => mine.has(p.puuid)) || all[0]).team;
   const teams = [...new Set(all.map(p => p.team))].sort((a, b) => (a === 100 ? -1 : b === 100 ? 1 : a - b));
   const bar = (v, m, cls) => `<span class="pg-bar ${cls}"><i style="width:${Math.max(2, Math.round((100 * v) / m))}%"></i></span>`;
   const teamHtml = team => {
@@ -97,17 +93,17 @@ function postgameHtml() {
     const rows = ps.map(({ p, i }) => {
       const x = p.x || {};
       const kda = p.d ? (p.k + p.a) / p.d : null;
-      const n = place(p, i);
-      const badge = i === mvp ? `<b class="pg-pl mvp">MVP</b>` : i === ace ? `<b class="pg-pl ace">ACE</b>` : `<b class="pg-pl">#${n}</b>`;
+      const badge = i === mvp ? `<b class="pg-pl mvp">MVP</b>` : i === ace ? `<b class="pg-pl ace">ACE</b>` : `<b class="pg-pl">#${place(i)}</b>`;
       const r = mh.ranks[p.puuid] || {};
+      const wards = x.wards != null ? ` title="${esc(t('det.visionT'))}: ${x.wards} / ${x.wardsKilled || 0} / ${x.pinks || 0}"` : '';
       return `<div class="pg-row${mine.has(p.puuid) ? ' me' : ''}">
         <span class="pg-ch"><img src="${CHAMP_ICON(p.champ)}" alt=""><i>${p.lvl}</i></span>
         <span class="pg-sp">${icon(as.spells, p.spells && p.spells[0], 'pg-s')}${icon(as.perks, p.keystone, 'pg-s')}${icon(as.spells, p.spells && p.spells[1], 'pg-s')}${icon(as.styles, p.sub, 'pg-s')}</span>
-        <span class="pg-who"><span class="pg-name" title="${esc(p.name + (p.tag ? '#' + p.tag : ''))}">${esc(p.name || '?')}</span>${r.s ? rankChip(r.s, 'solo') : ''}</span>
+        <span class="pg-who"><span class="pg-name" data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(p.name + (p.tag ? '#' + p.tag : ''))}">${esc(p.name || '?')}</span>${r.s ? rankChip(r.s, 'solo') : ''}</span>
         <span title="${esc(t('pg.placeT'))}">${badge}</span>
         <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}</span>
-        <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</small></span>
-        <span class="pg-k"><b>${p.cs} CS</b><small>${Math.round((100 * (p.k + p.a)) / kills)}% KP · ${(p.cs / mins).toFixed(1)}/min</small></span>
+        <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${Math.round((100 * (p.k + p.a)) / kills)}% KP</small></span>
+        <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${(p.cs / mins).toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
         <span class="pg-b"><b>${k1(p.dmg)}</b>${bar(p.dmg, maxDmg, team === 100 ? 'blue' : 'red')}</span>
         <span class="pg-b"><b>${x.taken != null ? k1(x.taken) : '–'}</b>${bar(x.taken || 0, maxTaken, 'taken')}</span>
         <span class="pg-b"><b>${k1(p.gold)}</b>${bar(p.gold, maxGold, 'gold')}</span>
@@ -115,10 +111,19 @@ function postgameHtml() {
     }).join('');
     return head + rows;
   };
-  const cols = `<div class="pg-cols"><span></span><span></span><span></span><span></span><span></span><span>K / D / A</span><span>CS · KP</span><span>${t('pg.dealt')}</span><span>${t('pg.taken')}</span><span>${t('mh.gold')}</span></div>`;
+  const cols = `<div class="pg-cols"><span></span><span></span><span></span><span></span><span></span><span>K / D / A · KP</span><span>CS · ${t('det.vision')}</span><span>${t('pg.dealt')}</span><span>${t('pg.taken')}</span><span>${t('mh.gold')}</span></div>`;
+  return `<div class="pg-wrap"><div class="pg-table">${cols}${teams.map(teamHtml).join('')}</div></div>`;
+}
+
+function postgameHtml() {
+  const g = pg.game;
+  if (!g || g.remake || !g.players || g.players.length < 10) return '';
+  const ended = g.t + (g.dur || 0) * 1000;
+  if (Date.now() - ended > PG_FRESH) return '';
+  const mine = new Set(S.accounts.map(a => a.puuid));
   return `<div class="live-card pg-card"><div class="lc-head"><h3>${t('pg.title')} · ${esc(queueLabel(g))} · ${dur(g.dur)} · ${esc(ago(ended))}</h3>
       <button class="chip" id="pgOpen">${t('pg.open')}</button></div>
-    <div class="pg-wrap"><div class="pg-table">${cols}${teams.map(teamHtml).join('')}</div></div>
+    ${pgTableHtml(g, assets, mine)}
     <p class="fine">${t('pg.note')}</p></div>`;
 }
 

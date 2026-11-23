@@ -70,39 +70,6 @@ document.addEventListener('mousemove', e => {
 });
 function detailsHtml(g, as, mine) {
   const { a, b, roles } = lineUp(g, mine);
-  const mins = Math.max(1, g.dur / 60);
-  const all = g.players;
-  const maxDmg = Math.max(1, ...all.map(p => p.dmg || 0)), maxTaken = Math.max(1, ...all.map(p => (p.x && p.x.taken) || 0));
-  const teamOf = id => (g.teams || []).find(x => x.id === id) || {};
-  const sum = (ps, f) => ps.reduce((s, p) => s + (f(p) || 0), 0);
-  const head = (ps, side) => {
-    const tm = teamOf(ps[0] && ps[0].team);
-    const win = ps[0] && ps[0].win;
-    const obj = (k, label) => (tm[k] != null ? `<span title="${esc(t('det.' + k))}">${label} <b>${tm[k]}</b></span>` : '');
-    return `<div class="det-team ${side} ${win ? 'win' : 'loss'}">
-      <b>${t(win ? 'mh.win' : 'mh.loss')}</b>
-      <span>${sum(ps, p => p.k)} / ${sum(ps, p => p.d)} / ${sum(ps, p => p.a)}</span>
-      <span>${k1(sum(ps, p => p.gold))} ${t('mh.gold')}</span>
-      ${obj('towers', '🏰')}${obj('inhibs', '⬢')}${obj('drakes', '🐉')}${obj('heralds', '👁')}${obj('barons', '🟣')}</div>`;
-  };
-  const row = p => {
-    const x = p.x || {};
-    const ratio = p.d ? ((p.k + p.a) / p.d).toFixed(2) : t('mh.perfect');
-    return `<tr class="${mine.has(p.puuid) ? 'me' : ''}">
-      <td class="dc"><img src="${CHAMP_ICON(p.champ)}" alt=""><i>${p.lvl}</i><span data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}">${esc(p.name || '?')}</span></td>
-      <td><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small>${ratio}</small></td>
-      <td class="bar-cell"><b>${k1(p.dmg)}</b><span class="bar"><i style="width:${Math.round(100 * p.dmg / maxDmg)}%"></i></span></td>
-      <td class="bar-cell"><b>${x.taken != null ? k1(x.taken) : '–'}</b><span class="bar taken"><i style="width:${Math.round(100 * (x.taken || 0) / maxTaken)}%"></i></span></td>
-      <td><b>${k1(p.gold)}</b></td>
-      <td><b>${p.cs}</b><small>${(p.cs / mins).toFixed(1)}/min</small></td>
-      <td><b>${p.vis}</b><small>${x.wards != null ? `${x.wards} / ${x.wardsKilled || 0} / ${x.pinks || 0}` : ''}</small></td>
-      <td class="det-items">${(p.items || []).map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}</td>
-    </tr>`;
-  };
-  const table = (ps, side) => `${head(ps, side)}<table class="det-table"><thead><tr>
-      <th></th><th>KDA</th><th>${t('det.dmg')}</th><th>${t('det.taken')}</th><th>${t('mh.gold')}</th><th>CS</th>
-      <th title="${esc(t('det.visionT'))}">${t('det.vision')}</th><th>${t('det.items')}</th></tr></thead>
-      <tbody>${ps.map(row).join('')}</tbody></table>`;
   // lane against lane: who was ahead at the end (and at 10 / 15 minutes from the gold timeline)
   let h2h = '';
   if (roles) {
@@ -128,7 +95,7 @@ function detailsHtml(g, as, mine) {
     <div class="det-body">${open.has(key) ? body : ''}</div>` : '';
   return `<div class="mh-det" data-det="${esc(String(g.id))}">
     ${old ? `<p class="fine">${t('det.upgrading')}</p>` : ''}
-    ${sec('players', t('det.players'), table(a, 'l') + table(b, 'r'))}
+    ${sec('players', t('det.players'), pgTableHtml(g, as, mine))}
     ${sec('h2h', t('det.h2h'), h2h)}
     ${sec('gold', t('det.goldDiff'), g.gold && g.gold.length > 2 ? goldChart(g, left) : '')}
     ${sec('compare', t('det.compare'), compareHtml(g, a, b, roles, mine))}
@@ -233,7 +200,7 @@ function rankTip(r) {
   const [tier, div, lp] = r;
   return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
 }
-let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, filter: { puuid: '', queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, more: {}, filter: { puuid: '', queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440, 710, 4310].includes(g.q) ? ' ' + t('mh.ranked') : '');
@@ -405,8 +372,15 @@ function playTime(sec) {
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
 }
 function summaryHtml(list) {
-  const s = MatchFilter.summarize(list);
+  const s = MatchFilter.summarize(list, 1000);
   if (!s) return '';
+  // 5 of each list, "+5" shows five more, "less" goes back to 5
+  const cut = (key, arr) => arr.slice(0, mh.more[key] || 5);
+  const more = (key, arr) => {
+    const n = mh.more[key] || 5;
+    return (arr.length > n ? `<button class="mh-more" data-mhmore="${key}">${t('mh.showMore', { n: Math.min(5, arr.length - n) })}</button>` : '')
+      + (n > 5 ? `<button class="mh-more" data-mhless="${key}">${t('mh.showLess')}</button>` : '');
+  };
   const f1 = x => x.toFixed(1);
   const rec = (key, label, x, val) => x ? `<button class="mh-rec" data-goto="${esc(x.g.id)}" title="${esc(new Date(x.g.t).toLocaleString(locale()))}">
       <img src="${CHAMP_ICON(x.p.champ)}" alt=""><span>${label}</span><b>${val}</b></button>` : '';
@@ -423,19 +397,19 @@ function summaryHtml(list) {
     </div>
     ${[5, 4, 3, 2].some(m => s.multis[m]) ? `<div class="mh-multis">${[5, 4, 3, 2].filter(m => s.multis[m]).map(m =>
       `<button class="mh-multi m${m}${mh.pin === m ? ' on' : ''}" data-pin="${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</button>`).join('')}</div>` : ''}
-    ${s.accounts.length > 1 ? `<div class="mh-champs mh-accs"><span class="mh-ch-t">${t('mh.perAccount')}</span>${s.accounts.map(a => {
+    ${s.accounts.length > 1 ? `<div class="mh-champs mh-accs"><span class="mh-ch-t">${t('mh.perAccount')}</span>${cut('acc', s.accounts).map(a => {
       const acc = S.accounts.find(x => x.puuid === a.puuid);
       return `<button class="mh-ch" data-mhacc="${esc(a.puuid)}" title="${esc(t('mh.perAccountT'))}">
       ${acc && acc.iconId != null && !hides('icon') ? `<img src="${iconUrl(acc.iconId)}" alt="">` : ''}<span class="mh-ch-n">${esc(acc ? dispName(acc) : '?')}</span>
       <b>${a.games}</b><span class="${a.winrate >= 50 ? 'good' : 'bad'}">${a.winrate}% WR</span><span class="muted">${a.share}%</span><span class="muted">⏱ ${playTime(a.time)}</span></button>`;
-    }).join('')}</div>` : ''}
-    ${s.duos.length ? `<div class="mh-champs mh-duos"><span class="mh-ch-t">${t('mh.duos')}</span>${s.duos.map(d => `<span class="mh-ch" title="${esc(t('mh.duosT'))}">
+    }).join('')}${more('acc', s.accounts)}</div>` : ''}
+    ${s.duos.length ? `<div class="mh-champs mh-duos"><span class="mh-ch-t">${t('mh.duos')}</span>${cut('duo', s.duos).map(d => `<span class="mh-ch" title="${esc(t('mh.duosT'))}">
       <img src="${CHAMP_ICON(d.champ)}" alt=""><span class="mh-ch-n">${esc(S.accounts.some(a => a.puuid === d.puuid) ? dispName(S.accounts.find(a => a.puuid === d.puuid)) : d.name)}</span>
-      <b>${d.games}</b><span class="${d.winrate >= 50 ? 'good' : 'bad'}">${d.winrate}% WR</span></span>`).join('')}</div>` : ''}
-    ${(s.champs.length > 1 || mh.f.champ) ? `<div class="mh-champs"><span class="mh-ch-t">${t('mh.topChamps')}</span>${s.champs.map(c => `<button class="mh-ch${mh.f.champ === c.champ ? ' on' : ''}" data-mhchamp="${c.champ}" title="${esc(t('mh.topChampT'))}">
+      <b>${d.games}</b><span class="${d.winrate >= 50 ? 'good' : 'bad'}">${d.winrate}% WR</span></span>`).join('')}${more('duo', s.duos)}</div>` : ''}
+    ${(s.champs.length > 1 || mh.f.champ) ? `<div class="mh-champs"><span class="mh-ch-t">${t('mh.topChamps')}</span>${cut('champ', s.champs).map(c => `<button class="mh-ch${mh.f.champ === c.champ ? ' on' : ''}" data-mhchamp="${c.champ}" title="${esc(t('mh.topChampT'))}">
       <img src="${CHAMP_ICON(c.champ)}" alt=""><span class="mh-ch-n">${esc(champName(c.champ) || '#' + c.champ)}</span>
       <b>${c.games}</b><span class="${c.winrate >= 50 ? 'good' : 'bad'}">${c.winrate}% WR</span><span class="muted">${c.playrate}% ${t('mh.playrate')}</span>
-      <span class="muted">${c.kda == null ? t('mh.perfect') : c.kda.toFixed(1) + ' KDA'}</span></button>`).join('')}</div>` : ''}
+      <span class="muted">${c.kda == null ? t('mh.perfect') : c.kda.toFixed(1) + ' KDA'}</span></button>`).join('')}${more('champ', s.champs)}</div>` : ''}
     <div class="mh-recs">
       ${rec('kills', t('mh.recKills'), r.kills, r.kills && r.kills.p.k)}
       ${rec('deaths', t('mh.recDeaths'), r.deaths, r.deaths && r.deaths.p.d)}
@@ -510,6 +484,13 @@ document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => {
 // "show more" and jumping to a record's game
 $('viewMatches').addEventListener('click', e => {
   if (e.target.closest('#mhShowMore')) { mh.show += 40; renderMatches(); return; }
+  const mo = e.target.closest('[data-mhmore], [data-mhless]');
+  if (mo) {
+    const k = mo.dataset.mhmore || mo.dataset.mhless;
+    mh.more[k] = mo.dataset.mhmore ? (mh.more[k] || 5) + 5 : 5;
+    renderMatches();
+    return;
+  }
   // a champion of the top list: only his games (again: all games)
   // an account of the breakdown: only its games
   const ac = e.target.closest('[data-mhacc]');

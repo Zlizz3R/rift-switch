@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'mh.showLess': "کم",
     'pg.title': "پچھلا گیم", 'pg.blue': "بلیو ٹیم", 'pg.red': "ریڈ ٹیم", 'pg.dealt': "دیا گیا نقصان", 'pg.taken': "لیا گیا نقصان", 'pg.bans': "بینز", 'pg.open': "میچ ہسٹری میں", 'pg.placeT': "Rift Switch کا حساب: KDA، کل میں حصہ، نقصان، گولڈ، لیا گیا نقصان، وژن اور CS سے۔ MVP = جیتنے والوں میں بہترین، ACE = ہارنے والوں میں بہترین۔", 'pg.note': "بار: دس میں بہترین = 100 %۔ پوزیشن اور MVP / ACE Rift Switch حساب کرتا ہے۔",
     'mm.text': "Riot Client {rc} کے طور پر سائن اِن ہے، مگر League {lol} کے طور پر چل رہا ہے۔", 'mm.fix': "{name} کے طور پر League دوبارہ شروع کریں", 'mm.later': "چیمپئن سلیکٹ یا گیم کے دوران نہیں – بعد میں۔", 'mm.other': "کسی اور اکاؤنٹ", 'mm.started': "League Riot Client کے اکاؤنٹ سے دوبارہ شروع ہو رہا ہے۔",
     'sw.play_update': "League اپڈیٹ ہو رہا ہے – اس کے فوراً بعد Play",

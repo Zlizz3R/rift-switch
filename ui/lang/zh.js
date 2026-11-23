@@ -94,6 +94,7 @@
     'nav.live': "实时",
     'nav.tools': "工具",
     'set.theme': "外观",
+    'mh.showLess': "收起",
     'pg.title': "上一局", 'pg.blue': "蓝方", 'pg.red': "红方", 'pg.dealt': "造成伤害", 'pg.taken': "承受伤害", 'pg.bans': "禁用", 'pg.open': "在对局记录中查看", 'pg.placeT': "由 Rift Switch 根据 KDA、参团率、伤害、金币、承伤、视野和补刀计算的排名。MVP = 胜方最佳，ACE = 败方最佳。", 'pg.note': "条形：十名玩家中最佳者 = 100%。排名与 MVP / ACE 由 Rift Switch 计算。",
     'mm.text': "Riot Client 登录的是 {rc}，但 League 运行的是 {lol}。", 'mm.fix': "以 {name} 重启 League", 'mm.later': "英雄选择或对局中不可——结束后再试。", 'mm.other': "另一个账号", 'mm.started': "League 正以 Riot Client 的账号重启。",
     'sw.play_update': "League 正在更新——更新完成后立即开始",

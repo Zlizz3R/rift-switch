@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'mh.showLess': "Menos",
     'pg.title': "Última partida", 'pg.blue': "Time azul", 'pg.red': "Time vermelho", 'pg.dealt': "Dano causado", 'pg.taken': "Dano sofrido", 'pg.bans': "Banimentos", 'pg.open': "No histórico", 'pg.placeT': "Colocação calculada pelo Rift Switch com KDA, participação em abates, dano, ouro, dano sofrido, visão e CS. MVP = melhor dos vencedores, ACE = melhor dos perdedores.", 'pg.note': "Barras: o melhor dos dez = 100 %. Colocações e MVP / ACE são calculados pelo Rift Switch.",
     'mm.text': "O Riot Client está logado como {rc}, mas o League está rodando como {lol}.", 'mm.fix': "Reiniciar o League como {name}", 'mm.later': "Não durante a seleção ou uma partida – depois.", 'mm.other': "outra conta", 'mm.started': "O League está reiniciando com a conta do Riot Client.",
     'sw.play_update': "O League está atualizando – Jogar logo depois",

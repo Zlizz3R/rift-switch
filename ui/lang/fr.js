@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'mh.showLess': "Moins",
     'pg.title': "Dernière partie", 'pg.blue': "Équipe bleue", 'pg.red': "Équipe rouge", 'pg.dealt': "Dégâts infligés", 'pg.taken': "Dégâts subis", 'pg.bans': "Bannissements", 'pg.open': "Dans l'historique", 'pg.placeT': "Classement calculé par Rift Switch à partir du KDA, de la participation aux kills, des dégâts, de l’or, des dégâts subis, de la vision et des CS. MVP = meilleur des gagnants, ACE = meilleur des perdants.", 'pg.note': "Barres : le meilleur des dix joueurs = 100 %. Classements et MVP / ACE calculés par Rift Switch.",
     'mm.text': "Le Riot Client est connecté en tant que {rc}, mais League tourne en tant que {lol}.", 'mm.fix': "Relancer League en tant que {name}", 'mm.later': "Pas pendant la sélection ou une partie – après.", 'mm.other': "un autre compte", 'mm.started': "League redémarre avec le compte du Riot Client.",
     'sw.play_update': "League se met à jour – Jouer juste après",

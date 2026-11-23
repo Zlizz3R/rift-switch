@@ -95,6 +95,7 @@
     'nav.live': "مباشر",
     'nav.tools': "أدوات",
     'set.theme': "المظهر",
+    'mh.showLess': "أقل",
     'pg.title': "آخر مباراة", 'pg.blue': "الفريق الأزرق", 'pg.red': "الفريق الأحمر", 'pg.dealt': "الضرر المُلحق", 'pg.taken': "الضرر المُتلقى", 'pg.bans': "الحظر", 'pg.open': "في سجل المباريات", 'pg.placeT': "ترتيب يحسبه Rift Switch من KDA والمشاركة في القتل والضرر والذهب والضرر المتلقى والرؤية وCS. MVP = أفضل الفائزين، ACE = أفضل الخاسرين.", 'pg.note': "الأشرطة: الأفضل بين العشرة = 100%. الترتيب وMVP / ACE يحسبها Rift Switch.",
     'mm.text': "Riot Client مسجّل باسم {rc}، لكن League يعمل باسم {lol}.", 'mm.fix': "إعادة تشغيل League باسم {name}", 'mm.later': "ليس أثناء اختيار الأبطال أو المباراة – بعدها.", 'mm.other': "حساب آخر", 'mm.started': "يُعاد تشغيل League بحساب Riot Client.",
     'sw.play_update': "يجري تحديث League – ثم \"العب\" مباشرة",

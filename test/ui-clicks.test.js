@@ -492,17 +492,37 @@ test('match history: a click opens the details (not on a name); names open "open
   assert.ok(app.visible('#siteMenu'));
   await app.click(app.$('.mh-row .mh-kda') || app.$('.mh-row .mh-meta'));
   assert.ok(app.$('.mh-det'), 'details open');
-  assert.equal(app.$$('.det-table').length, 2, 'players open at first');
+  assert.equal(app.$$('.mh-det .pg-row').length, 10, 'players open at first, as the post-game table');
+  assert.ok(app.$('.mh-det .pg-pl.mvp') && app.$('.mh-det .pg-pl.ace'), 'MVP and ACE');
   assert.equal(app.$('.det-h2h'), null, 'other sections folded');
   assert.deepEqual(app.$$('.det-g').map((h) => h.dataset.sec), ['players', 'h2h', 'compare'], 'no gold section without a timeline');
   await app.click('[data-sec="h2h"]');
   assert.ok(app.$('.det-h2h'), 'lane vs lane opens');
   assert.ok(app.$('.mh-det'), 'a section head does not close the game');
   await app.click('[data-sec="players"]');
-  assert.equal(app.$$('.det-table').length, 0, 'players fold');
+  assert.equal(app.$$('.mh-det .pg-row').length, 0, 'players fold');
   await app.click(app.$('.mh-row .mh-meta'));
   assert.equal(app.$('.mh-det'), null, 'closes again');
 }));
+
+test('match history: the lists above show 5, "+5" five more, "less" back to 5', () => {
+  const games = Array.from({ length: 12 }, (_, k) => { const g = game(k + 1); g.players[0].champ = 100 + k; return g; });
+  return withApp({ replies: mhReplies(games) }, async (app) => {
+    await app.click('#navMatches');
+    const champs = () => app.$$('[data-mhchamp]').length;
+    assert.equal(champs(), 5);
+    assert.equal(app.$('[data-mhmore="champ"]').textContent, 'Show more (5)');
+    await app.click('[data-mhmore="champ"]');
+    assert.equal(champs(), 10);
+    assert.equal(app.$('[data-mhmore="champ"]').textContent, 'Show more (2)');
+    await app.click('[data-mhmore="champ"]');
+    assert.equal(champs(), 12);
+    assert.equal(app.$('[data-mhmore="champ"]'), null, 'nothing more to show');
+    await app.click('[data-mhless="champ"]');
+    assert.equal(champs(), 5);
+    assert.equal(app.$('[data-mhless="champ"]'), null);
+  });
+});
 
 test('match details: two freely chosen players compared, with their gold over time', () => withApp({ replies: mhReplies([game(1, { v: 3, gold: Array.from({ length: 20 }, (_, m) => Array.from({ length: 10 }, (_, i) => 500 + m * 400 + i * 10)) })]) }, async (app) => {
   await app.click('#navMatches');

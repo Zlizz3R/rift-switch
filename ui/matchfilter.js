@@ -50,7 +50,8 @@
   }
 
   // totals and records of a list of games (remakes left out)
-  function summarize(games) {
+  // max: how many entries the champion and teammate lists keep (5 if not given)
+  function summarize(games, max = 5) {
     const real = games.filter(g => !g.remake);
     if (!real.length) return null;
     const ps = real.map(g => ({ g, p: me(g) }));
@@ -71,9 +72,9 @@
       // games by their biggest multikill: { 2: doubles, 3: triples, 4: quadras, 5: pentas }
       multis: Object.fromEntries([2, 3, 4, 5].map(m => [m, ps.filter(x => Math.min(5, x.p.multi || 0) === m).length])),
       streak: streakOf(games),
-      champs: topChamps(ps, n),
+      champs: topChamps(ps, n, max),
       accounts: perAccount(ps, n),
-      duos: duos(ps),
+      duos: duos(ps, max),
       // time in these games (seconds), remakes included – they were played too
       time: games.reduce((s, g) => s + (g.dur || 0), 0),
     };
