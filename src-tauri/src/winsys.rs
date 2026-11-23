@@ -46,6 +46,68 @@ pub fn set_app_id(id: &str) {
     }
 }
 
+/// A Windows notification (bottom right, Action Center). Shown under the app's own id when the
+/// installer's Start menu shortcut carries it, otherwise under PowerShell's id (a portable copy –
+/// Windows only shows notifications of apps it knows).
+pub fn toast(app_id: &str, title: &str, body: &str) -> std::thread::JoinHandle<String> {
+    let (app_id, title, body) = (app_id.to_string(), xml_text(title), xml_text(body));
+    // WinRT wants a thread of its own (COM set up for it)
+    std::thread::spawn(move || {
+        use windows::core::HSTRING;
+        use windows::Data::Xml::Dom::XmlDocument;
+        use windows::UI::Notifications::{ToastNotification, ToastNotificationManager};
+        unsafe {
+            let _ = windows::Win32::System::WinRT::RoInitialize(
+                windows::Win32::System::WinRT::RO_INIT_MULTITHREADED,
+            );
+        }
+        let id = if installed_shortcut() {
+            app_id
+        } else {
+            r"{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe"
+                .to_string()
+        };
+        let show = || -> windows::core::Result<()> {
+            let xml = XmlDocument::new()?;
+            xml.LoadXml(&HSTRING::from(format!(
+                "<toast scenario=\"reminder\"><visual><binding template=\"ToastGeneric\"><text>{title}</text><text>{body}</text></binding></visual><audio src=\"ms-winsoundevent:Notification.Default\"/><actions/></toast>"
+            )))?;
+            let n = ToastNotification::CreateToastNotification(&xml)?;
+            ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(id.as_str()))?
+                .Show(&n)
+        };
+        match show() {
+            Ok(()) => format!("shown as {id}"),
+            Err(e) => format!("failed as {id}: {e}"),
+        }
+    })
+}
+fn xml_text(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+/// The installer's Start menu shortcut (it carries the app id) – for this user or for everyone.
+fn installed_shortcut() -> bool {
+    [std::env::var("APPDATA"), std::env::var("ProgramData")]
+        .into_iter()
+        .flatten()
+        .any(|base| {
+            std::fs::read_dir(
+                std::path::Path::new(&base).join(r"Microsoft\Windows\Start Menu\Programs"),
+            )
+            .map(|d| {
+                d.flatten().any(|e| {
+                    let n = e.file_name().to_string_lossy().to_lowercase();
+                    n.starts_with("rift switch") && n.ends_with(".lnk")
+                        || e.path().is_dir() && n.starts_with("rift switch")
+                })
+            })
+            .unwrap_or(false)
+        })
+}
+
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(Some(0)).collect()
 }

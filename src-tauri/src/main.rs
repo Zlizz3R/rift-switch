@@ -753,6 +753,11 @@ async fn tick_inner(my_gen: u64) {
         return;
     }
     let cur_id = cur.as_ref().map(|c| str_of(c, "puuid").to_string());
+    if phase.as_deref() == Some("ReadyCheck")
+        && with(|c| c.live.phase.as_deref() != Some("ReadyCheck"))
+    {
+        match_found();
+    }
     let (new_puuid, changed) = with(|c| {
         let np = cur_id != c.live.puuid;
         let ch = np || phase != c.live.phase;
@@ -2929,6 +2934,27 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
 
 // ---------- League events, auto-accept, polling ----------
 
+/// "Match found": a Windows notification (setting, off by default), once per ready check.
+fn match_found() {
+    use std::sync::atomic::{AtomicI64, Ordering};
+    static LAST: AtomicI64 = AtomicI64::new(0);
+    let (on, accept) = with(|c| (c.st.set_bool("matchNotify"), c.st.set_bool("autoAccept")));
+    let now = now_ms();
+    if !on || now - LAST.load(Ordering::SeqCst) < 15_000 {
+        return;
+    }
+    LAST.store(now, Ordering::SeqCst);
+    let body = tr(
+        if accept {
+            "tray.matchAuto"
+        } else {
+            "tray.matchAccept"
+        },
+        &[],
+    );
+    let _ = winsys::toast(APP_ID, &tr("tray.matchFound", &[]), &body);
+}
+
 async fn try_accept() {
     if !with(|c| c.st.set_bool("autoAccept") && !std::mem::replace(&mut c.accepting, true)) {
         return;
@@ -2966,6 +2992,7 @@ fn on_lcu_event(ev: events::Event) {
                 if changed {
                     push();
                     if p == "ReadyCheck" {
+                        match_found();
                         tauri::async_runtime::spawn(try_accept());
                     }
                 }
@@ -3051,6 +3078,14 @@ fn main() {
     };
     if !test_mode() {
         winsys::set_app_id(APP_ID);
+    }
+    // test helper: RS_TOAST shows the "match found" notification once (is it really shown?)
+    if test_mode() && std::env::var_os("RS_TOAST").is_some() {
+        let r = winsys::toast(APP_ID, "Match found!", "Rift Switch – notification test");
+        let _ = std::fs::write(
+            data_dir.join("toast-test.txt"),
+            r.join().unwrap_or_default(),
+        );
     }
     updater::set_dir(data_dir.join("updates"));
     let _ = CORE.set(Mutex::new(Core::new(
