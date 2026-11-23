@@ -40,14 +40,14 @@ async function pgRanks(g) {
   if (view === 'live') renderLive();
 }
 
-// the lane opponent: the one enemy with the same position (none without positions, e.g. ARAM)
+// the lane opponent: the enemy on the same position (none outside Summoner's Rift, e.g. ARAM)
 function pgOpponent(g, p) {
-  if (!p.pos) return null;
-  const o = g.players.filter(x => x.team !== p.team && x.pos === p.pos);
-  return o.length === 1 ? o[0] : null;
+  const ro = gameRoles(g);
+  if (!ro) return null;
+  return g.players.find(x => x.team !== p.team && ro.get(x) === ro.get(p)) || null;
 }
 // how much better than the lane opponent: per stat my share of the two of us (0.5 = even),
-// weighted, turned into a factor from ×0.70 to ×1.30 (a 60 : 40 lane is ×1.15)
+// weighted, turned into a factor from ×0.60 to ×1.40 (a 60 : 40 lane is ×1.15)
 const PG_LANE = { gold: 0.3, dmg: 0.25, kda: 0.25, cs: 0.1, vis: 0.1 };
 function pgLane(g, p) {
   const o = pgOpponent(g, p);
@@ -55,7 +55,7 @@ function pgLane(g, p) {
   const v = x => ({ gold: x.gold || 0, dmg: x.dmg || 0, kda: (x.k + x.a) / Math.max(1, x.d), cs: x.cs || 0, vis: x.vis || 0 });
   const a = v(p), b = v(o);
   const share = Object.keys(PG_LANE).reduce((s, k) => s + PG_LANE[k] * (a[k] + b[k] > 0 ? a[k] / (a[k] + b[k]) : 0.5), 0);
-  return { opp: o, share, mult: Math.min(1.3, Math.max(0.7, 1 + (share - 0.5) * 1.5)) };
+  return { opp: o, share, mult: Math.min(1.4, Math.max(0.6, 1 + (share - 0.5) * 1.5)) };
 }
 
 // a score per player from what the game says, each part relative to the best of the ten,

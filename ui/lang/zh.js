@@ -96,7 +96,7 @@
     'set.theme': "外观",
     'pg.laneT': "对 {name} 的对线系数：你们两人金币、伤害、KDA、补刀和视野中你占 {n}%",
     'mh.showLess': "收起",
-    'pg.title': "上一局", 'pg.blue': "蓝方", 'pg.red': "红方", 'pg.dealt': "造成伤害", 'pg.taken': "承受伤害", 'pg.bans': "禁用", 'pg.open': "在对局记录中查看", 'pg.placeT': "由 Rift Switch 计算的排名：根据 KDA、参团率、伤害、金币、承伤、视野和补刀得出分数，再乘以对线系数（比对线对手好或差多少，×0.70 至 ×1.30）。MVP = 胜方最佳，ACE = 败方最佳。", 'pg.note': "条形：十名玩家中最佳者 = 100%。排名与 MVP / ACE 由 Rift Switch 计算。",
+    'pg.title': "上一局", 'pg.blue': "蓝方", 'pg.red': "红方", 'pg.dealt': "造成伤害", 'pg.taken': "承受伤害", 'pg.bans': "禁用", 'pg.open': "在对局记录中查看", 'pg.placeT': "由 Rift Switch 计算的排名：根据 KDA、参团率、伤害、金币、承伤、视野和补刀得出分数，再乘以对线系数（比对线对手好或差多少，×0.60 至 ×1.40）。MVP = 胜方最佳，ACE = 败方最佳。", 'pg.note': "条形：十名玩家中最佳者 = 100%。排名与 MVP / ACE 由 Rift Switch 计算。",
     'mm.text': "Riot Client 登录的是 {rc}，但 League 运行的是 {lol}。", 'mm.fix': "以 {name} 重启 League", 'mm.later': "英雄选择或对局中不可——结束后再试。", 'mm.other': "另一个账号", 'mm.started': "League 正以 Riot Client 的账号重启。",
     'sw.play_update': "League 正在更新——更新完成后立即开始",
     'add.safe': "仅保存在此电脑上，并为你的 Windows 用户加密。绝不会发送到任何地方——Rift Switch 只会替你输入到 Riot Client 中。",

@@ -152,6 +152,45 @@ function compareHtml(g, a, b, roles, mine) {
 
 // ---------- the ten players ----------
 const POSITIONS = ['top', 'jungle', 'mid', 'bot', 'support'];
+// support items (World Atlas line and the older ones) – their owner was the support
+const SUPPORT_ITEMS = new Set([3850, 3851, 3853, 3854, 3855, 3857, 3858, 3859, 3860, 3862, 3863, 3864, 3865, 3866, 3867, 3869, 3870, 3871, 3876, 3877]);
+const roleCache = new WeakMap();
+// the position of every player of a Summoner's Rift game, or null. Riot's own guess ("pos", from
+// the timeline's lane / role) is often wrong – two tops, jungler and support swapped – so each team
+// gets the best of all 120 arrangements: Smite = jungle, a support item = support, Riot's guess,
+// fewest CS = support, Teleport = top, Heal / Barrier = bot, Exhaust = support.
+function gameRoles(g) {
+  if (roleCache.has(g)) return roleCache.get(g);
+  let out = null;
+  if (g.mode === 'CLASSIC' && g.players && g.players.length === 10) {
+    out = new Map();
+    for (const team of new Set(g.players.map(p => p.team))) {
+      const ps = g.players.filter(p => p.team === team);
+      if (ps.length !== 5) { out = null; break; }
+      const minCs = Math.min(...ps.map(p => p.cs || 0));
+      const fit = (p, r) => {
+        const sp = p.spells || [];
+        const smite = sp.includes(11), sup = (p.items || []).some(i => SUPPORT_ITEMS.has(i));
+        let s = p.pos === r ? 4 : 0;
+        if (r === 'jungle') s += smite ? 12 : -8; else if (smite) s -= 8;
+        if (r === 'support') s += (sup ? 10 : 0) + ((p.cs || 0) === minCs ? 3 : 0) + (sp.includes(3) ? 1 : 0); else if (sup) s -= 6;
+        if (r === 'top' && sp.includes(12)) s += 1;
+        if (r === 'bot' && (sp.includes(7) || sp.includes(21))) s += 1;
+        return s;
+      };
+      const f = ps.map(p => POSITIONS.map(r => fit(p, r)));
+      let best = null, bestS = -Infinity;
+      const walk = (i, used, perm, s) => {
+        if (i === 5) { if (s > bestS) { bestS = s; best = perm.slice(); } return; }
+        for (let r = 0; r < 5; r++) if (!(used & (1 << r))) { perm.push(r); walk(i + 1, used | (1 << r), perm, s + f[i][r]); perm.pop(); }
+      };
+      walk(0, 0, [], 0);
+      ps.forEach((p, i) => out.set(p, POSITIONS[best[i]]));
+    }
+  }
+  roleCache.set(g, out);
+  return out;
+}
 const POS_FILE = { top: 'top', jungle: 'jungle', mid: 'middle', bot: 'bottom', support: 'utility' };
 const posIcon = p => 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-' + POS_FILE[p] + '.png';
 // blue side (100) left, red side (200) right – like the client. Positions (and the icons in the middle) only when both teams have all five –
@@ -163,8 +202,8 @@ function lineUp(g, mine) {
     const left = Math.min(...ids);
     a = g.players.filter(p => p.team === left); b = g.players.filter(p => p.team !== left);
   } else { const h = Math.ceil(g.players.length / 2); a = g.players.slice(0, h); b = g.players.slice(h); }
-  const full = t => t.length === 5 && POSITIONS.every(p => t.some(x => x.pos === p));
-  if (full(a) && full(b)) return { a: POSITIONS.map(p => a.find(x => x.pos === p)), b: POSITIONS.map(p => b.find(x => x.pos === p)), roles: POSITIONS };
+  const ro = gameRoles(g);
+  if (ro && a.length === 5 && b.length === 5) return { a: POSITIONS.map(p => a.find(x => ro.get(x) === p)), b: POSITIONS.map(p => b.find(x => ro.get(x) === p)), roles: POSITIONS };
   return { a, b, roles: null };
 }
 function teamsTable(g, mine) {

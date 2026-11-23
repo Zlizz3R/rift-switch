@@ -508,6 +508,23 @@ test('match history: a click opens the details (not on a name); names open "open
   assert.equal(app.$('.mh-det'), null, 'closes again');
 }));
 
+test('positions: Riot\'s wrong guesses are fixed (Smite = jungle, support item = support); the lane factor compares the right players', () => withApp({}, async (app) => {
+  const g = game(1);
+  const [top, jgl, mid, bot, sup] = g.players.slice(0, 5);
+  // Riot said: both top and jungler "top", bot "support" and support "bot"
+  jgl.pos = 'top'; jgl.spells = [4, 11];
+  bot.pos = 'support'; sup.pos = 'bot'; sup.items = [3867, 0, 0, 0, 0, 0, 3364]; sup.cs = 30;
+  const ro = app.w.gameRoles(g);
+  assert.equal(ro.get(top), 'top');
+  assert.equal(ro.get(jgl), 'jungle');
+  assert.equal(ro.get(mid), 'mid');
+  assert.equal(ro.get(bot), 'bot');
+  assert.equal(ro.get(sup), 'support');
+  assert.equal(app.w.pgOpponent(g, top), g.players[5], 'top against the enemy top, not the jungler');
+  assert.ok(app.w.pgLane(g, top).mult >= 0.6 && app.w.pgLane(g, top).mult <= 1.4);
+  assert.equal(app.w.gameRoles({ ...g, mode: 'ARAM' }), null, 'no positions in ARAM');
+}));
+
 test('match history: the lists above show 5, "+5" five more, "less" back to 5', () => {
   const games = Array.from({ length: 12 }, (_, k) => { const g = game(k + 1); g.players[0].champ = 100 + k; return g; });
   return withApp({ replies: mhReplies(games) }, async (app) => {
