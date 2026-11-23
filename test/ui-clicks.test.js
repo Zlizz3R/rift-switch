@@ -702,17 +702,14 @@ test('live page: stands at once, even while the client and the champion list sti
 }));
 
 // ---------- app behaviour ----------
-test('app behaviour: start minimized only with Windows, Discord only when set up, details only with the status', () => withApp({}, async (app) => {
+test('app behaviour: "start minimized" only together with "start with Windows"', () => withApp({}, async (app) => {
   const box = k => app.$(`[data-setting="${k}"]`);
   assert.ok(box('startMinimized').disabled, 'needs "Start with Windows"');
-  assert.ok(box('discordStatus').disabled && box('discordDetails').disabled);
-  assert.ok(!app.$('#discordSoon').hidden);
-  await app.push({ ...app.S.state, discordReady: true, settings: { ...app.S.state.settings, autostart: true, discordStatus: true } });
-  assert.ok(!box('startMinimized').disabled && !box('discordStatus').disabled && !box('discordDetails').disabled);
-  assert.ok(app.$('#discordSoon').hidden);
-  box('discordDetails').checked = true;
-  box('discordDetails').dispatchEvent(new app.w.Event('change', { bubbles: true }));
-  assert.deepEqual(lastCall(app, 'set-setting').args, ['discordDetails', true]);
+  await app.push({ ...app.S.state, settings: { ...app.S.state.settings, autostart: true } });
+  assert.ok(!box('startMinimized').disabled);
+  box('updateCheck').checked = false;
+  box('updateCheck').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+  assert.deepEqual(lastCall(app, 'set-setting').args, ['updateCheck', false]);
 }));
 
 test('login interrupted by another window: hands-off hint while typing, then a clear message and "Log in again"', () => withApp({}, async (app) => {

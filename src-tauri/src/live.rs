@@ -108,47 +108,6 @@ async fn lobby() -> Option<Value> {
     Some(json!({ "queueId": lb["gameConfig"]["queueId"], "members": players(refs).await }))
 }
 
-/// For the Discord status: the queue's name (the client's own words) and the champion picked
-/// (in champion select: the hovered or locked one). None/0 when not known.
-pub async fn presence_extra(phase: &str) -> (String, i64) {
-    let (session, cs) = tokio::join!(lcu("/lol-gameflow/v1/session", 2000, "GET"), async {
-        if phase == "ChampSelect" {
-            lcu("/lol-champ-select/v1/session", 2000, "GET").await
-        } else {
-            None
-        }
-    });
-    let queue = session
-        .as_ref()
-        .and_then(|s| s["gameData"]["queue"]["description"].as_str())
-        .unwrap_or("")
-        .to_string();
-    let champ = cs
-        .and_then(|cs| {
-            let me = cs["myTeam"]
-                .as_array()?
-                .iter()
-                .find(|c| c["cellId"] == cs["localPlayerCellId"])?
-                .clone();
-            or_zero(&me["championId"], &me["championPickIntent"]).as_i64()
-        })
-        .unwrap_or(0);
-    (queue, champ)
-}
-/// A champion's name from the cached list ("" if the list isn't there yet).
-pub fn champ_name(id: i64) -> String {
-    CHAMPS
-        .lock()
-        .unwrap()
-        .as_ref()
-        .and_then(|l| {
-            l.as_array()
-                .and_then(|l| l.iter().find(|c| c["id"].as_i64() == Some(id)).cloned())
-        })
-        .and_then(|c| c["name"].as_str().map(String::from))
-        .unwrap_or_default()
-}
-
 async fn champ_select() -> Option<Value> {
     let cs = lcu("/lol-champ-select/v1/session", 3000, "GET").await?;
     let my = cs["myTeam"].as_array()?;

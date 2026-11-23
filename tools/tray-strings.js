@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { STRINGS, LANGS } = require('../ui/i18n.js');
 
-const KEY = /^(app\.name|tray\..+|discord\..+|lock\.locked|tile\.savedLogin|stream\.alias|jump\.switch|cat\.new|tier\..+|reveal\..+)$/;
+const KEY = /^(app\.name|tray\..+|lock\.locked|tile\.savedLogin|stream\.alias|jump\.switch|cat\.new|tier\..+|reveal\..+)$/;
 const out = {};
 for (const [code] of LANGS) {
   const s = STRINGS[code] || {};

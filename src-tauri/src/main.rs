@@ -5,7 +5,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod accounts;
-mod discord;
 mod events;
 mod live;
 mod matches;
@@ -230,7 +229,6 @@ fn snapshot(c: &Core) -> Value {
     m.remove("lock");
     m.insert("accounts".into(), Value::Array(accounts));
     m.insert("hasLock".into(), json!(c.st.lock.is_some()));
-    m.insert("discordReady".into(), json!(discord::available()));
     m.insert("sealLogins".into(), json!(sealed_on(c)));
     m.insert("live".into(), json!({ "puuid": c.live.puuid, "phase": c.live.phase, "clientUp": c.live.client_up, "waits": c.live.waits }));
     m.insert("pendingAdd".into(), json!(c.pending_add));
@@ -695,98 +693,6 @@ async fn tick() {
     };
     tick_inner(my_gen).await;
     with(|c| c.ticking = false);
-    discord_status().await;
-}
-
-/// Discord status (settings, off by default): what you are doing; with "details" also the
-/// Solo/Duo rank and, in champion select and in game, the champion and queue. Never a name.
-async fn discord_status() {
-    use std::sync::atomic::{AtomicBool, Ordering};
-    static WAS_ON: AtomicBool = AtomicBool::new(false);
-    static PHASE: Mutex<(String, i64, String, i64)> =
-        Mutex::new((String::new(), 0, String::new(), 0));
-    let (on, details, phase, active) = with(|c| {
-        (
-            c.st.set_bool("discordStatus") && discord::available() && !riot::offline_test(),
-            c.st.set_bool("discordDetails"),
-            if c.live.client_up {
-                c.live.phase.clone().unwrap_or_else(|| "None".into())
-            } else {
-                String::new()
-            },
-            c.st.active
-                .clone()
-                .and_then(|id| c.st.account(&id).cloned()),
-        )
-    });
-    if !on {
-        if WAS_ON.swap(false, Ordering::SeqCst) {
-            discord::set(None);
-        }
-        return;
-    }
-    WAS_ON.store(true, Ordering::SeqCst);
-    // when the phase began; queue and champion are asked for once per phase (champion select: each time)
-    let (since, mut queue, mut champ) = {
-        let mut p = PHASE.lock().unwrap();
-        if p.0 != phase {
-            *p = (
-                phase.clone(),
-                now_ms(),
-                String::new(),
-                if phase == "ChampSelect" { 0 } else { p.3 },
-            );
-        }
-        (p.1, p.2.clone(), p.3)
-    };
-    let wants = matches!(
-        phase.as_str(),
-        "ChampSelect" | "GameStart" | "InProgress" | "Reconnect"
-    );
-    if details && wants && (queue.is_empty() || phase == "ChampSelect") {
-        let (q, c) = live::presence_extra(&phase).await;
-        queue = q;
-        if c > 0 {
-            champ = c;
-        }
-        let mut p = PHASE.lock().unwrap();
-        if p.0 == phase {
-            p.2 = queue.clone();
-            p.3 = champ;
-        }
-    }
-    let solo = active
-        .as_ref()
-        .and_then(|a| a.get("solo").cloned())
-        .filter(|s| s.is_object());
-    let rank = solo.as_ref().and_then(|s| {
-        Some((
-            s["tier"].as_str()?.to_string(),
-            s["division"].as_str().unwrap_or("").to_string(),
-            s["lp"].as_i64().unwrap_or(0),
-        ))
-    });
-    let rank_text = rank
-        .as_ref()
-        .map(|(t, d, lp)| {
-            let apex = ["MASTER", "GRANDMASTER", "CHALLENGER"].contains(&t.as_str());
-            format!(
-                "{}{} · {lp} LP",
-                tr(&format!("tier.{t}"), &[]),
-                if apex { String::new() } else { format!(" {d}") }
-            )
-        })
-        .unwrap_or_default();
-    let info = discord::Info {
-        phase,
-        queue,
-        champ,
-        champ_name: live::champ_name(champ),
-        rank,
-        rank_text,
-        since,
-    };
-    discord::set(discord::activity(&info, details, &|k| tr(k, &[])));
 }
 
 fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
