@@ -477,15 +477,18 @@ async fn store_session(id: &str, verified: bool) -> bool {
 fn sealed_on(c: &Core) -> bool {
     c.st.lock.as_ref().is_some_and(|l| l["sealLogins"] == true)
 }
-/// A login file: Windows DPAPI, and inside it (if turned on) sealed with the app password.
-fn write_cred_file(id: &str, text: &str) -> bool {
+/// A login file's bytes: Windows DPAPI, and inside it (if turned on) sealed with the app password.
+fn cred_bytes(text: &str) -> Option<Vec<u8>> {
     let (on, key) = with(|c| (sealed_on(c), c.login_key));
     let inner = match (on, key) {
         (false, _) => text.as_bytes().to_vec(),
         (true, Some(k)) => secrets::seal_bytes(&k, text.as_bytes()),
-        (true, None) => return false, // can't happen while unlocked
+        (true, None) => return None, // can't happen while unlocked
     };
-    secrets::encrypt_local(&inner).is_some_and(|b| store::write_atomic(&cred_file(id), &b).is_ok())
+    secrets::encrypt_local(&inner)
+}
+fn write_cred_file(id: &str, text: &str) -> bool {
+    cred_bytes(text).is_some_and(|b| store::write_atomic(&cred_file(id), &b).is_ok())
 }
 enum Cred {
     Missing,
@@ -521,10 +524,38 @@ fn cred_state(id: &str) -> Cred {
     }
 }
 /// Every login file again, with the current setting and key (turning the seal on/off, new password).
+/// All or nothing: first every file is encrypted and written next to the old one (".new"); only when
+/// all of them made it are they swapped in. A failure leaves every old file as it was.
 fn rewrite_creds(logins: &[(String, String, String)]) -> bool {
-    logins
-        .iter()
-        .all(|(id, u, p)| write_cred_file(id, &json!({ "u": u, "p": p }).to_string()))
+    let fresh = |id: &str| cred_file(id).with_extension("bin.new");
+    let mut written: Vec<&str> = vec![];
+    let mut ok = true;
+    for (id, u, p) in logins {
+        let done = cred_bytes(&json!({ "u": u, "p": p }).to_string())
+            .is_some_and(|b| store::write_atomic(&fresh(id), &b).is_ok());
+        if !done {
+            ok = false;
+            break;
+        }
+        written.push(id.as_str());
+    }
+    if !ok {
+        for id in written {
+            let _ = std::fs::remove_file(fresh(id));
+        }
+        log_error(
+            "cred",
+            "re-encrypting the logins failed – nothing was changed",
+        );
+        return false;
+    }
+    for id in written {
+        if std::fs::rename(fresh(id), cred_file(id)).is_err() {
+            log_error("cred", "a re-encrypted login could not replace the old one");
+            ok = false;
+        }
+    }
+    ok
 }
 fn all_creds() -> Vec<(String, String, String)> {
     let ids: Vec<String> = with(|c| {
@@ -2009,15 +2040,16 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     match made {
                         Some((l, key)) => {
                             let logins = all_creds(); // read with the old key
-                            with(|c| {
+                            let before = with(|c| {
+                                let b = (c.st.lock.clone(), c.login_key);
                                 c.st.lock = Some(l);
                                 c.login_key = key;
+                                b
                             });
                             if sealed && !rewrite_creds(&logins) {
-                                log_error(
-                                    "seal",
-                                    "could not re-seal every login with the new password",
-                                );
+                                // the logins stay sealed with the old password: so does the lock
+                                with(|c| (c.st.lock, c.login_key) = before);
+                                return json!(false);
                             }
                             save();
                             json!(true)
@@ -2035,8 +2067,11 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         .unwrap_or(false);
                     if ok {
                         let logins = all_creds();
-                        with(|c| c.st.lock = None);
-                        rewrite_creds(&logins);
+                        let before = with(|c| c.st.lock.take());
+                        if !rewrite_creds(&logins) {
+                            with(|c| c.st.lock = before); // logins still sealed: the lock stays
+                            return json!(false);
+                        }
                         with(|c| c.login_key = None);
                         save();
                     }
@@ -2066,14 +2101,19 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         return json!(false);
                     };
                     let logins = all_creds();
-                    with(|c| {
+                    let before = with(|c| {
+                        let b = (c.st.lock.clone(), c.login_key);
                         c.login_key = Some(key);
                         if let Some(lock) = c.st.lock.as_mut() {
                             lock["ksalt"] = json!(ks);
                             lock["sealLogins"] = json!(what == "seal");
                         }
+                        b
                     });
                     let ok = rewrite_creds(&logins);
+                    if !ok {
+                        with(|c| (c.st.lock, c.login_key) = before);
+                    }
                     save();
                     json!(ok)
                 }
@@ -3239,6 +3279,17 @@ mod tests {
         assert!(rewrite_creds(&all_creds()));
         with(|c| c.login_key = None);
         assert_eq!(load_cred(P1), Some(("user".into(), "Müller€".into())));
+        // all or nothing: re-sealing that can't happen (no key) leaves the old file as it was
+        let before = std::fs::read(cred_file(P1)).unwrap();
+        with(|c| c.st.lock = Some(json!({ "salt": "", "hash": "", "sealLogins": true })));
+        assert!(!rewrite_creds(&[(
+            P1.to_string(),
+            "user".into(),
+            "Müller€".into()
+        )]));
+        assert_eq!(std::fs::read(cred_file(P1)).unwrap(), before);
+        assert!(!cred_file(P1).with_extension("bin.new").exists());
+        with(|c| c.st.lock = Some(json!({ "salt": "", "hash": "" })));
 
         // what the window gets: no LP history list (only its length), no lock hash
         let snap = with(|c| snapshot(c));
