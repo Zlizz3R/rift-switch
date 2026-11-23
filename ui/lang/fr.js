@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'sw.play_update': "League se met à jour – Jouer juste après",
     'add.safe': "Enregistré uniquement sur ce PC, chiffré pour ton utilisateur Windows. Jamais envoyé nulle part – Rift Switch le tape seulement pour toi dans le Riot Client.",
     'dash.peak': "Pic de saison", 'dash.peakSeen': "plus haut vu", 'dash.lastSeason': "saison passée {r}", 'p.peak': "pic de saison {r}", 'mh.duos': "Joué avec", 'mh.duosT': "Coéquipiers dans 2 de ces parties ou plus : parties ensemble et ton taux de victoire avec eux",
     'app.tagline': "Le compagnon multi-comptes local pour League of Legends.", 'first.title': "Démarrer avec Windows ?", 'first.text': "Ainsi rangs, LP et parties restent à jour et la connexion est à un clic. Modifiable à tout moment dans les paramètres.", 'first.tray': "Oui, discrètement dans la zone de notification", 'first.trayT': "Pas de fenêtre au démarrage – environ 8 Mo de mémoire jusqu'à ce que tu l'ouvres.", 'first.window': "Oui, avec la fenêtre", 'first.windowT': "Ouvre Rift Switch dès la connexion à Windows.", 'first.no': "Non", 'first.noT': "Lance Rift Switch toi-même quand tu en as besoin.", 'first.doneTray': "Rift Switch démarre maintenant avec Windows, dans la zone de notification.", 'first.doneWindow': "Rift Switch démarre maintenant avec Windows.",

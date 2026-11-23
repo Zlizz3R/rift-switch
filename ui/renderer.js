@@ -809,7 +809,7 @@ function renderSwitching(sw) {
   $('swHint').hidden = !(sw.step === 'signin' && sw.detail === 'typing');
   $('swSteps').innerHTML = sw.steps.map((k, i) => {
     const st = i < cur ? 'done' : i === cur ? 'now' : '';
-    const label = k === 'signin' && sw.detail && i === cur ? t('sw.signin_' + sw.detail) : t(SW_KEYS[k] || k);
+    const label = sw.detail && i === cur && I18N.STRINGS.en['sw.' + k + '_' + sw.detail] ? t('sw.' + k + '_' + sw.detail) : t(SW_KEYS[k] || k);
     return `<li class="${st}"><span class="sw-dot">${st === 'done' ? '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</span>${esc(label)}</li>`;
   }).join('');
 }

@@ -718,6 +718,8 @@ test('login interrupted by another window: hands-off hint while typing, then a c
   await app.click('#confirmYes');
   await app.push({ ...app.S.state, switching: { id: P(2), n: 1, steps: ['close', 'client', 'signin', 'play', 'launch'], step: 'signin', detail: 'typing' } });
   assert.ok(app.visible('#swHint'));
+  await app.push({ ...app.S.state, switching: { id: P(2), n: 1, steps: ['close', 'client', 'signin', 'play', 'launch'], step: 'play', detail: 'update' } });
+  assert.match(app.$('#swSteps').textContent, /League is updating/);
   await app.push({ ...app.S.state, switching: null, login: { name: 'Player2', stage: 'failed', msgKey: 'af.lostfocus' } });
   assert.equal(app.$('#loginTitle').textContent, 'Login interrupted');
   assert.match(app.$('#loginText').textContent, /Please don't click anything/);

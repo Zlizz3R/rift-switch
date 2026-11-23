@@ -1185,6 +1185,7 @@ async fn auto_login(u: String, p: String, name: String, settle_ms: i64, since: O
     set_login(json!({ "name": name, "stage": "wait" }));
     let t0 = now_ms();
     let (mut signed_out_since, mut typed_at): (Option<i64>, Option<i64>) = (None, None);
+    let (mut tries, mut shown) = (0u32, false);
     while alive() && now_ms() - t0 < 120_000 {
         let st = riot::rc_login_state().await;
         if !alive() {
@@ -1193,6 +1194,11 @@ async fn auto_login(u: String, p: String, name: String, settle_ms: i64, since: O
         if st.subject.is_some() {
             set_login(Value::Null);
             return;
+        }
+        // the Riot Client hasn't come up after 20 s (started to the tray, slow first start): open it
+        if !st.up && !shown && now_ms() - t0 > 20_000 {
+            shown = true;
+            riot::show_riot_client();
         }
         if st.up {
             sw_step("signin", "");
@@ -1203,6 +1209,16 @@ async fn auto_login(u: String, p: String, name: String, settle_ms: i64, since: O
                 let r = riot::autofill(&u, &p, since).await;
                 if !alive() {
                     return;
+                }
+                // window not there / not in front / form not drawn yet (first start, still loading):
+                // bring the Riot Client up and try again – up to three times before giving up
+                if matches!(r.as_str(), "nowindow" | "nofocus" | "noform") && tries < 3 {
+                    tries += 1;
+                    riot::show_riot_client();
+                    set_login(json!({ "name": name, "stage": "wait" }));
+                    sw_step("signin", "");
+                    sleep(3000).await;
+                    continue;
                 }
                 if r != "ok" && r != "ok-nopersist" {
                     let k = if AUTOFILL_ERR.contains(&r.as_str()) {
@@ -1256,7 +1272,9 @@ async fn auto_play(pl: &'static str) {
     let t0 = now_ms();
     let (mut signed_in_since, mut presses, mut checked): (Option<i64>, u32, bool) =
         (None, 0, false);
-    while alive() && now_ms() - t0 < 180_000 {
+    // an update in the Riot Client extends the wait (up to 30 minutes)
+    let mut deadline = t0 + 180_000;
+    while alive() && now_ms() < deadline {
         let st = riot::rc_login_state().await;
         if st.up && st.subject.is_none() {
             sw_step("signin", "");
@@ -1317,12 +1335,18 @@ async fn auto_play(pl: &'static str) {
                     sw_clear();
                     return;
                 }
+            } else if riot::updating().await {
+                // League (or the client) is updating: Play only works afterwards
+                sw_step("play", "update");
+                deadline = deadline.max((now_ms() + 120_000).min(t0 + 1_800_000));
+                signed_in_since = Some(now_ms());
             } else if presses == 0 || now_ms() - signed_in_since.unwrap_or(0) > 12_000 {
-                // give the client a moment to start League by itself; retry once
-                if presses >= 2 {
+                // give the client a moment to start League by itself; then press again
+                if presses >= 3 {
                     sw_clear();
                     return;
                 }
+                sw_step("play", "");
                 // right after a login the client often answers "not ready" for a few seconds:
                 // only a press it accepted counts (a refused one is tried again within a second)
                 if riot::press_play(with(|c| c.play_line)).await {

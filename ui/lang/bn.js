@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'sw.play_update': "League আপডেট হচ্ছে – এরপরই Play",
     'add.safe': "শুধু এই PC-তে, আপনার Windows ইউজারের জন্য এনক্রিপ্ট করে রাখা হয়। কোথাও পাঠানো হয় না – Rift Switch শুধু আপনার হয়ে Riot Client-এ লেখে।",
     'dash.peak': "সিজন পিক", 'dash.peakSeen': "দেখা সর্বোচ্চ", 'dash.lastSeason': "গত সিজন {r}", 'p.peak': "সিজন পিক {r}", 'mh.duos': "সাথে খেলা", 'mh.duosT': "এই গেমগুলোর ২টি বা বেশিতে সতীর্থ: একসাথে গেম ও তাদের সাথে আপনার জয়ের হার",
     'app.tagline': "League of Legends-এর লোকাল মাল্টি-অ্যাকাউন্ট সঙ্গী।", 'first.title': "Windows-এর সাথে চালু করবেন?", 'first.text': "তাহলে র‍্যাঙ্ক, LP ও গেম আপডেট থাকে আর লগ ইন এক ক্লিকে। সেটিংসে যেকোনো সময় বদলাতে পারবেন।", 'first.tray': "হ্যাঁ, চুপচাপ ট্রেতে", 'first.trayT': "শুরুতে কোনো উইন্ডো নেই – খোলা পর্যন্ত প্রায় 8 MB মেমরি।", 'first.window': "হ্যাঁ, উইন্ডোসহ", 'first.windowT': "Windows-এ সাইন ইন করার পরই Rift Switch খোলে।", 'first.no': "না", 'first.noT': "দরকার হলে নিজে Rift Switch চালু করুন।", 'first.doneTray': "Rift Switch এখন Windows-এর সাথে ট্রেতে চালু হবে।", 'first.doneWindow': "Rift Switch এখন Windows-এর সাথে চালু হবে।",

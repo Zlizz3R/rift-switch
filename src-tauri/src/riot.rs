@@ -1023,6 +1023,15 @@ async fn rc_api(path: &str, method: &str) -> Raw {
         },
     }
 }
+/// The Riot Client is downloading or installing an update (League's or its own).
+pub async fn updating() -> bool {
+    let r = rc_api("/patch-proxy/v1/active-updates", "GET").await;
+    r.up && r.status == 200
+        && r.body
+            .as_ref()
+            .and_then(Value::as_array)
+            .is_some_and(|a| !a.is_empty())
+}
 /// The "Play" button of the Riot Client (live or PBE).
 pub async fn press_play(pl: &str) -> bool {
     let r = rc_api(
