@@ -14,14 +14,16 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-pub const QUEUE_GROUPS: [(&str, &[i64]); 7] = [
+pub const QUEUE_GROUPS: [(&str, &[i64]); 8] = [
     ("solo", &[420]),
     ("flex", &[440]),
     ("r5", &[710]),
     ("classic", &[4310]),
     ("normal", &[400, 430, 490, 480]),
-    ("aram", &[450, 2400]),
+    ("aram", &[450, 2400, 3220, 3270]),
     ("arena", &[1700, 1710]),
+    // Clash on the Rift and ARAM Clash (the client calls their mode "CLASSIC" / "ARAM")
+    ("clash", &[700, 720]),
 ];
 const RANK_TTL: i64 = 12 * 3600 * 1000;
 const RANK_KEEP: i64 = 14 * 24 * 3600 * 1000;

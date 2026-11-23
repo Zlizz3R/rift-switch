@@ -72,7 +72,22 @@
       multis: Object.fromEntries([2, 3, 4, 5].map(m => [m, ps.filter(x => Math.min(5, x.p.multi || 0) === m).length])),
       streak: streakOf(games),
       champs: topChamps(ps, n),
+      accounts: perAccount(ps, n),
+      // time in these games (seconds), remakes included – they were played too
+      time: games.reduce((s, g) => s + (g.dur || 0), 0),
     };
+  }
+  // games per own account: games, win rate, share of all games, time played – most games first
+  function perAccount(ps, n) {
+    const by = new Map();
+    for (const { g, p } of ps) {
+      const id = (g.owners && g.owners[0]) || p.puuid;
+      const a = by.get(id) || { puuid: id, games: 0, wins: 0, time: 0 };
+      a.games++; a.wins += p.win ? 1 : 0; a.time += g.dur || 0;
+      by.set(id, a);
+    }
+    return [...by.values()].sort((x, y) => y.games - x.games)
+      .map(a => ({ ...a, winrate: Math.round((100 * a.wins) / a.games), share: Math.round((100 * a.games) / n) }));
   }
   // the most played champions: games, win rate, share of all games (play rate), KDA – most games first
   function topChamps(ps, n, max = 5) {

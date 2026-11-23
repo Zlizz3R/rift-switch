@@ -1,7 +1,7 @@
 // Match history page: recent games of all saved accounts in one list (op.gg style, kept short).
 // Uses the globals of renderer.js / views.js (S, t, $, esc, api, CHAMP_ICON, SITES, openSite …).
 
-const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 710: 'Ranked 5v5', 4310: 'Classic 5v5', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
+const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 710: 'Ranked 5v5', 4310: 'Classic 5v5', 700: 'Clash', 720: 'ARAM Clash', 3220: 'ARAM', 3270: 'ARAM', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
 const NORMAL_QUEUES = [400, 430, 480, 490];
 const MULTI = { 2: 'mh.double', 3: 'mh.triple', 4: 'mh.quadra', 5: 'mh.penta' };
 const MH_DEFAULT = { from: '', to: '', range: 'all', result: '', champ: 0, sort: 'new', minKills: '', maxDeaths: '', minKda: '', minMulti: '' };
@@ -399,6 +399,11 @@ $('mhAdvBtn').onclick = () => { mh.adv = !mh.adv; renderMatches(); };
 $('mhReset').onclick = () => { mh.pin = 0; mh.f = { ...MH_DEFAULT }; $('mhChamp').value = ''; renderMatches(); };
 
 // totals of what the filters show, plus a few records (click one to jump to that game)
+// "34 h 12 min" / "48 min"
+function playTime(sec) {
+  const m = Math.round(sec / 60);
+  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
+}
 function summaryHtml(list) {
   const s = MatchFilter.summarize(list);
   if (!s) return '';
@@ -413,10 +418,17 @@ function summaryHtml(list) {
       <span>Ø <b>${f1(s.avg.k)} / <i>${f1(s.avg.d)}</i> / ${f1(s.avg.a)}</b> (${s.avg.kda == null ? t('mh.perfect') : s.avg.kda.toFixed(2) + ' KDA'})</span>
       <span>Ø <b>${f1(s.avg.csMin)}</b> CS/min</span>
       <span>Ø <b>${short(Math.round(s.avg.dmg))}</b> ${t('mh.dmg')}</span>
+      ${s.time ? `<span title="${esc(t('mh.timeT'))}">⏱ <b>${playTime(s.time)}</b> ${t('mh.time')}</span>` : ''}
       ${s.streak && s.streak.n >= 2 ? `<span class="${s.streak.win ? 'good' : 'bad'}">${t(s.streak.win ? 'mh.streakW' : 'mh.streakL', { n: s.streak.n })}</span>` : ''}
     </div>
     ${[5, 4, 3, 2].some(m => s.multis[m]) ? `<div class="mh-multis">${[5, 4, 3, 2].filter(m => s.multis[m]).map(m =>
       `<button class="mh-multi m${m}${mh.pin === m ? ' on' : ''}" data-pin="${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</button>`).join('')}</div>` : ''}
+    ${s.accounts.length > 1 ? `<div class="mh-champs mh-accs"><span class="mh-ch-t">${t('mh.perAccount')}</span>${s.accounts.map(a => {
+      const acc = S.accounts.find(x => x.puuid === a.puuid);
+      return `<button class="mh-ch" data-mhacc="${esc(a.puuid)}" title="${esc(t('mh.perAccountT'))}">
+      ${acc && acc.iconId != null && !hides('icon') ? `<img src="${iconUrl(acc.iconId)}" alt="">` : ''}<span class="mh-ch-n">${esc(acc ? dispName(acc) : '?')}</span>
+      <b>${a.games}</b><span class="${a.winrate >= 50 ? 'good' : 'bad'}">${a.winrate}% WR</span><span class="muted">${a.share}%</span><span class="muted">⏱ ${playTime(a.time)}</span></button>`;
+    }).join('')}</div>` : ''}
     ${(s.champs.length > 1 || mh.f.champ) ? `<div class="mh-champs"><span class="mh-ch-t">${t('mh.topChamps')}</span>${s.champs.map(c => `<button class="mh-ch${mh.f.champ === c.champ ? ' on' : ''}" data-mhchamp="${c.champ}" title="${esc(t('mh.topChampT'))}">
       <img src="${CHAMP_ICON(c.champ)}" alt=""><span class="mh-ch-n">${esc(champName(c.champ) || '#' + c.champ)}</span>
       <b>${c.games}</b><span class="${c.winrate >= 50 ? 'good' : 'bad'}">${c.winrate}% WR</span><span class="muted">${c.playrate}% ${t('mh.playrate')}</span>
@@ -496,6 +508,9 @@ document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => {
 $('viewMatches').addEventListener('click', e => {
   if (e.target.closest('#mhShowMore')) { mh.show += 40; renderMatches(); return; }
   // a champion of the top list: only his games (again: all games)
+  // an account of the breakdown: only its games
+  const ac = e.target.closest('[data-mhacc]');
+  if (ac) { mh.filter.puuid = ac.dataset.mhacc; loadMatches(); return; }
   const ch = e.target.closest('[data-mhchamp]');
   if (ch) { const id = +ch.dataset.mhchamp; setFilter({ champ: mh.f.champ === id ? 0 : id }); return; }
   const pin = e.target.closest('[data-pin]');
@@ -525,7 +540,7 @@ $('viewMatches').addEventListener('click', async e => {
   loadMatches();
 });
 $('mhList').addEventListener('click', e => {
-  if (e.target.closest('[data-player], [data-pin], [data-goto], [data-mhchamp], button, a, input, .mh-det')) return;
+  if (e.target.closest('[data-player], [data-pin], [data-goto], [data-mhchamp], [data-mhacc], button, a, input, .mh-det')) return;
   const row = e.target.closest('.mh-row');
   if (!row) return;
   const id = row.dataset.gid;

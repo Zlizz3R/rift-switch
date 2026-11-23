@@ -1133,6 +1133,25 @@ li.now .sw-dot { border-color: var(--gold); border-top-color: transparent; anima
 .cl-chip em { font-style: normal; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .cl-chip.skin { border-color: rgba(200,170,110,.45); }
 .cl-chip.champShard, .cl-chip.skinShard { border-style: dashed; }
+/* mini tiles: every account at a glance; with a search, a border for what it owns */
+.coll-tiles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: stretch; }
+.coll-tiles:empty { display: none; }
+.ct { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 124px; padding: 10px 8px 8px; border-radius: 12px; background: var(--panel); border: 2px solid var(--line); color: var(--text); font: inherit; text-align: center; cursor: pointer; transition: border-color .15s, opacity .15s, filter .15s, box-shadow .15s; }
+.ct .avatar { width: 48px; height: 48px; margin-bottom: 9px; flex: none; }
+.ct .avatar img, .ct .avatar .ph { width: 48px; height: 48px; box-shadow: none; }
+.ct .avatar .level { bottom: -7px; font-size: 9.5px; padding: 0 6px; }
+.ct b { max-width: 100%; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct span { max-width: 100%; font-size: 11px; line-height: 1.25; color: var(--muted); }
+.ct:hover { border-color: #3a4560; }
+.ct.both { border-color: #4cc38a; box-shadow: 0 0 0 3px rgba(76,195,138,.13); }
+.ct.champ { border-color: #e0b84a; box-shadow: 0 0 0 3px rgba(224,184,74,.13); }
+.ct.none { opacity: .4; filter: grayscale(1); }
+.ct.none:hover { opacity: .7; }
+.ct.unread { opacity: .5; border-style: dashed; }
+.coll-key { flex-basis: 100%; display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); }
+.coll-key span { display: inline-flex; align-items: center; gap: 6px; }
+.coll-key i { width: 12px; height: 12px; border-radius: 4px; border: 2px solid var(--line); }
+.coll-key i.both { border-color: #4cc38a; } .coll-key i.champ { border-color: #e0b84a; } .coll-key i.none { opacity: .5; }
 
 /* sign-in needs a hand: what to do in the Riot Client */
 .login-manual { text-align: left; margin: 4px 0 14px; display: grid; gap: 10px; justify-items: center; }

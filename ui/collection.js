@@ -64,13 +64,14 @@ function renderColl() {
   if (!el) return;
   document.querySelectorAll('[data-ck]').forEach(b => b.classList.toggle('on', b.dataset.ck === coll.kind));
   renderCollBar();
-  if (!coll.data) { el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
+  if (!coll.data) { el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; $('collTiles').innerHTML = ''; return; }
   const accs = S.accounts.filter(a => !a.placeholder);
   const by = new Map(coll.data.map(c => [c.puuid, c]));
   const known = accs.filter(a => by.has(a.puuid));
   const missing = accs.length - known.length;
   const foot = missing ? `<p class="coll-foot">${t('coll.missing', { n: missing })}</p>` : '';
   const q = collNorm(coll.q);
+  renderCollTiles(accs, by, q);
   if (!q && coll.kind === 'all') {
     // no search: every account with its numbers – or that it hasn't been read yet
     if (!accs.length) { el.innerHTML = `<div class="chart-empty">${t('coll.empty')}</div>`; return; }
@@ -98,6 +99,43 @@ function renderColl() {
       <div class="ca-head"><b>${esc(dispName(a))}</b><span>${t('coll.hits', { n: hits.length })}</span></div>
       <div class="ca-list">${hits.sort((x, y) => x.k.localeCompare(y.k) || x.name.localeCompare(y.name)).slice(0, 60).map(h =>
         `<span class="cl-chip ${h.k}" title="${esc(t(COLL_LABEL[h.k]))}"><img src="${h.tile || CHAMP_ICON(h.champ)}" alt="" loading="lazy">${esc(h.name)}${h.n > 1 ? ` <i>×${h.n}</i>` : ''}${h.k.endsWith('Shard') ? ` <em>${t(h.perm ? 'coll.perm' : 'coll.shard')}</em>` : ''}</span>`).join('')}</div></div>`).join('')}</div>${foot}`;
+}
+
+// Mini tiles above the list: every account at a glance. With a search ("Yorick", "K/DA") the
+// border tells what each account has – green: the champion and a matching skin, yellow: the
+// champion but no such skin, greyed out: not the champion. Not read yet: dashed.
+function collSearchChamps(by, q) {
+  const ids = new Set();
+  if (coll.champs) for (const [id, name] of coll.champs) if (collReal(id) && collNorm(name).includes(q)) ids.add(id);
+  // a skin name ("Shepherd of Souls") stands for its champion
+  for (const c of by.values()) for (const e of collEntries(c)) if ((e.k === 'champ' || e.k === 'skin') && collMatch(e, q)) ids.add(e.champ);
+  return ids;
+}
+function collTileState(c, q, ids) {
+  const e = collEntries(c);
+  const own = new Set(e.filter(x => x.k === 'champ').map(x => x.champ));
+  const hasChamp = [...ids].some(id => own.has(id));
+  const skins = e.filter(x => x.k === 'skin' && ids.has(x.champ) && own.has(x.champ) && collMatch(x, q)).length;
+  return { st: !hasChamp ? 'none' : skins ? 'both' : 'champ', skins };
+}
+function renderCollTiles(accs, by, q) {
+  const el = $('collTiles');
+  if (!accs.length) { el.innerHTML = ''; return; }
+  const ids = q ? collSearchChamps(by, q) : null;
+  const ORDER = { both: 0, champ: 1, none: 2, unread: 3 };
+  const tiles = accs.map(a => {
+    const c = by.get(a.puuid);
+    if (!c) return { a, st: 'unread', sub: t('coll.notRead').split(/ [–-] /)[0], tip: t('coll.notRead') };
+    if (!q) return { a, st: '', sub: `${t('coll.champs')}: ${collEntries(c).filter(x => x.k === 'champ').length}`, tip: '' };
+    const { st, skins } = collTileState(c, q, ids);
+    const tip = t(st === 'both' ? 'coll.tBoth' : st === 'champ' ? 'coll.tChamp' : 'coll.tNone');
+    return { a, st, sub: st === 'none' ? tip : `${t('coll.skins')}: ${skins}`, tip };
+  });
+  if (q) tiles.sort((x, y) => ORDER[x.st] - ORDER[y.st]);
+  const key = q ? `<div class="coll-key">${['both', 'champ', 'none'].map(s => `<span><i class="${s}"></i>${esc(t(s === 'both' ? 'coll.tBoth' : s === 'champ' ? 'coll.tChamp' : 'coll.tNone'))}</span>`).join('')}</div>` : '';
+  // like the account tiles: the summoner icon with the level small at the bottom
+  const av = a => `<div class="avatar">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="" loading="lazy">` : '<div class="ph"></div>'}${a.level && !hides('level') ? `<span class="level">${a.level}</span>` : ''}</div>`;
+  el.innerHTML = tiles.map(({ a, st, sub, tip }) => `<button class="ct ${st}" data-cacc="${esc(a.puuid)}"${tip ? ` title="${esc(tip)}"` : ''}>${av(a)}<b>${esc(dispName(a))}</b><span>${esc(sub)}</span></button>`).join('') + key;
 }
 
 $('collSearch').addEventListener('input', () => { coll.q = $('collSearch').value; renderColl(); });
