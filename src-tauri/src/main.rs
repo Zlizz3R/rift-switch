@@ -846,8 +846,19 @@ async fn tick_inner(my_gen: u64) {
                         .cloned()
                         .unwrap_or_default();
                     let mut p = p;
-                    if let Some(coll) = p.remove("_coll") {
-                        a.insert("coll".into(), coll);
+                    // part by part: what the client couldn't tell yet keeps its last good answer
+                    if let Some(Value::Object(new)) = p.remove("_coll") {
+                        let c = a.entry("coll").or_insert_with(|| json!({}));
+                        if !c.is_object() {
+                            *c = json!({});
+                        }
+                        let c = c.as_object_mut().unwrap();
+                        let good = new.contains_key("champs") || new.contains_key("skins");
+                        for (k, v) in new {
+                            if k != "at" || good {
+                                c.insert(k, v);
+                            }
+                        }
                     }
                     prof.extend(p);
                     a.insert("profile".into(), Value::Object(prof));
@@ -2336,6 +2347,19 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 open_path(&url);
             }
             Value::Null
+        }
+        // the collection page: read the signed-in account's profile and collection now
+        "read-collection" => {
+            if !with(|c| c.live.client_up) {
+                return json!({ "ok": false, "closed": true });
+            }
+            if with(|c| c.ticking || c.busy) {
+                return json!({ "ok": false, "busy": true });
+            }
+            with(|c| c.last_profile_at = 0);
+            tick().await;
+            push();
+            json!({ "ok": true, "puuid": with(|c| c.live.puuid.clone()) })
         }
         "refresh" => {
             if with(|c| c.ticking || c.busy) {

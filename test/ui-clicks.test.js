@@ -605,7 +605,12 @@ test('collection: numbers per account, a search finds champions, skins and shard
   assert.ok(!app.$('#viewColl').hidden);
   const row = app.$(`.coll-table tr[data-cacc="${P(1)}"]`);
   assert.deepEqual([...row.querySelectorAll('td')].slice(1, 5).map(td => td.textContent), ['2', '1', '2', '1']);
-  assert.match(app.$('#collBody').textContent, /1 accounts not read yet/);
+  // not read yet: its own row with what to do
+  assert.match(app.$(`.coll-table tr.unread[data-cacc="${P(3)}"]`).textContent, /Not read yet/);
+  // read now: the signed-in account, then the page loads the new data
+  await app.click('#collRead');
+  assert.equal(app.called('read-collection').length, 1);
+  assert.equal(app.called('collections').length, 2);
   await app.type('#collSearch', 'ahri');
   assert.equal(app.$$('.coll-acc').length, 1);
   assert.deepEqual(app.$$('.coll-acc .cl-chip').map(x => x.className.split(' ')[1]).sort(), ['champ', 'skin', 'skinShard']);

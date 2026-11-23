@@ -380,30 +380,40 @@ pub async fn lookup_riot_id(game_name: &str, tag: &str) -> Option<Obj> {
 /// Owned champions (ids), owned skins ([id, name, picture]) and the shards / permanents in the loot
 /// ([kind, id, count, name, picture]: "c" champion shard, "C" champion permanent, "s" skin shard,
 /// "S" skin permanent). The picture is the client's tilePath (shown via CommunityDragon).
+///
+/// Only the parts the client really answered are in the result: right after a login the
+/// inventory often isn't loaded yet – an empty or failed part must not replace a good one
+/// (main.rs merges the parts into the stored collection).
 pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
     let owned = |x: &&Value| x["ownership"]["owned"] == true;
+    let mut out = json!({ "at": now_ms() });
     let champs: Vec<Value> = champs
         .as_array()
         .map(|c| {
             c.iter()
                 .filter(owned)
-                .filter(|x| num_of(x.get("id")) > 0.0)
+                .filter(|x| real_champ(x))
                 .map(|x| x["id"].clone())
                 .collect()
         })
         .unwrap_or_default();
-    let skins: Vec<Value> = skins
-        .as_array()
-        .map(|s| {
-            s.iter()
-                .filter(owned)
-                .filter(|x| x["isBase"] != true)
-                .map(|x| json!([x["id"], x["name"], x["tilePath"].as_str().unwrap_or("")]))
-                .collect()
-        })
-        .unwrap_or_default();
-    let shards: Vec<Value> = loot
-        .as_array()
+    // nobody owns no champion at all: an empty list means "not loaded yet"
+    if !champs.is_empty() {
+        out["champs"] = json!(champs);
+    }
+    if let Some(s) = skins.as_array().filter(|s| !s.is_empty()) {
+        let list: Vec<Value> = s
+            .iter()
+            .filter(owned)
+            .filter(|x| real_skin(x))
+            .map(|x| json!([x["id"], x["name"], x["tilePath"].as_str().unwrap_or("")]))
+            .collect();
+        out["skins"] = json!(list);
+    }
+    let Some(loot) = loot.as_array() else {
+        return out;
+    };
+    let shards: Vec<Value> = Some(loot)
         .map(|l| {
             l.iter()
                 .filter_map(|x| {
@@ -428,7 +438,17 @@ pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
                 .collect()
         })
         .unwrap_or_default();
-    json!({ "at": now_ms(), "champs": champs, "skins": skins, "shards": shards })
+    out["shards"] = json!(shards);
+    out
+}
+/// Real champions only: the client also lists copies for special modes (ids from 60000 on).
+fn real_champ(x: &Value) -> bool {
+    let id = num_of(x.get("id"));
+    id > 0.0 && id < 10_000.0
+}
+/// Real skins only (not the base skin, not the copies of special-mode champions: id = champion * 1000 + n).
+fn real_skin(x: &Value) -> bool {
+    x["isBase"] != true && num_of(x.get("id")) < 10_000_000.0
 }
 
 /// Everything only the signed-in account can see about itself ("_coll": the collection, which
@@ -485,7 +505,7 @@ pub async fn profile_data(me: &Obj) -> Obj {
         p.insert("topMastery".into(), Value::Array(m.iter().take(3).map(|x| json!({ "id": x["championId"], "level": x["championLevel"], "points": x["championPoints"] })).collect()));
     }
     if let Some(Value::Array(c)) = champs {
-        let real: Vec<&Value> = c.iter().filter(|x| num_of(x.get("id")) > 0.0).collect();
+        let real: Vec<&Value> = c.iter().filter(|x| real_champ(x)).collect();
         p.insert(
             "champs".into(),
             json!(real
@@ -500,7 +520,7 @@ pub async fn profile_data(me: &Obj) -> Obj {
             "skins".into(),
             json!(s
                 .iter()
-                .filter(|x| x["isBase"] != true && x["ownership"]["owned"] == true)
+                .filter(|x| real_skin(x) && x["ownership"]["owned"] == true)
                 .count()),
         );
     }
@@ -1218,6 +1238,24 @@ mod tests {
                     { "type": "CHAMPION", "storeItemId": 1, "count": 0, "itemDesc": "Annie" }]),
         );
         assert_eq!(c["champs"], json!([103]));
+        let empty = collection_of(
+            &json!({ "errorCode": "RPC_ERROR" }),
+            &json!([]),
+            &Value::Null,
+        );
+        assert!(
+            empty.get("champs").is_none()
+                && empty.get("skins").is_none()
+                && empty.get("shards").is_none()
+        );
+        let modes = collection_of(
+            &json!([{ "id": 60083, "ownership": { "owned": true } }, { "id": 83, "ownership": { "owned": true } }]),
+            &json!([{ "id": 60083001, "name": "Undertaker Yorick", "ownership": { "owned": true } },
+                    { "id": 83001, "name": "Undertaker Yorick", "ownership": { "owned": true } }]),
+            &json!([]),
+        );
+        assert_eq!(modes["champs"], json!([83]));
+        assert_eq!(modes["skins"].as_array().unwrap().len(), 1);
         assert_eq!(c["skins"], json!([[103001, "Dynasty Ahri", "/t/1.jpg"]]));
         assert_eq!(
             c["shards"],
