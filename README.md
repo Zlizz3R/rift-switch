@@ -4,7 +4,7 @@
 
 # Rift Switch
 
-**A small, fast account switcher and companion for League of Legends on Windows.**<br>
+**The local multi-account companion for League of Legends.**<br>
 Pick an account, press **Log in** – League restarts with it. No typing, no logging out by hand.
 
 [![Download](https://img.shields.io/github/v/release/Zlizz3R/rift-switch?label=download&color=c8aa6e)](https://github.com/Zlizz3R/rift-switch/releases/latest)

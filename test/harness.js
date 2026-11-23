@@ -14,7 +14,7 @@ function sampleState(extra = {}) {
   return {
     accounts: [acc(1), acc(2, { category: 'c1' }), acc(3), acc(4, { placeholder: true, gameName: 'ab•••c', tagLine: '', hasCred: true, solo: null, level: null })],
     categories: [{ id: 'c1', name: 'Smurfs', collapsed: false }],
-    active: P(1), settings: { lang: 'en', theme: 'dark', uiScale: '100', confirmSwitch: true, autoPlay: true, sort: 'custom', tile: null, seenVersion: '1.1.0' },
+    active: P(1), settings: { lang: 'en', theme: 'dark', uiScale: '100', confirmSwitch: true, autoPlay: true, sort: 'custom', tile: null, seenVersion: '1.1.0', askedStart: true },
     live: { clientUp: true, puuid: P(1), phase: 'Lobby', waits: [] }, hasLock: false, sealLogins: false, pendingAdd: false, busy: false, login: null,
     version: '1.1.0', update: { status: 'off' }, ...extra,
   };

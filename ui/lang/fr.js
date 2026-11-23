@@ -98,6 +98,7 @@
     'nav.live': "En direct",
     'nav.tools': "Outils",
     'set.theme': "Apparence",
+    'app.tagline': "Le compagnon multi-comptes local pour League of Legends.", 'first.title': "Démarrer avec Windows ?", 'first.text': "Ainsi rangs, LP et parties restent à jour et la connexion est à un clic. Modifiable à tout moment dans les paramètres.", 'first.tray': "Oui, discrètement dans la zone de notification", 'first.trayT': "Pas de fenêtre au démarrage – environ 8 Mo de mémoire jusqu'à ce que tu l'ouvres.", 'first.window': "Oui, avec la fenêtre", 'first.windowT': "Ouvre Rift Switch dès la connexion à Windows.", 'first.no': "Non", 'first.noT': "Lance Rift Switch toi-même quand tu en as besoin.", 'first.doneTray': "Rift Switch démarre maintenant avec Windows, dans la zone de notification.", 'first.doneWindow': "Rift Switch démarre maintenant avec Windows.",
     'sw.hands': "Ne clique sur rien maintenant – je saisis tes identifiants.", 'login.interrupted': "Connexion interrompue", 'login.retry': "Se reconnecter",
     'mh.time': "joué", 'mh.timeT': "Temps passé dans les parties affichées (selon leur durée)", 'mh.perAccount': "Par compte", 'mh.perAccountT': "Clic : seulement les parties de ce compte",
     'dash.topChamp': "Champion le plus joué", 'dash.topAcc': "Le plus de parties", 'dash.nGames': "{n} parties",

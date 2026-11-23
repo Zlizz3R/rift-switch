@@ -96,6 +96,7 @@
     'nav.live': "لائیو",
     'nav.tools': "ٹولز",
     'set.theme': "شکل",
+    'app.tagline': "League of Legends کے لیے مقامی ملٹی اکاؤنٹ ساتھی۔", 'first.title': "Windows کے ساتھ شروع کریں؟", 'first.text': "تب رینک، LP اور گیمز تازہ رہتے ہیں اور لاگ اِن ایک کلک پر۔ ترتیبات میں کبھی بھی بدل سکتے ہیں۔", 'first.tray': "ہاں، خاموشی سے ٹرے میں", 'first.trayT': "شروع میں کوئی ونڈو نہیں – کھولنے تک تقریباً 8 MB میموری۔", 'first.window': "ہاں، ونڈو کے ساتھ", 'first.windowT': "Windows میں سائن اِن کے فوراً بعد Rift Switch کھولتا ہے۔", 'first.no': "نہیں", 'first.noT': "ضرورت ہو تو Rift Switch خود شروع کریں۔", 'first.doneTray': "Rift Switch اب Windows کے ساتھ ٹرے میں شروع ہوگا۔", 'first.doneWindow': "Rift Switch اب Windows کے ساتھ شروع ہوگا۔",
     'sw.hands': "ابھی کچھ کلک نہ کریں – میں آپ کا لاگ اِن لکھ رہا ہوں۔", 'login.interrupted': "لاگ اِن رک گیا", 'login.retry': "دوبارہ لاگ اِن",
     'mh.time': "کھیلا", 'mh.timeT': "دکھائے گئے گیمز میں وقت (ان کی مدت سے)", 'mh.perAccount': "ہر اکاؤنٹ", 'mh.perAccountT': "کلک: صرف اس اکاؤنٹ کے گیمز",
     'dash.topChamp': "سب سے زیادہ کھیلا چیمپئن", 'dash.topAcc': "سب سے زیادہ گیمز", 'dash.nGames': "{n} گیمز",

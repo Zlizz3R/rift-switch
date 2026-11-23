@@ -105,7 +105,7 @@ const counters = { Zed: { share: 88, list: [{ name: 'Ahri', wr: 51.8, rating: 6.
 const state = {
   accounts, categories: [{ id: 'c1', name: 'Smurfs', collapsed: false }, { id: 'c2', name: 'Other servers', collapsed: false }], active: P(1),
   settings: { lang: process.env.DEMO_LANG || 'en', theme: 'dark', uiScale: '100', confirmSwitch: true, autoPlay: true, sort: 'custom', tile: null, layout: 'tiles',
-    champPool: [103, 238, 517, 157, 91], lane: 'mid', seenVersion: '1.2.0' },
+    champPool: [103, 238, 517, 157, 91], lane: 'mid', seenVersion: '1.2.0', askedStart: true },
   live: { clientUp: true, puuid: P(1), phase: 'ChampSelect', waits: [] }, hasLock: false, sealLogins: false, pendingAdd: false, busy: false, login: null,
   version: '1.2.0', update: { status: 'current' }, switching: null,
 };

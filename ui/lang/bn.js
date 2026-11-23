@@ -95,6 +95,7 @@
     'nav.live': "লাইভ",
     'nav.tools': "টুলস",
     'set.theme': "চেহারা",
+    'app.tagline': "League of Legends-এর লোকাল মাল্টি-অ্যাকাউন্ট সঙ্গী।", 'first.title': "Windows-এর সাথে চালু করবেন?", 'first.text': "তাহলে র‍্যাঙ্ক, LP ও গেম আপডেট থাকে আর লগ ইন এক ক্লিকে। সেটিংসে যেকোনো সময় বদলাতে পারবেন।", 'first.tray': "হ্যাঁ, চুপচাপ ট্রেতে", 'first.trayT': "শুরুতে কোনো উইন্ডো নেই – খোলা পর্যন্ত প্রায় 8 MB মেমরি।", 'first.window': "হ্যাঁ, উইন্ডোসহ", 'first.windowT': "Windows-এ সাইন ইন করার পরই Rift Switch খোলে।", 'first.no': "না", 'first.noT': "দরকার হলে নিজে Rift Switch চালু করুন।", 'first.doneTray': "Rift Switch এখন Windows-এর সাথে ট্রেতে চালু হবে।", 'first.doneWindow': "Rift Switch এখন Windows-এর সাথে চালু হবে।",
     'sw.hands': "এখন কিছুতে ক্লিক করবেন না – আপনার লগইন লিখছি।", 'login.interrupted': "লগইন থেমে গেছে", 'login.retry': "আবার লগ ইন",
     'mh.time': "খেলা", 'mh.timeT': "দেখানো গেমগুলোতে সময় (তাদের দৈর্ঘ্য থেকে)", 'mh.perAccount': "প্রতি অ্যাকাউন্ট", 'mh.perAccountT': "ক্লিক: শুধু এই অ্যাকাউন্টের গেম",
     'dash.topChamp': "সবচেয়ে বেশি খেলা চ্যাম্পিয়ন", 'dash.topAcc': "সবচেয়ে বেশি গেম", 'dash.nGames': "{n}টি গেম",

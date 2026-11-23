@@ -97,6 +97,7 @@
     'nav.live': "Ao vivo",
     'nav.tools': "Ferramentas",
     'set.theme': "Aparência",
+    'app.tagline': "O companheiro local multi-contas para League of Legends.", 'first.title': "Iniciar com o Windows?", 'first.text': "Assim elo, PDL e partidas ficam atualizados e entrar está a um clique. Dá para mudar a qualquer momento nas configurações.", 'first.tray': "Sim, discretamente na bandeja", 'first.trayT': "Sem janela ao iniciar – cerca de 8 MB de memória até você abrir.", 'first.window': "Sim, com a janela", 'first.windowT': "Abre o Rift Switch logo após entrar no Windows.", 'first.no': "Não", 'first.noT': "Abra o Rift Switch você mesmo quando precisar.", 'first.doneTray': "O Rift Switch agora inicia com o Windows, na bandeja.", 'first.doneWindow': "O Rift Switch agora inicia com o Windows.",
     'sw.hands': "Não clique em nada agora – estou digitando seu login.", 'login.interrupted': "Login interrompido", 'login.retry': "Entrar de novo",
     'mh.time': "jogado", 'mh.timeT': "Tempo nas partidas mostradas (pela duração)", 'mh.perAccount': "Por conta", 'mh.perAccountT': "Clique: só as partidas desta conta",
     'dash.topChamp': "Campeão mais jogado", 'dash.topAcc': "Mais partidas", 'dash.nGames': "{n} partidas",

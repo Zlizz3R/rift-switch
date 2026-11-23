@@ -628,4 +628,23 @@ applyTheme();
 
 // "What's new" once after an update (renderer.js has the state by then)
 // the first state can arrive before this file is loaded: draw once more (detail panel)
-stateReady.then(() => { render(); setTimeout(notesOnce, 600); });
+stateReady.then(() => { render(); setTimeout(firstStart, 400); });
+
+// first start: asked once whether Rift Switch should start with Windows (nothing is switched on
+// without asking); then "What's new" as usual
+function firstStart() {
+  if (!S.settings || S.locked || S.settings.askedStart || !S.version) return notesOnce();
+  $('startBox').hidden = false;
+}
+$('startBox').addEventListener('click', e => {
+  const b = e.target.closest('[data-first]');
+  if (!b) return;
+  const how = b.dataset.first;
+  $('startBox').hidden = true;
+  S.settings = { ...S.settings, askedStart: true, autostart: how !== 'no', startMinimized: how === 'tray' };
+  api.setSetting('autostart', how !== 'no');
+  api.setSetting('startMinimized', how === 'tray');
+  api.setSetting('askedStart', true);
+  render();
+  if (how !== 'no') toast(t(how === 'tray' ? 'first.doneTray' : 'first.doneWindow'));
+});

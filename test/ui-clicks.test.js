@@ -728,6 +728,20 @@ test('login interrupted by another window: hands-off hint while typing, then a c
   assert.equal(app.called('switch').length, 2);
 }));
 
+test('first start: asked once whether to start with Windows – "quietly in the tray" switches both on', () => {
+  const st = sampleState();
+  st.settings.askedStart = false;
+  return withApp({ state: st }, async (app) => {
+    await new Promise(r => app.w.setTimeout(r, 500));
+    await app.settle();
+    assert.ok(app.visible('#startBox'));
+    await app.click('[data-first="tray"]');
+    assert.ok(!app.visible('#startBox'));
+    const set = app.called('set-setting').map(c => c.args);
+    assert.deepEqual(set.slice(-3), [['autostart', true], ['startMinimized', true], ['askedStart', true]]);
+  });
+});
+
 // ---------- overview page ----------
 function dashReplies() {
   const now = Date.now(), D = 86400000;   // Player3 also plays Ranked 5v5 (see dashState)
