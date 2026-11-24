@@ -110,7 +110,7 @@
     'coll.readFor': "{name} 已登录——其他账号会在你登录时读取。", 'coll.readClosed': "League 未运行——启动后才能读取已登录的账号。", 'coll.notRead': "尚未读取——请登录该账号一次（League 需打开）。", 'coll.tBoth': "拥有英雄和皮肤", 'coll.tChamp': "拥有英雄，无皮肤", 'coll.tNone': "未拥有该英雄",
     'tools.diag': "保存诊断信息", 'tools.diagT': "用于错误报告的文本文件：版本、安装、状态、错误日志末尾——不含名称、ID 或用户文件夹。", 'tools.diagSaved': "诊断已保存——请将文件附在报告中。", 'exp.plain': "不含登录信息", 'exp.plainT': "账号、分类、备注、目标、设置和 LP 历史。适合作为备份；导入后每个账号登录一次。", 'exp.logins': "含登录信息（密码保护）", 'exp.loginsT': "另含已保存登录的用户名和密码，用单独的密码加密（scrypt + AES-256）。拥有文件和该密码的人都能登录——请妥善保管。", 'exp.never': "文件中绝不包含：Riot Client 的登录状态（\"保持登录\"）、应用密码和对局记录。", 'notes.title': "更新内容", 'notes.sub': "每个版本的变化", 'notes.open': "此版本的新内容", 'notes.this': "已安装", 'src.title': "数据来源", 'src.sub': "应用建立的每个连接及发送的内容", 'help.sources': "## 仅在你的电脑上\n- Riot Client 和 League 客户端（127.0.0.1）：段位、等级、对局记录、惩罚、收藏。\n- 账号、登录信息和会话保存在应用数据文件夹中，并为你的 Windows 用户加密。\n## 互联网\n- CommunityDragon：图标、段位徽章、英雄和装备数据。\n- counterstats.net：英雄选择助手中每个对位的两个英雄名。\n- GitHub：每 6 小时检查新版本。\n- op.gg 等网站：仅当你自己打开资料时。\n## 绝不\n- 不发送任何账号数据、密码或统计。无追踪、无广告。",
     'sw.penTitle': "{name} 有惩罚", 'sw.penLock': "{reason}——剩余 {left}。可以登录，但之后才能开始游戏。", 'sw.penLowPrio': "低优先级队列：{what}。每局都要先等待。", 'sw.penBtn': "仍然登录", 'login.wrong': "已登录为 {got}——不是 {want}。请检查该账号保存的登录信息。", 'login.step1': "打开 Riot Client（下方按钮）。", 'login.step2': "输入邮件或应用中的验证码，或完成人机验证。", 'login.step3': "完成——Rift Switch 会检测到登录并自动启动 League。", 'login.step3f': "或在那里自行登录——Rift Switch 会为该账号保留此登录。", 'login.openRc': "打开 Riot Client",
-    'nav.coll': "收藏", 'coll.title': "收藏", 'coll.sub': "所有账号的英雄、皮肤和碎片——一次全部搜索", 'coll.search': "英雄或皮肤 …", 'coll.champs': "英雄", 'coll.skins': "皮肤", 'coll.shards': "碎片", 'coll.champShards': "英雄碎片", 'coll.skinShards': "皮肤碎片", 'coll.asOf': "截至", 'coll.champ': "已拥有英雄", 'coll.skin': "已拥有皮肤", 'coll.champShard': "战利品中的英雄碎片", 'coll.skinShard': "战利品中的皮肤碎片", 'coll.shard': "碎片", 'coll.perm': "永久", 'coll.hits': "找到 {n} 个", 'coll.none': "你的账号都没有这个。", 'coll.empty': "尚未读取：登录账号且 League 打开时才会读取其收藏。", 'coll.missing': "还有 {n} 个账号未读取——请登录一次。",
+    'nav.coll': "收藏", 'coll.title': "收藏", 'coll.search': "英雄或皮肤 …", 'coll.champs': "英雄", 'coll.skins': "皮肤", 'coll.shards': "碎片", 'coll.asOf': "截至", 'coll.champ': "已拥有英雄", 'coll.skin': "已拥有皮肤", 'coll.champShard': "战利品中的英雄碎片", 'coll.skinShard': "战利品中的皮肤碎片", 'coll.shard': "碎片", 'coll.perm': "永久", 'coll.hits': "找到 {n} 个", 'coll.none': "你的账号都没有这个。", 'coll.empty': "尚未读取：登录账号且 League 打开时才会读取其收藏。", 'coll.missing': "还有 {n} 个账号未读取——请登录一次。",
     'lay.tiles': "卡片", 'lay.compact': "小卡片", 'lay.list': "列表", 'keys.title': "键盘快捷键 (?)", 'help.keys': "## 任意位置\n- Ctrl+F 或 / – 搜索账号\n- Ctrl+1 … 6 – 账号、总览、收藏、实时、对局记录、工具\n- Ctrl+N – 添加账号，Ctrl+Shift+N – 批量添加\n- Ctrl+, – 设置\n- F5 – 刷新段位\n- ? – 本列表\n- Esc – 关闭 / 取消选择\n## 账号\n- 方向键 – 下一个账号（Shift：多选）\n- Ctrl+A – 选择所有显示的账号\n- Enter – 登录\n- E 或 F2 – 编辑备注\n- P – 资料\n- Delete – 移除（会先询问）\n- Ctrl+点击、Shift+点击或框选 – 多选，然后一次修改备注、分类……",
     'add.bulk': "批量添加账号", 'add.bulkSub': "粘贴列表——每行一个账号", 'bulk.title': "批量添加账号", 'bulk.hint': "每行一个账号：user:password、user--Name#TAG--password、user;password;Name#TAG;备注——或使用 \"Username: …\"、\"Password: …\"、\"Riot ID: …\" 这样的块，账号之间空一行。只有 Riot ID 则不带登录信息添加。现在不会登录任何账号。", 'bulk.ph': "account1:password1\naccount2--Name#EUW--password2\nName#EUW", 'bulk.note': "备注", 'bulk.noCat': "无分类", 'bulk.btn': "添加 {n} 个", 'bulk.progress': "正在添加 {i} / {n} …", 'bulk.done': "已添加 {n} 个账号。", 'bulk.doneSkip': "已添加 {n} 个账号，跳过 {k} 行。", 'bulk.none': "在上方粘贴或输入列表。", 'bulk.idOnly': "仅 Riot ID", 'bulk.err.pass': "缺少密码", 'bulk.err.user': "用户名？", 'bulk.err.empty': "无法识别", 'bulk.err.twice': "列表中重复",
     'nav.dash': "总览", 'dash.title': "总览", 'dash.sub': "所有账号在一张图中——以及每个账号的近况", 'dash.d7': "7 天", 'dash.d30': "30 天", 'dash.d90': "90 天", 'dash.all': "全部", 'dash.games': "排位场次", 'dash.wl': "胜 – 负", 'dash.wr': "胜率", 'dash.lp': "LP", 'dash.climber': "最佳上分", 'dash.account': "账号", 'dash.rank': "当前段位", 'dash.goal': "目标", 'dash.noGoal': "设定目标 …", 'dash.goalLeft': "还差 {n} LP", 'dash.goalDone': "已达成 ✓", 'dash.active': "上次游戏", 'dash.empty': "还没有排位数据。League 打开时会保存每个账号的段位和 LP——每个账号登录一次即可。", 'dash.chartEmpty': "此期间没有 LP 变化——选择更长的时间或显示更多账号。",
@@ -237,6 +237,15 @@
     'mast.tipSrc': "来源：{src}",
     'last.title': "上一场对局",
     'last.open': "在对局记录中打开",
+    'coll.n.chroma': "炫彩",
+    'coll.n.ward': "守卫皮肤",
+    'coll.n.icon': "头像",
+    'coll.n.emote': "表情",
+    'coll.n.finisher': "终结特效",
+    'coll.n.runes': "符文页",
+    'coll.total': "所有账号",
+    'coll.countsLater': "炫彩、守卫皮肤、头像、表情、终结特效和符文页从下一次读取开始统计——登录时按\"加载\"，或登录该账号一次。",
+    'coll.sub': "所有账号的英雄、皮肤、炫彩等——一次搜索全部",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

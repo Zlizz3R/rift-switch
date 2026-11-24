@@ -47,6 +47,10 @@ function collMatch(e, q) {
   if (!q) return true;
   return collNorm(e.name).includes(q) || collNorm(collChamp(e.champ)).includes(q);
 }
+// the counted things beside champions and skins (riot.rs counts_of)
+const COLL_COUNTS = ['chroma', 'ward', 'icon', 'emote', 'finisher', 'runes'];
+// read before these were counted: say once that the next "Load" fills them in
+const collCountsHint = (known, by) => known.some(a => !by.get(a.puuid).counts) ? `<p class="coll-foot">${t('coll.countsLater')}</p>` : '';
 const COLL_KINDS = { all: () => true, champ: e => e.k === 'champ', skin: e => e.k === 'skin', shard: e => e.k === 'champShard' || e.k === 'skinShard' };
 
 // the shared "Load" button (views.js) reads the signed-in account; the others at their next login
@@ -74,17 +78,30 @@ function renderColl() {
     // no search: every account with its numbers – or that it hasn't been read yet
     if (!accs.length) { el.innerHTML = `<div class="chart-empty">${t('coll.empty')}</div>`; return; }
     const sorted = [...known, ...accs.filter(a => !by.has(a.puuid))];
-    el.innerHTML = `<table class="dash-table coll-table"><thead><tr><th>${t('dash.account')}</th><th>${t('coll.champs')}</th><th>${t('coll.skins')}</th><th>${t('coll.champShards')}</th><th>${t('coll.skinShards')}</th><th>${t('p.be')}</th><th>${t('coll.asOf')}</th></tr></thead><tbody>
-      ${sorted.map(a => {
-        const c = by.get(a.puuid);
-        if (!c) return `<tr class="unread" data-cacc="${esc(a.puuid)}"><td><span class="dash-name">${esc(dispName(a))}</span></td><td colspan="6" class="muted">${t('coll.notRead')}</td></tr>`;
-        const e = collEntries(c);
-        const cnt = k => e.filter(x => x.k === k).reduce((n, x) => n + (x.n || 1), 0);
-        const be = a.profile && a.profile.be;
-        return `<tr data-cacc="${esc(a.puuid)}"><td><span class="dash-name">${esc(dispName(a))}</span></td>
-          <td>${cnt('champ')}</td><td>${cnt('skin')}</td><td>${cnt('champShard')}</td><td>${cnt('skinShard')}</td>
-          <td>${be == null || hides('wallet') ? '–' : num(be)}</td><td class="muted">${esc(fmtDate(c.at))}</td></tr>`;
-      }).join('')}</tbody></table>`;
+    // per account: what it owns, counted (shards are in the search, not here)
+    const nums = c => {
+      const e = collEntries(c);
+      const n = c.counts || {};
+      return [e.filter(x => x.k === 'champ').length, e.filter(x => x.k === 'skin').length, ...COLL_COUNTS.map(k => n[k])];
+    };
+    const cell = v => `<td>${v == null ? '<span class="muted">–</span>' : num(v)}</td>`;
+    const rows = sorted.map(a => {
+      const c = by.get(a.puuid);
+      if (!c) return `<tr class="unread" data-cacc="${esc(a.puuid)}"><td><span class="dash-name">${esc(dispName(a))}</span></td><td colspan="${COLL_COUNTS.length + 4}" class="muted">${t('coll.notRead')}</td></tr>`;
+      const be = a.profile && a.profile.be;
+      return `<tr data-cacc="${esc(a.puuid)}"><td><span class="dash-name">${esc(dispName(a))}</span></td>${nums(c).map(cell).join('')}
+        ${cell(be == null || hides('wallet') ? null : be)}<td class="muted">${esc(fmtDate(c.at))}</td></tr>`;
+    });
+    // all accounts together (a number nobody has read yet stays "–")
+    let foot2 = '';
+    if (known.length > 1) {
+      const all = known.map(a => nums(by.get(a.puuid)));
+      const sum = all[0].map((_, i) => all.some(r => r[i] != null) ? all.reduce((x, r) => x + (r[i] || 0), 0) : null);
+      foot2 = `<tfoot><tr><td>${t('coll.total')}</td>${sum.map(cell).join('')}<td></td><td></td></tr></tfoot>`;
+    }
+    const head = ['coll.champs', 'coll.skins', ...COLL_COUNTS.map(k => 'coll.n.' + k), 'p.be', 'coll.asOf'];
+    el.innerHTML = `<table class="dash-table coll-table"><thead><tr><th>${t('dash.account')}</th>${head.map(k => `<th>${t(k)}</th>`).join('')}</tr></thead><tbody>
+      ${rows.join('')}</tbody>${foot2}</table>${collCountsHint(known, by)}`;
     return;
   }
   if (!known.length) { el.innerHTML = `<div class="chart-empty">${t('coll.empty')}</div>`; return; }

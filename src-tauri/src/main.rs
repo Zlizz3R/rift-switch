@@ -945,7 +945,12 @@ async fn tick_inner(my_gen: u64) {
                         let c = c.as_object_mut().unwrap();
                         let good = new.contains_key("champs") || new.contains_key("skins");
                         for (k, v) in new {
-                            if k != "at" || good {
+                            // the counts too: a number the client didn't tell keeps the last one
+                            if let (Value::Object(add), Some(Value::Object(had))) =
+                                (&v, c.get_mut("counts").filter(|_| k == "counts"))
+                            {
+                                had.extend(add.clone());
+                            } else if k != "at" || good {
                                 c.insert(k, v);
                             }
                         }

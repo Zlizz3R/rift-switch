@@ -666,13 +666,22 @@ test('collection: numbers per account, a search finds champions, skins and shard
   'load-all': { ok: true, champs: 162, skins: 87, games: 12 },
   champions: [{ id: 103, name: 'Ahri' }, { id: 22, name: 'Ashe' }, { id: 1, name: 'Annie' }],
   collections: [
-    { puuid: P(1), at: 1, champs: [103, 22], skins: [[103001, 'Dynasty Ahri']], shards: [['c', 1, 2, 'Annie'], ['s', 103015, 1, 'Arcade Ahri']] },
+    { puuid: P(1), at: 1, champs: [103, 22], skins: [[103001, 'Dynasty Ahri']], shards: [['c', 1, 2, 'Annie'], ['s', 103015, 1, 'Arcade Ahri']],
+      counts: { chroma: 3, ward: 5, icon: 1240, emote: 12, finisher: 1, runes: 9 } },
     { puuid: P(2), at: 1, champs: [1], skins: [], shards: [] },
   ] } }, async (app) => {
   await app.click('#navColl');
   assert.ok(!app.$('#viewColl').hidden);
   const row = app.$(`.coll-table tr[data-cacc="${P(1)}"]`);
-  assert.deepEqual([...row.querySelectorAll('td')].slice(1, 5).map(td => td.textContent), ['2', '1', '2', '1']);
+  const cells = r => [...r.querySelectorAll('td')].slice(1, 9).map(td => td.textContent.replace(/\D/g, '') || '–');
+  // champions, skins, chromas, ward skins, icons, emotes, finishers, rune pages – no shards here
+  assert.deepEqual(cells(row), ['2', '1', '3', '5', '1240', '12', '1', '9']);
+  assert.ok(!/shard/i.test(app.$('.coll-table thead').textContent));
+  // read before the counts existed: "–", not 0, and a word on when they come
+  assert.deepEqual(cells(app.$(`.coll-table tr[data-cacc="${P(2)}"]`)), ['1', '0', '–', '–', '–', '–', '–', '–']);
+  assert.match(app.$('#collBody').textContent, /next reading/);
+  // all accounts together
+  assert.deepEqual(cells(app.$('.coll-table tfoot tr')), ['3', '1', '3', '5', '1240', '12', '1', '9']);
   // not read yet: its own row with what to do
   assert.match(app.$(`.coll-table tr.unread[data-cacc="${P(3)}"]`).textContent, /Not read yet/);
   // "Load": the signed-in account, everything at once

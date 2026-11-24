@@ -5,7 +5,7 @@
 use crate::accounts::{num_of, Obj};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
@@ -455,6 +455,51 @@ pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
     out["shards"] = json!(shards);
     out
 }
+/// What else the account owns, as counts: ward skins, chromas, summoner icons, emotes, finishers
+/// (inventory types WARD_SKIN, CHAMPION_SKIN, SUMMONER_ICON, EMOTE, NEXUS_FINISHER) and rune pages.
+/// A chroma is an owned CHAMPION_SKIN item that isn't one of the owned skins (the client lists
+/// both under that type). Only what the client really answered is in it; nothing at all: None.
+pub fn counts_of(inv: &Value, perks: &Value, skins: &Value) -> Option<Value> {
+    let mut out = Obj::new();
+    if let Some(items) = inv.as_array().filter(|l| !l.is_empty()) {
+        let owned = |ty: &str| -> Vec<&Value> {
+            items
+                .iter()
+                .filter(|x| x["inventoryType"] == ty && x["owned"] == true)
+                .collect()
+        };
+        for (key, ty) in [
+            ("ward", "WARD_SKIN"),
+            ("icon", "SUMMONER_ICON"),
+            ("emote", "EMOTE"),
+            ("finisher", "NEXUS_FINISHER"),
+        ] {
+            out.insert(key.into(), json!(owned(ty).len()));
+        }
+        let skin_ids: HashSet<i64> = skins
+            .as_array()
+            .map(|s| {
+                s.iter()
+                    .filter(|x| x["ownership"]["owned"] == true)
+                    .filter_map(|x| x["id"].as_i64())
+                    .collect()
+            })
+            .unwrap_or_default();
+        if !skin_ids.is_empty() {
+            let chromas = owned("CHAMPION_SKIN")
+                .into_iter()
+                .filter_map(|x| x["itemId"].as_i64())
+                .filter(|id| !skin_ids.contains(id))
+                .count();
+            out.insert("chroma".into(), json!(chromas));
+        }
+    }
+    if let Some(n) = perks["ownedPageCount"].as_i64() {
+        out.insert("runes".into(), json!(n));
+    }
+    (!out.is_empty()).then(|| Value::Object(out))
+}
+
 /// The client's mastery list -> { at, champs: { "<champion id>": [points, level] } }.
 /// An empty list means "not loaded yet" (every account that played has points): None.
 pub fn mastery_of(list: &[Value]) -> Option<Value> {
@@ -487,6 +532,9 @@ fn real_skin(x: &Value) -> bool {
     x["isBase"] != true && num_of(x.get("id")) < 10_000_000.0
 }
 
+/// The inventory types counted on the collection page, in one request.
+const INVENTORY_COUNTED: &str = "/lol-inventory/v1/inventory?inventoryTypes=%5B%22WARD_SKIN%22,%22CHAMPION_SKIN%22,%22SUMMONER_ICON%22,%22EMOTE%22,%22NEXUS_FINISHER%22%5D";
+
 /// Everything only the signed-in account can see about itself ("_coll": the collection, which
 /// main.rs keeps outside the profile).
 pub async fn profile_data(me: &Obj) -> Obj {
@@ -499,7 +547,7 @@ pub async fn profile_data(me: &Obj) -> Obj {
         format!("/lol-champions/v1/inventories/{sid}/champions-minimal"),
         format!("/lol-champions/v1/inventories/{sid}/skins-minimal"),
     );
-    let (wallet, honor, mastery, score, champs, skins, loot) = tokio::join!(
+    let (wallet, honor, mastery, score, champs, skins, loot, inv, perks) = tokio::join!(
         get("/lol-inventory/v1/wallet?currencyTypes=%5B%22RP%22,%22lol_blue_essence%22%5D"),
         get("/lol-honor-v2/v1/profile"),
         lcu(
@@ -511,6 +559,8 @@ pub async fn profile_data(me: &Obj) -> Obj {
         lcu(&u_champs, 6000, "GET"),
         lcu(&u_skins, 6000, "GET"),
         lcu("/lol-loot/v1/player-loot", 6000, "GET"),
+        lcu(INVENTORY_COUNTED, 8000, "GET"),
+        get("/lol-perks/v1/inventory"),
     );
     // what the account owns, for the collection page (kept apart from the profile: it's long)
     if champs.is_some() || skins.is_some() || loot.is_some() {
@@ -519,6 +569,14 @@ pub async fn profile_data(me: &Obj) -> Obj {
             skins.as_ref().unwrap_or(&Value::Null),
             loot.as_ref().unwrap_or(&Value::Null),
         ));
+    }
+    let counts = counts_of(
+        inv.as_ref().unwrap_or(&Value::Null),
+        perks.as_ref().unwrap_or(&Value::Null),
+        skins.as_ref().unwrap_or(&Value::Null),
+    );
+    if let Some(n) = counts {
+        p_coll.get_or_insert_with(|| json!({}))["counts"] = n;
     }
     let mut p = Obj::new();
     p.insert("at".into(), json!(now_ms()));
@@ -1320,6 +1378,37 @@ mod tests {
                 ["c", 22, 2, "Ashe", ""],
                 ["s", 103015, 1, "Arcade Ahri", ""]
             ])
+        );
+    }
+
+    #[test]
+    fn counts_from_the_inventory() {
+        let it = |ty: &str, id: i64, owned: bool| json!({ "inventoryType": ty, "itemId": id, "owned": owned });
+        let inv = json!([
+            it("WARD_SKIN", 0, false),
+            it("WARD_SKIN", 3, true),
+            it("WARD_SKIN", 4, true),
+            it("SUMMONER_ICON", 29, true),
+            it("EMOTE", 4096, true),
+            it("NEXUS_FINISHER", 6, true),
+            // a skin and two chromas of it, one not owned
+            it("CHAMPION_SKIN", 103001, true),
+            it("CHAMPION_SKIN", 103002, true),
+            it("CHAMPION_SKIN", 103003, false),
+        ]);
+        let skins = json!([{ "id": 103000, "isBase": true, "ownership": { "owned": true } },
+                           { "id": 103001, "ownership": { "owned": true } }]);
+        let c = counts_of(&inv, &json!({ "ownedPageCount": 21 }), &skins).unwrap();
+        assert_eq!(
+            c,
+            json!({ "ward": 2, "icon": 1, "emote": 1, "finisher": 1, "chroma": 1, "runes": 21 })
+        );
+        // skins not loaded: no chroma count (rather none than a wrong one); nothing answered: None
+        let c = counts_of(&inv, &Value::Null, &json!([])).unwrap();
+        assert!(c.get("chroma").is_none() && c.get("runes").is_none() && c["ward"] == 2);
+        assert_eq!(
+            counts_of(&json!([]), &json!({ "errorCode": "x" }), &Value::Null),
+            None
         );
     }
 }

@@ -1326,3 +1326,6 @@ span.mh-ch { cursor: default; }
 .d-last { margin: 10px 0 4px; }
 .d-last:empty { display: none; }
 .d-sec-t { display: block; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 5px; }
+.coll-table td:not(:first-child), .coll-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.coll-table tfoot td { font-weight: 600; border-bottom: 0; border-top: 1px solid var(--line); }
+.coll-table tr.unread td { text-align: left; }
