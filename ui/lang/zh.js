@@ -465,6 +465,10 @@
     'rad.allChamps': "所有英雄",
     'rad.none': "在此筛选下没有已知对线对手的对局。",
     'rad.flip': "点击：对线对手比较风格",
+    'mh.recScope': "{n} 场已保存 {mode} 对局中的最佳",
+    'trend.lead': "最近 {sel} 局对比之前：",
+    'trend.few': "需要 {need} 局（当前 {have} 局）",
+    'trend.deaths': "阵亡",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

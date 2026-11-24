@@ -466,6 +466,10 @@
     'rad.allChamps': "সব চ্যাম্পিয়ন",
     'rad.none': "এই ফিল্টারে পরিচিত লেন প্রতিপক্ষসহ কোনো গেম নেই।",
     'rad.flip': "ক্লিক: লেন প্রতিপক্ষের বিপক্ষে খেলার ধরন",
+    'mh.recScope': "{n}টি সংরক্ষিত {mode} গেমে সেরা",
+    'trend.lead': "শেষ {sel}টি গেম বনাম আগেরগুলো:",
+    'trend.few': "{need}টি গেম দরকার (এখানে {have})",
+    'trend.deaths': "মৃত্যু",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

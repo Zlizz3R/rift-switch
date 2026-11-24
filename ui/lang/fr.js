@@ -469,6 +469,10 @@
     'rad.allChamps': "Tous les champions",
     'rad.none': "Aucune partie avec un adversaire de voie connu pour ces filtres.",
     'rad.flip': "Clic : style de jeu face à l’adversaire de voie",
+    'mh.recScope': "Meilleurs résultats sur {n} parties {mode} enregistrées",
+    'trend.lead': "{sel} dernières parties contre les précédentes :",
+    'trend.few': "il faut {need} parties ({have} ici)",
+    'trend.deaths': "Morts",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

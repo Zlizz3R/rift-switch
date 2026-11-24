@@ -467,6 +467,10 @@
     'rad.allChamps': "تمام چیمپئنز",
     'rad.none': "ان فلٹرز کے لیے معلوم لین مخالف والی کوئی گیم نہیں۔",
     'rad.flip': "کلک: لین مخالف کے مقابلے کھیل کا انداز",
+    'mh.recScope': "{n} محفوظ {mode} گیمز میں بہترین",
+    'trend.lead': "آخری {sel} گیمز بمقابلہ اس سے پہلے کی:",
+    'trend.few': "{need} گیمز چاہئیں (یہاں {have})",
+    'trend.deaths': "اموات",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

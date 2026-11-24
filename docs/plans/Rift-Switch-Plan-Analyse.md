@@ -608,5 +608,9 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Farm, Schaden, Kill-Beteiligung, Vision, Überleben, Lane-Phase (Gold bei 15 Min.), Türme. Übersicht → „Spielstil“
   (Filter von Leistung, eine Rolle – gewählt oder Hauptrolle –, Champion-Auswahl), daneben dieselben Werte als
   Balken. In Live: Klick auf den Champion einer Karte zeigt deren Radar.
-- [ ] Phase 7 – Trends und Bestwerte
+- [x] Phase 7 – Trends und Bestwerte – 24.11.2026: Leistung zeigt unter der Leiste den Trend „letzte 10/20/50/100
+  Spiele gegen die davor“ für Winrate und eine wählbare Kennzahl (KDA, CS/min, Schaden/min, Vision/min, KP, Tode),
+  mit ▲/▼ in die gute Richtung; zu wenig Spiele sagt, wie viele fehlen (`PerfMath.trend`). Bestwerte der Match history
+  stammen nur aus einer Spielart (die mit den meisten Spielen der Auswahl) und nennen ihren Geltungsbereich („Bestwerte
+  in 1.240 gespeicherten Summoner's-Rift-Spielen“).
 - [ ] Phase 8 – Frühere Ranked-Seasons

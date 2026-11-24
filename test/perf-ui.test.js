@@ -105,3 +105,13 @@ test('play style: a radar against the lane opponent on the main role, the same v
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('records: one mode only, with their scope ("bests in 14 stored Summoner\'s Rift games")', async () => {
+  const app = await boot({ replies });
+  try {
+    await app.click('#navMatches');
+    await app.settle();
+    assert.match(app.$('.mh-rec-scope').textContent, /Bests in 14 stored Summoner's Rift games/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

@@ -466,6 +466,10 @@
     'rad.allChamps': "كل الأبطال",
     'rad.none': "لا مباريات بخصم مسار معروف لهذه المرشحات.",
     'rad.flip': "انقر: أسلوب اللعب مقابل خصم المسار",
+    'mh.recScope': "الأفضل في {n} مباراة {mode} محفوظة",
+    'trend.lead': "آخر {sel} مباراة مقابل ما قبلها:",
+    'trend.few': "يلزم {need} مباراة (هنا {have})",
+    'trend.deaths': "الوفيات",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

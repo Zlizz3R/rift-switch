@@ -467,6 +467,10 @@
     'rad.allChamps': "सभी चैंपियन",
     'rad.none': "इन फ़िल्टर के लिए ज्ञात लेन विरोधी वाला कोई गेम नहीं।",
     'rad.flip': "क्लिक: लेन विरोधी के मुक़ाबले खेल शैली",
+    'mh.recScope': "{n} सहेजे गए {mode} गेम में सर्वश्रेष्ठ",
+    'trend.lead': "पिछले {sel} गेम बनाम उससे पहले:",
+    'trend.few': "{need} गेम चाहिए (यहाँ {have})",
+    'trend.deaths': "मौतें",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

@@ -5,7 +5,7 @@
 
 const perf = {
   f: { acc: '', queue: 'ranked', range: 'y' + new Date().getFullYear(), role: '' },
-  sort: 'n', dir: -1, open: new Set(), all: false, cSort: 'n', games: null, loading: false,
+  sort: 'n', dir: -1, open: new Set(), all: false, cSort: 'n', games: null, loading: false, trendN: 20, trendKey: 'kda',
 };
 
 async function loadPerf() {
@@ -86,6 +86,29 @@ function perfBarHtml(ag) {
   </div>`;
 }
 
+// the trend: the last n games against the n before them – win rate and one chosen figure
+const PERF_TREND_LABEL = { kda: 'mh.kda', csMin: 'det.csMin', dmgMin: 'perf.dmgMin', visMin: 'perf.visMin', kp: 'perf.kp', deaths: 'trend.deaths' };
+function perfTrendHtml(parts) {
+  const n = perf.trendN, key = perf.trendKey;
+  const tr = PerfMath.trend(parts, n, key);
+  const selN = `<select id="trendN">${[10, 20, 50, 100].map(v => `<option value="${v}"${v === n ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+  const selK = `<select id="trendKey">${Object.keys(PerfMath.TREND_KEYS).map(k => `<option value="${k}"${k === key ? ' selected' : ''}>${esc(t(PERF_TREND_LABEL[k]))}</option>`).join('')}</select>`;
+  if (!tr.ok) return `<div class="trend"><span>${t('trend.lead', { sel: selN })}</span><span class="muted">${esc(t('trend.few', { have: tr.have, need: tr.need }))}</span></div>`;
+  const fmt = v => (v == null ? '–' : key === 'kp' ? Math.round(v * 100) + ' %' : perfDec(v, key === 'dmgMin' ? 0 : key === 'visMin' || key === 'kda' ? 2 : 1));
+  const arrow = (now, before, better) => {
+    if (now == null || before == null || now === before) return '<i class="tr-eq">=</i>';
+    const up = (now - before) * better > 0;
+    return `<i class="${up ? 'tr-up' : 'tr-down'}">${up ? '▲' : '▼'}</i>`;
+  };
+  return `<div class="trend"><span>${t('trend.lead', { sel: selN })}</span>
+    <span>${t('dash.wr')} <b>${perfPct(tr.wr[1])} → ${perfPct(tr.wr[0])}</b> ${arrow(tr.wr[0], tr.wr[1], 1)}</span>
+    <span>${selK} <b>${fmt(tr.prev)} → ${fmt(tr.cur)}</b> ${arrow(tr.cur, tr.prev, tr.better)}</span></div>`;
+}
+document.addEventListener('change', e => {
+  if (e.target.id === 'trendN') { perf.trendN = +e.target.value; renderPerf(); }
+  if (e.target.id === 'trendKey') { perf.trendKey = e.target.value; renderPerf(); }
+});
+
 // the role table: a role per row, unfolded its champions
 const PERF_COLS = [
   ['n', 'perf.games'], ['winrate', 'dash.wr'], ['avg', 'perf.avg'], ['kda', 'mh.kda'], ['csMin', 'det.csMin'],
@@ -111,7 +134,7 @@ function perfStatsHtml(parts, ag) {
         <td><span class="mast-ch"><img src="${CHAMP_ICON(c.champ)}" alt="" loading="lazy">${esc(perfChamp(c.champ))}</span></td>${perfCells(c)}</tr>`).join('') : '';
     return `<tr class="pr-role${open ? ' open' : ''}" data-prow="${r.role}"><td><span class="pr-name"><i class="pr-chev"></i>${icon}${esc(t('pos.' + r.role))}</span></td>${perfCells(r)}</tr>${champsHtml}`;
   }).join('');
-  return `${perfBarHtml(ag)}<div class="mast-wrap"><table class="dash-table perf-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  return `${perfBarHtml(ag)}${perfTrendHtml(parts)}<div class="mast-wrap"><table class="dash-table perf-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
 
 // the champion list in the style of op.gg: "All" first, then the champions by games

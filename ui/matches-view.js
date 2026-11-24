@@ -395,7 +395,14 @@ function summaryHtml(list) {
   const f1 = x => x.toFixed(1);
   const rec = (key, label, x, val) => x ? `<button class="mh-rec" data-goto="${esc(x.g.id)}" title="${esc(new Date(x.g.t).toLocaleString(locale()))}">
       <img src="${CHAMP_ICON(x.p.champ)}" alt=""><span>${label}</span><b>${val}</b></button>` : '';
-  const r = s.records;
+  // records: never mixed between modes – those of the mode with the most games here, with their scope
+  const modeOf = g => (g.mode === 'CLASSIC' ? 'sr' : g.mode === 'ARAM' ? 'aram' : g.mode === 'CHERRY' ? 'arena' : 'other');
+  const counts = new Map();
+  for (const g of list) if (!Stats.isRemake(g)) counts.set(modeOf(g), (counts.get(modeOf(g)) || 0) + 1);
+  const mode = [...counts].sort((a, b) => b[1] - a[1])[0];
+  const recS = mode ? MatchFilter.summarize(list.filter(g => modeOf(g) === mode[0]), 1) : null;
+  const r = recS ? recS.records : {};
+  const modeName = mode ? (mode[0] === 'sr' ? "Summoner's Rift" : mode[0] === 'aram' ? 'ARAM' : mode[0] === 'arena' ? 'Arena' : t('mh.other')) : '';
   return `<div class="mh-sum">
     <div class="mh-tot">
       <span><b>${s.games}</b> ${t('mh.sumGames')}</span>
@@ -422,6 +429,7 @@ function summaryHtml(list) {
       <b>${c.games}</b><span class="${c.winrate >= 50 ? 'good' : 'bad'}">${c.winrate}% WR</span><span class="muted">${c.playrate}% ${t('mh.playrate')}</span>
       <span class="muted">${c.kda == null ? t('mh.perfect') : c.kda.toFixed(1) + ' KDA'}</span></button>`).join('')}${more('champ', s.champs)}</div>` : ''}
     <div class="mh-recs">
+      ${mode ? `<span class="mh-rec-scope">${esc(t('mh.recScope', { n: num(mode[1]), mode: modeName }))}</span>` : ''}
       ${rec('kills', t('mh.recKills'), r.kills, r.kills && r.kills.p.k)}
       ${rec('deaths', t('mh.recDeaths'), r.deaths, r.deaths && r.deaths.p.d)}
       ${rec('kda', t('mh.recKda'), r.kda, r.kda && (Stats.perfect(r.kda.p) ? t('mh.perfect') : Stats.kda(r.kda.p.k, r.kda.p.d, r.kda.p.a).toFixed(1)))}

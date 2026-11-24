@@ -468,6 +468,10 @@
     'rad.allChamps': "Todos os campeões",
     'rad.none': "Nenhuma partida com oponente de rota conhecido para estes filtros.",
     'rad.flip': "Clique: estilo contra o oponente de rota",
+    'mh.recScope': "Melhores marcas em {n} partidas salvas de {mode}",
+    'trend.lead': "Últimas {sel} partidas contra as anteriores:",
+    'trend.few': "precisa de {need} partidas ({have} aqui)",
+    'trend.deaths': "Mortes",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

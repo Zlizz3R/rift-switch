@@ -468,6 +468,10 @@
     'rad.allChamps': "Все чемпионы",
     'rad.none': "Нет игр с известным соперником по линии для этих фильтров.",
     'rad.flip': "Клик: стиль игры против соперника по линии",
+    'mh.recScope': "Лучшее в {n} сохранённых играх {mode}",
+    'trend.lead': "Последние {sel} игр против предыдущих:",
+    'trend.few': "нужно {need} игр (здесь {have})",
+    'trend.deaths': "Смерти",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

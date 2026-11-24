@@ -60,7 +60,18 @@
   const markWinrate = r => (r.n >= MARK.minGames && r.winrate >= MARK.winrate ? 'good' : '');
   const markKda = r => (r.n >= MARK.minGames && (r.perfect || r.kda >= MARK.kda) ? 'good' : '');
 
-  const api = { QUEUES, ROLES, MARK, years, roleOf, select, champRows, roleTable, sortRows, markWinrate, markKda };
+  // Trend: the last n games against the n before them (newest first by time). key: a figure of
+  // stats.js aggregate; better: 1 = more is better, -1 = fewer. → { cur, prev, wr: [now, before], ok }
+  const TREND_KEYS = { kda: 1, csMin: 1, dmgMin: 1, visMin: 1, kp: 1, deaths: -1 };
+  function trend(parts, n, key) {
+    const list = [...parts].sort((a, b) => b.g.t - a.g.t);
+    if (list.length < 2 * n) return { ok: false, have: list.length, need: 2 * n };
+    const a = St.aggregate(list.slice(0, n)), b = St.aggregate(list.slice(n, 2 * n));
+    const val = x => (key === 'deaths' ? x.avg.d : x[key]);
+    return { ok: true, cur: val(a), prev: val(b), better: TREND_KEYS[key] || 1, wr: [a.winrate, b.winrate] };
+  }
+
+  const api = { QUEUES, ROLES, MARK, years, roleOf, select, champRows, roleTable, sortRows, markWinrate, markKda, TREND_KEYS, trend };
   if (node) module.exports = api;
   else root.PerfMath = api;
 })(typeof window !== 'undefined' ? window : this);

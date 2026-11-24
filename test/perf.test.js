@@ -66,3 +66,17 @@ test('champion list: most games first, sortable; colour only from 5 games on', (
   assert.equal(PM.markWinrate(rows[1]), '');           // 2 games: no colour
   assert.equal(PM.markKda(rows[1]), '');
 });
+
+test('trend: the last n games against the n before; too few games say how many are needed', () => {
+  // newest 10: wins with 1 death; the 10 before: losses with 5 deaths
+  const games = [...Array.from({ length: 10 }, (_, i) => game({ t: Date.UTC(2026, 5, 20, i), me: { win: true, d: 1 } })),
+    ...Array.from({ length: 10 }, (_, i) => game({ t: Date.UTC(2026, 5, 1, i), me: { win: false, d: 5 } }))];
+  const parts = PM.select(games, { queue: 'all', range: 'all' });
+  const tr = PM.trend(parts, 10, 'deaths');
+  assert.equal(tr.ok, true);
+  assert.deepEqual(tr.wr, [1, 0]);
+  assert.equal(tr.cur, 1);
+  assert.equal(tr.prev, 5);
+  assert.equal(tr.better, -1);            // fewer deaths is better
+  assert.deepEqual(PM.trend(parts, 20, 'kda'), { ok: false, have: 20, need: 40 });
+});

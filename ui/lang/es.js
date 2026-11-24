@@ -469,6 +469,10 @@
     'rad.allChamps': "Todos los campeones",
     'rad.none': "No hay partidas con rival de línea conocido para estos filtros.",
     'rad.flip': "Clic: estilo frente al rival de línea",
+    'mh.recScope': "Mejores marcas en {n} partidas guardadas de {mode}",
+    'trend.lead': "Últimas {sel} partidas frente a las anteriores:",
+    'trend.few': "hacen falta {need} partidas (aquí {have})",
+    'trend.deaths': "Muertes",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;
