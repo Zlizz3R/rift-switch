@@ -18,7 +18,7 @@ async function loadPerf() {
   perf.loading = false;
   renderPerf();
 }
-const perfOn = () => view === 'dash' && (dashTab() === 'stats' || dashTab() === 'champs');
+const perfOn = () => view === 'dash' && ['stats', 'champs', 'style'].includes(dashTab());
 api.onMatchesChanged(() => { if (perfOn()) loadPerf(); });
 
 // ---------- formatting ----------
@@ -67,7 +67,8 @@ function renderPerf() {
   const ag = Stats.aggregate(parts);
   $('perfLine').textContent = perfLine(ag);
   if (!ag) { el.innerHTML = `<div class="chart-empty">${t('mh.noMatch')}</div>`; return; }
-  el.innerHTML = dashTab() === 'champs' ? perfChampsHtml(parts, ag) : perfStatsHtml(parts, ag);
+  const tab = dashTab();
+  el.innerHTML = tab === 'champs' ? perfChampsHtml(parts, ag) : tab === 'style' ? perfStyleHtml(parts) : perfStatsHtml(parts, ag);
 }
 
 // the key figures in one row

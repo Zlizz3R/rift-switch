@@ -501,6 +501,20 @@
     'pgt.new': "New: {name}",
     'pgt.gone': "Gone: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "Play style",
+    'rad.farm': "Farm",
+    'rad.dmg': "Damage",
+    'rad.kp': "Kill participation",
+    'rad.vis': "Vision",
+    'rad.surv': "Survival",
+    'rad.lane': "Lane phase",
+    'rad.tower': "Towers",
+    'rad.tip': "{axis} {pct} % · Ø {mine} vs. {theirs} · {n} games",
+    'rad.few': "{axis}: too few games ({n} of {min})",
+    'rad.basis': "Each axis: your value ÷ your lane opponent's in the same game, averaged over the games. 100 % (the middle ring) = as good as the opponent; for deaths the other way round. Dashed: fewer than 10 games. No total score.",
+    'rad.allChamps': "All champions",
+    'rad.none': "No games with a known lane opponent for these filters.",
+    'rad.flip': "Click: play style against the lane opponent",
   };
 
   const de = {
@@ -985,6 +999,20 @@
     'pgt.new': "Neu: {name}",
     'pgt.gone': "Weg: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "Spielstil",
+    'rad.farm': "Farm",
+    'rad.dmg': "Schaden",
+    'rad.kp': "Kill-Beteiligung",
+    'rad.vis': "Sicht",
+    'rad.surv': "Überleben",
+    'rad.lane': "Lane-Phase",
+    'rad.tower': "Türme",
+    'rad.tip': "{axis} {pct} % · Ø {mine} gegen {theirs} · {n} Spiele",
+    'rad.few': "{axis}: zu wenige Spiele ({n} von {min})",
+    'rad.basis': "Jede Achse: dein Wert ÷ der deines Lane-Gegners im selben Spiel, gemittelt über die Spiele. 100 % (der mittlere Ring) = so gut wie der Gegner; bei Toden umgekehrt. Gestrichelt: weniger als 10 Spiele. Kein Gesamtwert.",
+    'rad.allChamps': "Alle Champions",
+    'rad.none': "Keine Spiele mit bekanntem Lane-Gegner für diese Filter.",
+    'rad.flip': "Klick: Spielstil gegen den Lane-Gegner",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

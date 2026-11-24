@@ -453,6 +453,20 @@
     'pgt.new': "नया: {name}",
     'pgt.gone': "हटा: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "खेल शैली",
+    'rad.farm': "फ़ार्म",
+    'rad.dmg': "डैमेज",
+    'rad.kp': "किल भागीदारी",
+    'rad.vis': "विज़न",
+    'rad.surv': "बचाव",
+    'rad.lane': "लेन चरण",
+    'rad.tower': "टावर",
+    'rad.tip': "{axis} {pct} % · औसत {mine} बनाम {theirs} · {n} गेम",
+    'rad.few': "{axis}: बहुत कम गेम ({min} में से {n})",
+    'rad.basis': "हर अक्ष: उसी गेम में आपका मान ÷ आपके लेन विरोधी का, गेम में औसत। 100 % (बीच का घेरा) = विरोधी जितना अच्छा; मौतों में उल्टा। डैश: 10 से कम गेम। कोई कुल स्कोर नहीं।",
+    'rad.allChamps': "सभी चैंपियन",
+    'rad.none': "इन फ़िल्टर के लिए ज्ञात लेन विरोधी वाला कोई गेम नहीं।",
+    'rad.flip': "क्लिक: लेन विरोधी के मुक़ाबले खेल शैली",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

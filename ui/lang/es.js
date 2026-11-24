@@ -455,6 +455,20 @@
     'pgt.new': "Nueva: {name}",
     'pgt.gone': "Perdida: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "Estilo",
+    'rad.farm': "Farmeo",
+    'rad.dmg': "Daño",
+    'rad.kp': "Participación",
+    'rad.vis': "Visión",
+    'rad.surv': "Supervivencia",
+    'rad.lane': "Fase de línea",
+    'rad.tower': "Torres",
+    'rad.tip': "{axis} {pct} % · Ø {mine} frente a {theirs} · {n} partidas",
+    'rad.few': "{axis}: muy pocas partidas ({n} de {min})",
+    'rad.basis': "Cada eje: tu valor ÷ el de tu rival de línea en la misma partida, de media. 100 % (el anillo central) = igual de bueno que el rival; en muertes al revés. Discontinuo: menos de 10 partidas. Sin nota total.",
+    'rad.allChamps': "Todos los campeones",
+    'rad.none': "No hay partidas con rival de línea conocido para estos filtros.",
+    'rad.flip': "Clic: estilo frente al rival de línea",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

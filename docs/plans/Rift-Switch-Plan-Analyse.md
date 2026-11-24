@@ -603,6 +603,10 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   hat keine Teams), Rahmen je Party (Violett/Magenta, nebeneinander verbunden, sonst ⛓ + Nummer, Hover hebt Partner
   hervor); genau 1 gemeinsames Spiel = Hinweis-Tag auf beiden Karten. „Kenne ich den?“ gegen alle eigenen Spiele
   (Klick öffnet das Spiel). Eigene Bilanz gegen den Champion des Lane-Gegners. Rechnen in `ui/insights.js`.
-- [ ] Phase 6 – Spielstilprofil gegen den Lane-Gegner
+- [x] Phase 6 – Spielstilprofil gegen den Lane-Gegner – 24.11.2026: `ui/radar.js` (je Achse eigener Wert ÷ Wert des
+  Lane-Gegners im selben Spiel, gemittelt; Tode umgekehrt; < 10 Spiele gestrichelt ohne Wert; kein Gesamtwert). Achsen:
+  Farm, Schaden, Kill-Beteiligung, Vision, Überleben, Lane-Phase (Gold bei 15 Min.), Türme. Übersicht → „Spielstil“
+  (Filter von Leistung, eine Rolle – gewählt oder Hauptrolle –, Champion-Auswahl), daneben dieselben Werte als
+  Balken. In Live: Klick auf den Champion einer Karte zeigt deren Radar.
 - [ ] Phase 7 – Trends und Bestwerte
 - [ ] Phase 8 – Frühere Ranked-Seasons

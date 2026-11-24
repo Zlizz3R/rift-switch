@@ -453,6 +453,20 @@
     'pgt.new': "نیا: {name}",
     'pgt.gone': "ختم: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "کھیل کا انداز",
+    'rad.farm': "فارم",
+    'rad.dmg': "ڈیمج",
+    'rad.kp': "کِل میں شرکت",
+    'rad.vis': "وژن",
+    'rad.surv': "بچاؤ",
+    'rad.lane': "لین مرحلہ",
+    'rad.tower': "ٹاورز",
+    'rad.tip': "{axis} {pct} % · اوسط {mine} بمقابلہ {theirs} · {n} گیمز",
+    'rad.few': "{axis}: بہت کم گیمز ({min} میں سے {n})",
+    'rad.basis': "ہر محور: اسی گیم میں آپ کی قدر ÷ آپ کے لین مخالف کی، گیمز میں اوسط۔ 100 % (درمیانی دائرہ) = مخالف جتنا اچھا؛ اموات میں الٹ۔ ڈیش: 10 سے کم گیمز۔ کوئی کل اسکور نہیں۔",
+    'rad.allChamps': "تمام چیمپئنز",
+    'rad.none': "ان فلٹرز کے لیے معلوم لین مخالف والی کوئی گیم نہیں۔",
+    'rad.flip': "کلک: لین مخالف کے مقابلے کھیل کا انداز",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

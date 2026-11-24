@@ -452,6 +452,20 @@
     'pgt.new': "নতুন: {name}",
     'pgt.gone': "চলে গেছে: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "খেলার ধরন",
+    'rad.farm': "ফার্ম",
+    'rad.dmg': "ড্যামেজ",
+    'rad.kp': "কিল অংশগ্রহণ",
+    'rad.vis': "ভিশন",
+    'rad.surv': "টিকে থাকা",
+    'rad.lane': "লেন পর্ব",
+    'rad.tower': "টাওয়ার",
+    'rad.tip': "{axis} {pct} % · গড় {mine} বনাম {theirs} · {n}টি গেম",
+    'rad.few': "{axis}: খুব কম গেম ({min}টির মধ্যে {n})",
+    'rad.basis': "প্রতিটি অক্ষ: একই গেমে আপনার মান ÷ লেন প্রতিপক্ষের, গেম জুড়ে গড়। ১০০ % (মাঝের বৃত্ত) = প্রতিপক্ষের সমান; মৃত্যুর ক্ষেত্রে উল্টো। ড্যাশ: ১০টির কম গেম। কোনো মোট স্কোর নেই।",
+    'rad.allChamps': "সব চ্যাম্পিয়ন",
+    'rad.none': "এই ফিল্টারে পরিচিত লেন প্রতিপক্ষসহ কোনো গেম নেই।",
+    'rad.flip': "ক্লিক: লেন প্রতিপক্ষের বিপক্ষে খেলার ধরন",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

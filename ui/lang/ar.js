@@ -452,6 +452,20 @@
     'pgt.new': "جديد: {name}",
     'pgt.gone': "زال: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "أسلوب اللعب",
+    'rad.farm': "الزراعة",
+    'rad.dmg': "الضرر",
+    'rad.kp': "المشاركة في القتل",
+    'rad.vis': "الرؤية",
+    'rad.surv': "البقاء",
+    'rad.lane': "مرحلة المسار",
+    'rad.tower': "الأبراج",
+    'rad.tip': "{axis} {pct} % · متوسط {mine} مقابل {theirs} · {n} مباراة",
+    'rad.few': "{axis}: مباريات قليلة جدًا ({n} من {min})",
+    'rad.basis': "كل محور: قيمتك ÷ قيمة خصم مسارك في المباراة نفسها، بالمتوسط. 100 % (الحلقة الوسطى) = بمستوى الخصم؛ وللوفيات بالعكس. متقطع: أقل من 10 مباريات. لا نتيجة إجمالية.",
+    'rad.allChamps': "كل الأبطال",
+    'rad.none': "لا مباريات بخصم مسار معروف لهذه المرشحات.",
+    'rad.flip': "انقر: أسلوب اللعب مقابل خصم المسار",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

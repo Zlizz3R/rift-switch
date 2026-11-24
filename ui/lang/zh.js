@@ -451,6 +451,20 @@
     'pgt.new': "新增：{name}",
     'pgt.gone': "失去：{name}（{from} → {to}）",
     'pgt.change': "{name}：{from} → {to}",
+    'dash.tabStyle': "风格",
+    'rad.farm': "补刀",
+    'rad.dmg': "伤害",
+    'rad.kp': "参团率",
+    'rad.vis': "视野",
+    'rad.surv': "生存",
+    'rad.lane': "对线期",
+    'rad.tower': "推塔",
+    'rad.tip': "{axis} {pct}% · 平均 {mine} 对 {theirs} · {n} 局",
+    'rad.few': "{axis}：对局太少（{n}/{min}）",
+    'rad.basis': "每条轴：同一局中你的数值 ÷ 对线对手的数值，按对局取平均。100%（中间圈）= 与对手持平；阵亡则反之。虚线：少于 10 局。不计算总分。",
+    'rad.allChamps': "所有英雄",
+    'rad.none': "在此筛选下没有已知对线对手的对局。",
+    'rad.flip': "点击：对线对手比较风格",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

@@ -6,16 +6,16 @@
 const mast = { data: null, games: null, q: '', sort: 'total', dir: -1, all: false, stamp: '' };
 
 // ---------- Overview sub-tabs (the last one chosen is kept) ----------
-const DASH_TABS = ['lp', 'stats', 'champs', 'mast', 'tags'];
+const DASH_TABS = ['lp', 'stats', 'champs', 'style', 'mast', 'tags'];
 const dashTab = () => { const v = ((S.settings && S.settings.uiTabs) || {}).dash; return DASH_TABS.includes(v) ? v : 'lp'; };
 function showDashTab(tab) {
   document.querySelectorAll('#dashTabs [data-dt]').forEach(b => b.classList.toggle('on', b.dataset.dt === tab));
   $('dashLp').hidden = tab !== 'lp';
-  $('dashPerf').hidden = tab !== 'stats' && tab !== 'champs';
+  $('dashPerf').hidden = !['stats', 'champs', 'style'].includes(tab);
   $('dashMast').hidden = tab !== 'mast';
   $('dashTags').hidden = tab !== 'tags';
   if (tab === 'mast') { renderMast(); loadMast(); }
-  if (tab === 'stats' || tab === 'champs') { renderPerf(); loadPerf(); }
+  if (['stats', 'champs', 'style'].includes(tab)) { renderPerf(); loadPerf(); }
   if (tab === 'tags') { renderTagsView(); loadTagsView(); }
   refreshLoadBtns();
 }

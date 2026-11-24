@@ -86,3 +86,22 @@ test('champions: "All" first, the top 8, then all of them, sortable; the tab is 
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('play style: a radar against the lane opponent on the main role, the same values as bars', async () => {
+  const app = await boot({ replies });
+  try {
+    await app.click('#navDash');
+    await app.click('[data-dt="style"]');
+    await app.settle();
+    assert.ok(app.$('#perfBody svg.radar'));
+    const bars = app.$$('.rd-bar');
+    assert.equal(bars.length, 7);
+    // 13 mid games with a lane opponent: farm has a value; 100 % = as good as him
+    assert.match(bars[0].textContent, /Farm\s*100 %/);
+    assert.match(bars[0].title, /13 games/);
+    // the lane phase needs the gold per minute: none stored – dashed, no value (not 0)
+    assert.ok(bars[5].classList.contains('few'));
+    assert.match(app.$('.rd-head').textContent, /Mid \(main role\)/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

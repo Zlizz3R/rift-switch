@@ -454,6 +454,20 @@
     'pgt.new': "Nova: {name}",
     'pgt.gone': "Perdida: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "Estilo",
+    'rad.farm': "Farm",
+    'rad.dmg': "Dano",
+    'rad.kp': "Participação",
+    'rad.vis': "Visão",
+    'rad.surv': "Sobrevivência",
+    'rad.lane': "Fase de rota",
+    'rad.tower': "Torres",
+    'rad.tip': "{axis} {pct} % · Ø {mine} contra {theirs} · {n} partidas",
+    'rad.few': "{axis}: poucas partidas ({n} de {min})",
+    'rad.basis': "Cada eixo: seu valor ÷ o do oponente de rota na mesma partida, na média. 100 % (o anel do meio) = tão bom quanto o oponente; para mortes, o contrário. Tracejado: menos de 10 partidas. Sem nota total.",
+    'rad.allChamps': "Todos os campeões",
+    'rad.none': "Nenhuma partida com oponente de rota conhecido para estes filtros.",
+    'rad.flip': "Clique: estilo contra o oponente de rota",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

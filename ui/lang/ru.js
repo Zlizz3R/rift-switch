@@ -454,6 +454,20 @@
     'pgt.new': "Новый: {name}",
     'pgt.gone': "Пропал: {name} ({from} → {to})",
     'pgt.change': "{name}: {from} → {to}",
+    'dash.tabStyle': "Стиль игры",
+    'rad.farm': "Фарм",
+    'rad.dmg': "Урон",
+    'rad.kp': "Участие в убийствах",
+    'rad.vis': "Обзор",
+    'rad.surv': "Выживание",
+    'rad.lane': "Лайнинг",
+    'rad.tower': "Башни",
+    'rad.tip': "{axis} {pct} % · Ø {mine} против {theirs} · {n} игр",
+    'rad.few': "{axis}: мало игр ({n} из {min})",
+    'rad.basis': "Каждая ось: твоё значение ÷ значение соперника по линии в той же игре, в среднем. 100 % (средний круг) = на уровне соперника; для смертей наоборот. Пунктир: меньше 10 игр. Общей оценки нет.",
+    'rad.allChamps': "Все чемпионы",
+    'rad.none': "Нет игр с известным соперником по линии для этих фильтров.",
+    'rad.flip': "Клик: стиль игры против соперника по линии",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

@@ -134,12 +134,12 @@ function scCardHtml(c, side, slot, guess, ex = {}) {
       <span class="sc-name"><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.level ? ' · ' + esc(t('scout.level', { n: p.level })) : ''}</small></span>
       ${slot ? `<img class="sc-pos${guess ? ' guess' : ''}" src="${posIcon(slot)}" alt="" title="${esc(t('pos.' + slot) + (guess ? ' – ' + t('scout.guessed') : ''))}">` : ''}</div>
     <div class="sc-mid">
-      <div class="sc-champ">${p.championId ? `<img src="${champIcon(p.championId)}" alt="">` : '<span></span>'}
+      <div class="sc-champ" data-scflip="${esc(p.puuid || '')}" title="${esc(t('rad.flip'))}">${p.championId ? `<img src="${champIcon(p.championId)}" alt="">` : '<span></span>'}
         <span><b>${esc(champName)}</b><small>${ag ? `Ø ${perfAvg(ag)}` : '–'}</small>${c.pts != null ? `<small>${esc(t('scout.mastery', { pts: num(c.pts) }))}</small>` : ''}</span></div>
       <div class="sc-ranks">${scRank('Solo/Duo', p.solo)}${scRank('Flex', p.flex)}</div>
     </div>
-    <div class="sc-rings"><div title="${esc(wrTip)}">${wr}</div><div title="${esc(roleTip)}">${role}</div></div>
-    <div class="sc-tags">${chips.length ? chips.join('') : `<span class="muted">${esc(c.n ? t('scout.noTags', { n: c.n }) : t('scout.noData'))}</span>`}</div>
+    ${typeof rdv !== 'undefined' && rdv.flipped.has(p.puuid) ? scRadarHtml(c) : `<div class="sc-rings"><div title="${esc(wrTip)}">${wr}</div><div title="${esc(roleTip)}">${role}</div></div>
+    <div class="sc-tags">${chips.length ? chips.join('') : `<span class="muted">${esc(c.n ? t('scout.noTags', { n: c.n }) : t('scout.noData'))}</span>`}</div>`}
   </div>`;
 }
 

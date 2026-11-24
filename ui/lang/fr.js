@@ -455,6 +455,20 @@
     'pgt.new': "Nouveau : {name}",
     'pgt.gone': "Perdu : {name} ({from} → {to})",
     'pgt.change': "{name} : {from} → {to}",
+    'dash.tabStyle': "Style de jeu",
+    'rad.farm': "Farm",
+    'rad.dmg': "Dégâts",
+    'rad.kp': "Participation",
+    'rad.vis': "Vision",
+    'rad.surv': "Survie",
+    'rad.lane': "Phase de voie",
+    'rad.tower': "Tours",
+    'rad.tip': "{axis} {pct} % · Ø {mine} contre {theirs} · {n} parties",
+    'rad.few': "{axis} : trop peu de parties ({n} sur {min})",
+    'rad.basis': "Chaque axe : ta valeur ÷ celle de ton adversaire de voie dans la même partie, en moyenne. 100 % (l’anneau du milieu) = aussi bon que l’adversaire ; pour les morts, l’inverse. En pointillés : moins de 10 parties. Pas de note globale.",
+    'rad.allChamps': "Tous les champions",
+    'rad.none': "Aucune partie avec un adversaire de voie connu pour ces filtres.",
+    'rad.flip': "Clic : style de jeu face à l’adversaire de voie",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;
