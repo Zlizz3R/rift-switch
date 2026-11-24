@@ -582,7 +582,9 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   `ui/stats.js`; alle Stufe-C-Tags und „Drachentöter“ drin. Am echten Client geprüft: Kill- und Drachen-Ereignisse
   passen; **Ward-Ereignisse liefert die Client-Timeline nicht** – „Früher Warder“ ist deshalb aus (`off` in
   `tag-rules.js`), bis eine Quelle sie hat.
-- [ ] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – Entscheidung: ___
+- [ ] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – gemessen 24.11.2026, Bericht in
+  `docs/plans/Speichermessung.md` (App-Format 4: ~10 KB pro Spiel, gzip ~4 KB; Match-Liste des Clients nur ~20 Spiele
+  pro Spieler) – Entscheidung: ___
 - [ ] Speicherlimit in den Einstellungen (gehört zu Phase 5)
 - [ ] Phase 5 – Live-Übersicht im Porofessor-Stil
 - [ ] Phase 5b – Mehr Live-Infos
