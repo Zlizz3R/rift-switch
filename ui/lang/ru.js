@@ -250,7 +250,6 @@
     'mast.tipExtra': "+ {min} мин за игру на поиск, выбор чемпиона, экран загрузки и экран после игры",
     'dash.tabStats': "Показатели",
     'dash.tabChamps': "Чемпионы",
-    'perf.qRanked': "Рейтинговые (одиночные + гибкие)",
     'perf.season': "Сезон {y}",
     'perf.allRoles': "Все роли",
     'pos.none': "Без линии (ARAM, Arena …)",
@@ -407,7 +406,6 @@
     'tag.mainBanned.t': "Обычно играет на {champ} ({n} игр) – забанен",
     'tag.autofill': "Автозаполнение?",
     'tag.autofill.t': "Обычно {role} ({pct} %), сейчас {now}",
-    
     'set.ownGames': "Твои игры",
     'set.othersGames': "Игры других игроков (Live)",
     'set.othersClear': "Удалить",
@@ -490,6 +488,9 @@
     'ss.saved': "Сезоны сохранены.",
     'ss.note': "Три источника, никогда не складываются: клиент знает только прошлый и текущий сезон; сохранённые игры считаются по календарному году; введённое тобой помечено как твоё.",
     'load.step.lists': "Списки матчей",
+    'ov.allT': "Учитываются все аккаунты",
+    'ov.accT': "Клик: в расчёт или нет · Ctrl+клик: только этот",
+    'ov.none': "Аккаунт не выбран – включи один сверху.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

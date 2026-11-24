@@ -248,7 +248,6 @@
     'mast.tipExtra': "+ গেমপ্রতি {min} মিনিট: কিউ, চ্যাম্পিয়ন সিলেক্ট, লোডিং স্ক্রিন ও গেম-পরবর্তী স্ক্রিন",
     'dash.tabStats': "পারফরম্যান্স",
     'dash.tabChamps': "চ্যাম্পিয়ন",
-    'perf.qRanked': "র‍্যাঙ্কড (সোলো + ফ্লেক্স)",
     'perf.season': "সিজন {y}",
     'perf.allRoles': "সব রোল",
     'pos.none': "লেন ছাড়া (ARAM, Arena …)",
@@ -405,7 +404,6 @@
     'tag.mainBanned.t': "সাধারণত {champ} খেলে ({n}টি গেম) – ব্যান",
     'tag.autofill': "অটোফিল?",
     'tag.autofill.t': "সাধারণত {role} ({pct} %), এখন {now}",
-    
     'set.ownGames': "আপনার গেম",
     'set.othersGames': "অন্য খেলোয়াড়দের গেম (লাইভ)",
     'set.othersClear': "মুছুন",
@@ -488,6 +486,9 @@
     'ss.saved': "সিজন সংরক্ষিত হয়েছে।",
     'ss.note': "তিনটি উৎস, কখনো যোগ হয় না: ক্লায়েন্ট শুধু আগের ও বর্তমান সিজন জানায়; সংরক্ষিত গেম ক্যালেন্ডার বছর ধরে গোনা হয়; আপনার লেখা আপনার বলে চিহ্নিত।",
     'load.step.lists': "ম্যাচ তালিকা",
+    'ov.allT': "সব অ্যাকাউন্ট গোনা হবে",
+    'ov.accT': "ক্লিক: হিসাবে রাখুন বা বাদ দিন · Ctrl+ক্লিক: শুধু এটি",
+    'ov.none': "কোনো অ্যাকাউন্ট বাছা হয়নি – উপরে একটি চালু করুন।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

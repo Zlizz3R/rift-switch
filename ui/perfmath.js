@@ -20,13 +20,21 @@
   // A participation's position: top … support, or 'none' (ARAM, Arena, games without all ten).
   const roleOf = x => St.role(x.g, x.p) || 'none';
 
-  // f: { acc: puuid or '' (all), queue: key of QUEUES, range / from / to (matchfilter.js), role: '' or ROLES }
+  // the queue groups of the match history (matches.rs QUEUE_GROUPS): any of them can be on or off
+  const GROUPS = {
+    solo: [420], flex: [440], r5: [710], classic: [4310], normal: [400, 430, 480, 490], aram: [450, 2400, 3220, 3270],
+    arena: [1700, 1710], clash: [700, 720],
+  };
+  // f: { accs: puuids (none = all), queues: group keys (none = all) or queue: key of QUEUES,
+  //      range / from / to (matchfilter.js), role: '' or ROLES }
   // → every own account's part in every game that matches (remakes out; stats.js byParticipation)
   function select(games, f = {}, now = Date.now()) {
-    const qs = QUEUES[f.queue] === undefined ? QUEUES.ranked : QUEUES[f.queue];
+    const qs = Array.isArray(f.queues) ? (f.queues.length ? f.queues.flatMap(k => GROUPS[k] || []) : null)
+      : QUEUES[f.queue] === undefined ? QUEUES.ranked : QUEUES[f.queue];
+    const accs = f.accs && f.accs.length ? new Set(f.accs) : f.acc ? new Set([f.acc]) : null;
     const [from, to] = MF.rangeBounds(f, now);
     return St.byParticipation(games).filter(x =>
-      (!f.acc || x.p.puuid === f.acc) &&
+      (!accs || accs.has(x.p.puuid)) &&
       (!qs || qs.includes(x.g.q)) &&
       x.g.t >= from && x.g.t < to &&
       (!f.role || roleOf(x) === f.role));
@@ -71,7 +79,7 @@
     return { ok: true, cur: val(a), prev: val(b), better: TREND_KEYS[key] || 1, wr: [a.winrate, b.winrate] };
   }
 
-  const api = { QUEUES, ROLES, MARK, years, roleOf, select, champRows, roleTable, sortRows, markWinrate, markKda, TREND_KEYS, trend };
+  const api = { QUEUES, GROUPS, ROLES, MARK, years, roleOf, select, champRows, roleTable, sortRows, markWinrate, markKda, TREND_KEYS, trend };
   if (node) module.exports = api;
   else root.PerfMath = api;
 })(typeof window !== 'undefined' ? window : this);

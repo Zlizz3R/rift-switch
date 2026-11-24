@@ -99,6 +99,7 @@
           <button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="style" data-i18n="dash.tabStyle"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="tags" data-i18n="dash.tabTags"></button><button data-dt="seasons" data-i18n="dash.tabSeasons"></button>
           <span class="grow"></span><button class="btn load-btn" data-loadall=""></button>
         </div>
+        <div class="seg ov-accs" id="ovAccs" hidden></div>
         <div id="dashLp">
           <div class="mh-filter">
             <div class="seg"><button data-dq="solo">Solo/Duo</button><button data-dq="flex">Flex</button><button data-dq="r5">Ranked 5v5</button><button data-dq="classic">Classic 5v5</button></div>
@@ -108,7 +109,7 @@
         </div>
         <div id="dashPerf" hidden>
           <div class="mh-filter perf-filter">
-            <select id="perfAcc"></select><select id="perfQueue"></select><select id="perfRange"></select>
+            <div class="seg" id="perfQueues"></div><select id="perfRange"></select>
             <div class="seg perf-roles" id="perfRole"></div>
           </div>
           <p class="perf-line" id="perfLine"></p>
@@ -116,7 +117,7 @@
         </div>
         <div id="dashTags" hidden>
           <div class="mh-filter">
-            <select id="tagAcc"></select><div class="seg perf-roles" id="tagRole"></div>
+            <div class="seg perf-roles" id="tagRole"></div>
             <span class="grow"></span><span class="coll-for" id="tagSub"></span>
           </div>
           <div id="tagBody"></div>
@@ -577,6 +578,7 @@
 <script src="matches-view.js"></script>
 <script src="postgame.js"></script>
 <script src="dashboard.js"></script>
+<script src="ovfilter.js"></script>
 <script src="playtime-rules.js"></script>
 <script src="mastmath.js"></script>
 <script src="mastery.js"></script>

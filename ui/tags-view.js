@@ -3,7 +3,7 @@
 // colour), not met (grey) or not enough data (dashed, with how many games are missing). A click on
 // a tag shows the numbers behind it. Engine: tags.js. Uses the globals of renderer.js / views.js.
 
-const tagv = { acc: '', role: '', games: null, mast: null, loading: false, open: '' };
+const tagv = { role: '', games: null, mast: null, loading: false, open: '' };
 
 async function loadTagsView() {
   if (tagv.loading) return;
@@ -20,7 +20,7 @@ async function loadTagsView() {
 api.onMatchesChanged(() => { if (view === 'dash' && dashTab() === 'tags') loadTagsView(); });
 
 // the last shown levels per account and role – a tag only goes 5 % past its threshold (tags.js)
-const tagPrevKey = () => `rs.tagPrev.${tagv.acc || 'all'}.${tagv.role || 'main'}`;
+const tagPrevKey = () => `rs.tagPrev.${ovChosen().map(a => a.puuid.slice(0, 8)).sort().join('+') || 'none'}.${tagv.role || 'main'}`;
 function tagPrev() { try { return new Set(JSON.parse(localStorage.getItem(tagPrevKey()) || '[]')); } catch { return new Set(); } }
 function tagKeep(results) { try { localStorage.setItem(tagPrevKey(), JSON.stringify([...Tags.keys(results)])); } catch { /* private mode: no memory */ } }
 
@@ -72,16 +72,13 @@ function tagDetail(x) {
 function renderTagsView() {
   const el = $('tagBody');
   if (!el || $('dashTags').hidden) return;
-  const accs = S.accounts.filter(a => !a.placeholder);
-  if (tagv.acc && !accs.some(a => a.puuid === tagv.acc)) tagv.acc = '';
-  const opt = (v, l, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(l)}</option>`;
-  $('tagAcc').innerHTML = opt('', t('mh.allAccounts'), !tagv.acc) + accs.map(a => opt(a.puuid, dispName(a), tagv.acc === a.puuid)).join('');
+  const accs = ovChosen();
   $('tagRole').innerHTML = `<button data-trole=""${!tagv.role ? ' class="on"' : ''}>${t('tags.mainRole')}</button>` +
     Stats.POSITIONS.map(r => `<button data-trole="${r}" title="${esc(t('pos.' + r))}"${tagv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('');
   if (!tagv.games) { $('tagSub').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
-  const own = tagv.acc ? [tagv.acc] : accs.map(a => a.puuid);
+  const own = accs.map(a => a.puuid);
   const read = (tagv.mast || []).filter(m => own.includes(m.puuid));
-  const acc = tagv.acc && accs.find(a => a.puuid === tagv.acc);
+  const acc = accs.length === 1 ? accs[0] : null;
   const res = Tags.evaluate({ games: tagv.games, own, role: tagv.role || null, prev: tagPrev(),
     level: acc && acc.level != null ? acc.level : null, mastery: read.length ? MastMath.masteryTable(read) : null });
   tagKeep(res.results);
@@ -112,7 +109,6 @@ function renderTagsView() {
   el.innerHTML = `${top}${groups}<p class="coll-foot">${t('tags.basis')}</p>`;
 }
 
-$('tagAcc').onchange = () => { tagv.acc = $('tagAcc').value; tagv.open = ''; renderTagsView(); };
 $('dashTags').addEventListener('click', e => {
   const r = e.target.closest('[data-trole]');
   if (r) { tagv.role = r.dataset.trole; tagv.open = ''; return renderTagsView(); }

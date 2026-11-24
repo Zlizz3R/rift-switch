@@ -5,7 +5,7 @@
 const DASH_COLORS = ['#c8aa6e', '#0ac8b9', '#e5737a', '#8f7cf7', '#4cc38a', '#f29a4a', '#5aa9e6', '#e27bd0', '#b8c26a', '#9aa3b5'];
 const TIER_COLORS = { IRON: '#6b625d', BRONZE: '#9a6240', SILVER: '#8c9db1', GOLD: '#c8aa6e', PLATINUM: '#3fb6a8',
   EMERALD: '#2fae6a', DIAMOND: '#6a7de8', MASTER: '#b05fe0', GRANDMASTER: '#d8504f', CHALLENGER: '#f0c860' };
-const dash = { data: null, qs: new Set(['solo']), days: 30, hidden: new Set(), view: null, histLen: -1 };
+const dash = { data: null, qs: new Set(['solo']), days: 30, view: null, histLen: -1 };
 // the ranked queues, any combination: one colour per account, one line style per queue
 const DASH_QUEUES = [['solo', 'Solo/Duo', ''], ['flex', 'Flex', '7 5'], ['r5', 'Ranked 5v5', '2 4'], ['classic', 'Classic 5v5', '10 4 2 4']];
 const dashQName = q => (DASH_QUEUES.find(x => x[0] === q) || [q, q])[1];
@@ -65,7 +65,7 @@ function valueAt(pts, ts) {
 }
 
 function dashChart(series, t0, t1) {
-  const shown = series.filter(s => !dash.hidden.has(s.a.puuid) && s.pts.length);
+  const shown = series.filter(s => !ovf.off.has(s.a.puuid) && s.pts.length);
   const clip = s => {
     const start = valueAt(s.pts, t0);
     const inside = s.pts.filter(p => p.t > t0 && p.t <= t1);
@@ -199,7 +199,7 @@ function renderDash() {
   // one chip per account (it hides all its lines); with several queues a key for the line styles
   const accs = [...new Map(series.map(s => [s.a.puuid, s])).values()];
   const key = dash.qs.size > 1 ? `<span class="dash-key">${DASH_QUEUES.filter(x => dash.qs.has(x[0])).map(([, n, d]) => `<span><svg viewBox="0 0 28 6"><line x1="0" x2="28" y1="3" y2="3"${d ? ` stroke-dasharray="${d}"` : ''}/></svg>${esc(n)}</span>`).join('')}</span>` : '';
-  const chips = accs.map(s => `<button class="dash-chip ${dash.hidden.has(s.a.puuid) ? 'off' : ''}" data-dchip="${esc(s.a.puuid)}"><i style="background:${s.color}"></i>${esc(dispName(s.a))}</button>`).join('');
+  const chips = accs.map(s => `<button class="dash-chip ${ovf.off.has(s.a.puuid) ? 'off' : ''}" data-dchip="${esc(s.a.puuid)}"><i style="background:${s.color}"></i>${esc(dispName(s.a))}</button>`).join('');
   const list = rows.slice().sort((p, q) => (q.cur ?? -1) - (p.cur ?? -1));
   el.innerHTML = `
     <div class="stats dash-stats">
@@ -242,9 +242,7 @@ $('viewDash').addEventListener('click', e => {
   if (c) {
     const id = c.dataset.dchip;
     // a click shows/hides one account; with Ctrl only this one
-    if (e.ctrlKey) { dash.hidden = new Set(S.accounts.map(a => a.puuid).filter(x => x !== id)); }
-    else if (dash.hidden.has(id)) dash.hidden.delete(id); else dash.hidden.add(id);
-    return renderDash();
+    return ovToggle(id, e.ctrlKey || e.metaKey);
   }
   const row = e.target.closest('[data-dacc]');
   if (row && !e.target.closest('select')) openProfile(row.dataset.dacc);

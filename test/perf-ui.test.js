@@ -34,7 +34,7 @@ test('performance: key figures and roles add up, a role unfolds, a champion open
     await app.settle();
     assert.ok(app.visible('#dashPerf'));
     // ranked of this season by default: 14 games (the ARAM game isn't ranked)
-    assert.match(app.$('#perfLine').textContent, /^14 games · Ranked \(Solo \+ Flex\) · Season \d{4}/);
+    assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex · Season \d{4}/);
     assert.match(app.$('.perf-bar .pk').textContent, /Games\s*14/);
     const roles = app.$$('.perf-table tr.pr-role');
     assert.deepEqual(roles.map(r => r.dataset.prow), ['jungle', 'mid']);
@@ -51,12 +51,11 @@ test('performance: key figures and roles add up, a role unfolds, a champion open
     assert.match(app.$('#perfLine').textContent, /^1 game · .*Jungle/);
     await app.click('[data-prole=""]');
     // all queues: ARAM shows up as "no lane"
-    app.$('#perfQueue').value = 'all';
-    app.$('#perfQueue').dispatchEvent(new app.w.Event('change'));
+    await app.click('[data-pq=""]');
     assert.ok(app.$('tr[data-prow="none"]'));
     // a champion: the match history with this champion and the same queues
-    app.$('#perfQueue').value = 'ranked';
-    app.$('#perfQueue').dispatchEvent(new app.w.Event('change'));
+    await app.click('[data-pq="solo"]');
+    await app.click('[data-pq="flex"]');
     assert.ok(app.$('tr[data-prow="mid"]').classList.contains('open'), 'an unfolded role stays open');
     await app.click('tr.pr-champ[data-pchamp="103"]');
     await app.settle();
@@ -112,6 +111,37 @@ test('records: one mode only, with their scope ("bests in 14 stored Summoner\'s 
     await app.click('#navMatches');
     await app.settle();
     assert.match(app.$('.mh-rec-scope').textContent, /Bests in 14 stored Summoner's Rift games/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('overview filter: queues one by one, accounts as chips for every tab (kept)', async () => {
+  const app = await boot({ replies });
+  try {
+    await app.click('#navDash');
+    await app.click('[data-dt="champs"]');
+    await app.settle();
+    assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex/);
+    // Flex off: only the Solo/Duo games
+    await app.click('[data-pq="flex"]');
+    assert.match(app.$('#perfLine').textContent, /^5 games · Solo\/Duo ·/);
+    // ARAM on as well
+    await app.click('[data-pq="aram"]');
+    assert.match(app.$('#perfLine').textContent, /^6 games · Solo\/Duo \+ ARAM/);
+    // the accounts: one bar for all tabs; the account of all these games off → nothing
+    assert.ok(app.visible('#ovAccs'));
+    await app.click(`[data-ovacc="${P(1)}"]`);
+    assert.match(app.$('#perfBody').textContent, /No games match/);
+    assert.ok(!app.$(`[data-ovacc="${P(1)}"]`).classList.contains('on'));
+    // the same choice on another tab; the LP history shows it in its own chips (no second bar)
+    await app.click('[data-dt="stats"]');
+    assert.match(app.$('#perfBody').textContent, /No games match/);
+    await app.click('[data-dt="lp"]');
+    assert.ok(!app.visible('#ovAccs'));
+    // "All" brings every account back
+    await app.click('[data-dt="champs"]');
+    await app.click('[data-ovacc=""]');
+    assert.match(app.$('#perfLine').textContent, /^6 games/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

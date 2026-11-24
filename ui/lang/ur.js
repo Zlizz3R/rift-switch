@@ -249,7 +249,6 @@
     'mast.tipExtra': "+ فی گیم {min} منٹ: قطار، چیمپئن سلیکٹ، لوڈنگ اسکرین اور گیم کے بعد کی اسکرین",
     'dash.tabStats': "کارکردگی",
     'dash.tabChamps': "چیمپئنز",
-    'perf.qRanked': "رینکڈ (سولو + فلیکس)",
     'perf.season': "سیزن {y}",
     'perf.allRoles': "تمام رولز",
     'pos.none': "بغیر لین (ARAM، Arena …)",
@@ -406,7 +405,6 @@
     'tag.mainBanned.t': "عام طور پر {champ} کھیلتا ہے ({n} گیمز) – بین",
     'tag.autofill': "آٹوفل؟",
     'tag.autofill.t': "عام طور پر {role} ({pct} %)، اب {now}",
-    
     'set.ownGames': "آپ کی گیمز",
     'set.othersGames': "دوسرے کھلاڑیوں کی گیمز (لائیو)",
     'set.othersClear': "حذف کریں",
@@ -489,6 +487,9 @@
     'ss.saved': "سیزن محفوظ ہو گئے۔",
     'ss.note': "تین ذرائع، کبھی جمع نہیں: کلائنٹ صرف پچھلا اور موجودہ سیزن بتاتا ہے؛ محفوظ گیمز کیلنڈر سال کے حساب سے گنی جاتی ہیں؛ آپ کا درج کردہ آپ کا لکھا ہوا دکھایا جاتا ہے۔",
     'load.step.lists': "میچ فہرستیں",
+    'ov.allT': "تمام اکاؤنٹس شمار ہوں",
+    'ov.accT': "کلک: حساب میں شامل یا باہر · Ctrl+کلک: صرف یہی",
+    'ov.none': "کوئی اکاؤنٹ منتخب نہیں – اوپر ایک چنیں۔",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

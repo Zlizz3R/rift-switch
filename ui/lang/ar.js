@@ -248,7 +248,6 @@
     'mast.tipExtra': "+ {min} دقيقة لكل مباراة للانتظار واختيار البطل وشاشة التحميل وشاشة ما بعد المباراة",
     'dash.tabStats': "الأداء",
     'dash.tabChamps': "الأبطال",
-    'perf.qRanked': "المصنفة (فردي + مرن)",
     'perf.season': "موسم {y}",
     'perf.allRoles': "كل الأدوار",
     'pos.none': "بلا مسار (ARAM، Arena …)",
@@ -405,7 +404,6 @@
     'tag.mainBanned.t': "يلعب عادة {champ} ({n} مباراة) – محظور",
     'tag.autofill': "ملء تلقائي؟",
     'tag.autofill.t': "عادة {role} ({pct} %)، الآن {now}",
-    
     'set.ownGames': "مبارياتك",
     'set.othersGames': "مباريات لاعبين آخرين (مباشر)",
     'set.othersClear': "حذف",
@@ -488,6 +486,9 @@
     'ss.saved': "تم حفظ المواسم.",
     'ss.note': "ثلاثة مصادر لا تُجمع أبدًا: العميل يعرف الموسم السابق والحالي فقط؛ المباريات المحفوظة تُعد حسب السنة؛ ما تُدخله مُعلَّم بأنه منك.",
     'load.step.lists': "قوائم المباريات",
+    'ov.allT': "كل الحسابات تُحسب",
+    'ov.accT': "انقر: ضمن التقييم أو خارجه · Ctrl+نقر: هذا فقط",
+    'ov.none': "لم يُختر حساب – فعّل واحدًا في الأعلى.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

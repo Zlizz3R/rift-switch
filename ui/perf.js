@@ -3,8 +3,13 @@
 // champion list. The maths is in perfmath.js / stats.js. A click on a champion opens the match
 // history with the same filters. Uses the globals of renderer.js / views.js / matches-view.js.
 
+function perfQueuesKept() {
+  try { const q = JSON.parse(localStorage.getItem('rs.perfQ')); if (Array.isArray(q)) return q; } catch { /* default */ }
+  return ['solo', 'flex'];
+}
 const perf = {
-  f: { acc: '', queue: 'ranked', range: 'y' + new Date().getFullYear(), role: '' },
+  // queues: groups switched on (none = all); kept like the account choice
+  f: { queues: perfQueuesKept(), range: 'y' + new Date().getFullYear(), role: '' },
   sort: 'n', dir: -1, open: new Set(), all: false, cSort: 'n', games: null, loading: false, trendN: 20, trendKey: 'kda',
 };
 
@@ -28,16 +33,18 @@ const perfAvg = r => `${perfDec(r.avg.k)} / ${perfDec(r.avg.d)} / ${perfDec(r.av
 const perfKda = r => (r.perfect ? t('mh.perfect') : perfDec(r.kda, 2));
 const perfGames = n => (n === 1 ? t('perf.game1') : t('dash.nGames', { n: num(n) }));
 const perfChamp = id => (champById(id) || {}).name || '#' + id;
-const PERF_QUEUES = () => [['ranked', t('perf.qRanked')], ['solo', 'Solo/Duo'], ['flex', 'Flex'], ['normal', t('mh.normal')], ['aram', 'ARAM'], ['all', t('perf.qAll')]];
+const PERF_QUEUES = () => [['solo', 'Solo/Duo'], ['flex', 'Flex'], ['r5', 'Ranked 5v5'], ['classic', 'Classic 5v5'], ['normal', t('mh.normal')],
+  ['aram', 'ARAM'], ['arena', 'Arena'], ['clash', 'Clash']];
+// what the filter counts, for select(): the chosen accounts and queues
+const perfF = () => ({ ...perf.f, accs: ovChosen().map(a => a.puuid) });
 
 // ---------- the filter ----------
 function renderPerfFilter() {
   const f = perf.f;
-  const accs = S.accounts.filter(a => !a.placeholder);
-  if (f.acc && !accs.some(a => a.puuid === f.acc)) f.acc = '';
   const opt = (v, label, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(label)}</option>`;
-  $('perfAcc').innerHTML = opt('', t('mh.allAccounts'), !f.acc) + accs.map(a => opt(a.puuid, dispName(a), f.acc === a.puuid)).join('');
-  $('perfQueue').innerHTML = PERF_QUEUES().map(([k, l]) => opt(k, l, f.queue === k)).join('');
+  // queues like the match history: each one on or off, "All" = every queue
+  $('perfQueues').innerHTML = `<button data-pq=""${!f.queues.length ? ' class="on"' : ''}>${t('mh.allQueues')}</button>` +
+    PERF_QUEUES().map(([k, l]) => `<button data-pq="${k}"${f.queues.includes(k) ? ' class="on"' : ''}>${esc(l)}</button>`).join('');
   // seasons (calendar years) with games, the current one always; then the usual ranges
   const years = [...new Set([new Date().getFullYear(), ...PerfMath.years(perf.games || [])])].sort((a, b) => b - a);
   const ranges = [...years.map(y => ['y' + y, t('perf.season', { y })]), ['90', t('mh.r90')], ['30', t('mh.r30')], ['7', t('mh.r7')], ['all', t('mh.rAll')]];
@@ -49,11 +56,11 @@ function renderPerfFilter() {
 function perfLine(ag) {
   const f = perf.f;
   const parts = [perfGames(ag ? ag.n : 0)];
-  parts.push((PERF_QUEUES().find(q => q[0] === f.queue) || [])[1]);
+  parts.push(f.queues.length ? PERF_QUEUES().filter(([k]) => f.queues.includes(k)).map(q => q[1]).join(' + ') : t('perf.qAll'));
   parts.push($('perfRange').selectedOptions[0] ? $('perfRange').selectedOptions[0].textContent : '');
   if (f.role) parts.push(t('pos.' + f.role));
-  const acc = f.acc && S.accounts.find(a => a.puuid === f.acc);
-  parts.push(acc ? dispName(acc) : ag && ag.accounts === 1 ? t('mast.account1') : t('mast.accounts', { n: ag ? ag.accounts : 0 }));
+  const chosen = ovChosen();
+  parts.push(chosen.length === 1 ? dispName(chosen[0]) : ag && ag.accounts === 1 ? t('mast.account1') : t('mast.accounts', { n: ag ? ag.accounts : 0 }));
   return parts.filter(Boolean).join(' · ');
 }
 
@@ -63,7 +70,7 @@ function renderPerf() {
   if (!el || $('dashPerf').hidden) return;
   renderPerfFilter();
   if (!perf.games) { $('perfLine').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
-  const parts = PerfMath.select(perf.games, perf.f);
+  const parts = PerfMath.select(perf.games, perfF());
   const ag = Stats.aggregate(parts);
   $('perfLine').textContent = perfLine(ag);
   if (!ag) { el.innerHTML = `<div class="chart-empty">${t('mh.noMatch')}</div>`; return; }
@@ -158,15 +165,21 @@ function perfChampsHtml(parts, ag) {
 // a champion: the match history with the same account, queue, time and this champion
 function perfOpen(champ) {
   const f = perf.f;
-  const QG = { ranked: ['solo', 'flex'], solo: ['solo'], flex: ['flex'], normal: ['normal'], aram: ['aram'], all: [] };
   const y = /^y(\d{4})$/.exec(f.range);
   const time = y ? { range: 'custom', from: `${y[1]}-01-01`, to: `${y[1]}-12-31` } : { range: f.range };
-  openMatchesWith({ puuid: f.acc, queues: QG[f.queue] || [], champ: champ || 0, ...time });
+  // the match history filters one account (or all)
+  const chosen = ovChosen();
+  openMatchesWith({ puuid: chosen.length === 1 ? chosen[0].puuid : '', queues: [...f.queues], champ: champ || 0, ...time });
 }
-$('perfAcc').onchange = () => { perf.f.acc = $('perfAcc').value; renderPerf(); };
-$('perfQueue').onchange = () => { perf.f.queue = $('perfQueue').value; renderPerf(); };
 $('perfRange').onchange = () => { perf.f.range = $('perfRange').value; renderPerf(); };
 $('dashPerf').addEventListener('click', e => {
+  const pq = e.target.closest('[data-pq]');
+  if (pq) {
+    const k = pq.dataset.pq, q = perf.f.queues;
+    perf.f.queues = !k ? [] : q.includes(k) ? q.filter(x => x !== k) : [...q, k];
+    try { localStorage.setItem('rs.perfQ', JSON.stringify(perf.f.queues)); } catch { /* not kept */ }
+    return renderPerf();
+  }
   const ro = e.target.closest('[data-prole]');
   if (ro) { perf.f.role = ro.dataset.prole; return renderPerf(); }
   const so = e.target.closest('[data-psort]');

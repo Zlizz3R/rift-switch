@@ -297,7 +297,6 @@
     'mast.tipExtra': "+ {min} min per game for queue, champ select, loading screen and the post-game screen",
     'dash.tabStats': "Performance",
     'dash.tabChamps': "Champions",
-    'perf.qRanked': "Ranked (Solo + Flex)",
     'perf.season': "Season {y}",
     'perf.allRoles': "All roles",
     'pos.none': "No lane (ARAM, Arena …)",
@@ -454,7 +453,6 @@
     'tag.mainBanned.t': "Usually plays {champ} ({n} games) – banned",
     'tag.autofill': "Autofilled?",
     'tag.autofill.t': "Usually {role} ({pct} %), now {now}",
-    
     'set.ownGames': "Your games",
     'set.othersGames': "Other players' games (Live)",
     'set.othersClear': "Delete",
@@ -537,6 +535,9 @@
     'ss.saved': "Seasons saved.",
     'ss.note': "Three sources, never added up: the client tells only the last and the current season; stored games count by calendar year; what you enter is marked as yours.",
     'load.step.lists': "Match lists",
+    'ov.allT': "Every account counts",
+    'ov.accT': "Click: in or out of the evaluation · Ctrl+click: only this one",
+    'ov.none': "No account chosen – switch one on above.",
   };
 
   const de = {
@@ -817,7 +818,6 @@
     'mast.tipExtra': "+ {min} Min. pro Spiel für Suche, Champ Select, Ladebildschirm und Spielende",
     'dash.tabStats': "Leistung",
     'dash.tabChamps': "Champions",
-    'perf.qRanked': "Ranked (Solo + Flex)",
     'perf.season': "Season {y}",
     'perf.allRoles': "Alle Rollen",
     'pos.none': "Ohne Lane (ARAM, Arena …)",
@@ -974,7 +974,6 @@
     'tag.mainBanned.t': "Spielt sonst {champ} ({n} Spiele) – gebannt",
     'tag.autofill': "Autofill?",
     'tag.autofill.t': "Spielt sonst {role} ({pct} %), jetzt {now}",
-    
     'set.ownGames': "Deine Spiele",
     'set.othersGames': "Spiele anderer Spieler (Live)",
     'set.othersClear': "Löschen",
@@ -1057,6 +1056,9 @@
     'ss.saved': "Seasons gespeichert.",
     'ss.note': "Drei Quellen, nie zusammengezählt: Der Client kennt nur die letzte und die aktuelle Season; gespeicherte Spiele zählen nach Kalenderjahr; Eingetragenes ist als deins markiert.",
     'load.step.lists': "Match-Listen",
+    'ov.allT': "Alle Accounts zählen",
+    'ov.accT': "Klick: in die Auswertung oder raus · Strg+Klick: nur dieser",
+    'ov.none': "Kein Account gewählt – oben einen anwählen.",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

@@ -251,7 +251,6 @@
     'mast.tipExtra': "+ {min} min par partie pour la file, la sélection des champions, l'écran de chargement et l'écran de fin de partie",
     'dash.tabStats': "Performances",
     'dash.tabChamps': "Champions",
-    'perf.qRanked': "Classée (Solo + Flex)",
     'perf.season': "Saison {y}",
     'perf.allRoles': "Tous les rôles",
     'pos.none': "Sans voie (ARAM, Arena…)",
@@ -408,7 +407,6 @@
     'tag.mainBanned.t': "Joue d’habitude {champ} ({n} parties) – banni",
     'tag.autofill': "Autofill ?",
     'tag.autofill.t': "Joue d’habitude {role} ({pct} %), maintenant {now}",
-    
     'set.ownGames': "Tes parties",
     'set.othersGames': "Parties des autres joueurs (Live)",
     'set.othersClear': "Supprimer",
@@ -491,6 +489,9 @@
     'ss.saved': "Saisons enregistrées.",
     'ss.note': "Trois sources, jamais additionnées : le client ne donne que la saison précédente et l’actuelle ; les parties enregistrées comptent par année civile ; ce que tu saisis est marqué comme tien.",
     'load.step.lists': "Listes de parties",
+    'ov.allT': "Tous les comptes comptent",
+    'ov.accT': "Clic : dans l’analyse ou non · Ctrl+clic : seulement celui-ci",
+    'ov.none': "Aucun compte choisi – active-en un en haut.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

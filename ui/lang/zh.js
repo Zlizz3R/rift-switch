@@ -247,7 +247,6 @@
     'mast.tipExtra': "+ 每局 {min} 分钟：排队、英雄选择、载入画面和赛后界面",
     'dash.tabStats': "表现",
     'dash.tabChamps': "英雄",
-    'perf.qRanked': "排位（单双 + 灵活）",
     'perf.season': "{y} 赛季",
     'perf.allRoles': "所有位置",
     'pos.none': "无分路（大乱斗、斗魂竞技场…）",
@@ -404,7 +403,6 @@
     'tag.mainBanned.t': "常玩 {champ}（{n} 局）——被禁用",
     'tag.autofill': "补位？",
     'tag.autofill.t': "常玩 {role}（{pct}%），现在 {now}",
-    
     'set.ownGames': "你的对局",
     'set.othersGames': "其他玩家的对局（实时）",
     'set.othersClear': "删除",
@@ -487,6 +485,9 @@
     'ss.saved': "赛季已保存。",
     'ss.note': "三个来源，从不相加：客户端只提供上个和本赛季；已保存对局按自然年统计；你填写的内容会标记为你填写。",
     'load.step.lists': "对局列表",
+    'ov.allT': "统计所有账号",
+    'ov.accT': "点击：加入或移出统计 · Ctrl+点击：只看这个",
+    'ov.none': "未选择账号——请在上方选择。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

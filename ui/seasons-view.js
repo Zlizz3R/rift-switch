@@ -14,8 +14,8 @@ function renderSeasonsView() {
   const el = $('seasonsBody');
   if (!el || $('dashSeasons').hidden) return;
   if (!ssv.games) { el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
-  const accs = S.accounts.filter(a => !a.placeholder);
-  if (!accs.length) { el.innerHTML = `<div class="chart-empty">${t('mast.none')}</div>`; return; }
+  const accs = ovChosen();
+  if (!accs.length) { el.innerHTML = `<div class="chart-empty">${t('ov.none')}</div>`; return; }
   const y = new Date().getFullYear();
   const parts = Stats.byParticipation(ssv.games).filter(x => Stats.RANKED_QUEUES.includes(x.g.q));
   el.innerHTML = accs.map(a => {

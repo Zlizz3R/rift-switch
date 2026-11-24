@@ -48,8 +48,8 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     // no text key without a translation
     assert.doesNotMatch(app.$('#dashTags').innerHTML, /\btags?\.[a-zA-Z]+\.?[a-zA-Z]*\b(?![^<]*>)/);
     // another account: nothing played → too little data everywhere, no strengths
-    app.$('#tagAcc').value = P(2);
-    app.$('#tagAcc').dispatchEvent(new app.w.Event('change'));
+    app.$(`[data-ovacc="${P(2)}"]`).dispatchEvent(new app.w.MouseEvent('click', { bubbles: true, ctrlKey: true }));
+    await app.settle();
     assert.match(app.$('#tagBody').textContent, /No ranked games stored yet|Nothing yet/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }

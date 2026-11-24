@@ -14,6 +14,7 @@ function showDashTab(tab) {
   $('dashPerf').hidden = !['stats', 'champs', 'style'].includes(tab);
   $('dashMast').hidden = tab !== 'mast';
   $('dashTags').hidden = tab !== 'tags';
+  if (typeof renderOvAccs === 'function') renderOvAccs();
   $('dashSeasons').hidden = tab !== 'seasons';
   if (tab === 'mast') { renderMast(); loadMast(); }
   if (['stats', 'champs', 'style'].includes(tab)) { renderPerf(); loadPerf(); }
@@ -81,7 +82,7 @@ function mastTimeTip(e, puuids) {
 function renderMast() {
   const el = $('mastBody');
   if (!el || $('dashMast').hidden) return;
-  const accs = S.accounts.filter(a => !a.placeholder);
+  const accs = ovChosen();
   if (!mast.data) { el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
   const by = new Map(mast.data.map(m => [m.puuid, m]));
   const read = accs.filter(a => by.has(a.puuid));

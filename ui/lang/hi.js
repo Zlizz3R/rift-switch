@@ -249,7 +249,6 @@
     'mast.tipExtra': "+ प्रति गेम {min} मिनट: कतार, चैंपियन चयन, लोडिंग स्क्रीन और गेम के बाद की स्क्रीन",
     'dash.tabStats': "प्रदर्शन",
     'dash.tabChamps': "चैंपियन",
-    'perf.qRanked': "रैंक्ड (सोलो + फ्लेक्स)",
     'perf.season': "सीज़न {y}",
     'perf.allRoles': "सभी रोल",
     'pos.none': "बिना लेन (ARAM, Arena …)",
@@ -406,7 +405,6 @@
     'tag.mainBanned.t': "आमतौर पर {champ} खेलता है ({n} गेम) – बैन",
     'tag.autofill': "ऑटोफ़िल?",
     'tag.autofill.t': "आमतौर पर {role} ({pct} %), अब {now}",
-    
     'set.ownGames': "आपके गेम",
     'set.othersGames': "दूसरे खिलाड़ियों के गेम (लाइव)",
     'set.othersClear': "हटाएँ",
@@ -489,6 +487,9 @@
     'ss.saved': "सीज़न सहेजे गए।",
     'ss.note': "तीन स्रोत, कभी जोड़े नहीं जाते: क्लाइंट सिर्फ़ पिछला और मौजूदा सीज़न बताता है; सहेजे गए गेम कैलेंडर वर्ष से गिने जाते हैं; आपकी प्रविष्टियाँ आपकी के रूप में चिह्नित हैं।",
     'load.step.lists': "मैच सूचियाँ",
+    'ov.allT': "सभी अकाउंट गिने जाएँ",
+    'ov.accT': "क्लिक: गिनती में शामिल या बाहर · Ctrl+क्लिक: सिर्फ़ यही",
+    'ov.none': "कोई अकाउंट नहीं चुना – ऊपर एक चुनें।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;
