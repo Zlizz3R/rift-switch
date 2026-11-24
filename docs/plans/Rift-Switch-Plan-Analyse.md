@@ -613,4 +613,8 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   mit ▲/▼ in die gute Richtung; zu wenig Spiele sagt, wie viele fehlen (`PerfMath.trend`). Bestwerte der Match history
   stammen nur aus einer Spielart (die mit den meisten Spielen der Auswahl) und nennen ihren Geltungsbereich („Bestwerte
   in 1.240 gespeicherten Summoner's-Rift-Spielen“).
-- [ ] Phase 8 – Frühere Ranked-Seasons
+- [x] Phase 8 – Frühere Ranked-Seasons – 24.11.2026: Der Client kennt nur die letzte Season (Ende und jetzt auch Höchststand,
+  `lastSeasonPeak`) und die laufende. Übersicht → „Seasons“ je Account mit drei getrennten Quellen: Client, gespeicherte
+  Ranked-Spiele je Kalenderjahr, selbst eingetragen (Text einfügen mit Vorschau wie beim Bulk-Add, `ui/seasonparse.js`,
+  Feld `seasonsManual`, Befehl `seasons-set`, auch im Export). OP.GG-MCP nur geprüft, nicht eingebaut (Nachtrag im
+  Prüfbericht) – Entscheidung offen.

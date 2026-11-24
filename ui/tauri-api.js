@@ -60,6 +60,7 @@
     othersClear: () => call('others-clear'),
     scoutGames: puuids => call('scout-games', puuids),
     champDamage: ids => call('champ-damage', ids),
+    seasonsSet: (puuid, list) => call('seasons-set', puuid, list),
     matchesClear: () => call('mh-clear'),
     playerRanks: puuids => call('player-ranks', puuids),
     unlock: pass => call('unlock', pass),

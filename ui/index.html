@@ -96,7 +96,7 @@
       <section id="viewDash" hidden>
         <div class="head"><h1><span data-i18n="dash.title"></span></h1><p class="sub" data-i18n="dash.sub"></p></div>
         <div class="subtabs" id="dashTabs">
-          <button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="style" data-i18n="dash.tabStyle"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="tags" data-i18n="dash.tabTags"></button>
+          <button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="style" data-i18n="dash.tabStyle"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="tags" data-i18n="dash.tabTags"></button><button data-dt="seasons" data-i18n="dash.tabSeasons"></button>
           <span class="grow"></span><button class="btn load-btn" data-loadall=""></button>
         </div>
         <div id="dashLp">
@@ -121,6 +121,7 @@
           </div>
           <div id="tagBody"></div>
         </div>
+        <div id="dashSeasons" hidden><div id="seasonsBody"></div></div>
         <div id="dashMast" hidden>
           <div class="mh-filter">
             <label class="search coll-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -586,6 +587,8 @@
 <script src="tag-rules.js"></script>
 <script src="tags.js"></script>
 <script src="tags-view.js"></script>
+<script src="seasonparse.js"></script>
+<script src="seasons-view.js"></script>
 <script src="scout-view.js"></script>
 <script src="insights.js"></script>
 <script src="live-more.js"></script>

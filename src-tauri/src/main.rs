@@ -2674,6 +2674,26 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             }
             Value::Null
         }
+        // earlier seasons entered by hand (kept apart, marked as such)
+        "seasons-set" => {
+            let list = ops::seasons_of(&a(1));
+            let ok = with(|c| {
+                c.st.account_mut(&s(0))
+                    .map(|a| {
+                        if list.is_empty() {
+                            a.remove("seasonsManual");
+                        } else {
+                            a.insert("seasonsManual".into(), json!(list));
+                        }
+                    })
+                    .is_some()
+            });
+            if ok {
+                save();
+                push();
+            }
+            json!({ "ok": ok })
+        }
         "ranked-games" => with(|c| {
             c.st.account(&s(0))
                 .and_then(|a| a.get("rankedGames").cloned())

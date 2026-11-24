@@ -340,6 +340,56 @@ pub fn goal_of(v: &Value) -> Option<Value> {
         .then(|| json!({ "tier": tier, "division": div }))
 }
 
+// ---------- past seasons, entered by hand ----------
+
+/// Earlier seasons the user typed in or pasted: [{ season, queue, tier, division, wins, losses }],
+/// cleaned (unknown values dropped, at most 40). Kept apart from anything read from games.
+pub fn seasons_of(v: &Value) -> Vec<Value> {
+    const TIERS: [&str; 10] = [
+        "IRON",
+        "BRONZE",
+        "SILVER",
+        "GOLD",
+        "PLATINUM",
+        "EMERALD",
+        "DIAMOND",
+        "MASTER",
+        "GRANDMASTER",
+        "CHALLENGER",
+    ];
+    v.as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|e| {
+            let season: String = e["season"]
+                .as_str()?
+                .chars()
+                .filter(|c| c.is_ascii_alphanumeric() || " -./".contains(*c))
+                .take(12)
+                .collect();
+            if season.trim().is_empty() {
+                return None;
+            }
+            let queue = match e["queue"].as_str().unwrap_or("solo") {
+                "flex" => "flex",
+                _ => "solo",
+            };
+            let tier = e["tier"].as_str().filter(|t| TIERS.contains(t)).unwrap_or("");
+            let div = e["division"]
+                .as_str()
+                .filter(|d| ["I", "II", "III", "IV"].contains(d) && !tier.is_empty())
+                .unwrap_or("");
+            let n = |k: &str| e[k].as_i64().filter(|n| (0..=5000).contains(n));
+            let (w, l) = (n("wins"), n("losses"));
+            if tier.is_empty() && w.is_none() && l.is_none() {
+                return None;
+            }
+            Some(json!({ "season": season.trim(), "queue": queue, "tier": tier, "division": div, "wins": w, "losses": l }))
+        })
+        .take(40)
+        .collect()
+}
+
 // ---------- mastery ----------
 
 /// One line of an account's mastery history: the champions whose points changed since the last
@@ -573,5 +623,25 @@ mod tests {
             r"1 login: signed in as another account than picked (Foo <riot-id> / <riot-id>) %USERPROFILE%\AppData <e-mail> <id>"
         );
         assert_eq!(redact("level#2 fine", ""), "level#2 fine");
+    }
+
+    #[test]
+    fn seasons_entered_by_hand_are_cleaned() {
+        let list = seasons_of(&json!([
+            { "season": "2023", "queue": "solo", "tier": "GOLD", "division": "II", "wins": 54, "losses": 50 },
+            { "season": "S2024-1<script>", "queue": "flex", "tier": "WOOD", "wins": 10 },
+            { "season": "", "tier": "GOLD" },
+            { "season": "2022", "tier": "nope" },
+            { "season": "2021", "queue": "x", "tier": "MASTER", "division": "I", "wins": -3, "losses": 9999 }
+        ]));
+        assert_eq!(list.len(), 3);
+        assert_eq!(list[0]["division"], "II");
+        assert_eq!(
+            list[1],
+            json!({ "season": "S2024-1scrip", "queue": "flex", "tier": "", "division": "", "wins": 10, "losses": null })
+        );
+        assert_eq!(list[2]["queue"], "solo");
+        assert!(list[2]["wins"].is_null() && list[2]["losses"].is_null());
+        assert_eq!(seasons_of(&json!("x")).len(), 0);
     }
 }

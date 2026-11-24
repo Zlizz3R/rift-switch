@@ -69,3 +69,27 @@ rechnet sie mit den echten Punkten pro Spiel des Accounts.
 
 - Die Match-Liste (`/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=…&endIndex=…`) lieferte bei
   begIndex 0/100/200/400 jeweils Antworten – wie weit sie wirklich zurückreicht, wird in Phase 5 genau gemessen.
+
+
+## Nachtrag 24.11.2026 – Frühere Seasons und OP.GG-MCP-Server (Phase 8)
+
+**Was der Client zu früheren Seasons liefert** (am laufenden Client geprüft, nur lesend,
+`/lol-ranked/v1/current-ranked-stats`): pro Queue `previousSeasonEndTier/Division` (Ende der letzten Season),
+`previousSeasonHighestTier/Division` (Höchststand der letzten Season) und `highestTier/Division` (Höchststand der
+laufenden Season), dazu `highestPreviousSeasonEndTier` für den Account und unter `seasons` die Nummer der laufenden
+Season (23) und ihr Ende. **Nichts davor**: ältere Seasons kennt der Client nicht. Die App zeigt deshalb drei getrennte
+Quellen (Client, gespeicherte Spiele je Kalenderjahr, selbst eingetragen) und zählt sie nie zusammen.
+
+**OP.GG-MCP-Server** (`https://mcp-api.op.gg/mcp`, Code: [github.com/opgginc/opgg-mcp](https://github.com/opgginc/opgg-mcp)):
+- Werkzeuge für Spieler: `lol_get_summoner_profile` (Rang, Tier, LP, Winrate, Champion-Pool – die aktuelle Season),
+  `lol_list_summoner_matches` (letzte Spiele), `lol_get_summoner_game_detail`. **Ein Werkzeug für frühere Seasons ist
+  nicht beschrieben.**
+- Der Code steht unter MIT-Lizenz – das betrifft den Code, nicht die Daten.
+- Die Nutzungsbedingungen von OP.GG ([op.gg/lol/policies/agreement](https://www.op.gg/lol/policies/agreement), Stand
+  14.09.2026) erlauben nur „personal, non-commercial use“ und verbieten u. a. „use automated scripts to collect
+  information from or otherwise interact with the Services“ sowie Kopieren und Weitergeben von Inhalten. MCP-Server
+  oder Apps werden dort nicht erwähnt, eine ausdrückliche Erlaubnis für Apps gibt es nicht.
+
+**Ergebnis:** nicht eingebaut. Eine App, die den Server automatisch abfragt, fällt nach dem Wortlaut unter die
+„automated scripts“, und die gesuchten früheren Seasons liefert er nach seiner Beschreibung ohnehin nicht. Einbauen
+nur mit schriftlicher Erlaubnis von OP.GG und deiner Zustimmung (Entscheidung offen).

@@ -287,6 +287,10 @@ pub fn pick_queue(stats: &Value, q: &str, own: bool) -> Value {
     if let Some(p) = rank_of("previousSeasonEndTier", "previousSeasonEndDivision") {
         o["lastSeason"] = p;
     }
+    // the highest rank of the last season (the client tells nothing older than that)
+    if let Some(p) = rank_of("previousSeasonHighestTier", "previousSeasonHighestDivision") {
+        o["lastSeasonPeak"] = p;
+    }
     o
 }
 
