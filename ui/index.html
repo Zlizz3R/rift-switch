@@ -319,6 +319,12 @@
         <button class="option" id="exportBtn"><span class="opt-title" data-i18n="set.export"></span><span class="opt-sub" data-i18n="set.exportT"></span></button>
         <button class="option" id="importBtn"><span class="opt-title" data-i18n="set.import"></span><span class="opt-sub" data-i18n="set.importT"></span></button>
       </div>
+      <div class="store-box">
+        <div class="store-row"><span><b data-i18n="set.ownGames"></b><small id="storeOwn"></small></span></div>
+        <div class="store-row"><span><b data-i18n="set.othersGames"></b><small id="storeOthers"></small></span><button class="btn small" id="othersClear" data-i18n="set.othersClear"></button></div>
+        <div class="store-row"><span><b data-i18n="set.limit"></b><small data-i18n="set.limitT"></small></span>
+          <select id="othersLimit"><option value="0" data-i18n="set.limitNone"></option><option value="500">500 MB</option><option value="1000">1 GB</option><option value="2000">2 GB</option><option value="5000">5 GB</option></select></div>
+      </div>
 
       <div class="set-g" data-i18n="set.gAbout"></div>
       <p class="tagline" data-i18n="app.tagline"></p>
@@ -578,6 +584,7 @@
 <script src="tag-rules.js"></script>
 <script src="tags.js"></script>
 <script src="tags-view.js"></script>
+<script src="scout-view.js"></script>
 <script src="collection.js"></script>
 <script src="bulk.js"></script>
 <script src="keys.js"></script>

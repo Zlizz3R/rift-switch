@@ -465,22 +465,17 @@ function renderLive(force) {
   $('liveDot').hidden = !(d.clash && d.clash.opponents && d.clash.opponents.length) && !d.champSelect && !d.lobby && !d.inGame;
   const parts = [];
   const pens = penaltiesHtml();
-  if (pens) parts.push(pens);
+  // a game on: the ten players first (all of them on screen), the penalties below
+  if (pens && !d.inGame) parts.push(pens);
   if (d.clash && d.clash.opponents && d.clash.opponents.length) {
     const ids = d.clash.opponents.filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
     parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.clash')} – ${esc(d.clash.teamName || '')} ${d.clash.teamTag ? '[' + esc(d.clash.teamTag) + ']' : ''}</h3>
       <button class="btn gold ext-btn" id="clashAll" data-ids="${esc(ids.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button></div>
       ${d.clash.opponents.map(playerRow).join('')}</div>`);
   }
-  if (d.inGame && (d.inGame.teamOne.length || d.inGame.teamTwo.length)) {
-    const mine = d.inGame.teamTwo.some(p => p.puuid === d.me) ? 'teamTwo' : 'teamOne';
-    const theirs = mine === 'teamOne' ? 'teamTwo' : 'teamOne';
-    const ids = d.inGame[theirs].filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
-    parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.enemies')} <span class="info" title="${esc(t('live.ranksNote'))}">?</span></h3>
-      ${ids.length ? `<button class="btn gold ext-btn multi-btn" data-ids="${esc(ids.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button>` : ''}</div>
-      ${d.inGame[theirs].map(playerRow).join('')}</div>`);
-    parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.allies')}</h3></div>${d.inGame[mine].map(playerRow).join('')}</div>`);
-  }
+  // a game on (loading screen and after): the ten players as cards (scout-view.js)
+  if (d.inGame && (d.inGame.teamOne.length || d.inGame.teamTwo.length)) parts.push(scoutBoardHtml(d));
+  if (pens && d.inGame) parts.push(pens);
   if (d.lobby && d.lobby.members.length) {
     parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.lobby')}</h3></div>${d.lobby.members.map(playerRow).join('')}</div>`);
   }

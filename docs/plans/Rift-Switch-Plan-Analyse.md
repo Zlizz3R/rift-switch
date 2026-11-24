@@ -582,11 +582,19 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   `ui/stats.js`; alle Stufe-C-Tags und „Drachentöter“ drin. Am echten Client geprüft: Kill- und Drachen-Ereignisse
   passen; **Ward-Ereignisse liefert die Client-Timeline nicht** – „Früher Warder“ ist deshalb aus (`off` in
   `tag-rules.js`), bis eine Quelle sie hat.
-- [ ] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – gemessen 24.11.2026, Bericht in
+- [x] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – gemessen 24.11.2026, Bericht in
   `docs/plans/Speichermessung.md` (App-Format 4: ~10 KB pro Spiel, gzip ~4 KB; Match-Liste des Clients nur ~20 Spiele
-  pro Spieler) – Entscheidung: ___
-- [ ] Speicherlimit in den Einstellungen (gehört zu Phase 5)
-- [ ] Phase 5 – Live-Übersicht im Porofessor-Stil
+  pro Spieler) – Entscheidung 24.11.: „weitermachen“ → Empfehlung übernommen: App-Format 4 in eigenem Ordner.
+- [x] Speicherlimit in den Einstellungen – 24.11.2026: System & Daten zeigt eigene und fremde Spiele getrennt (Größe,
+  Anzahl, Löschen für fremde); Limit unbegrenzt/500 MB/1/2/5 GB, darüber gehen die ältesten fremden Spiele; einmalige
+  Frage ab 1 GB (Limit 2 GB setzen oder unbegrenzt lassen). „Komprimieren“ gibt es nicht (App-Format 4 ist schon klein).
+- [x] Phase 5 – Live-Übersicht im Porofessor-Stil – 24.11.2026: Backend-Ladeplan (`scout_loop` in main.rs, Speicher
+  `matches-others`): Champ Select Verbündete (2 parallel), Ladebildschirm alle 10 (4 parallel), sobald die Live Client
+  Data API eine Spielzeit > 0 meldet keine Abfrage mehr, danach der Rest; Match-Listen 30 Min. gemerkt; Spiele, die
+  schon im eigenen Speicher sind, werden kopiert statt geladen. Karten in `ui/scout-view.js` (zwei Reihen nach
+  Position, geschätzte Position blass, Rang-Tönung nach innen, Kreise Winrate-auf-Champion und Hauptrolle, Tags mit
+  kurz/genau, Tag-Bereich scrollt, Ladebalken gesamt und je Karte). Live-Tags in `Tags.liveTags`. Am echten Spiel
+  noch nicht gesehen (Ladebildschirm → Spielstart, Tempo von Stufe A).
 - [ ] Phase 5b – Mehr Live-Infos
 - [ ] Phase 6 – Spielstilprofil gegen den Lane-Gegner
 - [ ] Phase 7 – Trends und Bestwerte

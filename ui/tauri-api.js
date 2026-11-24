@@ -56,6 +56,9 @@
     matchesGet: ids => call('matches-get', ids),
     matchesAssets: () => call('mh-assets'),
     matchesStorage: () => call('mh-storage'),
+    othersStorage: () => call('others-storage'),
+    othersClear: () => call('others-clear'),
+    scoutGames: puuids => call('scout-games', puuids),
     matchesClear: () => call('mh-clear'),
     playerRanks: puuids => call('player-ranks', puuids),
     unlock: pass => call('unlock', pass),
@@ -63,6 +66,7 @@
     lock: (what, pass, oldPass) => call('lock', what, pass, oldPass),
     onState: on('state'),
     onMatchesChanged: fn => T.event.listen('matches-changed', () => fn()),
+    onScoutChanged: fn => T.event.listen('scout-changed', () => fn()),
     onTraySwitch: on('tray-switch'),
     onToast: on('toast'),
   };

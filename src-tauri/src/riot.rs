@@ -799,6 +799,43 @@ pub async fn accept_ready_check() -> bool {
         .is_some()
 }
 
+/// Seconds the running game has been on, from the game's own Live Client Data API (port 2999).
+/// None while there is no game window answering yet (loading screen) or no game at all.
+pub async fn live_game_time() -> Option<f64> {
+    if offline_test() {
+        return None;
+    }
+    let r = local_client()
+        .get("https://127.0.0.1:2999/liveclientdata/gamestats")
+        .timeout(Duration::from_millis(800))
+        .send()
+        .await
+        .ok()?;
+    if !r.status().is_success() {
+        return None;
+    }
+    let t = r.text().await.ok()?;
+    serde_json::from_str::<Value>(&t).ok()?["gameTime"].as_f64()
+}
+/// Another player's mastery: { "<champion id>": points } (the client tells it for any player).
+pub async fn mastery_points_of(puuid: &str) -> Option<Value> {
+    let list = lcu(
+        &format!("/lol-champion-mastery/v1/{puuid}/champion-mastery"),
+        6000,
+        "GET",
+    )
+    .await?;
+    let m: crate::accounts::Obj = list
+        .as_array()?
+        .iter()
+        .filter_map(|x| {
+            let id = x["championId"].as_i64().filter(|i| *i > 0 && *i < 10_000)?;
+            Some((id.to_string(), x["championPoints"].clone()))
+        })
+        .collect();
+    Some(Value::Object(m))
+}
+
 pub async fn gameflow_phase() -> Option<String> {
     lcu("/lol-gameflow/v1/gameflow-phase", 2000, "GET")
         .await

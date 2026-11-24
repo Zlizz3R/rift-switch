@@ -245,6 +245,7 @@ fn snapshot(c: &Core) -> Value {
     m.insert("login".into(), c.login.clone());
     m.insert("switching".into(), c.sw.clone());
     m.insert("loading".into(), c.loading.clone());
+    m.insert("scout".into(), scout_snapshot());
     m.insert("saveError".into(), json!(c.save_error));
     m.insert("cryptoBroken".into(), json!(c.crypto_broken));
     m.insert("version".into(), json!(version));
@@ -1293,25 +1294,27 @@ async fn fill_games(max: usize) -> usize {
     });
     fetch_games(ids).await
 }
+/// One game from the client: its details, compacted, with the parts of its timeline we keep.
+async fn fetch_game(id: String) -> Option<Value> {
+    let g = riot::lcu(&format!("/lol-match-history/v1/games/{id}"), 6000, "GET").await?;
+    let mut c = matches::compact(&g)?;
+    let pids = matches::participant_ids(&g);
+    if let Some(tl) = riot::lcu(
+        &format!("/lol-match-history/v1/game-timelines/{id}"),
+        6000,
+        "GET",
+    )
+    .await
+    {
+        matches::add_timeline(&mut c, &tl, &pids);
+    }
+    Some(c)
+}
 async fn fetch_games(ids: Vec<String>) -> usize {
     let mut got = 0;
     for id in ids {
-        let g = riot::lcu(&format!("/lol-match-history/v1/games/{id}"), 6000, "GET").await;
-        match g
-            .as_ref()
-            .and_then(|g| matches::compact(g).map(|c| (c, matches::participant_ids(g))))
-        {
-            Some((mut c, pids)) => {
-                // the gold of every player per minute (for the details view)
-                if let Some(tl) = riot::lcu(
-                    &format!("/lol-match-history/v1/game-timelines/{id}"),
-                    6000,
-                    "GET",
-                )
-                .await
-                {
-                    matches::add_timeline(&mut c, &tl, &pids);
-                }
+        match fetch_game(id.clone()).await {
+            Some(c) => {
                 if with(|c2| c2.mh.insert(&c)) {
                     got += 1;
                 }
@@ -1320,6 +1323,218 @@ async fn fetch_games(ids: Vec<String>) -> usize {
         }
     }
     got
+}
+
+// ---------- scouting: the other players of the current game (Live) ----------
+// Their match lists first (stage A, kept 30 minutes), then their games (details + timeline, newest
+// first) into a store of their own (matches-others). Champion select: the allies the client shows,
+// 2 at a time. Loading screen: all ten, 4 at a time. As soon as the game runs (game time > 0):
+// not one request more. After the game: the rest for the same players. Only while the window is
+// open, never in a test copy that mustn't talk to Riot.
+static OTHERS: OnceLock<Mutex<matches::Matches>> = OnceLock::new();
+fn others<R>(f: impl FnOnce(&mut matches::Matches) -> R) -> R {
+    let m = OTHERS.get_or_init(|| {
+        let dir = DATA
+            .get()
+            .cloned()
+            .unwrap_or_default()
+            .join("matches-others");
+        Mutex::new(matches::Matches::load_others(dir))
+    });
+    f(&mut m.lock().unwrap_or_else(|e| e.into_inner()))
+}
+#[derive(Default)]
+struct Scout {
+    targets: Vec<String>,
+    listed: HashMap<String, i64>,
+    mastery: HashMap<String, Value>,
+    failed: HashMap<String, u8>,
+    running: bool,
+    busy: bool,
+}
+static SCOUT: Mutex<Option<Scout>> = Mutex::new(None);
+fn scout<R>(f: impl FnOnce(&mut Scout) -> R) -> R {
+    f(SCOUT
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get_or_insert_with(Scout::default))
+}
+/// For the state: per player (stored, noted) games, the totals, whether the game runs.
+fn scout_snapshot() -> Value {
+    let (targets, running, listed) = scout(|s| {
+        let l = s
+            .targets
+            .iter()
+            .filter(|p| s.listed.contains_key(*p))
+            .count();
+        (s.targets.clone(), s.running, l)
+    });
+    if targets.is_empty() {
+        return Value::Null;
+    }
+    let per: Obj = others(|o| {
+        targets
+            .iter()
+            .map(|p| {
+                let (d, n) = o.progress(p);
+                (p.clone(), json!([d, n]))
+            })
+            .collect()
+    });
+    let (done, total) = per.values().fold((0, 0), |(a, b), v| {
+        (
+            a + v[0].as_u64().unwrap_or(0),
+            b + v[1].as_u64().unwrap_or(0),
+        )
+    });
+    json!({ "players": per, "done": done, "total": total, "running": running, "listed": listed, "of": targets.len() })
+}
+async fn scout_loop() {
+    loop {
+        sleep(1500).await;
+        if riot::offline_test() || !win_shown() || scout(|s| s.busy) {
+            continue;
+        }
+        scout(|s| s.busy = true);
+        let changed = scout_round().await;
+        scout(|s| s.busy = false);
+        if changed {
+            push();
+            emit("scout-changed", Value::Null);
+        }
+    }
+}
+fn puuids_of(list: &[&Value]) -> Vec<String> {
+    list.iter()
+        .flat_map(|t| t.as_array().into_iter().flatten())
+        .filter_map(|p| p["puuid"].as_str())
+        .filter(|p| !p.is_empty())
+        .map(String::from)
+        .collect()
+}
+/// One step of the plan; true when something changed.
+async fn scout_round() -> bool {
+    let phase = with(|c| c.live.phase.clone()).unwrap_or_default();
+    let own: std::collections::HashSet<String> = with(|c| {
+        c.st.accounts
+            .iter()
+            .map(|a| str_of(a, "puuid").to_string())
+            .collect()
+    });
+    let (mut targets, par) = match phase.as_str() {
+        "ChampSelect" => {
+            scout(|s| s.running = false);
+            let Some(cs) = riot::lcu("/lol-champ-select/v1/session", 3000, "GET").await else {
+                return false;
+            };
+            (puuids_of(&[&cs["myTeam"]]), 2)
+        }
+        "GameStart" | "InProgress" | "Reconnect" => {
+            if scout(|s| s.running) {
+                return false;
+            }
+            if riot::live_game_time().await.is_some_and(|t| t > 0.0) {
+                scout(|s| s.running = true);
+                return true;
+            }
+            let Some(gs) = riot::lcu("/lol-gameflow/v1/session", 3000, "GET").await else {
+                return false;
+            };
+            let gd = &gs["gameData"];
+            (puuids_of(&[&gd["teamOne"], &gd["teamTwo"]]), 4)
+        }
+        "WaitingForStats" | "PreEndOfGame" | "EndOfGame" => {
+            scout(|s| s.running = false);
+            (scout(|s| s.targets.clone()), 2)
+        }
+        _ => {
+            scout(|s| s.running = false);
+            return false;
+        }
+    };
+    targets.retain(|p| !own.contains(p));
+    targets.dedup();
+    if targets.is_empty() {
+        return false;
+    }
+    let new_targets = scout(|s| {
+        let ch = s.targets != targets;
+        if ch {
+            s.targets = targets.clone();
+        }
+        ch
+    });
+    // stage A: match lists (and mastery) of everyone first
+    let now = now_ms();
+    let need: Vec<String> = scout(|s| {
+        targets
+            .iter()
+            .filter(|p| s.listed.get(*p).is_none_or(|t| now - t > 1_800_000))
+            .take(par)
+            .cloned()
+            .collect()
+    });
+    if !need.is_empty() {
+        let got = futures_util::future::join_all(need.iter().map(|p| async move {
+            let (l, m) = tokio::join!(riot::match_list(p, 0, 20), riot::mastery_points_of(p));
+            (p.clone(), l, m)
+        }))
+        .await;
+        for (p, list, mast) in got {
+            if let Some(l) = list {
+                others(|o| o.note(&p, &l));
+            }
+            scout(|s| {
+                s.listed.insert(p.clone(), now);
+                if let Some(m) = mast {
+                    s.mastery.insert(p.clone(), m);
+                }
+            });
+        }
+        return true;
+    }
+    // stages B + C: their games, newest first
+    let failed = scout(|s| s.failed.clone());
+    let ids: Vec<String> = others(|o| o.missing_for(&targets))
+        .into_iter()
+        .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
+        .take(par)
+        .collect();
+    if ids.is_empty() {
+        return new_targets;
+    }
+    // games the own store has (played together): copied over, no request
+    let (have, fetch): (Vec<String>, Vec<String>) =
+        with(|c| ids.into_iter().partition(|id| c.mh.has(id)));
+    if !have.is_empty() {
+        let games = with(|c| matches::read_entries(&c.mh.games_file(), &c.mh.entries(&have)));
+        others(|o| {
+            for g in &games {
+                o.insert(g);
+            }
+        });
+    }
+    let got = futures_util::future::join_all(fetch.iter().map(|id| fetch_game(id.clone()))).await;
+    for (id, g) in fetch.iter().zip(got) {
+        match g {
+            Some(g) => {
+                others(|o| o.insert(&g));
+            }
+            None => scout(|s| *s.failed.entry(id.clone()).or_insert(0) += 1),
+        }
+    }
+    // the storage limit (Settings → Data): the oldest other players' games go
+    let limit = with(|c| {
+        c.st.settings
+            .get("othersLimit")
+            .and_then(Value::as_str)
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(0)
+    });
+    if limit > 0 {
+        others(|o| o.prune_to(limit * 1_000_000));
+    }
+    true
 }
 
 // ---------- auto-login ----------
@@ -2757,6 +2972,37 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         "mh-assets" => live::game_assets(data()).await,
         "mh-storage" => with(|c| json!({ "bytes": c.mh.size(), "games": c.mh.count() })),
+        // other players' games (Live): size, delete, and what is known of up to ten of them
+        "others-storage" => others(|o| json!({ "bytes": o.size(), "games": o.count() })),
+        "others-clear" => {
+            others(|o| o.clear());
+            scout(|s| {
+                s.listed.clear();
+                s.failed.clear();
+            });
+            json!({ "ok": true })
+        }
+        "scout-games" => {
+            let ids: Vec<String> = a(0)
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .filter(|p| is_id(p))
+                .take(10)
+                .map(String::from)
+                .collect();
+            let mast = scout(|s| s.mastery.clone());
+            let out: Obj = others(|o| {
+                ids.iter()
+                    .map(|p| {
+                        let games = o.games_of(p);
+                        (p.clone(), json!({ "games": games, "mastery": mast.get(p) }))
+                    })
+                    .collect()
+            });
+            Value::Object(out)
+        }
         "mh-clear" => {
             with(|c| {
                 c.mh.clear();
@@ -3489,6 +3735,7 @@ fn main() {
                 });
             }
             tauri::async_runtime::spawn(tick_loop());
+            tauri::async_runtime::spawn(scout_loop());
             tauri::async_runtime::spawn(accept_loop());
             updater::init(push, || with(|c| c.st.set_bool("updateCheck")));
             if with(|c| menu::switch_arg(&argv, &c.st)).is_some() {

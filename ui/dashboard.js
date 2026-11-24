@@ -4,7 +4,7 @@
 
 const DASH_COLORS = ['#c8aa6e', '#0ac8b9', '#e5737a', '#8f7cf7', '#4cc38a', '#f29a4a', '#5aa9e6', '#e27bd0', '#b8c26a', '#9aa3b5'];
 const TIER_COLORS = { IRON: '#6b625d', BRONZE: '#9a6240', SILVER: '#8c9db1', GOLD: '#c8aa6e', PLATINUM: '#3fb6a8',
-  EMERALD: '#2fae6a', DIAMOND: '#6a7de8', MASTER: '#b05fe0' };
+  EMERALD: '#2fae6a', DIAMOND: '#6a7de8', MASTER: '#b05fe0', GRANDMASTER: '#d8504f', CHALLENGER: '#f0c860' };
 const dash = { data: null, qs: new Set(['solo']), days: 30, hidden: new Set(), view: null, histLen: -1 };
 // the ranked queues, any combination: one colour per account, one line style per queue
 const DASH_QUEUES = [['solo', 'Solo/Duo', ''], ['flex', 'Flex', '7 5'], ['r5', 'Ranked 5v5', '2 4'], ['classic', 'Classic 5v5', '10 4 2 4']];

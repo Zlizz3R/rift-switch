@@ -89,7 +89,7 @@ function game(n, win, owner = P(1), at = 0) {
   const players = CH.map(([c0, , pos], i) => {
     const champ = i === at && at === 0 ? mine : c0;
     const blue = i < 5, won = blue === win;
-    return { puuid: i === at ? owner : 'x' + n + i, name: i === at ? accounts.find(a => a.puuid === owner).gameName : NAMES[i], tag: 'EUW', champ, team: blue ? 100 : 200, pos, win: won,
+    return { puuid: i === at ? owner : 'x' + n + i, name: i === at ? (accounts.find(a => a.puuid === owner) || { gameName: NAMES[i] }).gameName : NAMES[i], tag: 'EUW', champ, team: blue ? 100 : 200, pos, win: won,
       k: Math.floor(rnd() * 12) + (won ? 3 : 0), d: Math.floor(rnd() * 8) + 1, a: Math.floor(rnd() * 14) + 2, cs: 120 + Math.floor(rnd() * 140), gold: 8000 + Math.floor(rnd() * 6000),
       dmg: 12000 + Math.floor(rnd() * 22000), vis: 12 + Math.floor(rnd() * 40), lvl: 13 + Math.floor(rnd() * 5),
       items: [[3157, 3020, 6655, 4645, 3089, 0, 3340], [6692, 3111, 3071, 3053, 0, 0, 3364], [3031, 3006, 3094, 3036, 3072, 0, 3363], [3190, 3117, 3109, 2065, 0, 0, 3364], [3078, 3047, 6333, 3065, 0, 0, 3340]][i % 5],
@@ -130,6 +130,19 @@ const live = { clientUp: true, phase: 'ChampSelect', region: 'EUW', me: P(1), ch
   allies: [[P(1), 'Moonlit Fox', 103, 'middle'], ['a2', 'Jungle Diff', 64, 'jungle'], ['a3', 'Crit Happens', 222, 'bottom'], ['a4', 'Hookline', 412, 'utility'], ['a5', 'Demacia Main', 86, 'top']]
     .map(([puuid, gameName, championId, position], i) => ({ puuid, gameName, tagLine: 'EUW', championId, position, iconId: 20 + i, solo: q(1800 + i * 150, 30 + i, 25), flex: i % 2 ? q(1500 + i * 100, 10, 9) : null })),
   enemies: [{ championId: 238 }, { championId: 24 }, { championId: 51 }, { championId: 0 }, { championId: 0 }] } };
+// ---------- live: a game on – the ten players' cards (scout-view.js) ----------
+const LG = [[P(1), 'Moonlit Fox', 103, 'MIDDLE', 0], ['a2', 'Jungle Diff', 64, 'JUNGLE', 1], ['a3', 'Crit Happens', 222, 'BOTTOM', 2], ['a4', 'Hookline', 412, 'UTILITY', 3], ['a5', 'Demacia Main', 86, 'TOP', 4],
+  ['e1', 'Split Push Sam', 24, 'TOP', 5], ['e2', 'Gank Plank', 266, 'JUNGLE', 6], ['e3', 'Shadow Step', 238, 'MIDDLE', 7], ['e4', 'Headshot Hero', 51, 'BOTTOM', 8], ['e5', 'Pocket Healer', 117, 'UTILITY', 9]];
+const lgPlayer = ([puuid, gameName, championId, position], i) => ({ puuid, gameName, tagLine: 'EUW', championId, position, iconId: 20 + i, level: [412, 187, 96, 63, 41, 230, 77, 318, 154, 205][i],
+  solo: q(1500 + ((i * 397) % 1100), 20 + i * 3, 18 + i), flex: i % 3 ? q(1400 + i * 80, 8, 9) : null });
+const liveGame = { clientUp: true, phase: 'InProgress', region: 'EUW', me: P(1), inGame: { queueId: 420, teamOne: LG.slice(0, 5).map(lgPlayer), teamTwo: LG.slice(5).map((x, i) => lgPlayer(x, i + 5)) } };
+// every other player: 16 games of their match list, mostly on this game's champion and position
+const scoutData = {};
+LG.slice(1).forEach(([puuid, , champ, , at], k) => {
+  const list = Array.from({ length: 16 }, (_, j) => game(200 + k * 20 + j, rnd() < 0.55, puuid, at));
+  scoutData[puuid] = { games: list.map(g => ({ ...g, owners: [puuid] })), mastery: { [champ]: 40000 + k * 61000, 103: 12000 } };
+});
+const scoutState = { of: 9, listed: 9, done: 131, total: 144, running: false, players: Object.fromEntries(LG.slice(1).map(([p], k) => [p, [k === 7 ? 9 : 16, 16]])) };
 const counters = { Zed: { share: 88, list: [{ name: 'Ahri', wr: 51.8, rating: 6.4 }, { name: 'Lulu', wr: 50.9, rating: 5.6 }, { name: 'Galio', wr: 53.2, rating: 7.1 }, { name: 'Malzahar', wr: 54.0, rating: 7.6 }, { name: 'Syndra', wr: 48.7, rating: 4.2 }] } };
 
 const state = {
@@ -142,7 +155,7 @@ const state = {
 
 const shim = `<script>
 (function () {
-  const D = ${JSON.stringify({ state, dashboard, collections, masteries, ownGames, games, assets, champs, live, counters })};
+  const D = ${JSON.stringify({ state, dashboard, collections, masteries, ownGames, games, assets, champs, live, counters, liveGame, scoutData, scoutState })};
   const listeners = {};
   const answer = (ch, args) => {
     switch (ch) {
@@ -154,6 +167,8 @@ const shim = `<script>
       case 'own-games': return D.ownGames;
       case 'champions': return D.champs;
       case 'live': return D.live;
+      case 'scout-games': return Object.fromEntries((args[0] || []).map(p => [p, D.scoutData[p] || { games: [] }]));
+      case 'others-storage': return { bytes: 31400000, games: 2870 };
       case 'counters': { const c = D.counters[args[0]]; return c ? { ok: true, share: c.share, list: c.list } : { ok: true, share: 0, list: [] }; }
       case 'matches': return { index: D.games.map(g => [g.id, g.t, g.q, ...g.owners]), waiting: 0, loadingOlder: false, clientUp: true };
       case 'matches-get': return D.games.filter(g => args[0].includes(g.id));
@@ -171,6 +186,13 @@ const shim = `<script>
     window: { getCurrentWindow: () => ({ startDragging() {}, toggleMaximize() {} }) },
   };
   // the capture script pushes a new state (login steps screen …)
+  // the capture script switches Live to a running game
+  // the capture script switches Live to a running game (and back: __demoGame(false))
+  const champSelect = D.live;
+  window.__demoGame = (on = true) => {
+    D.live = on ? D.liveGame : champSelect;
+    window.__demoPush({ live: { clientUp: true, puuid: D.state.active, phase: on ? 'InProgress' : 'ChampSelect', waits: [] }, scout: on ? D.scoutState : null });
+  };
   window.__demoPush = st => (listeners.state || []).forEach(f => f({ payload: Object.assign(D.state, st) }));
 })();
 </script>

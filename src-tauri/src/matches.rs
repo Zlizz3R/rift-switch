@@ -51,6 +51,8 @@ pub struct Matches {
     index: HashMap<String, Entry>,
     by: Vec<(String, Vec<String>)>,
     ranks: Obj,
+    /// the own accounts' store (it may have the old matches.json next to it); false = other players
+    own: bool,
 }
 
 fn id_num(s: &str) -> i64 {
@@ -71,10 +73,28 @@ impl Matches {
             index: HashMap::new(),
             by: vec![],
             ranks: Obj::new(),
+            own: true,
         };
         if !m.dir.join("games.jsonl").exists() {
             m.migrate_old(&data_dir.join("matches.json"));
         }
+        m.open();
+        m
+    }
+    /// The store of other players' games (Live): same format, its own folder, nothing to migrate.
+    pub fn load_others(dir: PathBuf) -> Self {
+        let mut m = Matches {
+            dir,
+            index: HashMap::new(),
+            by: vec![],
+            ranks: Obj::new(),
+            own: false,
+        };
+        m.open();
+        m
+    }
+    fn open(&mut self) {
+        let m = self;
         m.read_index();
         m.shrink_if_worth();
         if let Ok(t) = fs::read_to_string(m.dir.join("by.json")) {
@@ -95,7 +115,6 @@ impl Matches {
         if let Ok(t) = fs::read_to_string(m.dir.join("ranks.json")) {
             m.ranks = serde_json::from_str(&t).unwrap_or_default();
         }
-        m
     }
 
     /// The old version kept everything in one matches.json (at most 1500 games): carried over once.
@@ -454,17 +473,100 @@ impl Matches {
                     .sum()
             })
             .unwrap_or(0)
-            + ["matches.json", "matches.json.migrated"]
-                .iter()
-                .map(|f| fs::metadata(self.dir.with_file_name(f)).map_or(0, |m| m.len()))
-                .sum::<u64>()
+            + if self.own {
+                ["matches.json", "matches.json.migrated"]
+                    .iter()
+                    .map(|f| fs::metadata(self.dir.with_file_name(f)).map_or(0, |m| m.len()))
+                    .sum::<u64>()
+            } else {
+                0
+            }
+    }
+    /// Is this game stored?
+    pub fn has(&self, id: &str) -> bool {
+        self.index.contains_key(id)
+    }
+    /// The noted games of these players that aren't stored yet, newest first.
+    pub fn missing_for(&self, puuids: &[String]) -> Vec<String> {
+        let mut out: Vec<String> = self
+            .by
+            .iter()
+            .filter(|(p, _)| puuids.contains(p))
+            .flat_map(|(_, ids)| ids.iter())
+            .filter(|id| !self.index.contains_key(*id))
+            .cloned()
+            .collect();
+        out.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
+        out.dedup();
+        out
+    }
+    /// (stored, noted) games of a player.
+    pub fn progress(&self, puuid: &str) -> (usize, usize) {
+        self.by
+            .iter()
+            .find(|(p, _)| p == puuid)
+            .map(|(_, ids)| {
+                (
+                    ids.iter().filter(|id| self.index.contains_key(*id)).count(),
+                    ids.len(),
+                )
+            })
+            .unwrap_or((0, 0))
+    }
+    /// Every stored game of a player's match list.
+    pub fn games_of(&self, puuid: &str) -> Vec<Value> {
+        let ids: Vec<String> = self
+            .by
+            .iter()
+            .find(|(p, _)| p == puuid)
+            .map(|(_, ids)| {
+                ids.iter()
+                    .filter(|id| self.index.contains_key(*id))
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        self.read_games(&ids)
+    }
+    /// Over `max` bytes: the oldest games go (and leave the players' lists), down to 90 % of it.
+    /// Returns how many went. Only ever used on the other players' store.
+    pub fn prune_to(&mut self, max: u64) -> usize {
+        if max == 0 || self.size() <= max {
+            return 0;
+        }
+        let mut all: Vec<(&String, &Entry)> = self.index.iter().collect();
+        all.sort_by_key(|(_, e)| e.t);
+        let mut live: u64 = all.iter().map(|(_, e)| e.len as u64 + 1).sum();
+        let target = max / 10 * 9;
+        let mut drop: HashSet<String> = HashSet::new();
+        for (id, e) in all {
+            if live <= target {
+                break;
+            }
+            live -= e.len as u64 + 1;
+            drop.insert(id.clone());
+        }
+        for (_, ids) in self.by.iter_mut() {
+            ids.retain(|id| !drop.contains(id));
+        }
+        self.save_by();
+        let keep: Vec<String> = self
+            .index
+            .keys()
+            .filter(|id| !drop.contains(*id))
+            .cloned()
+            .collect();
+        self.rewrite(&keep);
+        drop.len()
     }
     /// Deletes the whole stored history (the user confirmed it). Games still in the client's
     /// recent list come back on their own the next time League runs.
     pub fn clear(&mut self) {
         let _ = fs::remove_dir_all(&self.dir);
-        let _ = fs::remove_file(self.dir.with_file_name("matches.json"));
-        let _ = fs::remove_file(self.dir.with_file_name("matches.json.migrated"));
+        if self.own {
+            let _ = fs::remove_file(self.dir.with_file_name("matches.json"));
+            let _ = fs::remove_file(self.dir.with_file_name("matches.json.migrated"));
+        }
         self.index.clear();
         self.by.clear();
         self.ranks.clear();
@@ -993,6 +1095,41 @@ mod tests {
         assert_eq!(m2.count(), 80);
         assert_eq!(m2.dead_bytes().0, 0);
         assert!(m2.outdated(100).is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn others_store_progress_limit_and_no_own_files() {
+        let dir = std::env::temp_dir().join(format!("rs-others-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        // the own store's old file next to it must survive anything the other store does
+        fs::write(dir.join("matches.json"), "{}").unwrap();
+        let mut o = Matches::load_others(dir.join("matches-others"));
+        let list: Vec<Value> = (1..=30)
+            .map(|i| json!({ "id": i, "t": i * 1000, "q": 420 }))
+            .collect();
+        assert!(o.note("p1", &list));
+        assert_eq!(o.progress("p1"), (0, 30));
+        assert_eq!(o.missing_for(&["p1".into()])[0], "30"); // newest first
+        for id in 1..=30 {
+            let mut g = compact(&detail(id)).unwrap();
+            g["pad"] = json!("x".repeat(30_000));
+            assert!(o.insert(&g));
+        }
+        assert_eq!(o.progress("p1"), (30, 30));
+        assert_eq!(o.games_of("p1").len(), 30);
+        assert!(o.has("7"));
+        // a limit: the oldest go, down to 90 % of it, and leave the list
+        let gone = o.prune_to(500_000);
+        assert!(gone > 0);
+        assert!(o.size() <= 500_000);
+        assert!(!o.has("1"));
+        assert!(o.has("30"));
+        assert_eq!(o.progress("p1").1, 30 - gone);
+        o.clear();
+        assert!(dir.join("matches.json").exists());
+        assert_eq!(o.count(), 0);
         let _ = fs::remove_dir_all(&dir);
     }
 }

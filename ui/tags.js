@@ -217,7 +217,44 @@
   // the keys for the next run's hysteresis
   const keys = results => new Set(results.filter(x => x.state === 'met' && x.level).map(x => `${x.id}:${x.level}`));
 
-  const api = { GROUPS, METRICS, mainRole, levelOf, evaluate, pick, isStrength, isWeakness, keys };
+  // Live tags: they are about the current game, so they come first on a card (docs/plans 5.4).
+  // d: { games, puuid, champ (played now), mastery (points on it, null = unknown), position (from the
+  //      client, '' = unknown or guessed), enemyChamps, bans, results (evaluate() of this player), now }
+  function liveTags(d) {
+    const rule = id => TR.TAG_RULES.find(r => r.id === id) || {};
+    const now = d.now || Date.now();
+    const out = [];
+    const mine = St.byParticipation(d.games || []).filter(x => x.p.puuid === d.puuid);
+    const ranked = mine.filter(x => RANKED.includes(x.g.q));
+    const tag = (id, o) => out.push({ id, group: 'live', color: rule(id).color || 'warn', state: 'met', live: true, ...o });
+    // new to the champion: few ranked games on it lately AND little mastery (both needed; no mastery → no tag)
+    const nr = rule('newTo');
+    if (d.champ && d.mastery != null) {
+      const n = ranked.filter(x => x.p.champ === d.champ && now - x.g.t <= nr.days * DAY).length;
+      if (n <= nr.games && d.mastery < nr.mastery) tag('newTo', { champ: d.champ, vars: { n, pts: d.mastery } });
+    }
+    // their main / OTP champion picked by the enemy or banned
+    const mains = (d.results || []).filter(x => (x.id === 'main' || x.id === 'otp') && x.state === 'met' && x.champ);
+    for (const m of mains) {
+      const n = (m.vars && m.vars.n) || m.n;
+      if ((d.enemyChamps || []).includes(m.champ)) tag('mainTaken', { champ: m.champ, vars: { n } });
+      else if ((d.bans || []).includes(m.champ)) tag('mainBanned', { champ: m.champ, vars: { n } });
+    }
+    // a position from the client that isn't the main role
+    if (d.position && d.main && d.position !== d.main) {
+      const mr = mainRole(ranked);
+      const pct = mr.total ? Math.round((100 * (mr.shares.get(d.main) || 0)) / mr.total) : 0;
+      tag('autofill', { vars: { role: d.main, now: d.position, pct } });
+    }
+    // the first game of the day (local midnight) – only when there are games to tell
+    if (mine.length) {
+      const day = new Date(now); day.setHours(0, 0, 0, 0);
+      if (!mine.some(x => x.g.t >= day.getTime() && x.g.t < now)) tag('wokeUp', { vars: {} });
+    }
+    return out;
+  }
+
+  const api = { GROUPS, METRICS, mainRole, levelOf, evaluate, pick, isStrength, isWeakness, keys, liveTags };
   if (node) module.exports = api;
   else root.Tags = api;
 })(typeof window !== 'undefined' ? window : this);
