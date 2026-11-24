@@ -618,3 +618,5 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Ranked-Spiele je Kalenderjahr, selbst eingetragen (Text einfügen mit Vorschau wie beim Bulk-Add, `ui/seasonparse.js`,
   Feld `seasonsManual`, Befehl `seasons-set`, auch im Export). OP.GG-MCP nur geprüft, nicht eingebaut (Nachtrag im
   Prüfbericht) – Entscheidung offen.
+- [x] Neue Screenshots und Demo-Video (`tools/screens/capture.py`) – 24.11.2026: 16 Bilder, neu dabei performance,
+  champions, play-style, tags, seasons, live-game; README um die neuen Teile ergänzt.

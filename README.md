@@ -104,13 +104,37 @@ into one category.
 - **Key figures** across all accounts (games, win rate, LP, best climb, most played champion, busiest account) and each
   account's **season peak** and last season's rank, straight from the client.
 
+<details>
+<summary><b>Performance, champions, play style, mastery, tags, seasons</b></summary>
+
+<img src="docs/screens/performance.png" alt="Performance: key figures and a table by role">
+
+- **Performance** – one filter (account, queue, season, role) over all stored games: eight key figures, the trend of
+  the last 10–100 games against the ones before, and a table by role that unfolds into its champions.
+- **Champions** – the op.gg-style list: KDA, CS, win rate and games per champion; a click opens those games.
+
+<img src="docs/screens/play-style.png" alt="Play style: a radar against the lane opponent">
+
+- **Play style** – a radar of you against your lane opponent in the same games (farm, damage, kill participation,
+  vision, survival, lane phase, towers); 100 % = as good as him. No total score.
+- **Mastery** – every champion's points over all accounts, milestones, and the play time behind them
+  (points ÷ 850 × game length + 7 minutes around each game).
+
+<img src="docs/screens/tags.png" alt="Tags: strengths and things to work on">
+
+- **Tags** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
+  games, per role, each with the numbers behind it. "Too little data" is never shown as "not met".
+- **Seasons** – what the client tells about the last season, your stored games per year, and earlier seasons you
+  paste in yourself – three sources, never added up.
+</details>
+
 ### 🧰 Collection
 
 <img src="docs/screens/collection.png" alt="Collection: search across all accounts">
 
 Owned champions, skins and loot shards of every account – and **one search across all of them**: which account has
-Ahri, a K/DA skin or an Ashe shard? Without a search: champions, skins, shards and Blue Essence per account. (Read
-while you are logged in to that account.)
+Ahri, a K/DA skin or an Ashe shard? Without a search: champions, skins, chromas, ward skins, icons, emotes, finishers,
+rune pages and Blue Essence per account, and all accounts together. (Read while you are logged in to that account.)
 
 ### 📊 Match history
 
@@ -134,6 +158,14 @@ while you are logged in to that account.)
   enemy team.
 - **Clash** – your next opponents with their ranks as soon as the bracket is out.
 - **Penalties & waiting times** of all your accounts.
+
+<img src="docs/screens/live-game.png" alt="Live: the ten players of a game as cards">
+
+- **The ten players of your game** from the loading screen on: two rows, lane opponents face to face, rank, win rate
+  on this champion, main role, mastery and tags – loaded from the client while the loading screen runs, never during
+  the game. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
+  team's **damage mix** (AD / AP / True) shows what to build against.
+- **After the game**: what changed in your tags (▲ / ▼).
 
 <details>
 <summary><b>Champ select helper</b></summary>

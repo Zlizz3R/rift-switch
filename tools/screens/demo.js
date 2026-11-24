@@ -84,6 +84,8 @@ accounts.forEach((a, i) => { if (MAST[i]) a.mastAt = now - (i + 1) * DAY; });
 // ---------- match history ----------
 const CH = [[103, 'Ahri', 'mid'], [64, 'Lee Sin', 'jungle'], [222, 'Jinx', 'bot'], [412, 'Thresh', 'support'], [86, 'Garen', 'top'], [24, 'Jax', 'top'], [266, 'Aatrox', 'jungle'], [238, 'Zed', 'mid'], [51, 'Caitlyn', 'bot'], [117, 'Lulu', 'support']];
 const NAMES = ['Moonlit Fox', 'Jungle Diff', 'Crit Happens', 'Hookline', 'Demacia Main', 'Split Push Sam', 'Gank Plank', 'Shadow Step', 'Headshot Hero', 'Pocket Healer'];
+// magic damage dealers of the demo (the rest deal physical damage)
+const DEMO_AP = new Set([103, 117, 412, 517, 157, 91]);
 function game(n, win, owner = P(1), at = 0) {
   const mine = [103, 238, 103, 517, 103, 157, 91, 103, 238][n % 9];   // the own account plays a few champions
   const players = CH.map(([c0, , pos], i) => {
@@ -94,7 +96,7 @@ function game(n, win, owner = P(1), at = 0) {
       dmg: 12000 + Math.floor(rnd() * 22000), vis: 12 + Math.floor(rnd() * 40), lvl: 13 + Math.floor(rnd() * 5),
       items: [[3157, 3020, 6655, 4645, 3089, 0, 3340], [6692, 3111, 3071, 3053, 0, 0, 3364], [3031, 3006, 3094, 3036, 3072, 0, 3363], [3190, 3117, 3109, 2065, 0, 0, 3364], [3078, 3047, 6333, 3065, 0, 0, 3340]][i % 5],
       spells: [[4, 14], [4, 11], [4, 7], [4, 3], [4, 12]][i % 5], keystone: [8112, 8010, 8008, 8439, 8010][i % 5], sub: [8300, 8100, 8200, 8400, 8200][i % 5], multi: n === 2 && i === at ? 3 : 0,
-      x: { taken: 20000, phys: 9000, magic: 8000, true: 600, heal: 3000, mitig: 15000, cc: 10, wards: 9, wardsKilled: 3, pinks: 2, spent: 9000, turretDmg: 3000, obj: 6000, spree: 3 } };
+      x: { taken: 20000, phys: DEMO_AP.has(champ) ? 2500 : 15000, magic: DEMO_AP.has(champ) ? 14000 : 1500, true: 600, heal: 3000, mitig: 15000, cc: 10, wards: 9, wardsKilled: 3, pinks: 2, spent: 9000, turretDmg: 3000, obj: 6000, spree: 3 } };
   });
   const len = 24 + (n % 9);
   const gold = Array.from({ length: len }, (_, m) => players.map((p, i) => 500 + m * (320 + i * 9) + (p.win ? m * 22 : 0)));

@@ -114,6 +114,8 @@ def screenshots(page):
     shot("helper")
     js(page, "window.__demoGame(true);")
     settle(page, 3.0)
+    js(page, "document.getElementById('viewLive').scrollIntoView({ block: 'start' });")
+    settle(page, 0.5)
     shot("live-game")
     js(page, "window.__demoGame(false);")
     show(page, "accounts")
