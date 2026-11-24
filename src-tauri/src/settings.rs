@@ -12,7 +12,7 @@ pub fn defaults() -> Obj {
     json!({
         "autostart": false, "startMinimized": false, "askedStart": false, "updateCheck": true, "closeToTray": true, "autoAccept": false, "matchNotify": false, "autoPlay": true, "confirmSwitch": true,
         "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "tile": null,
-        "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": ""
+        "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": "", "uiTabs": null
     })
     .as_object()
     .unwrap()
@@ -61,6 +61,23 @@ pub fn clean_setting(key: &str, value: &Value) -> Option<Value> {
     };
     Some(match key {
         "tile" | "streamerHide" => switches(value),
+        // the last chosen sub-tab per page ({ "dash": "mast" }) and similar small choices
+        "uiTabs" => match value.as_object() {
+            Some(o) => Value::Object(
+                o.iter()
+                    .filter(|(k, x)| {
+                        let ok = |s: &str| {
+                            (1..=20).contains(&s.len())
+                                && s.chars().all(|c| c.is_ascii_alphanumeric())
+                        };
+                        ok(k) && x.as_str().is_some_and(ok)
+                    })
+                    .take(20)
+                    .map(|(k, x)| (k.clone(), x.clone()))
+                    .collect(),
+            ),
+            None => Value::Null,
+        },
         "champPool" => match value.as_array() {
             Some(a) => Value::Array(
                 a.iter()
@@ -134,6 +151,13 @@ mod tests {
                 &json!({ "icon": false, "bad key": true, "x": "str" })
             ),
             Some(json!({ "icon": false }))
+        );
+        assert_eq!(
+            clean_setting(
+                "uiTabs",
+                &json!({ "dash": "mast", "bad key": "x", "live": "a b", "n": 1 })
+            ),
+            Some(json!({ "dash": "mast" }))
         );
         let mut t = json!({ "autostart": true, "lang": "de" })
             .as_object()

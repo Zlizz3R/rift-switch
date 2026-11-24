@@ -42,7 +42,7 @@ function showView(v) {
   $('navMatches').classList.toggle('active', v === 'matches');
   if (v === 'live') pollLive(true);
   if (v === 'matches') { renderMatches(); loadMatches(); }
-  if (v === 'dash') { renderDash(); loadDash(); }
+  if (v === 'dash') { renderDash(); loadDash(); if (typeof showDashTab === 'function') showDashTab(dashTab()); }
   if (v === 'coll') { renderColl(); loadColl(); }
 }
 $('navAccounts').onclick = () => showView('accounts');
@@ -228,12 +228,14 @@ function renderDetail() {
       ${a.placeholder ? '' : `<button data-d="profile">${ic('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')}<span>${t('d.profile')}</span></button>`}
       <button data-d="login">${ic('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>')}<span>${t('d.login')}</span></button>
       ${a.placeholder ? '' : `<button data-d="open">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('menu.openWith')}</span></button>`}
+      ${a.placeholder ? '' : `<button class="load-btn" data-loadall="${esc(a.puuid)}"></button>`}
       <button data-d="note">${ic('<path d="M4 20h4L19 9l-4-4L4 16z"/>')}<span>${t('d.edit')}</span></button>
       <button data-d="move">${ic('<path d="M3 7h7l2 2h9v10H3z"/><path d="M12 13h5M15 11l2 2-2 2"/>')}<span>${t('d.move')}</span></button>
       <button data-d="remove" class="danger">${ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}<span>${t('menu.remove')}</span></button>
     </div>
 `;
   loadDetailChart(a);
+  if (typeof refreshLoadBtns === 'function') refreshLoadBtns();
 }
 $('detail').addEventListener('click', async e => {
   const m = e.target.closest('[data-m]');
@@ -659,3 +661,50 @@ $('startBox').addEventListener('click', e => {
   render();
   if (how !== 'no') toast(t(how === 'tray' ? 'first.doneTray' : 'first.doneWindow'));
 });
+
+// ---------- "Load": one action everywhere (collection, mastery, panel, overview) ----------
+// Everything the client has for the signed-in account at once: collection, mastery, ranks and
+// new games. All Load buttons show the same run (S.loading); a second press starts nothing new.
+const LOAD_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+let loadBarTimer = null;
+function loadBtnState(forId) {
+  const live = S.live || {}, L = S.loading;
+  const me = S.accounts.find(a => a.puuid === live.puuid);
+  if (L && typeof L === 'object') {
+    // the bar only after a second: short runs just say what they do
+    const long = Date.now() - (L.since || 0) > 1000;
+    const part = L.total ? L.done / L.total : 0;
+    const pct = Math.round(Math.min(1, ((L.n || 1) - 1 + part) / (L.of || 4)) * 100);
+    return { off: true, label: t('load.progress', { step: t('load.step.' + L.step), n: L.n || 1, of: L.of || 4 }), pct: long ? pct : null,
+      tip: L.step === 'games' && L.total ? t('load.games', { done: L.done, total: L.total }) : '' };
+  }
+  if (forId && forId !== live.puuid) return { off: true, label: t('load.next'), tip: t('load.nextTip') };
+  if (!live.clientUp || !me) return { off: true, label: t('load.btn'), tip: t('load.closed') };
+  return { off: false, label: t('load.btn'), tip: t('load.tip', { name: dispName(me) }) };
+}
+function refreshLoadBtns() {
+  for (const b of document.querySelectorAll('[data-loadall]')) {
+    const s = loadBtnState(b.dataset.loadall);
+    b.disabled = s.off;
+    b.title = s.tip;
+    b.classList.toggle('loading', s.pct != null);
+    b.innerHTML = `${LOAD_ICON}<span>${esc(s.label)}</span>${s.pct != null ? `<i class="lb-bar" style="width:${s.pct}%"></i>` : ''}`;
+  }
+  // a run under a second shows no bar: look again when the second is over
+  clearTimeout(loadBarTimer);
+  const L = S.loading;
+  if (L && typeof L === 'object') loadBarTimer = setTimeout(refreshLoadBtns, Math.max(50, 1050 - (Date.now() - (L.since || 0))));
+}
+async function runLoadAll() {
+  if (S.loading) return;
+  const r = await api.loadAll();
+  if (r && r.ok) return toast(t('load.done', { champs: r.champs, skins: r.skins, games: r.games }));
+  const why = r && r.why;
+  if (why === 'running') return;
+  toast(t(why === 'inGame' ? 'load.inGame' : why === 'busy' ? 'load.busy' : 'load.closed'), true);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-loadall]');
+  if (b && !b.disabled) runLoadAll();
+});
+api.onState(() => refreshLoadBtns());

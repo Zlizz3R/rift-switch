@@ -1,9 +1,9 @@
 // Collection page: champions, skins and shards of every account (as read at its last login), and
 // a search across all of them – "who has Ahri / a Star Guardian skin / an Ashe shard?".
 // Riot only tells the signed-in account's collection: each account is read while you are logged
-// in to it (every 5 minutes, or now with "Read now"). Uses the globals of renderer.js / views.js.
+// in to it (every 5 minutes, or now with "Load"). Uses the globals of renderer.js / views.js.
 
-const coll = { data: null, champs: null, q: '', kind: 'all', reading: false, stamp: '' };
+const coll = { data: null, champs: null, q: '', kind: 'all', stamp: '' };
 
 async function loadColl() {
   coll.stamp = collStamp();
@@ -49,14 +49,12 @@ function collMatch(e, q) {
 }
 const COLL_KINDS = { all: () => true, champ: e => e.k === 'champ', skin: e => e.k === 'skin', shard: e => e.k === 'champShard' || e.k === 'skinShard' };
 
-// "Read now": the signed-in account, right away
+// the shared "Load" button (views.js) reads the signed-in account; the others at their next login
 function renderCollBar() {
   const live = S.live || {};
   const me = S.accounts.find(a => a.puuid === live.puuid);
-  const b = $('collRead');
-  b.disabled = coll.reading || !live.clientUp || !me;
-  b.textContent = coll.reading ? t('coll.reading') : t('coll.readNow');
   $('collReadFor').textContent = !live.clientUp ? t('coll.readClosed') : me ? t('coll.readFor', { name: dispName(me) }) : '';
+  refreshLoadBtns();
 }
 
 function renderColl() {
@@ -139,15 +137,6 @@ function renderCollTiles(accs, by, q) {
 }
 
 $('collSearch').addEventListener('input', () => { coll.q = $('collSearch').value; renderColl(); });
-$('collRead').onclick = async () => {
-  coll.reading = true;
-  renderCollBar();
-  const r = await api.readCollection();
-  coll.reading = false;
-  if (r && r.ok) { toast(t('coll.readDone')); await loadColl(); }
-  else toast(t(r && r.closed ? 'coll.readClosed' : 'refresh.busy'), true);
-  renderCollBar();
-};
 $('viewColl').addEventListener('click', e => {
   const k = e.target.closest('[data-ck]');
   if (k) { coll.kind = k.dataset.ck; return renderColl(); }

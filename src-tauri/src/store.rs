@@ -265,7 +265,7 @@ pub fn write_atomic(file: &Path, text: &[u8]) -> std::io::Result<()> {
 
 // ---------- export / import ----------
 
-const EXPORT_FIELDS: [&str; 19] = [
+const EXPORT_FIELDS: [&str; 20] = [
     "puuid",
     "gameName",
     "tagLine",
@@ -285,6 +285,7 @@ const EXPORT_FIELDS: [&str; 19] = [
     "goal",
     "goals",
     "coll",
+    "mast",
 ];
 
 fn pick_fields(x: &Obj) -> Obj {

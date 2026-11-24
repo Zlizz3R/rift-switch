@@ -1271,3 +1271,43 @@ span.mh-ch { cursor: default; }
 .mh-det .pg-wrap { margin: 4px 0 8px; }
 .pg-place { display: grid; justify-items: center; gap: 3px; }
 .pg-lane { font-size: 10.5px; color: var(--muted); } .pg-lane.up { color: #4cc38a; } .pg-lane.down { color: #e5737a; }
+
+/* ---------- sub-tabs (Overview: LP history · Mastery …) ---------- */
+.subtabs { display: flex; align-items: center; gap: 2px; margin: 4px 0 14px; border-bottom: 1px solid var(--line); }
+.subtabs [data-dt] { padding: 7px 12px 9px; color: var(--muted); font-size: 13px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.subtabs [data-dt]:hover { color: var(--text); }
+.subtabs [data-dt].on { color: var(--gold2); border-bottom-color: var(--gold); }
+.subtabs .grow { flex: 1; }
+.subtabs .load-btn { margin-bottom: 6px; }
+
+/* ---------- "Load": the same run on every button, a thin bar once it takes over a second ---------- */
+.load-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 6px; }
+.load-btn svg { width: 15px; height: 15px; flex: none; }
+.load-btn .lb-bar { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--teal); transition: width .3s; }
+.load-btn:disabled { cursor: default; }
+.d-actions .load-btn { flex-direction: column; gap: 5px; }
+.d-actions .load-btn svg { width: 17px; height: 17px; }
+.d-actions .load-btn:disabled { opacity: .55; }
+
+/* ---------- Overview → Mastery ---------- */
+.mast-top { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.mast-card { display: flex; gap: 12px; align-items: center; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.mast-card img { width: 52px; height: 52px; border-radius: 12px; flex: none; }
+.mast-card b { font-size: 13px; }
+.mast-card .mc-pts { font-size: 20px; font-weight: 600; color: var(--gold2); line-height: 1.25; font-variant-numeric: tabular-nums; }
+.mast-card small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+.mast-sum { color: var(--muted); font-size: 12px; margin: 2px 0 4px; }
+.mast-wrap { overflow-x: auto; }
+.mast-table th { white-space: nowrap; cursor: default; }
+.mast-table th[data-ms] { cursor: pointer; }
+.mast-table th[data-ms]:hover { color: var(--text); }
+.mast-table th small { display: block; font-size: 10.5px; color: #566079; font-weight: 400; }
+.mast-table th.unread, .mast-table td.unread { color: #566079; font-style: italic; }
+.mast-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mast-table td.best { color: var(--gold2); box-shadow: inset 0 -2px 0 rgba(200,170,110,.55); }
+.mast-table td small { font-size: 10.5px; }
+.mast-ch { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 600; }
+.mast-ch img { width: 24px; height: 24px; border-radius: 6px; }
+.ms { font-style: normal; font-size: 10px; font-weight: 600; padding: 0 5px; border-radius: 6px; border: 1px solid rgba(200,170,110,.45); color: var(--gold); vertical-align: 1px; }
+.ms.sm { border-color: transparent; color: #8a7a55; padding: 0 2px; }
+.mast-more { margin-top: 10px; }

@@ -546,7 +546,12 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Bericht in `docs/plans/Pruefbericht.md`. Mastery fremder PUUIDs geht; counterstats-Abruf verstößt
   wahrscheinlich gegen deren User Agreement (Vorschläge im Bericht); Registrierung im Developer Portal empfohlen.
   Nichts umgebaut, Entscheidung offen.
-- [ ] Phase 1 – Mastery über alle Accounts, Spielzeit-Schätzung, „Laden“-Knöpfe
+- [x] Phase 1 – Mastery über alle Accounts, Spielzeit-Schätzung, „Laden“-Knöpfe – 24.11.2026: Mastery jedes
+  Champions wird beim Einloggen gelesen (Account-Feld `mast`, Verlauf je Account in `mastery/<puuid>.jsonl`, nur
+  Änderungen). Übersicht → Unterreiter „Mastery“ (Top 5, Tabelle Champion × Account, Gesamt, Suche, Sortierung,
+  Meilensteine, Spielzeit als Spanne mit Quellen in `ui/playtime-rules.js`, Eichung ab 10 Spielen zwischen zwei
+  Lesungen). Ein „Laden“ für alles (Sammlung, Übersicht, Account-Panel), ein gemeinsamer Fortschritt.
+  Offen: „meistgespielt“ bleibt in der Match history (nicht doppelt in der Mastery-Ansicht).
 - [ ] Phase 2 – Kennzahlen an einer Stelle + „Letztes Spiel“
 - [ ] Phase 3 – Overview: Kennzahlenleiste + Rollen-/Champion-Tabelle
 - [ ] Phase 4 – Tag-Engine + Tags für eigene Accounts

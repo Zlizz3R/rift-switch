@@ -70,6 +70,17 @@ const collections = [
   { puuid: P(3), at: now - 4 * DAY, champs: [412, 117, 89, 40], skins: [[412001, 'Deep Terror Thresh', '/lol-game-data/assets/ASSETS/Characters/Thresh/Skins/Skin01/Images/thresh_splash_tile_1.jpg']], shards: [['s', 103001, 1, 'Dynasty Ahri', '/lol-game-data/assets/ASSETS/Characters/Ahri/Skins/Skin01/Images/ahri_splash_tile_1.jpg']] },
 ];
 
+// ---------- mastery (points, level) per account ----------
+const MAST = [
+  { 103: [1412330, 141], 238: [412000, 42], 517: [188400, 19], 157: [96200, 11], 91: [64100, 8], 222: [41800, 6] },
+  { 103: [612040, 63], 86: [380120, 39], 24: [146900, 16], 266: [52000, 7] },
+  { 412: [905300, 92], 117: [233400, 25], 103: [204115, 22], 89: [70400, 9] },
+  { 86: [120300, 14], 24: [88100, 10], 64: [61000, 8] },
+  { 238: [140800, 16], 103: [92000, 11] },
+];
+const masteries = MAST.map((champs, i) => ({ puuid: P(i + 1), at: now - (i + 1) * DAY, champs }));
+accounts.forEach((a, i) => { if (MAST[i]) a.mastAt = now - (i + 1) * DAY; });
+
 // ---------- match history ----------
 const CH = [[103, 'Ahri', 'mid'], [64, 'Lee Sin', 'jungle'], [222, 'Jinx', 'bot'], [412, 'Thresh', 'support'], [86, 'Garen', 'top'], [24, 'Jax', 'top'], [266, 'Aatrox', 'jungle'], [238, 'Zed', 'mid'], [51, 'Caitlyn', 'bot'], [117, 'Lulu', 'support']];
 const NAMES = ['Moonlit Fox', 'Jungle Diff', 'Crit Happens', 'Hookline', 'Demacia Main', 'Split Push Sam', 'Gank Plank', 'Shadow Step', 'Headshot Hero', 'Pocket Healer'];
@@ -91,6 +102,9 @@ function game(n, win, owner = P(1)) {
     players, gold, teams: [{ id: 100, towers: win ? 9 : 3, drakes: win ? 3 : 1, barons: win ? 1 : 0 }, { id: 200, towers: win ? 2 : 8, drakes: win ? 1 : 3 }], owners: [owner] };
 }
 const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true)];
+// each own account's games in short, like the app's "own-games"
+const ownGames = {};
+for (const g of games) for (const p of g.players) if (g.owners.includes(p.puuid)) (ownGames[p.puuid] = ownGames[p.puuid] || []).push([g.t, g.dur, g.q, p.champ, p.win, g.remake]);
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 const appData = process.env.APPDATA ? path.join(process.env.APPDATA, 'rift-switch') : '';
 // public CommunityDragon data the app caches (item / spell / rune pictures, champion names)
@@ -114,13 +128,16 @@ const state = {
 
 const shim = `<script>
 (function () {
-  const D = ${JSON.stringify({ state, dashboard, collections, games, assets, champs, live, counters })};
+  const D = ${JSON.stringify({ state, dashboard, collections, masteries, ownGames, games, assets, champs, live, counters })};
   const listeners = {};
   const answer = (ch, args) => {
     switch (ch) {
       case 'get-state': return D.state;
       case 'dashboard': return D.dashboard;
       case 'collections': return D.collections;
+      case 'masteries': return D.masteries;
+      case 'mastery-history': return {};
+      case 'own-games': return D.ownGames;
       case 'champions': return D.champs;
       case 'live': return D.live;
       case 'counters': { const c = D.counters[args[0]]; return c ? { ok: true, share: c.share, list: c.list } : { ok: true, share: 0, list: [] }; }

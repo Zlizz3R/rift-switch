@@ -663,6 +663,7 @@ test('keyboard: pages, search, arrow keys, Enter logs in, ? lists the shortcuts'
 
 // ---------- collection ----------
 test('collection: numbers per account, a search finds champions, skins and shards on every account', () => withApp({ replies: {
+  'load-all': { ok: true, champs: 162, skins: 87, games: 12 },
   champions: [{ id: 103, name: 'Ahri' }, { id: 22, name: 'Ashe' }, { id: 1, name: 'Annie' }],
   collections: [
     { puuid: P(1), at: 1, champs: [103, 22], skins: [[103001, 'Dynasty Ahri']], shards: [['c', 1, 2, 'Annie'], ['s', 103015, 1, 'Arcade Ahri']] },
@@ -674,10 +675,10 @@ test('collection: numbers per account, a search finds champions, skins and shard
   assert.deepEqual([...row.querySelectorAll('td')].slice(1, 5).map(td => td.textContent), ['2', '1', '2', '1']);
   // not read yet: its own row with what to do
   assert.match(app.$(`.coll-table tr.unread[data-cacc="${P(3)}"]`).textContent, /Not read yet/);
-  // read now: the signed-in account, then the page loads the new data
+  // "Load": the signed-in account, everything at once
   await app.click('#collRead');
-  assert.equal(app.called('read-collection').length, 1);
-  assert.equal(app.called('collections').length, 2);
+  assert.equal(app.called('load-all').length, 1);
+  assert.match(app.$('#toast').textContent, /162 champions, 87 skins, 12 new games/);
   await app.type('#collSearch', 'ahri');
   assert.equal(app.$$('.coll-acc').length, 1);
   assert.deepEqual(app.$$('.coll-acc .cl-chip').map(x => x.className.split(' ')[1]).sort(), ['champ', 'skin', 'skinShard']);

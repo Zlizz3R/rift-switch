@@ -665,6 +665,32 @@ pub fn compact(g: &Value) -> Option<Value> {
     )
 }
 
+/// Each own account's games in short: { puuid: [[time, seconds, queue, champion, win, remake]] }
+/// (for the play time estimate and the mastery calibration). A game two own accounts played
+/// together is in both lists.
+pub fn own_rows(games: &[Value], owners: &HashSet<String>) -> Obj {
+    let mut out: HashMap<String, Vec<Value>> = HashMap::new();
+    for g in games {
+        let Some(players) = g["players"].as_array() else {
+            continue;
+        };
+        for p in players {
+            let Some(id) = p["puuid"].as_str().filter(|x| owners.contains(*x)) else {
+                continue;
+            };
+            out.entry(id.to_string()).or_default().push(json!([
+                g["t"],
+                g["dur"],
+                g["q"],
+                p["champ"],
+                p["win"] == true,
+                g["remake"] == true
+            ]));
+        }
+    }
+    out.into_iter().map(|(k, v)| (k, Value::Array(v))).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -674,6 +700,17 @@ mod tests {
             "participantIdentities": (0..10).map(|i| json!({ "participantId": i + 1, "player": { "puuid": format!("p{i}"), "gameName": format!("N{i}"), "tagLine": "EUW" } })).collect::<Vec<_>>(),
             "participants": (0..10).map(|i| json!({ "participantId": i + 1, "teamId": if i < 5 { 100 } else { 200 }, "championId": i + 1, "spell1Id": 4, "spell2Id": 14,
                 "stats": { "kills": i, "deaths": 1, "assists": 2, "totalMinionsKilled": 100, "neutralMinionsKilled": 5, "item0": 3031, "win": i < 5, "perk0": 8112, "perkSubStyle": 8300 } })).collect::<Vec<_>>() })
+    }
+
+    #[test]
+    fn own_rows_per_account() {
+        let g = compact(&detail(7)).unwrap();
+        let owners: HashSet<String> = ["p1".to_string(), "p6".to_string()].into();
+        let r = own_rows(&[g], &owners);
+        assert_eq!(r["p1"], json!([[7000, 1800, 420, 2, true, false]]));
+        assert_eq!(r["p6"][0][3], 7);
+        assert_eq!(r["p6"][0][4], false);
+        assert!(!r.contains_key("p0"));
     }
 
     #[test]

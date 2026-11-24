@@ -86,6 +86,8 @@ struct Core {
     login_key: Option<secrets::Key>,
     /// "Load older games" running: (games done, games to do)
     older: Option<(usize, usize)>,
+    /// "Load" running: { step, n, done, total, since } – every Load button shows the same progress
+    loading: Value,
 }
 
 impl Core {
@@ -123,6 +125,7 @@ impl Core {
             jump_key: String::new(),
             after_load_switch: None,
             failed_games: HashMap::new(),
+            loading: Value::Null,
             expecting_since: 0,
             read_only,
             no_persist: None,
@@ -222,6 +225,10 @@ fn snapshot(c: &Core) -> Value {
                 if let Some(at) = a.remove("coll").and_then(|c| c.get("at").cloned()) {
                     a.insert("collAt".into(), at);
                 }
+                // the same for every champion's mastery (the mastery page asks for it)
+                if let Some(at) = a.remove("mast").and_then(|m| m.get("at").cloned()) {
+                    a.insert("mastAt".into(), at);
+                }
                 a.insert("historyLen".into(), json!(n));
                 Value::Object(a)
             })
@@ -237,6 +244,7 @@ fn snapshot(c: &Core) -> Value {
     m.insert("busy".into(), json!(c.busy));
     m.insert("login".into(), c.login.clone());
     m.insert("switching".into(), c.sw.clone());
+    m.insert("loading".into(), c.loading.clone());
     m.insert("saveError".into(), json!(c.save_error));
     m.insert("cryptoBroken".into(), json!(c.crypto_broken));
     m.insert("version".into(), json!(version));
@@ -394,6 +402,38 @@ fn session_file(id: &str) -> PathBuf {
 }
 fn cred_file(id: &str) -> PathBuf {
     data().join("creds").join(format!("{}.bin", safe_id(id)))
+}
+/// An account's mastery history: one JSON line per reading that changed something.
+fn mastery_file(id: &str) -> PathBuf {
+    data()
+        .join("mastery")
+        .join(format!("{}.jsonl", safe_id(id)))
+}
+fn append_mastery(id: &str, line: &Value) {
+    use std::io::Write;
+    let f = mastery_file(id);
+    if let Some(dir) = f.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let r = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&f)
+        .and_then(|mut file| writeln!(file, "{line}"));
+    if let Err(e) = r {
+        log_error("mastery", &format!("history not written: {e}"));
+    }
+}
+/// The mastery history of one account (oldest first); broken lines are skipped.
+fn read_mastery(id: &str) -> Vec<Value> {
+    std::fs::read_to_string(mastery_file(id))
+        .map(|t| {
+            t.lines()
+                .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+                .filter(Value::is_object)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 fn safe_id(id: &str) -> &str {
     if is_id(id) {
@@ -887,7 +927,8 @@ async fn tick_inner(my_gen: u64) {
             if stale() {
                 return;
             }
-            with(|c| {
+            let mast_line = with(|c| {
+                let mut line = None;
                 if let Some(a) = c.st.account_mut(&id) {
                     let mut prof = a
                         .get("profile")
@@ -909,6 +950,11 @@ async fn tick_inner(my_gen: u64) {
                             }
                         }
                     }
+                    // every champion's mastery; what changed goes to the account's mastery history
+                    if let Some(new) = p.remove("_mast") {
+                        line = ops::mastery_changes(a.get("mast"), &new);
+                        a.insert("mast".into(), new);
+                    }
                     prof.extend(p);
                     a.insert("profile".into(), Value::Object(prof));
                     let games = notices.iter().find_map(|n| n["games"].as_i64());
@@ -920,7 +966,12 @@ async fn tick_inner(my_gen: u64) {
                         ops::set_penalties(a, pens, now);
                     }
                 }
+                line
             });
+            if let Some(line) = mast_line {
+                append_mastery(&id, &line);
+            }
+            load_step("mast", 0, 0);
             if let Some(hs) = hs {
                 merge_history(&id, &hs, true);
             }
@@ -977,10 +1028,12 @@ async fn tick_inner(my_gen: u64) {
         with(|c| c.last_rank_sweep = now);
         let region = str_of(&cur, "region").to_string();
         let list: Vec<Obj> = with(|c| c.st.accounts.clone());
-        for a in list {
+        let n = list.len();
+        for (i, a) in list.into_iter().enumerate() {
             if stale() {
                 return;
             }
+            load_step("ranks", i, n);
             let aid = str_of(&a, "puuid").to_string();
             with(|c| {
                 if let Some(x) = c.st.account_mut(&aid) {
@@ -1133,6 +1186,95 @@ async fn load_everything() {
         c.older = None;
     });
     emit("matches-changed", Value::Null);
+}
+
+/// The steps of "Load", in order (the window names them).
+const LOAD_STEPS: [&str; 4] = ["coll", "mast", "ranks", "games"];
+/// "Load" reached a step (only while it runs; the tick calls this too).
+fn load_step(step: &str, done: usize, total: usize) {
+    let moved = with(|c| {
+        if !c.loading.is_object() {
+            return false;
+        }
+        let n = LOAD_STEPS.iter().position(|s| *s == step).unwrap_or(0) + 1;
+        c.loading["step"] = json!(step);
+        c.loading["n"] = json!(n);
+        c.loading["done"] = json!(done);
+        c.loading["total"] = json!(total);
+        true
+    });
+    if moved {
+        push();
+    }
+}
+
+/// "Load": everything the client has for the signed-in account at once – collection and mastery
+/// (the profile), ranks of every account, then the new games. Every Load button shows this one run.
+async fn load_all() -> Value {
+    let before = with(|c| c.mh.count());
+    // the profile and the rank sweep run in the next tick; one that is running now may have read
+    // before this: wait for it (up to 20 s), then tick
+    with(|c| {
+        c.last_profile_at = 0;
+        c.last_rank_sweep = 0;
+    });
+    load_step("coll", 0, 0);
+    for _ in 0..200 {
+        if !with(|c| c.ticking) {
+            break;
+        }
+        sleep(100).await;
+    }
+    tick().await;
+    let in_game = || {
+        with(|c| {
+            !c.live.client_up
+                || c.live
+                    .phase
+                    .as_deref()
+                    .is_some_and(|p| IN_GAME.contains(&p))
+        })
+    };
+    // the new games: details of every game the lists named but the store doesn't have yet
+    let todo: Vec<String> = with(|c| {
+        let failed = &c.failed_games;
+        c.mh.missing()
+            .into_iter()
+            .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
+            .collect()
+    });
+    let total = todo.len();
+    load_step("games", 0, total);
+    for (i, chunk) in todo.chunks(4).enumerate() {
+        if in_game() {
+            break;
+        }
+        fetch_games(chunk.to_vec()).await;
+        load_step("games", ((i + 1) * 4).min(total), total);
+    }
+    if total > 0 {
+        emit("matches-changed", Value::Null);
+    }
+    let r = with(|c| {
+        let me = c.live.puuid.clone().unwrap_or_default();
+        let a = c.st.account(&me);
+        let len = |k: &str, sub: &str| {
+            a.and_then(|a| a.get(k))
+                .and_then(|x| x.get(sub))
+                .map(|x| match x {
+                    Value::Array(v) => v.len(),
+                    Value::Object(o) => o.len(),
+                    _ => 0,
+                })
+                .unwrap_or(0)
+        };
+        let r = json!({ "ok": true, "puuid": me, "champs": len("coll", "champs"), "skins": len("coll", "skins"),
+            "mastery": len("mast", "champs"), "games": c.mh.count().saturating_sub(before) });
+        c.loading = Value::Null;
+        r
+    });
+    push();
+    r
 }
 
 async fn fill_games(max: usize) -> usize {
@@ -2250,6 +2392,38 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     .collect();
             Value::Array(list)
         }),
+        // the mastery page: every champion's points per account (as of its last reading)
+        "masteries" => with(|c| {
+            let list: Vec<Value> =
+                c.st.accounts
+                    .iter()
+                    .filter(|a| a.get("mast").is_some_and(Value::is_object))
+                    .map(|a| {
+                        let mut x = a["mast"].clone();
+                        x["puuid"] = json!(str_of(a, "puuid"));
+                        x
+                    })
+                    .collect();
+            Value::Array(list)
+        }),
+        // the readings of each account's mastery (for the play time estimate): { puuid: [lines] }
+        "mastery-history" => {
+            let ids: Vec<String> = with(|c| {
+                c.st.accounts
+                    .iter()
+                    .filter(|a| a.get("mast").is_some())
+                    .map(|a| str_of(a, "puuid").to_string())
+                    .collect()
+            });
+            Value::Object(
+                ids.into_iter()
+                    .map(|id| {
+                        let h = read_mastery(&id);
+                        (id, Value::Array(h))
+                    })
+                    .collect(),
+            )
+        }
         // a rank goal per account and queue: Solo/Duo in "goal", the others in "goals"
         "goal" => {
             let goal = ops::goal_of(&a(1));
@@ -2387,6 +2561,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 });
                 let _ = std::fs::remove_file(session_file(&id));
                 let _ = std::fs::remove_file(cred_file(&id));
+                let _ = std::fs::remove_file(mastery_file(&id));
                 save();
             }
             Value::Null
@@ -2468,17 +2643,34 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             Value::Null
         }
         // the collection page: read the signed-in account's profile and collection now
-        "read-collection" => {
-            if !with(|c| c.live.client_up) {
-                return json!({ "ok": false, "closed": true });
+        // "Load" (collection, mastery, panel, overview): everything for the signed-in account at
+        // once; a second press while it runs just shows the same progress
+        "load-all" => {
+            let why = with(|c| {
+                if !c.live.client_up || c.live.puuid.is_none() {
+                    return Some("closed");
+                }
+                if c.live
+                    .phase
+                    .as_deref()
+                    .is_some_and(|p| IN_GAME.contains(&p))
+                {
+                    return Some("inGame");
+                }
+                if c.busy {
+                    return Some("busy");
+                }
+                if c.loading.is_object() {
+                    return Some("running");
+                }
+                c.loading = json!({ "step": "coll", "n": 1, "of": LOAD_STEPS.len(), "done": 0, "total": 0, "since": now_ms() });
+                None
+            });
+            if let Some(why) = why {
+                return json!({ "ok": false, "why": why });
             }
-            if with(|c| c.ticking || c.busy) {
-                return json!({ "ok": false, "busy": true });
-            }
-            with(|c| c.last_profile_at = 0);
-            tick().await;
             push();
-            json!({ "ok": true, "puuid": with(|c| c.live.puuid.clone()) })
+            load_all().await
         }
         "refresh" => {
             if with(|c| c.ticking || c.busy) {
@@ -2528,6 +2720,34 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 tokio::task::spawn_blocking(move || matches::read_entries(&file, &entries))
                     .await
                     .unwrap_or_default()
+            )
+        }
+        // every own account's games in short (time, length, queue, champion, win, remake)
+        "own-games" => {
+            let (file, entries, owners) = with(|c| {
+                let accs: Vec<String> =
+                    c.st.accounts
+                        .iter()
+                        .map(|a| str_of(a, "puuid").to_string())
+                        .collect();
+                let ids: Vec<String> =
+                    c.mh.index_list(&accs, None, None)
+                        .iter()
+                        .filter_map(|r| r[0].as_str().map(String::from))
+                        .collect();
+                (
+                    c.mh.games_file(),
+                    c.mh.entries(&ids),
+                    accs.into_iter()
+                        .collect::<std::collections::HashSet<String>>(),
+                )
+            });
+            Value::Object(
+                tokio::task::spawn_blocking(move || {
+                    matches::own_rows(&matches::read_entries(&file, &entries), &owners)
+                })
+                .await
+                .unwrap_or_default(),
             )
         }
         "mh-assets" => live::game_assets(data()).await,

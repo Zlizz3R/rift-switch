@@ -340,10 +340,46 @@ pub fn goal_of(v: &Value) -> Option<Value> {
         .then(|| json!({ "tier": tier, "division": div }))
 }
 
+// ---------- mastery ----------
+
+/// One line of an account's mastery history: the champions whose points changed since the last
+/// reading ({ at, c: { "<id>": points } }). The first reading keeps every champion (the baseline).
+/// None = nothing changed (no line is written).
+pub fn mastery_changes(old: Option<&Value>, new: &Value) -> Option<Value> {
+    let champs = new.get("champs")?.as_object()?;
+    let before = old.and_then(|o| o.get("champs")).and_then(Value::as_object);
+    let pts = |v: &Value| v.get(0).and_then(Value::as_i64).unwrap_or(0);
+    let c: Obj = champs
+        .iter()
+        .filter(|(id, v)| {
+            before
+                .and_then(|b| b.get(*id))
+                .is_none_or(|o| pts(o) != pts(v))
+        })
+        .map(|(id, v)| (id.clone(), json!(pts(v))))
+        .collect();
+    (!c.is_empty()).then(|| json!({ "at": new["at"], "c": c }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::store::normalize;
+
+    #[test]
+    fn mastery_history_keeps_only_changes() {
+        let a = json!({ "at": 1, "champs": { "420": [1000, 5], "74": [200, 1] } });
+        let first = mastery_changes(None, &a).unwrap();
+        assert_eq!(first, json!({ "at": 1, "c": { "420": 1000, "74": 200 } }));
+        let same = json!({ "at": 2, "champs": { "420": [1000, 5], "74": [200, 1] } });
+        assert!(mastery_changes(Some(&a), &same).is_none());
+        let b = json!({ "at": 3, "champs": { "420": [1900, 6], "74": [200, 1], "1": [50, 1] } });
+        assert_eq!(
+            mastery_changes(Some(&a), &b).unwrap(),
+            json!({ "at": 3, "c": { "420": 1900, "1": 50 } })
+        );
+        assert!(mastery_changes(Some(&a), &json!({})).is_none());
+    }
 
     fn st() -> State {
         normalize(json!({

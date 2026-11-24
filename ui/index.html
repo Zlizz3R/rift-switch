@@ -95,11 +95,25 @@
 
       <section id="viewDash" hidden>
         <div class="head"><h1><span data-i18n="dash.title"></span></h1><p class="sub" data-i18n="dash.sub"></p></div>
-        <div class="mh-filter">
-          <div class="seg"><button data-dq="solo">Solo/Duo</button><button data-dq="flex">Flex</button><button data-dq="r5">Ranked 5v5</button><button data-dq="classic">Classic 5v5</button></div>
-          <div class="seg"><button data-dd="7" data-i18n="dash.d7"></button><button data-dd="30" data-i18n="dash.d30"></button><button data-dd="90" data-i18n="dash.d90"></button><button data-dd="0" data-i18n="dash.all"></button></div>
+        <div class="subtabs" id="dashTabs">
+          <button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="mast" data-i18n="dash.tabMast"></button>
+          <span class="grow"></span><button class="btn load-btn" data-loadall=""></button>
         </div>
-        <div id="dashBody"></div>
+        <div id="dashLp">
+          <div class="mh-filter">
+            <div class="seg"><button data-dq="solo">Solo/Duo</button><button data-dq="flex">Flex</button><button data-dq="r5">Ranked 5v5</button><button data-dq="classic">Classic 5v5</button></div>
+            <div class="seg"><button data-dd="7" data-i18n="dash.d7"></button><button data-dd="30" data-i18n="dash.d30"></button><button data-dd="90" data-i18n="dash.d90"></button><button data-dd="0" data-i18n="dash.all"></button></div>
+          </div>
+          <div id="dashBody"></div>
+        </div>
+        <div id="dashMast" hidden>
+          <div class="mh-filter">
+            <label class="search coll-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input id="mastSearch" data-i18n-ph="mast.search" spellcheck="false"></label>
+            <span class="grow"></span><span class="coll-for" id="mastSub"></span>
+          </div>
+          <div id="mastBody"></div>
+        </div>
       </section>
 
       <section id="viewColl" hidden>
@@ -110,7 +124,7 @@
           <div class="seg"><button data-ck="all" data-i18n="mh.allQueues"></button><button data-ck="champ" data-i18n="coll.champs"></button><button data-ck="skin" data-i18n="coll.skins"></button><button data-ck="shard" data-i18n="coll.shards"></button></div>
           <span class="grow"></span>
           <span class="coll-for" id="collReadFor"></span>
-          <button class="btn gold" id="collRead"></button>
+          <button class="btn gold load-btn" id="collRead" data-loadall=""></button>
         </div>
         <div id="collTiles" class="coll-tiles"></div>
         <div id="collBody"></div>
@@ -540,6 +554,9 @@
 <script src="matches-view.js"></script>
 <script src="postgame.js"></script>
 <script src="dashboard.js"></script>
+<script src="playtime-rules.js"></script>
+<script src="mastmath.js"></script>
+<script src="mastery.js"></script>
 <script src="collection.js"></script>
 <script src="bulk.js"></script>
 <script src="keys.js"></script>

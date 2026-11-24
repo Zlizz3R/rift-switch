@@ -455,6 +455,28 @@ pub fn collection_of(champs: &Value, skins: &Value, loot: &Value) -> Value {
     out["shards"] = json!(shards);
     out
 }
+/// The client's mastery list -> { at, champs: { "<champion id>": [points, level] } }.
+/// An empty list means "not loaded yet" (every account that played has points): None.
+pub fn mastery_of(list: &[Value]) -> Option<Value> {
+    let champs: Obj = list
+        .iter()
+        .filter(|x| {
+            let id = num_of(x.get("championId"));
+            id > 0.0 && id < 10_000.0
+        })
+        .map(|x| {
+            (
+                (num_of(x.get("championId")) as i64).to_string(),
+                json!([
+                    num_of(x.get("championPoints")) as i64,
+                    num_of(x.get("championLevel")) as i64
+                ]),
+            )
+        })
+        .collect();
+    (!champs.is_empty()).then(|| json!({ "at": now_ms(), "champs": champs }))
+}
+
 /// Real champions only: the client also lists copies for special modes (ids from 60000 on).
 fn real_champ(x: &Value) -> bool {
     let id = num_of(x.get("id"));
@@ -511,6 +533,10 @@ pub async fn profile_data(me: &Obj) -> Obj {
         p.insert("masteryScore".into(), s);
     }
     if let Some(Value::Array(m)) = mastery {
+        // every champion's points and level, kept on the account ("mast") for the mastery page
+        if let Some(mast) = mastery_of(&m) {
+            p.insert("_mast".into(), mast);
+        }
         p.insert("masteryChamps".into(), json!(m.len()));
         let mut m = m;
         m.sort_by(|a, b| {
