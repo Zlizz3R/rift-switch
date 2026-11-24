@@ -103,7 +103,8 @@ function game(n, win, owner = P(1), at = 0) {
 }
 const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true),
   // older ones on other roles, for the Overview's performance and champion pages
-  ...[[1, true], [1, false], [1, true], [4, true], [4, false], [4, true], [4, true], [1, true], [2, false], [3, true], [1, true], [4, false]]
+  ...[[1, true], [1, false], [1, true], [4, true], [4, false], [4, true], [4, true], [1, true], [2, false], [3, true], [1, true], [4, false],
+    [0, true], [0, true], [0, false], [0, true], [0, true], [0, false], [0, true], [0, true]]
     .map(([at, win], i) => game(13 + i, win, i % 3 === 2 ? P(2) : P(1), at))];
 // each own account's games in short, like the app's "own-games"
 const ownGames = {};

@@ -1372,3 +1372,22 @@ span.mh-ch { cursor: default; }
 .oc-row small { color: var(--muted); font-size: 12px; }
 .oc-row b.muted { color: var(--muted); }
 .oc-more { margin-top: 10px; }
+
+/* ---------- Overview → Tags ---------- */
+.tag-top { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.tag-top > div, .tag-group { padding: 12px 14px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
+.tag-group { margin-bottom: 10px; }
+.tchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tchip { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+.tchip.tc-good { color: #4cc38a; background: rgba(76,195,138,.12); border-color: rgba(76,195,138,.3); }
+.tchip.tc-master { color: #6fe3a6; background: rgba(76,195,138,.22); border-color: rgba(111,227,166,.55); }
+.tchip.tc-info { color: #7fb4f0; background: rgba(90,150,230,.12); border-color: rgba(90,150,230,.3); }
+.tchip.tc-warn { color: #e0a84a; background: rgba(224,168,74,.12); border-color: rgba(224,168,74,.3); }
+.tchip.tc-bad { color: #ef6b70; background: rgba(229,72,77,.12); border-color: rgba(229,72,77,.32); }
+.tchip.tc-not { color: var(--muted); border-color: var(--line); font-weight: 500; }
+.tchip.tc-few { color: var(--muted); border: 1px dashed #364057; font-weight: 500; }
+.tchip.tc-few i { font-style: normal; opacity: .7; font-size: 11px; }
+.tchip.on { outline: 2px solid rgba(200,170,110,.6); outline-offset: 1px; }
+.tdetail { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: baseline; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.tdetail b { color: var(--text); font-weight: 600; }
+.tdetail span { opacity: .5; }

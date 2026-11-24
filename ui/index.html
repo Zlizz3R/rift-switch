@@ -96,7 +96,7 @@
       <section id="viewDash" hidden>
         <div class="head"><h1><span data-i18n="dash.title"></span></h1><p class="sub" data-i18n="dash.sub"></p></div>
         <div class="subtabs" id="dashTabs">
-          <button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="mast" data-i18n="dash.tabMast"></button>
+          <button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="tags" data-i18n="dash.tabTags"></button>
           <span class="grow"></span><button class="btn load-btn" data-loadall=""></button>
         </div>
         <div id="dashLp">
@@ -113,6 +113,13 @@
           </div>
           <p class="perf-line" id="perfLine"></p>
           <div id="perfBody"></div>
+        </div>
+        <div id="dashTags" hidden>
+          <div class="mh-filter">
+            <select id="tagAcc"></select><div class="seg perf-roles" id="tagRole"></div>
+            <span class="grow"></span><span class="coll-for" id="tagSub"></span>
+          </div>
+          <div id="tagBody"></div>
         </div>
         <div id="dashMast" hidden>
           <div class="mh-filter">
@@ -568,6 +575,9 @@
 <script src="mastery.js"></script>
 <script src="perfmath.js"></script>
 <script src="perf.js"></script>
+<script src="tag-rules.js"></script>
+<script src="tags.js"></script>
+<script src="tags-view.js"></script>
 <script src="collection.js"></script>
 <script src="bulk.js"></script>
 <script src="keys.js"></script>

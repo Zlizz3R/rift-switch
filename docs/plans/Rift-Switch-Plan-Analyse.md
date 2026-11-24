@@ -570,7 +570,14 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   `ui/perfmath.js`, Positionen jetzt `Stats.roles`, Zeitfilter `MatchFilter.rangeBounds`. Ein Klick öffnet die
   Match history mit Account, Queue, Zeitraum und Champion (die Rolle hat die Match history nicht). Season =
   Kalenderjahr, bis Phase 8 die echten Season-Grenzen bringt. Zählt jede Teilnahme eigener Accounts.
-- [ ] Phase 4 – Tag-Engine + Tags für eigene Accounts
+- [ ] Phase 4 – Tag-Engine + Tags für eigene Accounts – Teil 1 am 24.11.2026: `ui/tag-rules.js` (alle Schwellen,
+  V-Werte mit `// TODO Schwelle prüfen`), `ui/tags.js` (erfüllt / nicht erfüllt / zu wenig Daten, Ausprägungen,
+  Hysterese 5 %, Konflikte, Hauptrolle ≥ 60 % ab 10 Spielen), Übersicht → Unterreiter „Tags“ (Stärken, Baustellen,
+  alle Tags nach Gruppen, Klick zeigt Wert/Schwelle/Spiele/Zeitraum; je Account oder alle). Drin: alle Tags der Stufen
+  A, B und M, dazu „Früher Vorsprung“ (aus dem gespeicherten Goldverlauf). Meister = Stark-Name + ★. Live-Tags
+  (Neu auf, Main geklaut/gebannt, Autofill?, Aufgewacht) sind als Regeln angelegt und kommen mit Phase 5.
+  Offen (Teil 2): Timeline-Tags (Stufe C: Solo-Kills, Duelle, Tode vor 10/15, CS bei 15, Farm-Anteile, Wards vor 3:00,
+  Ganks, Jungle-Aggression) und „Drachentöter“ – dafür muss das Spielformat mehr aus der Timeline speichern.
 - [ ] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – Entscheidung: ___
 - [ ] Speicherlimit in den Einstellungen (gehört zu Phase 5)
 - [ ] Phase 5 – Live-Übersicht im Porofessor-Stil

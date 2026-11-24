@@ -90,6 +90,19 @@
   // one player's position, or null (ARAM, Arena, games without all ten players)
   const role = (g, p) => { const r = roles(g); return (r && r.get(p)) || null; };
 
+  // the lane opponent: the enemy on the same position (null when positions aren't known)
+  function laneOpponent(g, p) {
+    const r = roles(g), mine = r && r.get(p);
+    return mine ? g.players.find(o => o.team !== p.team && r.get(o) === mine) || null : null;
+  }
+  // gold lead over the lane opponent at minute m (stored gold per minute); null if unknown
+  function goldDiffAt(g, p, m = 15) {
+    const o = laneOpponent(g, p), row = g.gold && g.gold[m];
+    if (!o || !row) return null;
+    const i = g.players.indexOf(p), j = g.players.indexOf(o);
+    return Number.isFinite(row[i]) && Number.isFinite(row[j]) ? row[i] - row[j] : null;
+  }
+
   // ---------- which player rows count ----------
   // the own player of a game: its first own account (a game counts once)
   const me = g => g.players.find(p => p.puuid === (g.owners || [])[0]) || g.players[0];
@@ -148,7 +161,7 @@
   }
 
   const api = { REMAKE_SEC, ARAM_QUEUES, RANKED_QUEUES, winPct, isRemake, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
-    visMin, dmgShare, perGame, POSITIONS, roles, role, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
+    visMin, dmgShare, perGame, POSITIONS, roles, role, laneOpponent, goldDiffAt, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Stats = api;
 })(typeof window !== 'undefined' ? window : this);
