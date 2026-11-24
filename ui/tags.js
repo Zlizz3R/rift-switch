@@ -246,11 +246,6 @@
       const pct = mr.total ? Math.round((100 * (mr.shares.get(d.main) || 0)) / mr.total) : 0;
       tag('autofill', { vars: { role: d.main, now: d.position, pct } });
     }
-    // the first game of the day (local midnight) – only when there are games to tell
-    if (mine.length) {
-      const day = new Date(now); day.setHours(0, 0, 0, 0);
-      if (!mine.some(x => x.g.t >= day.getTime() && x.g.t < now)) tag('wokeUp', { vars: {} });
-    }
     return out;
   }
 

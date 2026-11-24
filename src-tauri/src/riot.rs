@@ -504,6 +504,21 @@ pub fn counts_of(inv: &Value, perks: &Value, skins: &Value) -> Option<Value> {
     (!out.is_empty()).then(|| Value::Object(out))
 }
 
+/// The owned champions (ids) of the inventory – the second source when champions-minimal is empty.
+pub fn champs_of_inventory(inv: &Value) -> Vec<Value> {
+    let mut ids: Vec<i64> = inv
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|x| x["inventoryType"] == "CHAMPION" && x["owned"] == true)
+        .filter_map(|x| x["itemId"].as_i64())
+        .filter(|id| *id > 0 && *id < 10_000)
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    ids.into_iter().map(|i| json!(i)).collect()
+}
+
 /// The client's mastery list -> { at, champs: { "<champion id>": [points, level] } }.
 /// An empty list means "not loaded yet" (every account that played has points): None.
 pub fn mastery_of(list: &[Value]) -> Option<Value> {
@@ -537,7 +552,7 @@ fn real_skin(x: &Value) -> bool {
 }
 
 /// The inventory types counted on the collection page, in one request.
-const INVENTORY_COUNTED: &str = "/lol-inventory/v1/inventory?inventoryTypes=%5B%22WARD_SKIN%22,%22CHAMPION_SKIN%22,%22SUMMONER_ICON%22,%22EMOTE%22,%22NEXUS_FINISHER%22%5D";
+const INVENTORY_COUNTED: &str = "/lol-inventory/v1/inventory?inventoryTypes=%5B%22WARD_SKIN%22,%22CHAMPION_SKIN%22,%22SUMMONER_ICON%22,%22EMOTE%22,%22NEXUS_FINISHER%22,%22CHAMPION%22%5D";
 
 /// Everything only the signed-in account can see about itself ("_coll": the collection, which
 /// main.rs keeps outside the profile).
@@ -573,6 +588,14 @@ pub async fn profile_data(me: &Obj) -> Obj {
             skins.as_ref().unwrap_or(&Value::Null),
             loot.as_ref().unwrap_or(&Value::Null),
         ));
+    }
+    // right after a login champions-minimal is sometimes still empty: the inventory knows them too
+    let inv_champs = champs_of_inventory(inv.as_ref().unwrap_or(&Value::Null));
+    if !inv_champs.is_empty() {
+        let c = p_coll.get_or_insert_with(|| json!({ "at": now_ms() }));
+        if c.get("champs").is_none() {
+            c["champs"] = json!(inv_champs);
+        }
     }
     let counts = counts_of(
         inv.as_ref().unwrap_or(&Value::Null),
@@ -1451,5 +1474,18 @@ mod tests {
             counts_of(&json!([]), &json!({ "errorCode": "x" }), &Value::Null),
             None
         );
+    }
+
+    #[test]
+    fn champions_from_the_inventory() {
+        let inv = json!([
+            { "inventoryType": "CHAMPION", "itemId": 266, "owned": true },
+            { "inventoryType": "CHAMPION", "itemId": 1, "owned": false },
+            { "inventoryType": "CHAMPION", "itemId": 60083, "owned": true },
+            { "inventoryType": "EMOTE", "itemId": 5, "owned": true },
+            { "inventoryType": "CHAMPION", "itemId": 103, "owned": true }
+        ]);
+        assert_eq!(champs_of_inventory(&inv), vec![json!(103), json!(266)]);
+        assert!(champs_of_inventory(&Value::Null).is_empty());
     }
 }

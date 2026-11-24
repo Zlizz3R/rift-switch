@@ -93,7 +93,6 @@ function scTagTexts(x) {
   if (x.id === 'newTo') return [t('tag.newTo', { champ }), t('tag.newTo.t', { n: v.n, pts: num(v.pts), champ })];
   if (x.id === 'mainTaken' || x.id === 'mainBanned') return [t('tag.' + x.id), t(`tag.${x.id}.t`, { champ, n: v.n })];
   if (x.id === 'autofill') return [t('tag.autofill'), t('tag.autofill.t', { role: t('pos.' + v.role), now: t('pos.' + v.now), pct: v.pct })];
-  if (x.id === 'wokeUp') return [t('tag.wokeUp'), t('tag.wokeUp.t')];
   return [tagName(x), tagText(x)];
 }
 function scChip(x) {

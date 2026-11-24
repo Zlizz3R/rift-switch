@@ -595,16 +595,19 @@ test('match history: every filter control works without errors', () => withApp({
   assert.equal(app.$$('.mh-row').length, 3);
 }));
 
-test('match history: "load older games" shows its progress, and waits until a game is over', () => withApp({ replies: { ...mhReplies([game(1)]), 'matches-more': { ok: false, inGame: true } } }, async (app) => {
+test('match history: the one "Load" loads everything – also every older game – and waits until a game is over', () => withApp({ replies: { ...mhReplies([game(1)]), 'load-all': { ok: false, why: 'inGame' } } }, async (app) => {
   await app.click('#navMatches');
-  await app.click('#mhMore');
+  assert.ok(!app.$('#mhMore'), 'no separate "load older games" any more');
+  await app.click('#viewMatches [data-loadall]');
+  assert.equal(app.called('load-all').length, 1);
   assert.match(app.$('#toast').textContent, /Not during a game/);
 }));
 
-test('match history: progress on the button while everything loads', () => withApp({ replies: { ...mhReplies([game(1)]), matches: { ...mhReplies([game(1)]).matches, loadingOlder: true, older: [12, 40] } } }, async (app) => {
+test('match history: the shared progress while everything loads', () => withApp({}, async (app) => {
+  await app.push({ ...app.S.state, loading: { step: 'lists', n: 4, of: 5, done: 2, total: 6, since: 0 } });
   await app.click('#navMatches');
-  assert.equal(app.$('#mhMore').textContent, 'Loading 12 / 40 …');
-  assert.ok(app.$('#mhMore').disabled);
+  assert.match(app.$('#viewMatches [data-loadall]').textContent, /Match lists … 4\/5/);
+  assert.ok(app.$('#viewMatches [data-loadall]').disabled);
 }));
 
 // ---------- adding many accounts ----------

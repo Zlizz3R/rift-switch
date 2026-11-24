@@ -82,7 +82,8 @@ function renderColl() {
     const nums = c => {
       const e = collEntries(c);
       const n = c.counts || {};
-      return [e.filter(x => x.k === 'champ').length, e.filter(x => x.k === 'skin').length, ...COLL_COUNTS.map(k => n[k])];
+      // not read yet (e.g. the client hadn't loaded them at login): "–", not 0
+      return [c.champs ? e.filter(x => x.k === 'champ').length : null, c.skins ? e.filter(x => x.k === 'skin').length : null, ...COLL_COUNTS.map(k => n[k])];
     };
     const cell = v => `<td>${v == null ? '<span class="muted">–</span>' : num(v)}</td>`;
     const rows = sorted.map(a => {

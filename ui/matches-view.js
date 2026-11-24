@@ -259,7 +259,7 @@ async function loadMatches() {
     const d = await api.matches({ puuid: mh.filter.puuid || null, queue: [...mh.filter.queues].join(',') || null });
     if (d) {
       const games = await mhGames(d.index);
-      mh.data = { games, waiting: d.waiting, loadingOlder: d.loadingOlder, older: d.older, clientUp: d.clientUp, assets: assets || {} };
+      mh.data = { games, waiting: d.waiting, clientUp: d.clientUp, assets: assets || {} };
     }
   } catch (e) { console.warn('matches', e); }
   mh.loading = false;
@@ -275,12 +275,8 @@ function renderMatches() {
     + accs.map(a => `<option value="${esc(a.puuid)}">${esc(dispName(a))}</option>`).join('');
   $('mhAccount').value = mh.filter.puuid;
   document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq ? mh.filter.queues.has(b.dataset.mhq) : !mh.filter.queues.size));
-  // "Load older games": always at the top; greyed out (with the reason) while League is closed
-  const more = $('mhMore');
-  more.textContent = d && d.loadingOlder ? (d.older && d.older[1] ? t('mh.loadingCount', { n: d.older[0], total: d.older[1] }) : t('mh.loadingOlder')) : t('mh.more');
-  // only blocked while it is already loading; without League a click explains why
-  more.disabled = !!(d && d.loadingOlder);
-  more.title = '';
+  // the shared "Load" (views.js) loads everything, the whole match history too
+  refreshLoadBtns();
   if (!d) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.loading')}</div>`; return; }
   $('mhSub').textContent = d.waiting && d.clientUp ? t('mh.fetching', { n: d.waiting }) : !d.clientUp ? t('mh.offline') : t('mh.sub');
   syncFilterInputs();
@@ -566,18 +562,6 @@ $('viewMatches').addEventListener('click', e => {
   if (!find()) { mh.show = 2000; renderMatches(); }
   const row = find();
   if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1200); }
-});
-// older games: every account, one timeline
-$('viewMatches').addEventListener('click', async e => {
-  if (!e.target.closest('#mhMore')) return;
-  // games come from the League client: without it, say so instead of doing nothing
-  if (!(mh.data && mh.data.clientUp) && !(S.live && S.live.clientUp)) return toast(t('mh.moreOffline'), true);
-  e.target.closest('#mhMore').disabled = true;
-  e.target.closest('#mhMore').textContent = t('mh.loadingOlder');
-  const r = await api.matchesMore();
-  if (r && r.offline) toast(t('mh.moreOffline'), true);
-  if (r && r.inGame) toast(t('mh.moreInGame'), true);
-  loadMatches();
 });
 $('mhList').addEventListener('click', e => {
   if (e.target.closest('[data-player], [data-pin], [data-goto], [data-mhchamp], [data-mhacc], button, a, input, .mh-det')) return;

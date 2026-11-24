@@ -124,7 +124,6 @@
     'live.vsWho': "你的对手是谁？", 'live.ratingT': "克制评分 {r}（counterstats.net）——越高对线越轻松",
     'live.preloadBtn': "预加载全部对位", 'live.preloadT': "加载你的英雄池在该位置会遇到的每个对手（据 counterstats.net，通常每个 30–50 个）——最好在排队时点击。保存一天。",
     'live.poolTitle': "我的英雄池", 'live.bestVs': "对阵 {name} 的最佳选择", 'live.preload': "正在加载对位 {n} / {total} …",
-    'mh.loadingCount': "加载中 {n} / {total} …", 'mh.moreInGame': "对局中不加载——结束后一次性全部加载。",
     'multi.noteTitle': "为 {n} 个账号设置同一备注", 'multi.noteDone': "已为 {n} 个账号设置备注。",
     'det.dmg': "伤害", 'det.taken': "承伤", 'det.vision': "视野", 'det.visionT': "视野得分——插眼 / 排眼 / 购买真眼", 'det.items': "装备", 'det.h2h': "对位对比", 'det.goldAt': "{m}′ 金币", 'det.goldEnd': "结束时金币", 'det.goldDiff': "团队经济差（蓝方在上，红方在下）", 'det.upgrading': "较早的对局：英雄联盟运行时会补充全部详情和经济曲线。", 'det.towers': "防御塔", 'det.inhibs': "水晶", 'det.drakes': "小龙", 'det.heralds': "先锋", 'det.barons': "大龙",
     'help.open': "帮助", 'help.helper': "## 功能\n显示你的哪个英雄对阵敌方对线者表现最好——依据该对位的胜率。\n## 使用方法\n- 添加你玩的英雄（“+ 添加英雄”），会被保存。\n- 在右上角选择你的位置。\n- 在英雄选择中，敌方选择会出现在“你的对手是谁？”下方——点击你预计在你这条线的那个。敌方同位置的英雄一被选出就会自动选中。\n- 或者自己输入敌人。你的英雄会立即按对位从好到差排列。\n## 预加载\n“预加载全部对位”会获取你的英雄池在该位置遇到的每个对手——最好在排队时点击，这样英雄选择时立即可用。保存一天。\n## 须知\n- 数据来自 counterstats.net（所有段位、当前版本）。只发送英雄名称。\n- “–”表示该对位场次不足。", 'help.tools': "## 刷新段位\n立即重新加载所有账号的段位、头像和等级（否则每隔几分钟一次）。需要打开英雄联盟。\n## 关闭所有 Riot 进程\n关闭英雄联盟、Riot 客户端及其辅助程序——卡住时的解决办法。会先保存当前账号的登录。\n## 重启英雄联盟\n关闭全部并用当前账号重新启动英雄联盟。适用于更新后或客户端黑屏时。\n## 清除 Riot 客户端缓存\n删除客户端的网页缓存和日志（不影响你的登录）。适用于窗口空白或奇怪的登录错误。\n## 打开 Riot 客户端日志\n打开日志文件夹——Riot 客服会要这个。\n## 打开应用数据文件夹\nRift Switch 保存账号的位置。其中的登录和密码仅为你的 Windows 用户加密。", 'help.live': "## 房间\n房间里所有人的单双排和灵活组排段位。\n## 英雄选择\n你的队伍及段位和位置。对面只显示英雄（Riot 在开局前隐藏名字）。\n## 游戏中\n双方队伍的单双排和灵活段位，开局时直接来自 Riot。\"Multi op.gg\" 会在 op.gg 打开整个敌方队伍。\n## 冠军杯赛\n赛程公布后显示你的下一组对手，附段位和一键在 op.gg 打开五人的按钮。\n## 惩罚与等待时间\n你各账号的挂机惩罚、排位禁赛、秒退惩罚和低优先级队列，以及剩余时间。每个账号的惩罚需登录一次后才可知。", 'help.mh': "## 所有账号的对局\n所有已保存账号的每场对局都在一个列表中，最新在上——由 Rift Switch 自己保存，关闭英雄联盟时也能查看。没有上限；上方的垃圾桶会删除全部。\n## 加载更早的对局\n一次性获取英雄联盟客户端中该服务器每个账号仍保存的所有对局，并补全缺少的详情，按钮上显示进度。对局中不进行。\n## 筛选\n账号、队列、时间（或自定义日期）、胜负、英雄、排序；\"更多筛选\"可加击杀、死亡、KDA 和多杀。上方汇总统计筛选结果。\n## 多杀\n点击\"2× 五杀\"（或其他）把这些对局放到最上面。\n## 玩家\n蓝色方在左，红色方在右。两个小标记是单双排（实心）和灵活（描边）；窗口较宽时会完整显示。这是当前段位——Riot 不保存对局时的段位。点击名字可在 op.gg 等网站打开。\n## 详情\n点击对局展开：所有玩家的数据、装备以及对位对比。",
@@ -137,7 +136,7 @@
     'mh.otherGames': "其他对局", 'mh.unpin': "恢复正常显示",
     'mh.rCustom': "自定义时间 …", 'mh.rankNow': "当前段位 – Riot 不保存对局时的段位",
     'mh.rAll': "全部时间", 'mh.rToday': "今天", 'mh.r7': "最近 7 天", 'mh.r30': "最近 30 天", 'mh.r90': "最近 90 天", 'mh.resAll': "全部", 'mh.wins': "胜场", 'mh.losses': "败场", 'mh.champPh': "英雄 …", 'mh.sNew': "最新优先", 'mh.sKda': "最佳 KDA", 'mh.sKills': "最多击杀", 'mh.sDeaths': "最多死亡", 'mh.sDmg': "最高伤害", 'mh.sCs': "最佳每分钟补刀", 'mh.sLong': "最长对局", 'mh.moreFilters': "更多筛选", 'mh.minKills': "击杀 ≥", 'mh.maxDeaths': "死亡 ≤", 'mh.minKda': "KDA ≥", 'mh.multiAny': "任意多杀", 'mh.m2': "双杀及以上", 'mh.m3': "三杀及以上", 'mh.m4': "四杀及以上", 'mh.m5': "五杀", 'mh.reset': "重置", 'mh.sumGames': "场", 'mh.sumWins': "胜率（{w}胜 {l}负）", 'mh.streakW': "{n} 连胜", 'mh.streakL': "{n} 连败", 'mh.pentas': "{n} 次五杀", 'mh.recKills': "最多击杀", 'mh.recDeaths': "最多死亡", 'mh.recKda': "最佳 KDA", 'mh.recDmg': "最高伤害", 'mh.showMore': "显示更多（{n}）", 'mh.noMatch': "没有符合筛选条件的对局。",
-    'mh.more': "加载更早的对局", 'mh.loadingOlder': "正在加载更早的对局 …", 'mh.moreOffline': "League 运行时才能加载更早的对局。", 'mh.noOlder': "没有更早的对局。", 'live.enemies': "敌方队伍", 'live.allies': "我方队伍", 'live.ranksNote': "单双排和灵活组排段位在开局时直接来自 Riot – 仅在 Riot 提供胜负时显示胜率。",
+    'live.enemies': "敌方队伍", 'live.allies': "我方队伍", 'live.ranksNote': "单双排和灵活组排段位在开局时直接来自 Riot – 仅在 Riot 提供胜负时显示胜率。",
     'upd.version': "版本 {v}", 'upd.off': "仅安装版支持更新", 'upd.idle': "已开启更新", 'upd.checking': "正在检查更新 …", 'upd.current': "已是最新", 'upd.downloading': "正在下载版本 {v} …", 'upd.ready': "版本 {v} 已就绪", 'upd.error': "检查更新失败", 'upd.check': "检查", 'upd.install': "立即重启", 'pw.pass': "密码", 'pw.again': "再次输入密码", 'pw.short': "至少 {n} 个字符。", 'pw.mismatch': "两次密码不一致。", 'pw.exportText': "可以包含已保存的登录信息，并用单独的密码保护（至少 8 个字符）。导入时需要再次输入。", 'pw.withLogins': "包含登录信息导出", 'pw.withoutLogins': "不含登录信息", 'pw.importText': "此文件包含已保存的登录信息。请输入导出时设置的密码，或不含登录信息导入。", 'pw.wrong': "密码错误。", 'pw.loginsImported': "已导入 {n} 个登录信息。", 'common.ok': "确定", 'common.next': "下一步", 'lock.title': "应用锁", 'lock.locked': "已锁定", 'lock.enter': "请输入应用密码。", 'lock.unlock': "解锁", 'lock.now': "立即锁定", 'lock.off': "关闭", 'lock.onSub': "开启 – 启动时及从托盘恢复窗口时需要密码", 'lock.offSub': "关闭 – 这台电脑上的任何人都能切换账号", 'lock.change': "更改应用密码", 'lock.current': "请输入当前应用密码。", 'lock.setText': "启动时及从托盘恢复窗口时询问。至少 4 个字符。", 'lock.saved': "应用锁已开启。", 'lock.removed': "应用锁已关闭。", 'jump.switch': "以 {name} 登录", 'nav.matches': "对局记录", 'mh.title': "对局记录", 'mh.sub': "所有账号的最近对局", 'mh.offline': "League 已关闭 – 显示已保存的对局", 'mh.fetching': "正在从客户端加载 {n} 场对局 …", 'mh.empty': "暂无对局。客户端运行时会读取对局。", 'mh.emptyOffline': "暂无已保存的对局。启动一次 League 即可读取。", 'mh.loading': "加载中 …", 'mh.allAccounts': "所有账号", 'mh.allQueues': "全部", 'mh.normal': "匹配", 'mh.other': "其他", 'mh.ranked': "（排位）", 'mh.win': "胜利", 'mh.loss': "失败", 'mh.remake': "重开", 'mh.kda': "KDA", 'mh.kp': "参团率", 'mh.dmg': "伤害", 'mh.gold': "金币", 'mh.perfect': "完美", 'mh.double': "双杀", 'mh.triple': "三杀", 'mh.quadra': "四杀", 'mh.penta': "五杀",
     'set.gAppearance': "外观", 'set.gSwitch': "登录", 'set.gPrivacy': "隐私与安全", 'set.gSystem': "系统与数据", 'set.gAbout': "关于", 'set.colors': "配色", 'set.uiScale': "界面大小", 'set.moreOpts': "显示选项", 'set.lessOpts': "隐藏选项", 'set.export': "导出", 'set.exportT': "账号、分类、设置", 'set.import': "导入", 'set.importT': "从导出的文件", 'set.exported': "已导出 {n} 个账号。", 'set.imported': "已导入：新增 {n} 个，已存在 {m} 个。", 'set.ioFailed': "无法读取或写入文件（{e}）。", 'set.badFile': "不是 Rift Switch 导出文件。", 'tile.decayIn': "{d} 天后掉分", 'tile.decayEst': "约 {d} 天后掉分", 'tile.decayNow': "正在掉分", 'tile.decayT': "该账号上次登录时 Riot 的掉分计数，之后按天倒数。", 'tile.decayEstT': "估算：上一局后 {n} 天（假设存满）。登录一次即可获得 Riot 的准确计数。",
     'theme.system': "跟随系统",
@@ -405,8 +404,7 @@
     'tag.mainBanned.t': "常玩 {champ}（{n} 局）——被禁用",
     'tag.autofill': "补位？",
     'tag.autofill.t': "常玩 {role}（{pct}%），现在 {now}",
-    'tag.wokeUp': "刚上线",
-    'tag.wokeUp.t': "今天第一局",
+    
     'set.ownGames': "你的对局",
     'set.othersGames': "其他玩家的对局（实时）",
     'set.othersClear': "删除",
@@ -488,6 +486,7 @@
     'ss.save': "保存 {n} 个赛季",
     'ss.saved': "赛季已保存。",
     'ss.note': "三个来源，从不相加：客户端只提供上个和本赛季；已保存对局按自然年统计；你填写的内容会标记为你填写。",
+    'load.step.lists': "对局列表",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

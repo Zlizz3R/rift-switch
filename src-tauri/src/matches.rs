@@ -43,6 +43,8 @@ pub struct Entry {
 /// 4 = from the timeline also CS per minute ("csm"), every champion kill ("kills"), each player's
 /// first ward ("w1") and who took the first dragon ("drake1") – for the timeline tags.
 pub const GAME_VERSION: u8 = 4;
+/// Other players' games are kept 30 days (Live); own games stay until deleted.
+pub const OTHERS_MAX_AGE: i64 = 30 * 24 * 3600 * 1000;
 /// Summoner's Rift queues (only there positions mean something)
 const SR_QUEUES: [i64; 7] = [400, 420, 430, 440, 480, 490, 700];
 
@@ -53,6 +55,8 @@ pub struct Matches {
     ranks: Obj,
     /// the own accounts' store (it may have the old matches.json next to it); false = other players
     own: bool,
+    /// other players' store: games older than this (ms) are neither noted nor kept
+    max_age: Option<i64>,
 }
 
 fn id_num(s: &str) -> i64 {
@@ -74,6 +78,7 @@ impl Matches {
             by: vec![],
             ranks: Obj::new(),
             own: true,
+            max_age: None,
         };
         if !m.dir.join("games.jsonl").exists() {
             m.migrate_old(&data_dir.join("matches.json"));
@@ -89,6 +94,7 @@ impl Matches {
             by: vec![],
             ranks: Obj::new(),
             own: false,
+            max_age: Some(OTHERS_MAX_AGE),
         };
         m.open();
         m
@@ -215,6 +221,14 @@ impl Matches {
         if puuid.is_empty() {
             return false;
         }
+        // other players: games past the age limit aren't wanted at all
+        let cutoff = self.max_age.map(|a| crate::riot::now_ms() - a);
+        let list: Vec<Value> = list
+            .iter()
+            .filter(|g| cutoff.is_none_or(|c| num_of(g.get("t")) as i64 >= c))
+            .cloned()
+            .collect();
+        let list = &list[..];
         let pos = match self.by.iter().position(|(p, _)| p == puuid) {
             Some(i) => i,
             None => {
@@ -528,6 +542,51 @@ impl Matches {
             .unwrap_or_default();
         self.read_games(&ids)
     }
+    /// Other players' games older than the age limit go (and leave the lists). Returns how many.
+    pub fn prune_old(&mut self, now: i64) -> usize {
+        let Some(age) = self.max_age else { return 0 };
+        let cutoff = now - age;
+        let drop: HashSet<String> = self
+            .index
+            .iter()
+            .filter(|(_, e)| e.t < cutoff)
+            .map(|(id, _)| id.clone())
+            .collect();
+        if drop.is_empty() {
+            return 0;
+        }
+        for (_, ids) in self.by.iter_mut() {
+            ids.retain(|id| !drop.contains(id));
+        }
+        self.save_by();
+        let keep: Vec<String> = self
+            .index
+            .keys()
+            .filter(|id| !drop.contains(*id))
+            .cloned()
+            .collect();
+        self.rewrite(&keep);
+        drop.len()
+    }
+    /// The client's raw answers of an own game (details + timeline), gzip, appended to
+    /// raw.jsonl.gz – an archive with every field, for figures nobody has thought of yet.
+    pub fn append_raw(&self, id: &str, game: &Value, timeline: Option<&Value>) {
+        use flate2::{write::GzEncoder, Compression};
+        let _ = fs::create_dir_all(&self.dir);
+        let Ok(f) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(self.dir.join("raw.jsonl.gz"))
+        else {
+            return;
+        };
+        let line = json!({ "id": id, "game": game, "timeline": timeline }).to_string() + "\n";
+        let mut z = GzEncoder::new(f, Compression::default());
+        if z.write_all(line.as_bytes()).is_ok() {
+            let _ = z.finish();
+        }
+    }
+
     /// Over `max` bytes: the oldest games go (and leave the players' lists), down to 90 % of it.
     /// Returns how many went. Only ever used on the other players' store.
     pub fn prune_to(&mut self, max: u64) -> usize {
@@ -1107,7 +1166,7 @@ mod tests {
         fs::write(dir.join("matches.json"), "{}").unwrap();
         let mut o = Matches::load_others(dir.join("matches-others"));
         let list: Vec<Value> = (1..=30)
-            .map(|i| json!({ "id": i, "t": i * 1000, "q": 420 }))
+            .map(|i| json!({ "id": i, "t": crate::riot::now_ms() - (30 - i) * 1000, "q": 420 }))
             .collect();
         assert!(o.note("p1", &list));
         assert_eq!(o.progress("p1"), (0, 30));
@@ -1130,6 +1189,45 @@ mod tests {
         o.clear();
         assert!(dir.join("matches.json").exists());
         assert_eq!(o.count(), 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn others_keep_30_days_own_raw_archive() {
+        let dir = std::env::temp_dir().join(format!("rs-age-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let now = crate::riot::now_ms();
+        let mut o = Matches::load_others(dir.join("matches-others"));
+        let old = now - OTHERS_MAX_AGE - 1000;
+        // an old game in a match list isn't even noted
+        o.note(
+            "p",
+            &[json!({ "id": 1, "t": old }), json!({ "id": 2, "t": now })],
+        );
+        assert_eq!(o.missing_for(&["p".into()]), vec!["2"]);
+        let mut g = compact(&detail(3)).unwrap();
+        g["t"] = json!(old);
+        o.insert(&g);
+        let mut g2 = compact(&detail(2)).unwrap();
+        g2["t"] = json!(now);
+        o.insert(&g2);
+        assert_eq!(o.prune_old(now), 1);
+        assert!(!o.has("3") && o.has("2"));
+        // own games: the raw answers, gzip, one member per game – readable as one stream
+        let own = Matches::load(&dir);
+        own.append_raw("7", &json!({ "gameId": 7 }), Some(&json!({ "frames": [] })));
+        own.append_raw("8", &json!({ "gameId": 8 }), None);
+        let f = fs::File::open(dir.join("matches").join("raw.jsonl.gz")).unwrap();
+        let mut text = String::new();
+        flate2::read::MultiGzDecoder::new(f)
+            .read_to_string(&mut text)
+            .unwrap();
+        let lines: Vec<Value> = text
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[1]["game"]["gameId"], 8);
         let _ = fs::remove_dir_all(&dir);
     }
 }

@@ -27,7 +27,6 @@
     { id: 'hotStreak', group: 'form', type: 'streak', win: true, n: 3, min: 3, stage: 'A', color: 'good', period: 'all' },
     { id: 'lossStreak', group: 'form', type: 'streak', win: false, n: 3, min: 3, stage: 'A', color: 'bad', period: 'all' },
     { id: 'backAgain', group: 'form', type: 'break', days: 14, within: 3, min: 1, stage: 'A', color: 'warn', period: 'all' },
-    { id: 'wokeUp', group: 'form', type: 'live', live: true, stage: 'A+L', color: 'warn' },
     { id: 'grinder', group: 'form', type: 'count', games: 50, days: 30, stage: 'A', color: 'info', period: 'd30' },
     { id: 'smurf', group: 'form', type: 'level', below: 100, stage: 'A', color: 'warn' },
 

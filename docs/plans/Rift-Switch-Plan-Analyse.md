@@ -620,3 +620,7 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Prüfbericht) – Entscheidung offen.
 - [x] Neue Screenshots und Demo-Video (`tools/screens/capture.py`) – 24.11.2026: 16 Bilder, neu dabei performance,
   champions, play-style, tags, seasons, live-game; README um die neuen Teile ergänzt.
+- [x] Nachträge 24.11.2026 (nach Durchsicht): Champions kommen zusätzlich aus dem Inventar (`champions-minimal` ist kurz
+  nach dem Einloggen manchmal leer), „Laden“ liest sie notfalls nach, unbekannt = „–“ statt 0. **Ein einziger „Laden“-
+  Knopf** für alles – jetzt auch alle Match-Listen und alle fehlenden/alten Spieldetails („Ältere Spiele laden“ ist
+  weg, der Knopf steht auch in der Match history). Eigene Spiele: Rohdaten gzip; fremde: 30 Tage. „Aufgewacht“ entfernt.

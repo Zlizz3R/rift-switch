@@ -52,7 +52,6 @@
     checkImportPass: pass => call('check-import-pass', pass),
     update: what => call('update', what),
     matches: filter => call('matches', filter),
-    matchesMore: () => call('matches-more'),
     matchesGet: ids => call('matches-get', ids),
     matchesAssets: () => call('mh-assets'),
     matchesStorage: () => call('mh-storage'),

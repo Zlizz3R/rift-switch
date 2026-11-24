@@ -46,3 +46,7 @@ sind das höchstens 10 × 20 = 200 Spiele, wegen Überschneidungen meist weniger
    einschalten.
 
 **Entscheidung:** ___
+
+**Nachtrag 24.11.2026 (Entscheidung):** Eigene Spiele zusätzlich als Rohdaten (Spieldaten + Timeline, gzip,
+`matches/raw.jsonl.gz`, ~16 KB pro Spiel) – angezeigt wird weiter aus App-Format 4. Fremde Spiele im App-Format 4,
+nach 30 Tagen verworfen (älter werden gar nicht erst geladen), dazu das Limit in den Einstellungen.
