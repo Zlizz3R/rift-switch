@@ -1332,3 +1332,43 @@ span.mh-ch { cursor: default; }
 .coll-table td:not(:first-child), .coll-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
 .coll-table tfoot td { font-weight: 600; border-bottom: 0; border-top: 1px solid var(--line); }
 .coll-table tr.unread td { text-align: left; }
+
+/* ---------- Overview → Performance / Champions ---------- */
+.perf-roles button { display: inline-flex; align-items: center; }
+.perf-roles img { width: 16px; height: 16px; opacity: .75; }
+.perf-roles button.on img { opacity: 1; }
+.perf-line { color: var(--muted); font-size: 12.5px; margin: -4px 0 12px; }
+.perf-bar { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
+.pk { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+.pk span { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk b { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pk small { color: var(--muted); font-size: 11px; }
+.pk.good b, .perf-table td.good, .oc-row b.good { color: #4cc38a; }
+.perf-table td:not(:first-child), .perf-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.perf-table th[data-psort] { cursor: pointer; }
+.perf-table th[data-psort]:hover { color: var(--text); }
+.pr-role { cursor: pointer; }
+.pr-role td { font-weight: 600; }
+.pr-role:hover td, .pr-champ:hover td { background: rgba(255,255,255,.025); }
+.pr-name { display: inline-flex; align-items: center; gap: 8px; }
+.pr-chev::before { content: '›'; display: inline-block; width: 8px; color: var(--muted); font-style: normal; transition: transform .15s; }
+.pr-role.open .pr-chev::before { transform: rotate(90deg); }
+.pr-ic { width: 18px; height: 18px; }
+.pr-champ { cursor: pointer; }
+.pr-champ td:first-child { padding-left: 34px; }
+.oc-sort { display: inline-flex; align-items: center; gap: 2px; margin-bottom: 10px; }
+.oc-sort span { color: var(--muted); font-size: 12px; padding: 0 6px; }
+.oc-list { display: flex; flex-direction: column; max-width: 760px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+.oc-row { display: grid; grid-template-columns: 42px 1fr 1fr 120px; align-items: center; gap: 14px; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--line); }
+.oc-row:last-child { border-bottom: 0; }
+.oc-row:hover { background: rgba(255,255,255,.03); }
+.oc-row.all { background: var(--panel2); }
+.oc-ic { width: 40px; height: 40px; border-radius: 50%; }
+.oc-ic.all { display: grid; place-items: center; background: #0d1119; border: 1px solid var(--line); color: var(--gold2); font-weight: 700; }
+.oc-name, .oc-kda, .oc-wr { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-variant-numeric: tabular-nums; }
+.oc-kda { align-items: center; }
+.oc-wr { align-items: flex-end; }
+.oc-row b { font-size: 14px; font-weight: 600; }
+.oc-row small { color: var(--muted); font-size: 12px; }
+.oc-row b.muted { color: var(--muted); }
+.oc-more { margin-top: 10px; }

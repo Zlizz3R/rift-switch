@@ -15,10 +15,13 @@
 
   // f: { range: 'all'|'today'|'7'|'30'|'90'|'custom', from: 'YYYY-MM-DD', to: 'YYYY-MM-DD', result: ''|'win'|'loss', champ: id, minKills, maxDeaths,
   //      minKda, minMulti, sort: 'new'|'kda'|'kills'|'deaths'|'dmg'|'cs'|'long' }
-  function filterGames(games, f = {}, now = Date.now()) {
-    const num = v => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
+  // the time window of a range filter: [from, to) in ms. Also used by the Overview (perfmath.js).
+  // 'y2026': that calendar year (the season, roughly – exact season dates come with past seasons).
+  function rangeBounds(f = {}, now = Date.now()) {
     let from = 0, to = Infinity;
-    if (f.range === 'today') { const d = new Date(now); d.setHours(0, 0, 0, 0); from = d.getTime(); }
+    const y = /^y(\d{4})$/.exec(String(f.range || ''));
+    if (y) { from = new Date(+y[1], 0, 1).getTime(); to = new Date(+y[1] + 1, 0, 1).getTime(); }
+    else if (f.range === 'today') { const d = new Date(now); d.setHours(0, 0, 0, 0); from = d.getTime(); }
     else if (['7', '30', '90'].includes(String(f.range))) from = now - Number(f.range) * DAY;
     else if (f.range === 'custom') {
       // both days included; a missing end = open end; swapped dates are fine
@@ -27,6 +30,12 @@
       if (a != null) from = a;
       if (b != null) to = b + DAY;
     }
+    return [from, to];
+  }
+
+  function filterGames(games, f = {}, now = Date.now()) {
+    const num = v => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
+    const [from, to] = rangeBounds(f, now);
     const minK = num(f.minKills), maxD = num(f.maxDeaths), minKda = num(f.minKda), minMulti = num(f.minMulti), champ = num(f.champ);
     const out = games.filter(g => {
       const p = me(g);
@@ -130,7 +139,7 @@
     return { win: first, n };
   }
 
-  const api = { dayStart, filterGames, summarize, streakOf, kda, me };
+  const api = { dayStart, rangeBounds, filterGames, summarize, streakOf, kda, me };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MatchFilter = api;
 })(typeof window !== 'undefined' ? window : this);

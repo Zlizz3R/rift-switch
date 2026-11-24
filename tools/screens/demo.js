@@ -84,16 +84,16 @@ accounts.forEach((a, i) => { if (MAST[i]) a.mastAt = now - (i + 1) * DAY; });
 // ---------- match history ----------
 const CH = [[103, 'Ahri', 'mid'], [64, 'Lee Sin', 'jungle'], [222, 'Jinx', 'bot'], [412, 'Thresh', 'support'], [86, 'Garen', 'top'], [24, 'Jax', 'top'], [266, 'Aatrox', 'jungle'], [238, 'Zed', 'mid'], [51, 'Caitlyn', 'bot'], [117, 'Lulu', 'support']];
 const NAMES = ['Moonlit Fox', 'Jungle Diff', 'Crit Happens', 'Hookline', 'Demacia Main', 'Split Push Sam', 'Gank Plank', 'Shadow Step', 'Headshot Hero', 'Pocket Healer'];
-function game(n, win, owner = P(1)) {
+function game(n, win, owner = P(1), at = 0) {
   const mine = [103, 238, 103, 517, 103, 157, 91, 103, 238][n % 9];   // the own account plays a few champions
   const players = CH.map(([c0, , pos], i) => {
-    const champ = i === 0 ? mine : c0;
+    const champ = i === at && at === 0 ? mine : c0;
     const blue = i < 5, won = blue === win;
-    return { puuid: i === 0 ? owner : 'x' + n + i, name: i === 0 ? accounts.find(a => a.puuid === owner).gameName : NAMES[i], tag: 'EUW', champ, team: blue ? 100 : 200, pos, win: won,
+    return { puuid: i === at ? owner : 'x' + n + i, name: i === at ? accounts.find(a => a.puuid === owner).gameName : NAMES[i], tag: 'EUW', champ, team: blue ? 100 : 200, pos, win: won,
       k: Math.floor(rnd() * 12) + (won ? 3 : 0), d: Math.floor(rnd() * 8) + 1, a: Math.floor(rnd() * 14) + 2, cs: 120 + Math.floor(rnd() * 140), gold: 8000 + Math.floor(rnd() * 6000),
       dmg: 12000 + Math.floor(rnd() * 22000), vis: 12 + Math.floor(rnd() * 40), lvl: 13 + Math.floor(rnd() * 5),
       items: [[3157, 3020, 6655, 4645, 3089, 0, 3340], [6692, 3111, 3071, 3053, 0, 0, 3364], [3031, 3006, 3094, 3036, 3072, 0, 3363], [3190, 3117, 3109, 2065, 0, 0, 3364], [3078, 3047, 6333, 3065, 0, 0, 3340]][i % 5],
-      spells: [[4, 14], [4, 11], [4, 7], [4, 3], [4, 12]][i % 5], keystone: [8112, 8010, 8008, 8439, 8010][i % 5], sub: [8300, 8100, 8200, 8400, 8200][i % 5], multi: n === 2 && i === 0 ? 3 : 0,
+      spells: [[4, 14], [4, 11], [4, 7], [4, 3], [4, 12]][i % 5], keystone: [8112, 8010, 8008, 8439, 8010][i % 5], sub: [8300, 8100, 8200, 8400, 8200][i % 5], multi: n === 2 && i === at ? 3 : 0,
       x: { taken: 20000, phys: 9000, magic: 8000, true: 600, heal: 3000, mitig: 15000, cc: 10, wards: 9, wardsKilled: 3, pinks: 2, spent: 9000, turretDmg: 3000, obj: 6000, spree: 3 } };
   });
   const len = 24 + (n % 9);
@@ -101,7 +101,10 @@ function game(n, win, owner = P(1)) {
   return { id: String(7000 + n), v: 3, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
     players, gold, teams: [{ id: 100, towers: win ? 9 : 3, drakes: win ? 3 : 1, barons: win ? 1 : 0 }, { id: 200, towers: win ? 2 : 8, drakes: win ? 1 : 3 }], owners: [owner] };
 }
-const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true)];
+const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true),
+  // older ones on other roles, for the Overview's performance and champion pages
+  ...[[1, true], [1, false], [1, true], [4, true], [4, false], [4, true], [4, true], [1, true], [2, false], [3, true], [1, true], [4, false]]
+    .map(([at, win], i) => game(13 + i, win, i % 3 === 2 ? P(2) : P(1), at))];
 // each own account's games in short, like the app's "own-games"
 const ownGames = {};
 for (const g of games) for (const p of g.players) if (g.owners.includes(p.puuid)) (ownGames[p.puuid] = ownGames[p.puuid] || []).push([g.t, g.dur, g.q, p.champ, p.win, g.remake]);

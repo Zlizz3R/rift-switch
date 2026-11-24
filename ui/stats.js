@@ -46,6 +46,50 @@
       dmgMin: dmgMin(g, p), visMin: visMin(g, p), dmgShare: dmgShare(g, p), win: !!p.win, mins: minutes(g) };
   }
 
+  // ---------- positions ----------
+  const POSITIONS = ['top', 'jungle', 'mid', 'bot', 'support'];
+  // support items (World Atlas line and the older ones) – their owner was the support
+  const SUPPORT_ITEMS = new Set([3850, 3851, 3853, 3854, 3855, 3857, 3858, 3859, 3860, 3862, 3863, 3864, 3865, 3866, 3867, 3869, 3870, 3871, 3876, 3877]);
+  const roleCache = new WeakMap();
+  // the position of every player of a Summoner's Rift game, or null. Riot's own guess ("pos", from
+  // the timeline's lane / role) is often wrong – two tops, jungler and support swapped – so each team
+  // gets the best of all 120 arrangements: Smite = jungle, a support item = support, Riot's guess,
+  // fewest CS = support, Teleport = top, Heal / Barrier = bot, Exhaust = support.
+  function roles(g) {
+    if (roleCache.has(g)) return roleCache.get(g);
+    let out = null;
+    if (g.mode === 'CLASSIC' && g.players && g.players.length === 10) {
+      out = new Map();
+      for (const team of new Set(g.players.map(p => p.team))) {
+        const ps = g.players.filter(p => p.team === team);
+        if (ps.length !== 5) { out = null; break; }
+        const minCs = Math.min(...ps.map(p => p.cs || 0));
+        const fit = (p, r) => {
+          const sp = p.spells || [];
+          const smite = sp.includes(11), sup = (p.items || []).some(i => SUPPORT_ITEMS.has(i));
+          let s = p.pos === r ? 4 : 0;
+          if (r === 'jungle') s += smite ? 12 : -8; else if (smite) s -= 8;
+          if (r === 'support') s += (sup ? 10 : 0) + ((p.cs || 0) === minCs ? 3 : 0) + (sp.includes(3) ? 1 : 0); else if (sup) s -= 6;
+          if (r === 'top' && sp.includes(12)) s += 1;
+          if (r === 'bot' && (sp.includes(7) || sp.includes(21))) s += 1;
+          return s;
+        };
+        const f = ps.map(p => POSITIONS.map(r => fit(p, r)));
+        let best = null, bestS = -Infinity;
+        const walk = (i, used, perm, s) => {
+          if (i === 5) { if (s > bestS) { bestS = s; best = perm.slice(); } return; }
+          for (let r = 0; r < 5; r++) if (!(used & (1 << r))) { perm.push(r); walk(i + 1, used | (1 << r), perm, s + f[i][r]); perm.pop(); }
+        };
+        walk(0, 0, [], 0);
+        ps.forEach((p, i) => out.set(p, POSITIONS[best[i]]));
+      }
+    }
+    roleCache.set(g, out);
+    return out;
+  }
+  // one player's position, or null (ARAM, Arena, games without all ten players)
+  const role = (g, p) => { const r = roles(g); return (r && r.get(p)) || null; };
+
   // ---------- which player rows count ----------
   // the own player of a game: its first own account (a game counts once)
   const me = g => g.players.find(p => p.puuid === (g.owners || [])[0]) || g.players[0];
@@ -88,6 +132,8 @@
       kp: kpv.avg, kpN: kpv.n,
       dmgShare: share.avg, dmgShareN: share.n,
       secs: sum(x => x.g.dur || 0),
+      cs: sum(x => x.p.cs || 0) / n,
+      accounts: new Set(rows.map(x => x.p.puuid)).size,
     };
   }
   // rows grouped by a key (champion, account, position …): Map key -> aggregate
@@ -102,7 +148,7 @@
   }
 
   const api = { REMAKE_SEC, ARAM_QUEUES, RANKED_QUEUES, winPct, isRemake, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
-    visMin, dmgShare, perGame, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
+    visMin, dmgShare, perGame, POSITIONS, roles, role, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Stats = api;
 })(typeof window !== 'undefined' ? window : this);

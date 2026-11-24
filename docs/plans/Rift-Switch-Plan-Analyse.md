@@ -564,7 +564,12 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Account-Panel, Klick öffnet es in der Match history. Hinweis: Die bisherige Zusammenfassung zählt ein Spiel
   zweier eigener Accounts einmal (erster Account) – so gelassen, damit die Zahlen gleich bleiben; für Leistung je
   Teilnahme gibt es `byParticipation` (ab Phase 3 genutzt).
-- [ ] Phase 3 – Overview: Kennzahlenleiste + Rollen-/Champion-Tabelle
+- [x] Phase 3 – Overview: Kennzahlenleiste + Rollen-/Champion-Tabelle – 24.11.2026: Übersicht → Unterreiter
+  „Leistung“ (Filter Account/Queue/Zeitraum/Rolle, Satz darüber, Leiste mit 8 Kennzahlen, Rollen-Tabelle zum
+  Aufklappen, sortierbar) und „Champions“ (op.gg-Stil: „Alle“, Top 8, dann alle mit Sortierung). Rechnen in
+  `ui/perfmath.js`, Positionen jetzt `Stats.roles`, Zeitfilter `MatchFilter.rangeBounds`. Ein Klick öffnet die
+  Match history mit Account, Queue, Zeitraum und Champion (die Rolle hat die Match history nicht). Season =
+  Kalenderjahr, bis Phase 8 die echten Season-Grenzen bringt. Zählt jede Teilnahme eigener Accounts.
 - [ ] Phase 4 – Tag-Engine + Tags für eigene Accounts
 - [ ] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – Entscheidung: ___
 - [ ] Speicherlimit in den Einstellungen (gehört zu Phase 5)

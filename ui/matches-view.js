@@ -151,46 +151,9 @@ function compareHtml(g, a, b, roles, mine) {
 }
 
 // ---------- the ten players ----------
-const POSITIONS = ['top', 'jungle', 'mid', 'bot', 'support'];
-// support items (World Atlas line and the older ones) – their owner was the support
-const SUPPORT_ITEMS = new Set([3850, 3851, 3853, 3854, 3855, 3857, 3858, 3859, 3860, 3862, 3863, 3864, 3865, 3866, 3867, 3869, 3870, 3871, 3876, 3877]);
-const roleCache = new WeakMap();
-// the position of every player of a Summoner's Rift game, or null. Riot's own guess ("pos", from
-// the timeline's lane / role) is often wrong – two tops, jungler and support swapped – so each team
-// gets the best of all 120 arrangements: Smite = jungle, a support item = support, Riot's guess,
-// fewest CS = support, Teleport = top, Heal / Barrier = bot, Exhaust = support.
-function gameRoles(g) {
-  if (roleCache.has(g)) return roleCache.get(g);
-  let out = null;
-  if (g.mode === 'CLASSIC' && g.players && g.players.length === 10) {
-    out = new Map();
-    for (const team of new Set(g.players.map(p => p.team))) {
-      const ps = g.players.filter(p => p.team === team);
-      if (ps.length !== 5) { out = null; break; }
-      const minCs = Math.min(...ps.map(p => p.cs || 0));
-      const fit = (p, r) => {
-        const sp = p.spells || [];
-        const smite = sp.includes(11), sup = (p.items || []).some(i => SUPPORT_ITEMS.has(i));
-        let s = p.pos === r ? 4 : 0;
-        if (r === 'jungle') s += smite ? 12 : -8; else if (smite) s -= 8;
-        if (r === 'support') s += (sup ? 10 : 0) + ((p.cs || 0) === minCs ? 3 : 0) + (sp.includes(3) ? 1 : 0); else if (sup) s -= 6;
-        if (r === 'top' && sp.includes(12)) s += 1;
-        if (r === 'bot' && (sp.includes(7) || sp.includes(21))) s += 1;
-        return s;
-      };
-      const f = ps.map(p => POSITIONS.map(r => fit(p, r)));
-      let best = null, bestS = -Infinity;
-      const walk = (i, used, perm, s) => {
-        if (i === 5) { if (s > bestS) { bestS = s; best = perm.slice(); } return; }
-        for (let r = 0; r < 5; r++) if (!(used & (1 << r))) { perm.push(r); walk(i + 1, used | (1 << r), perm, s + f[i][r]); perm.pop(); }
-      };
-      walk(0, 0, [], 0);
-      ps.forEach((p, i) => out.set(p, POSITIONS[best[i]]));
-    }
-  }
-  roleCache.set(g, out);
-  return out;
-}
+const POSITIONS = Stats.POSITIONS;
+// the position of every player of a Summoner's Rift game, or null (stats.js)
+function gameRoles(g) { return Stats.roles(g); }
 const POS_FILE = { top: 'top', jungle: 'jungle', mid: 'middle', bot: 'bottom', support: 'utility' };
 const posIcon = p => 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-' + POS_FILE[p] + '.png';
 // blue side (100) left, red side (200) right – like the client. Positions (and the icons in the middle) only when both teams have all five –
@@ -273,6 +236,19 @@ $('mhClear').onclick = async () => {
 // so even years of history load once, and a new game is one small request.
 mh.cache = new Map();
 let assets = null;
+// the games of an index ([id, time, queue, owners…]): the ones not in the cache are fetched first
+async function mhGames(index) {
+  const lack = index.map(r => r[0]).filter(id => !mh.cache.has(id));
+  for (let i = 0; i < lack.length; i += 500) {
+    for (const g of (await api.matchesGet(lack.slice(i, i + 500))) || []) mh.cache.set(String(g.id), g);
+  }
+  return index.filter(r => mh.cache.has(r[0])).map(r => ({ ...mh.cache.get(r[0]), owners: r.slice(3) }));
+}
+// every stored game of every account – the Overview's numbers come from the same games
+async function allGames() {
+  const d = await api.matches({ puuid: null, queue: null });
+  return d && Array.isArray(d.index) ? mhGames(d.index) : null;
+}
 async function loadMatches() {
   loadStorage();
   if (mh.loading) { mh.again = true; return; }
@@ -282,11 +258,7 @@ async function loadMatches() {
     if (!assets || !Object.keys(assets.items || {}).length) assets = (await api.matchesAssets()) || null;
     const d = await api.matches({ puuid: mh.filter.puuid || null, queue: [...mh.filter.queues].join(',') || null });
     if (d) {
-      const lack = d.index.map(r => r[0]).filter(id => !mh.cache.has(id));
-      for (let i = 0; i < lack.length; i += 500) {
-        for (const g of (await api.matchesGet(lack.slice(i, i + 500))) || []) mh.cache.set(String(g.id), g);
-      }
-      const games = d.index.filter(r => mh.cache.has(r[0])).map(r => ({ ...mh.cache.get(r[0]), owners: r.slice(3) }));
+      const games = await mhGames(d.index);
       mh.data = { games, waiting: d.waiting, loadingOlder: d.loadingOlder, older: d.older, clientUp: d.clientUp, assets: assets || {} };
     }
   } catch (e) { console.warn('matches', e); }
@@ -536,6 +508,13 @@ async function openGame(id) {
   if (!find()) { mh.show = 5000; renderMatches(); }
   const row = find();
   if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1200); }
+}
+// the match history with some filters set (from the Overview): account, queue groups, champion, time
+function openMatchesWith({ puuid = '', queues = [], champ = 0, range = 'all', from = '', to = '' } = {}) {
+  mh.filter.puuid = puuid; mh.filter.queues = new Set(queues);
+  mh.f = { ...MH_DEFAULT, champ, range, from, to }; mh.pin = 0; mh.show = 40;
+  $('mhChamp').value = champ ? champName(champ) : '';
+  showView('matches');
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-opengame]');
