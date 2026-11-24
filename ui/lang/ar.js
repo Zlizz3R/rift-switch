@@ -236,6 +236,8 @@
     'mast.tipAram': "جزء من المباريات كان ARAM (أقصر) – محسوب",
     'mast.tipOwnLen': "متوسط مدة مبارياتك المحفوظة {min} دقيقة ({n} مباراة)",
     'mast.tipSrc': "المصادر: {src}",
+    'last.title': "آخر مباراة",
+    'last.open': "افتح في سجل المباريات",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

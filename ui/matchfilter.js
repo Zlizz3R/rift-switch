@@ -1,12 +1,14 @@
-// Filters, sorting and the little statistics of the match history page.
-// Shared by the window and the tests (no DOM).
+// Filters, sorting and the little statistics of the match history page. Every figure comes from
+// stats.js (one place per formula). Shared by the window and the tests (no DOM).
 (function (root) {
+  const St = typeof module !== 'undefined' && module.exports ? require('./stats.js') : root.Stats;
   const DAY = 86400000;
 
-  // the player row of the own account that played the game
-  const me = g => g.players.find(p => p.puuid === g.owners[0]) || g.players[0];
-  const kda = p => (p.d ? (p.k + p.a) / p.d : p.k + p.a + 1000);   // no deaths = "perfect", ranked above all
-  const csMin = (p, g) => p.cs / Math.max(1, g.dur / 60);
+  // the player row of the own account that played the game (a game counts once)
+  const me = St.me;
+  // for sorting and the "KDA at least" filter: 0 deaths = "perfect", ranked above all
+  const kda = p => St.kda(p.k, p.d, p.a) + (St.perfect(p) ? 1000 : 0);
+  const csMin = (p, g) => St.csMin(g, p);
 
   // "2026-11-03" -> local midnight of that day (ms), or null
   const dayStart = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null; };
@@ -49,21 +51,18 @@
     return out.sort((a, b) => (by && by(a, b)) || b.t - a.t);
   }
 
-  // totals and records of a list of games (remakes left out)
+  // totals and records of a list of games (remakes left out; each game once, with its first own account)
   // max: how many entries the champion and teammate lists keep (5 if not given)
   function summarize(games, max = 5) {
-    const real = games.filter(g => !g.remake);
-    if (!real.length) return null;
-    const ps = real.map(g => ({ g, p: me(g) }));
-    const sum = k => ps.reduce((s, x) => s + x.p[k], 0);
-    const wins = ps.filter(x => x.p.win).length;
-    const n = ps.length;
+    const ps = St.byGame(games);
+    const ag = St.aggregate(ps);
+    if (!ag) return null;
+    const n = ag.n;
     const best = (score) => ps.reduce((b, x) => (!b || score(x) > score(b) ? x : b), null);
-    const k = sum('k'), d = sum('d'), a = sum('a');
     return {
-      games: n, wins, winrate: Math.round(100 * wins / n),
-      avg: { k: k / n, d: d / n, a: a / n, kda: d ? (k + a) / d : null,
-        csMin: ps.reduce((s, x) => s + csMin(x.p, x.g), 0) / n, dmg: sum('dmg') / n },
+      games: n, wins: ag.wins, winrate: Math.round(100 * ag.winrate),
+      // KDA over the sums; null = no death at all ("perfect")
+      avg: { k: ag.avg.k, d: ag.avg.d, a: ag.avg.a, kda: ag.perfect ? null : ag.kda, csMin: ag.csMin, dmg: ag.dmg },
       records: {
         kills: best(x => x.p.k), deaths: best(x => x.p.d), kda: best(x => kda(x.p)),
         dmg: best(x => x.p.dmg), multi: best(x => (x.p.multi || 0) * 100 + x.p.k),
@@ -119,11 +118,11 @@
     return [...by.values()]
       .sort((x, y) => y.games - x.games || y.wins - x.wins)
       .slice(0, max)
-      .map(c => ({ ...c, winrate: Math.round((100 * c.wins) / c.games), playrate: Math.round((100 * c.games) / n), kda: c.d ? (c.k + c.a) / c.d : null }));
+      .map(c => ({ ...c, winrate: Math.round((100 * c.wins) / c.games), playrate: Math.round((100 * c.games) / n), kda: c.d ? St.kda(c.k, c.d, c.a) : null }));
   }
   // current win/loss streak, newest first (by time, remakes skipped)
   function streakOf(games) {
-    const list = games.filter(g => !g.remake).slice().sort((a, b) => b.t - a.t);
+    const list = games.filter(g => !St.isRemake(g)).slice().sort((a, b) => b.t - a.t);
     if (!list.length) return null;
     const first = me(list[0]).win;
     let n = 0;

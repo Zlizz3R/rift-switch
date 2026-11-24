@@ -105,11 +105,11 @@ function detailsHtml(g, as, mine) {
 // ---------- two players side by side (freely chosen) ----------
 const CMP_ROWS = [
   ['det.kills', p => p.k], ['det.deaths', p => p.d, true], ['det.assists', p => p.a],
-  ['KDA', p => (p.d ? (p.k + p.a) / p.d : p.k + p.a), false, v => v.toFixed(2)],
+  ['KDA', p => Stats.kda(p.k, p.d, p.a), false, v => v.toFixed(2)],
   ['det.dmg', p => p.dmg], ['det.phys', p => p.x && p.x.phys], ['det.magic', p => p.x && p.x.magic], ['det.true', p => p.x && p.x.true],
   ['det.taken', p => p.x && p.x.taken], ['det.mitig', p => p.x && p.x.mitig], ['det.heal', p => p.x && p.x.heal],
   ['mh.gold', p => p.gold], ['det.spent', p => p.x && p.x.spent],
-  ['CS', p => p.cs], ['det.csMin', (p, g) => p.cs / Math.max(1, g.dur / 60), false, v => v.toFixed(1)],
+  ['CS', p => p.cs], ['det.csMin', (p, g) => Stats.csMin(g, p), false, v => v.toFixed(1)],
   ['det.vision', p => p.vis], ['det.wards', p => p.x && p.x.wards], ['det.wardsKilled', p => p.x && p.x.wardsKilled], ['det.pinks', p => p.x && p.x.pinks],
   ['det.cc', p => p.x && p.x.cc, false, v => v + ' s'], ['det.turretDmg', p => p.x && p.x.turretDmg], ['det.obj', p => p.x && p.x.obj],
   ['det.spree', p => p.x && p.x.spree], ['det.crit', p => p.x && p.x.crit], ['Level', p => p.lvl],
@@ -452,7 +452,7 @@ function summaryHtml(list) {
     <div class="mh-recs">
       ${rec('kills', t('mh.recKills'), r.kills, r.kills && r.kills.p.k)}
       ${rec('deaths', t('mh.recDeaths'), r.deaths, r.deaths && r.deaths.p.d)}
-      ${rec('kda', t('mh.recKda'), r.kda, r.kda && (r.kda.p.d ? ((r.kda.p.k + r.kda.p.a) / r.kda.p.d).toFixed(1) : t('mh.perfect')))}
+      ${rec('kda', t('mh.recKda'), r.kda, r.kda && (Stats.perfect(r.kda.p) ? t('mh.perfect') : Stats.kda(r.kda.p.k, r.kda.p.d, r.kda.p.a).toFixed(1)))}
       ${rec('dmg', t('mh.recDmg'), r.dmg, r.dmg && short(r.dmg.p.dmg))}
     </div>
   </div>`;
@@ -466,11 +466,10 @@ function icon(map, id, cls) {
 function gameRow(g, as) {
   const ownerId = g.owners[0];
   const me = g.players.find(p => p.puuid === ownerId) || g.players[0];
-  const team = g.players.filter(p => p.team === me.team);
-  const teamKills = team.reduce((s, p) => s + p.k, 0);
-  const kp = teamKills ? Math.round(100 * (me.k + me.a) / teamKills) : 0;
-  const ratio = me.d ? ((me.k + me.a) / me.d).toFixed(2) + ':1' : t('mh.perfect');
-  const mins = Math.max(1, g.dur / 60);
+  const st = Stats.perGame(g, me);
+  // no team kill: KP can't be told ("–"), never 0 %
+  const kp = st.kp == null ? '–' : Math.round(100 * st.kp) + '%';
+  const ratio = st.perfect ? t('mh.perfect') : st.kda.toFixed(2) + ':1';
   const res = g.remake ? 'remake' : me.win ? 'win' : 'loss';
   const owner = S.accounts.find(a => a.puuid === ownerId);
   const others = g.owners.slice(1).map(id => S.accounts.find(a => a.puuid === id)).filter(Boolean);
@@ -498,8 +497,8 @@ function gameRow(g, as) {
           <div class="mh-ratio">${ratio} ${t('mh.kda')}</div>
         </div>
         <div class="mh-stats">
-          <span>${t('mh.kp')} <b>${kp}%</b></span>
-          <span>CS <b>${me.cs}</b> (${(me.cs / mins).toFixed(1)})</span>
+          <span>${t('mh.kp')} <b>${kp}</b></span>
+          <span>CS <b>${me.cs}</b> (${st.csMin.toFixed(1)})</span>
           <span>${t('mh.dmg')} <b>${short(me.dmg)}</b></span>
           <span>${t('mh.gold')} <b>${short(me.gold)}</b></span>
         </div>
@@ -511,6 +510,37 @@ function gameRow(g, as) {
     ${mh.open.has(String(g.id)) ? detailsHtml(g, as, mine) : ''}
   </div>`;
 }
+
+// The game row, compact: the same game with only what fits a narrow place – champion, result,
+// queue, when, K/D/A, KDA, CS/min. "Last game" on the Live page and in the account panel.
+// A click opens the game in the match history.
+function gameRowShort(g) {
+  const me = MatchFilter.me(g);
+  const st = Stats.perGame(g, me);
+  const res = Stats.isRemake(g) ? 'remake' : me.win ? 'win' : 'loss';
+  return `<button class="mh-short ${res}" data-opengame="${esc(g.id)}" title="${esc(t('last.open'))}">
+    <img src="${CHAMP_ICON(me.champ)}" alt="">
+    <span class="ms-a"><b>${t('mh.' + res)}</b><small>${esc(queueLabel(g))} · ${esc(ago(g.t))}</small></span>
+    <span class="ms-b"><b>${me.k} / <i>${me.d}</i> / ${me.a}</b><small>${st.perfect ? t('mh.perfect') : st.kda.toFixed(2) + ':1'} · ${st.csMin.toFixed(1)} CS/min</small></span>
+  </button>`;
+}
+// a game opened in the match history: every filter off, the game unfolded and scrolled to
+async function openGame(id) {
+  id = String(id);
+  showView('matches');
+  mh.filter.puuid = ''; mh.filter.queues.clear(); mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.show = 40;
+  $('mhChamp').value = '';
+  mh.open.add(id);
+  await loadMatches();
+  const find = () => document.querySelector(`.mh-row[data-gid="${CSS.escape(id)}"]`);
+  if (!find()) { mh.show = 5000; renderMatches(); }
+  const row = find();
+  if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1200); }
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-opengame]');
+  if (b) openGame(b.dataset.opengame);
+});
 
 // filters
 $('mhAccount').onchange = () => { mh.filter.puuid = $('mhAccount').value; loadMatches(); };

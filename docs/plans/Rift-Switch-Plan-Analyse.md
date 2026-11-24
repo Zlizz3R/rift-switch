@@ -552,7 +552,14 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Meilensteine, Spielzeit als Spanne mit Quellen in `ui/playtime-rules.js`, Eichung ab 10 Spielen zwischen zwei
   Lesungen). Ein „Laden“ für alles (Sammlung, Übersicht, Account-Panel), ein gemeinsamer Fortschritt.
   Offen: „meistgespielt“ bleibt in der Match history (nicht doppelt in der Mastery-Ansicht).
-- [ ] Phase 2 – Kennzahlen an einer Stelle + „Letztes Spiel“
+- [x] Phase 2 – Kennzahlen an einer Stelle + „Letztes Spiel“ – 24.11.2026: `ui/stats.js` (KDA, KP, CS/min,
+  Schaden/min, Vision/min, Schadensanteil, Winrate, Remakes, Zählweise je Spiel / je Teilnahme, Gruppierung).
+  Match history (Zusammenfassung, Zeilen, Vergleich), Nach-dem-Spiel-Tabelle, Overview und Kacheln rechnen damit;
+  Vorher/Nachher-Test (`test/fixtures/summary-before.json`) bleibt gleich. Einzige sichtbare Änderung: KP ohne
+  Team-Kills zeigt „–“ statt „0 %“. „Letztes Spiel“ kompakt auf Live (ohne Spiel/Nach-dem-Spiel) und im
+  Account-Panel, Klick öffnet es in der Match history. Hinweis: Die bisherige Zusammenfassung zählt ein Spiel
+  zweier eigener Accounts einmal (erster Account) – so gelassen, damit die Zahlen gleich bleiben; für Leistung je
+  Teilnahme gibt es `byParticipation` (ab Phase 3 genutzt).
 - [ ] Phase 3 – Overview: Kennzahlenleiste + Rollen-/Champion-Tabelle
 - [ ] Phase 4 – Tag-Engine + Tags für eigene Accounts
 - [ ] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – Entscheidung: ___

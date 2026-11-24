@@ -235,6 +235,8 @@
     'mast.tipAram': "部分对局为极地大乱斗（更短）——已计入",
     'mast.tipOwnLen': "你保存的对局平均时长 {min} 分钟（{n} 场）",
     'mast.tipSrc': "来源：{src}",
+    'last.title': "上一场对局",
+    'last.open': "在对局记录中打开",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

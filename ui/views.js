@@ -222,7 +222,8 @@ function renderDetail() {
       ${dec ? `<div class="${decClose ? 'warn' : ''}">${ic('<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h0"/>')}${esc(dec)}</div>` : ''}
       ${st && st.ready === false ? `<div class="warn">${ic('<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/>')}${t('rk.notReady')}</div>` : ''}
     </div>
-    ${hides('ranks') ? '' : `<div class="d-chart">${detailData.id === a.puuid ? historyChart(detailData.hist, detailData.est, true) : ''}</div>`}`}
+    ${hides('ranks') ? '' : `<div class="d-chart">${detailData.id === a.puuid ? historyChart(detailData.hist, detailData.est, true) : ''}</div>`}
+    <div class="d-last" data-last="${esc(a.puuid)}">${lastOf.has(a.puuid) && lastOf.get(a.puuid).g ? `<span class="d-sec-t">${t('last.title')}</span>${gameRowShort(lastOf.get(a.puuid).g)}` : ''}</div>`}
     <button class="btn gold d-switch" id="dSwitch" title="${esc(t('d.hint'))}" ${signedIn ? 'disabled' : ''}>${ic('<path d="M7 4l12 8-12 8z"/>')}${signedIn ? t('d.signedIn') : t('d.switch')}</button>
     <div class="d-actions">
       ${a.placeholder ? '' : `<button data-d="profile">${ic('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')}<span>${t('d.profile')}</span></button>`}
@@ -235,8 +236,25 @@ function renderDetail() {
     </div>
 `;
   loadDetailChart(a);
+  if (!a.placeholder) loadLastGame(a.puuid);
   if (typeof refreshLoadBtns === 'function') refreshLoadBtns();
 }
+// the newest stored game of one account (for the panel); asked again when the match history changes
+const lastOf = new Map();   // puuid -> { id, g }
+async function loadLastGame(puuid, again) {
+  const had = lastOf.get(puuid);
+  if (had && !again) return;
+  lastOf.set(puuid, had || { id: null, g: null });
+  const d = await api.matches({ puuid, queue: null });
+  const row = d && d.index && d.index[0];
+  if (!row || (had && had.id === row[0])) return;
+  const [g] = (await api.matchesGet([row[0]])) || [];
+  if (!g) return;
+  lastOf.set(puuid, { id: row[0], g: { ...g, owners: row.slice(3) } });
+  const box = document.querySelector(`#detail [data-last="${CSS.escape(puuid)}"]`);
+  if (box && typeof gameRowShort === 'function') box.innerHTML = `<span class="d-sec-t">${t('last.title')}</span>${gameRowShort(lastOf.get(puuid).g)}`;
+}
+api.onMatchesChanged(() => { const a = selected(); if (a && !a.placeholder) loadLastGame(a.puuid, true); });
 $('detail').addEventListener('click', async e => {
   const m = e.target.closest('[data-m]');
   if (m && picked.size > 1) {
@@ -394,7 +412,7 @@ async function pollLive() {
 function queueRank(label, r) {
   if (!r) return `<div class="q-rank none"><span class="q-l">${label}</span><span>${t('tile.unranked')}</span></div>`;
   const games = r.wins + r.losses;
-  const wr = r.wl !== false && games ? ` · ${Math.round(100 * r.wins / games)}%` : r.wins ? ` · ${t('tile.wins', { n: r.wins })}` : '';
+  const wr = r.wl !== false && games ? ` · ${Stats.winPct(r.wins, games)}%` : r.wins ? ` · ${t('tile.wins', { n: r.wins })}` : '';
   const tip = r.wl !== false && games ? t('tile.wlTitle', { w: r.wins, l: r.losses }) : t('tile.wlUnknown');
   return `<div class="q-rank" title="${esc(tip)}"><span class="q-l">${label}</span><img src="${crestUrl(r.tier)}" alt="">
     <span><b>${tierName(r.tier)}${APEX.includes(r.tier) ? '' : ' ' + r.division}</b> · ${r.lp} LP<i>${wr}</i></span></div>`;
@@ -481,8 +499,11 @@ function renderLive(force) {
   } else if (helper.autoEnemy && !d.inGame) { helper.enemy = 0; helper.autoEnemy = false; }
   const post = !d.champSelect && !d.inGame && typeof postgameHtml === 'function' ? postgameHtml() : '';
   if (post) parts.push(post);
+  // no game, no post-game overview: the last game, small
+  const last = !post && liveData && !d.champSelect && !d.inGame && typeof lastGameHtml === 'function' ? lastGameHtml() : '';
+  if (last) parts.push(last);
   if (!liveData) parts.push(`<div class="live-card"><p class="fine">${t('live.loading')}</p></div>`);
-  else if (!post && (!parts.length || (parts.length === 1 && pens))) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
+  else if (!post && !last && (!parts.length || (parts.length === 1 && pens))) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
   parts.push(helperHtml());
   // keep focus/scroll of the helper's inputs: only replace when something changed
   const html = parts.join('');

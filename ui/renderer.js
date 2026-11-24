@@ -89,7 +89,7 @@ function rankRow(label, r, showWr = true) {
   }
   const games = r.wins + r.losses;
   if (!games) return `<div class="rank">${head}</div>`;
-  const wr = Math.round(100 * r.wins / games);
+  const wr = Stats.winPct(r.wins, games);
   const cls = wr >= 53 ? 'good' : wr <= 47 ? 'bad' : '';
   return `<div class="rank" title="${esc(t('tile.wlTitle', { w: r.wins, l: r.losses }) + (r.wlStale ? t('tile.wlStale') : ''))}">${head}
     <div class="wr"><b class="${cls}">${wr}%</b>${t('tile.games', { n: games })}</div></div>`;
@@ -224,7 +224,7 @@ const layout = () => (S.settings && S.settings.layout) || 'tiles';
 function rowRank(r) {
   if (r && !TIERS.includes(r.tier) && !(r.wins + r.losses)) r = null;
   if (!r) return `<span class="r-cell un">${t('tile.unranked')}</span>`;
-  const games = r.wins + r.losses, wr = games && r.wl !== false ? Math.round(100 * r.wins / games) : null;
+  const games = r.wins + r.losses, wr = r.wl !== false ? Stats.winPct(r.wins, games) : null;
   return `<span class="r-cell"><img src="${crestUrl(r.tier)}" alt=""><b>${tierName(r.tier)}${APEX.includes(r.tier) ? '' : ' ' + r.division}</b> <i>${r.lp} LP</i>${wr != null ? ` <em class="${wr >= 53 ? 'good' : wr <= 47 ? 'bad' : ''}">${wr} %</em>` : ''}</span>`;
 }
 function rowHtml(a, o = tileOpt()) {

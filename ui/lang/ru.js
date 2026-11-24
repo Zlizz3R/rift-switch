@@ -238,6 +238,8 @@
     'mast.tipAram': "Часть игр – ARAM (короче), учтено",
     'mast.tipOwnLen': "Ваши сохранённые игры длятся в среднем {min} мин ({n} игр)",
     'mast.tipSrc': "Источники: {src}",
+    'last.title': "Последняя игра",
+    'last.open': "Открыть в истории матчей",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

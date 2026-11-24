@@ -52,7 +52,7 @@ const PG_LANE = { gold: 0.3, dmg: 0.25, kda: 0.25, cs: 0.1, vis: 0.1 };
 function pgLane(g, p) {
   const o = pgOpponent(g, p);
   if (!o) return null;
-  const v = x => ({ gold: x.gold || 0, dmg: x.dmg || 0, kda: (x.k + x.a) / Math.max(1, x.d), cs: x.cs || 0, vis: x.vis || 0 });
+  const v = x => ({ gold: x.gold || 0, dmg: x.dmg || 0, kda: Stats.kda(x.k, x.d, x.a), cs: x.cs || 0, vis: x.vis || 0 });
   const a = v(p), b = v(o);
   const share = Object.keys(PG_LANE).reduce((s, k) => s + PG_LANE[k] * (a[k] + b[k] > 0 ? a[k] / (a[k] + b[k]) : 0.5), 0);
   return { opp: o, share, mult: Math.min(1.4, Math.max(0.6, 1 + (share - 0.5) * 1.5)) };
@@ -62,16 +62,14 @@ function pgLane(g, p) {
 // then multiplied by the lane factor (how much better or worse than the lane opponent)
 function pgPlacements(g) {
   const ps = g.players;
-  const mins = Math.max(1, g.dur / 60);
-  const teamKills = t => Math.max(1, ps.filter(p => p.team === t).reduce((s, p) => s + p.k, 0));
   const val = p => ({
-    kda: Math.min(10, (p.k + p.a) / Math.max(1, p.d)),
-    kp: (p.k + p.a) / teamKills(p.team),
+    kda: Math.min(10, Stats.kda(p.k, p.d, p.a)),
+    kp: Stats.kp(g, p) ?? 0,
     dmg: p.dmg || 0,
     gold: p.gold || 0,
     taken: (p.x && p.x.taken) || 0,
     vis: p.vis || 0,
-    cs: (p.cs || 0) / mins,
+    cs: Stats.csMin(g, p),
   });
   const W = { kda: 0.25, kp: 0.2, dmg: 0.2, gold: 0.1, taken: 0.1, vis: 0.1, cs: 0.05 };
   const vals = ps.map(val);
@@ -87,7 +85,6 @@ function pgPlacements(g) {
 // both teams as one table: header per team, a row per player (mine = own accounts, marked)
 function pgTableHtml(g, as, mine) {
   as = as || {};
-  const mins = Math.max(1, g.dur / 60);
   const { place, mvp, ace, lane } = pgPlacements(g);
   const all = g.players;
   const max = k => Math.max(1, ...all.map(k));
@@ -105,7 +102,6 @@ function pgTableHtml(g, as, mine) {
     const tm = (g.teams || []).find(x => x.id === team) || {};
     const win = ps[0] && ps[0].p.win;
     const sum = f => ps.reduce((s, x) => s + (f(x.p) || 0), 0);
-    const kills = Math.max(1, sum(p => p.k));
     const obj = (k, label) => (tm[k] != null ? `<span title="${esc(t('det.' + k))}">${label} <b>${tm[k]}</b></span>` : '');
     const bans = (tm.bans || []).filter(Boolean);
     const head = `<div class="pg-head ${team === 100 ? 'blue' : 'red'} ${win ? 'win' : 'loss'}">
@@ -118,7 +114,8 @@ function pgTableHtml(g, as, mine) {
     </div>`;
     const rows = ps.map(({ p, i }) => {
       const x = p.x || {};
-      const kda = p.d ? (p.k + p.a) / p.d : null;
+      const st = Stats.perGame(g, p);
+      const kda = st.perfect ? null : st.kda;
       const badge = i === mvp ? `<b class="pg-pl mvp">MVP</b>` : i === ace ? `<b class="pg-pl ace">ACE</b>` : `<b class="pg-pl">#${place(i)}</b>`;
       const r = mh.ranks[p.puuid] || {};
       const wards = x.wards != null ? ` title="${esc(t('det.visionT'))}: ${x.wards} / ${x.wardsKilled || 0} / ${x.pinks || 0}"` : '';
@@ -128,8 +125,8 @@ function pgTableHtml(g, as, mine) {
         <span class="pg-who"><span class="pg-name" data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(p.name + (p.tag ? '#' + p.tag : ''))}">${esc(p.name || '?')}</span>${r.s ? rankChip(r.s, 'solo') : ''}</span>
         <span class="pg-place" title="${esc(t('pg.placeT'))}">${badge}${laneChip(lane(i))}</span>
         <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}</span>
-        <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${Math.round((100 * (p.k + p.a)) / kills)}% KP</small></span>
-        <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${(p.cs / mins).toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
+        <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${st.kp == null ? '–' : Math.round(100 * st.kp) + '%'} KP</small></span>
+        <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${st.csMin.toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
         <span class="pg-b"><b>${k1(p.dmg)}</b>${bar(p.dmg, maxDmg, team === 100 ? 'blue' : 'red')}</span>
         <span class="pg-b"><b>${x.taken != null ? k1(x.taken) : '–'}</b>${bar(x.taken || 0, maxTaken, 'taken')}</span>
         <span class="pg-b"><b>${k1(p.gold)}</b>${bar(p.gold, maxGold, 'gold')}</span>
@@ -154,8 +151,12 @@ function postgameHtml() {
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('#pgOpen') || !pg.game) return;
-  showView('matches');
-  mh.open.add(String(pg.game.id));
-  renderMatches();
+  if (e.target.closest('#pgOpen') && pg.game) openGame(pg.game.id);
 });
+
+// "Last game" (compact) when no game and no post-game overview is on
+function lastGameHtml() {
+  const g = pg.game;
+  if (!g || !g.players) return '';
+  return `<div class="live-card"><div class="lc-head"><h3>${t('last.title')}</h3></div>${gameRowShort(g)}</div>`;
+}

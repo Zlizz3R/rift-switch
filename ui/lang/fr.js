@@ -239,6 +239,8 @@
     'mast.tipAram': "Une partie des parties étaient en ARAM (plus courtes) – prises en compte",
     'mast.tipOwnLen': "Tes parties enregistrées durent en moyenne {min} min ({n} parties)",
     'mast.tipSrc': "Sources : {src}",
+    'last.title': "Dernière partie",
+    'last.open': "Ouvrir dans l'historique",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

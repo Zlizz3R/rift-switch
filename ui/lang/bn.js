@@ -236,6 +236,8 @@
     'mast.tipAram': "কিছু গেম ARAM ছিল (ছোট) – গণনায় ধরা হয়েছে",
     'mast.tipOwnLen': "আপনার সংরক্ষিত গেম গড়ে {min} মিনিট ({n} গেম)",
     'mast.tipSrc': "সূত্র: {src}",
+    'last.title': "শেষ গেম",
+    'last.open': "ম্যাচ ইতিহাসে খুলুন",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

@@ -237,6 +237,8 @@
     'mast.tipAram': "کچھ گیمز ARAM تھے (چھوٹے) – شامل کیے گئے",
     'mast.tipOwnLen': "آپ کے محفوظ گیمز اوسطاً {min} منٹ ({n} گیمز)",
     'mast.tipSrc': "ذرائع: {src}",
+    'last.title': "آخری گیم",
+    'last.open': "میچ ہسٹری میں کھولیں",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

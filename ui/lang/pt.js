@@ -238,6 +238,8 @@
     'mast.tipAram': "Parte das partidas foi ARAM (mais curtas) – incluídas",
     'mast.tipOwnLen': "Suas partidas salvas duram em média {min} min ({n} partidas)",
     'mast.tipSrc': "Fontes: {src}",
+    'last.title': "Última partida",
+    'last.open': "Abrir no histórico",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

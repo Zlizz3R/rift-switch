@@ -204,10 +204,10 @@ function renderDash() {
   el.innerHTML = `
     <div class="stats dash-stats">
       ${stat(t('dash.games'), n)}
-      ${stat(t('dash.wl'), n ? `${w}–${n - w} <small>${Math.round((100 * w) / n)} %</small>` : '–')}
+      ${stat(t('dash.wl'), n ? `${w}–${n - w} <small>${Stats.winPct(w, n)} %</small>` : '–')}
       ${stat(t('dash.lp'), rows.some(r => r.delta != null) ? sgn(net) : '–', net > 0 ? 'up' : net < 0 ? 'down' : '')}
       ${stat(t('dash.climber'), best && best.delta > 0 ? `${esc(dispName(best.a))} <small>${sgn(best.delta)}</small>` : '–')}
-      ${stat(t('dash.topChamp'), topChamp ? `<img class="st-ic" src="${CHAMP_ICON(topChamp[0])}" alt="">${esc(champLabel(topChamp[0]))} <small>${topChamp[1].n} · ${Math.round((100 * topChamp[1].w) / topChamp[1].n)} %</small>` : '–')}
+      ${stat(t('dash.topChamp'), topChamp ? `<img class="st-ic" src="${CHAMP_ICON(topChamp[0])}" alt="">${esc(champLabel(topChamp[0]))} <small>${topChamp[1].n} · ${Stats.winPct(topChamp[1].w, topChamp[1].n)} %</small>` : '–')}
       ${stat(t('dash.topAcc'), topAccA ? `${esc(dispName(topAccA))} <small>${t('dash.nGames', { n: topAcc[1] })}</small>` : '–')}
     </div>
     <div class="dash-card">${dashChart(series, t0, t1)}<div class="dash-chips">${chips}${key}</div></div>
@@ -220,7 +220,7 @@ function renderDash() {
         <td>${r.cur != null ? esc(rankText(r.cur)) : `<i class="muted">${t('tile.unranked')}</i>`}</td>
         <td>${peakCell(r)}</td>
         <td>${r.n ? `${r.wins}–${r.losses}` : '–'}</td>
-        <td class="${r.n && r.wins / r.n >= 0.5 ? 'up' : r.n ? 'down' : ''}">${r.n ? Math.round((100 * r.wins) / r.n) + ' %' : '–'}</td>
+        <td class="${r.n && r.wins / r.n >= 0.5 ? 'up' : r.n ? 'down' : ''}">${r.n ? Stats.winPct(r.wins, r.n) + ' %' : '–'}</td>
         <td class="${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}">${r.delta == null ? '–' : sgn(r.delta)}${moved ? `<small>${shortRank(r.start)} → ${shortRank(r.cur)}</small>` : ''}</td>
         <td>${goalCell(r)}</td>
         <td class="${idle ? 'warn' : ''}">${r.a.lastPlayed ? esc(ago(r.a.lastPlayed)) : '–'}</td></tr>`;

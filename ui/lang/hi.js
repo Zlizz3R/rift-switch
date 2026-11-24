@@ -237,6 +237,8 @@
     'mast.tipAram': "कुछ गेम ARAM थे (छोटे) – शामिल किए गए",
     'mast.tipOwnLen': "आपके सहेजे गेम औसतन {min} मिनट चलते हैं ({n} गेम)",
     'mast.tipSrc': "स्रोत: {src}",
+    'last.title': "पिछला गेम",
+    'last.open': "मैच इतिहास में खोलें",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

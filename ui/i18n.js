@@ -285,6 +285,8 @@
     'mast.tipAram': "Part of the games were ARAM (shorter) – counted in",
     'mast.tipOwnLen': "Your stored games last Ø {min} min ({n} games)",
     'mast.tipSrc': "Sources: {src}",
+    'last.title': "Last game",
+    'last.open': "Open in the match history",
   };
 
   const de = {
@@ -553,6 +555,8 @@
     'mast.tipAram': "Ein Teil der Spiele war ARAM (kürzer) – eingerechnet",
     'mast.tipOwnLen': "Deine gespeicherten Spiele dauern Ø {min} Min. ({n} Spiele)",
     'mast.tipSrc': "Quellen: {src}",
+    'last.title': "Letztes Spiel",
+    'last.open': "In der Match history öffnen",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

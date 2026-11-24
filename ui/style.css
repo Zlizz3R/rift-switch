@@ -1311,3 +1311,18 @@ span.mh-ch { cursor: default; }
 .ms { font-style: normal; font-size: 10px; font-weight: 600; padding: 0 5px; border-radius: 6px; border: 1px solid rgba(200,170,110,.45); color: var(--gold); vertical-align: 1px; }
 .ms.sm { border-color: transparent; color: #8a7a55; padding: 0 2px; }
 .mast-more { margin-top: 10px; }
+
+/* ---------- the game row, compact ("Last game": Live page, account panel) ---------- */
+.mh-short { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; text-align: left;
+  padding: 7px 10px 7px 9px; border-radius: 9px; border-left: 3px solid #5383e8; background: rgba(83,131,232,.10); }
+.mh-short.loss { border-left-color: #e84057; background: rgba(232,64,87,.10); }
+.mh-short.remake { border-left-color: #6b7489; background: rgba(107,116,137,.10); }
+.mh-short:hover { filter: brightness(1.15); }
+.mh-short img { width: 36px; height: 36px; border-radius: 8px; }
+.mh-short b { display: block; font-size: 12.5px; font-weight: 600; }
+.mh-short i { font-style: normal; color: #e84057; }
+.mh-short small { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mh-short .ms-b { text-align: right; }
+.d-last { margin: 10px 0 4px; }
+.d-last:empty { display: none; }
+.d-sec-t { display: block; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 5px; }
