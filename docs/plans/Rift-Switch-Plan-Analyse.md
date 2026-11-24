@@ -579,8 +579,9 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Teil 2 am 24.11.2026: Spielformat 4 speichert aus der Timeline CS pro Minute, alle Kills mit Assists, die erste
   Ward je Spieler und das Team des ersten Drachen (~2 KB mehr pro Spiel, geschätzt; ältere Spiele lädt die App wie
   bisher nach, 4 pro Durchgang bei offenem Fenster; ersetzte Zeilen räumt sie beim Start weg). Begriffe aus 5.2 in
-  `ui/stats.js`; alle Stufe-C-Tags und „Drachentöter“ drin. Noch am echten Client zu prüfen: die Feldnamen der
-  Timeline-Ereignisse (bisher nur `totalGold` live bestätigt).
+  `ui/stats.js`; alle Stufe-C-Tags und „Drachentöter“ drin. Am echten Client geprüft: Kill- und Drachen-Ereignisse
+  passen; **Ward-Ereignisse liefert die Client-Timeline nicht** – „Früher Warder“ ist deshalb aus (`off` in
+  `tag-rules.js`), bis eine Quelle sie hat.
 - [ ] Speicher-Messung (vor dem dauerhaften Speichern fremder Spiele) – Entscheidung: ___
 - [ ] Speicherlimit in den Einstellungen (gehört zu Phase 5)
 - [ ] Phase 5 – Live-Übersicht im Porofessor-Stil

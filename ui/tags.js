@@ -197,7 +197,7 @@
     d.role = ctx.role || mr.main || mr.most || null;
     d.roleRows = d.role ? d.season.filter(x => St.role(x.g, x.p) === d.role) : d.season;
     const results = [];
-    for (const r of TR.TAG_RULES) if (!r.live) results.push(...evalRule(r, d));
+    for (const r of TR.TAG_RULES) if (!r.live && !r.off) results.push(...evalRule(r, d));
     // OTP beats "main" on the same champion
     const otp = results.find(x => x.id === 'otp' && x.state === 'met');
     const kept = otp ? results.filter(x => !(x.id === 'main' && x.state === 'met' && x.champ === otp.champ)) : results;

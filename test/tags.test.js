@@ -147,7 +147,7 @@ test('timeline tags: solo kills, duels, early deaths, early farm, lane CS, wards
   assert.equal(one('unkillable').state, 'met');                  // no death before 10:00
   assert.equal(one('gankVictim').state, 'not');                  // the gank death came after 15:00
   assert.equal(one('readyToRumble').state, 'met');               // a kill at 3:20
-  assert.equal(one('earlyWarder').state, 'met');                 // ward at 1:30
+  assert.equal(get(r, 'earlyWarder').length, 0);                 // off: the client's timelines have no wards
   assert.equal(one('dragonSlayer').state, 'met');
   assert.equal(one('earlyFarm').value, 135);                     // 9 CS a minute → 135 at 15
   assert.equal(one('earlyFarm').level, 'great');
@@ -156,7 +156,7 @@ test('timeline tags: solo kills, duels, early deaths, early farm, lane CS, wards
   assert.ok(Math.abs(one('earlyShare').value - 9 / 33) < 1e-9);  // 9 of 9 + 4 × 6
   // games stored before the timeline format: too little data, not "not met"
   const old = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1 })));
-  for (const id of ['soloFighter', 'unkillable', 'earlyFarm', 'laneCs', 'earlyWarder', 'dragonSlayer']) assert.equal(get(old, id)[0].state, 'few', id);
+  for (const id of ['soloFighter', 'unkillable', 'earlyFarm', 'laneCs', 'dragonSlayer']) assert.equal(get(old, id)[0].state, 'few', id);
 });
 test('timeline tags: jungle – ganks, aggressive and passive exclude each other', () => {
   // me = jungler (index 1); kills on the enemy mid (7) and the enemy jungler (6)

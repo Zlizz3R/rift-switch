@@ -671,17 +671,21 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
                     .get(i.max(0) as usize)
                     .filter(|_| i >= 0)
                     .map(|p| p["team"].clone());
-                drake1 = team
-                    .or_else(|| e.get("killerTeamId").cloned())
-                    .unwrap_or(Value::Null);
+                // no champion as killer (rare): the event's own team, when it names one
+                let own = Some(e["teamId"].clone()).filter(|t| t == 100 || t == 200);
+                drake1 = team.or(own).unwrap_or(Value::Null);
             }
             _ => {}
         }
     }
     if frames.len() > 1 {
         game["kills"] = Value::Array(kills);
-        game["w1"] = Value::Array(w1);
         game["drake1"] = drake1;
+        // the League client's timelines carry no ward events (checked 24.11.2026): only when some
+        // are there – no list at all is "unknown", a list of nulls would read as "never warded"
+        if w1.iter().any(|w| !w.is_null()) {
+            game["w1"] = Value::Array(w1);
+        }
     }
 }
 /// The participant ids of a game detail, in the order compact() lists the players.
@@ -959,6 +963,13 @@ mod tests {
         // the first dragon: the team of its killer (participant 8 = index 7)
         assert_eq!(g["drake1"], g["players"][7]["team"]);
         assert_eq!(g["v"], 4);
+        // a timeline without ward events (the client's): no "w1" at all, not "never warded"
+        let mut g2 = compact(&detail(9)).unwrap();
+        let mut tl2 = tl.clone();
+        tl2["frames"][0]["events"] = json!([]);
+        add_timeline(&mut g2, &tl2, &participant_ids(&detail(9)));
+        assert!(g2.get("w1").is_none());
+        assert_eq!(g2["kills"].as_array().unwrap().len(), 2);
     }
 
     #[test]
