@@ -24,6 +24,38 @@
     // stats of the details ("x" leaves out zeros: a game with details and no such key had 0)
     turretDmg: rows => { const r = withX(rows); return { v: avgOf(r.map(x => x.p.x.turretDmg || 0)), n: r.length }; },
     pinks: rows => { const r = withX(rows); return { v: avgOf(r.map(x => x.p.x.pinks || 0)), n: r.length }; },
+    // from the timeline (game format 4); older games have none and count as "no data"
+    cs15: rows => { const v = rows.map(x => St.csAt(x.g, x.g.players.indexOf(x.p), 15)).filter(v => v != null); return { v: avgOf(v), n: v.length }; },
+    laneCs15: rows => {
+      const diff = x => {
+        const o = St.laneOpponent(x.g, x.p);
+        const a = St.csAt(x.g, x.g.players.indexOf(x.p), 15), b = o ? St.csAt(x.g, x.g.players.indexOf(o), 15) : null;
+        return a != null && b != null ? a - b : null;
+      };
+      const v = rows.map(diff).filter(v => v != null);
+      return { v: avgOf(v), n: v.length };
+    },
+    share0to15: rows => { const v = rows.map(x => St.farmShare(x.g, x.p, 0, 15)).filter(v => v != null); return { v: avgOf(v), n: v.length }; },
+    share15to30: rows => {
+      const v = rows.filter(x => x.g.dur >= 25 * 60 && x.g.csm).map(x => St.farmShare(x.g, x.p, 15, Math.min(30, x.g.csm.length - 1))).filter(v => v != null);
+      return { v: avgOf(v), n: v.length };
+    },
+    soloKills: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => St.soloKills(x.g, x.p))), n: r.length }; },
+    duels: rows => {
+      const r = rows.filter(x => St.hasKills(x.g));
+      const k = r.reduce((s, x) => s + St.soloKills(x.g, x.p), 0), d = r.reduce((s, x) => s + St.soloDeaths(x.g, x.p), 0);
+      return { v: k + d ? k / (k + d) : null, n: k + d, vars: { k, d } };
+    },
+    deaths10: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => St.deathsBefore(x.g, x.p, 600))), n: r.length }; },
+    gankDeaths15: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => St.gankDeathsBefore(x.g, x.p, 900))), n: r.length }; },
+    firstKill5: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => (St.killBefore(x.g, x.p, 300) ? 1 : 0))), n: r.length }; },
+    ward3: rows => {
+      const r = rows.filter(x => Array.isArray(x.g.w1));
+      return { v: avgOf(r.map(x => { const w = x.g.w1[x.g.players.indexOf(x.p)]; return w != null && w < 180 ? 1 : 0; })), n: r.length };
+    },
+    firstDrake: rows => { const r = rows.filter(x => x.g.drake1 != null); return { v: avgOf(r.map(x => (x.g.drake1 === x.p.team ? 1 : 0))), n: r.length }; },
+    gank: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => (St.gankedBefore(x.g, x.p) ? 1 : 0))), n: r.length }; },
+    takedowns15: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => St.takedownsBefore(x.g, x.p, 900))), n: r.length }; },
   };
 
   // ---------- helpers ----------
@@ -132,10 +164,10 @@
       }
       case 'avg': {
         if (r.roles && d.role && !r.roles.includes(d.role)) return [];
-        const { v, n } = METRICS[r.metric](d.role ? d.roleRows : rows);
+        const { v, n, vars } = METRICS[r.metric](d.role ? d.roleRows : rows);
         if (n < r.min || v == null) return [few(n, r.min)];
         const ok = r.atLeast != null ? v >= r.atLeast : v < r.below;
-        return [out(ok ? 'met' : 'not', { value: v, th: r.atLeast != null ? r.atLeast : r.below, n, vars: { v, n } })];
+        return [out(ok ? 'met' : 'not', { value: v, th: r.atLeast != null ? r.atLeast : r.below, n, vars: { v, n, ...vars } })];
       }
       case 'mastery': {
         if (!d.mastery) return [out('few', { n: 0, need: 1, unread: true })];

@@ -125,3 +125,48 @@ test('every threshold sits in tag-rules.js; every rule has a known type', () => 
   }
   assert.equal(new Set(TR.TAG_RULES.map(r => r.id)).size, TR.TAG_RULES.length);
 });
+
+// ---------- timeline tags (game format 4) ----------
+// kills: [second, killer index, victim index, [assist indexes]] – me = index 2 (mid), enemy mid = 7
+function tlGame(o = {}) {
+  const g = game({ ago: o.ago || 1, at: o.at ?? 2 });
+  g.kills = o.kills || [];
+  g.csm = Array.from({ length: 31 }, (_, m) => Array.from({ length: 10 }, (_, i) => m * (i === (o.at ?? 2) ? 9 : 6)));
+  g.w1 = Array.from({ length: 10 }, (_, i) => (i === (o.at ?? 2) ? (o.ward ?? 90) : null));
+  g.drake1 = o.drake1 ?? 100;
+  return g;
+}
+test('timeline tags: solo kills, duels, early deaths, early farm, lane CS, wards, first dragon', () => {
+  const kills = [[200, 2, 7, []], [400, 2, 6, []], [700, 2, 8, []], [800, 7, 2, []], [1300, 9, 2, [5]]];
+  const r = run(Array.from({ length: 10 }, (_, i) => tlGame({ ago: i + 1, kills })));
+  const one = id => get(r, id)[0];
+  assert.equal(one('soloFighter').state, 'met');                 // 3 solo kills per game
+  assert.equal(one('duelist').state, 'met');                     // 30 of 40 duels
+  assert.equal(one('duelist').vars.k, 30);
+  assert.equal(one('duelist').n, 40);
+  assert.equal(one('unkillable').state, 'met');                  // no death before 10:00
+  assert.equal(one('gankVictim').state, 'not');                  // the gank death came after 15:00
+  assert.equal(one('readyToRumble').state, 'met');               // a kill at 3:20
+  assert.equal(one('earlyWarder').state, 'met');                 // ward at 1:30
+  assert.equal(one('dragonSlayer').state, 'met');
+  assert.equal(one('earlyFarm').value, 135);                     // 9 CS a minute → 135 at 15
+  assert.equal(one('earlyFarm').level, 'great');
+  assert.equal(one('laneCs').value, 45);                         // 135 − 90
+  assert.equal(one('laneCs').level, 'master');
+  assert.ok(Math.abs(one('earlyShare').value - 9 / 33) < 1e-9);  // 9 of 9 + 4 × 6
+  // games stored before the timeline format: too little data, not "not met"
+  const old = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1 })));
+  for (const id of ['soloFighter', 'unkillable', 'earlyFarm', 'laneCs', 'earlyWarder', 'dragonSlayer']) assert.equal(get(old, id)[0].state, 'few', id);
+});
+test('timeline tags: jungle – ganks, aggressive and passive exclude each other', () => {
+  // me = jungler (index 1); kills on the enemy mid (7) and the enemy jungler (6)
+  const kills = [[300, 1, 7, []], [400, 2, 8, [1]], [500, 1, 6, []], [600, 3, 9, [1]], [700, 1, 7, [2]]];
+  const r = run(Array.from({ length: 6 }, (_, i) => tlGame({ ago: i + 1, at: 1, kills })));
+  assert.equal(r.role, 'jungle');
+  assert.equal(get(r, 'ganker')[0].state, 'met');
+  assert.equal(get(r, 'aggroJungler')[0].state, 'met');          // 5 takedowns before 15:00
+  assert.equal(get(r, 'passiveJungler')[0].state, 'not');
+  assert.equal(get(r, 'soloFighter').length, 1);
+  // a mid laner isn't judged as a jungler
+  assert.equal(get(run([tlGame()]), 'ganker').length, 0);
+});

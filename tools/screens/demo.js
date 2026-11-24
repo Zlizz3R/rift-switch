@@ -98,7 +98,17 @@ function game(n, win, owner = P(1), at = 0) {
   });
   const len = 24 + (n % 9);
   const gold = Array.from({ length: len }, (_, m) => players.map((p, i) => 500 + m * (320 + i * 9) + (p.win ? m * 22 : 0)));
-  return { id: String(7000 + n), v: 3, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
+  // the timeline parts of game format 4: CS per minute, kills [second, killer, victim, [assists]], first wards, first dragon
+  const csm = Array.from({ length: len }, (_, m) => players.map((p, i) => Math.round(m * (i % 5 === 3 ? 1.2 : 6 + (i === at ? 1.8 : 0) + (i % 5) * 0.3))));
+  const kills = [];
+  for (let k = 0; k < 14; k++) {
+    const own = rnd() < 0.35, killer = own ? at : Math.floor(rnd() * 10), victimTeam = players[killer].team === 100 ? 5 : 0;
+    const assists = rnd() < (own ? 0.4 : 0.7) ? [victimTeam === 5 ? Math.floor(rnd() * 5) : 5 + Math.floor(rnd() * 5)].filter(a => a !== killer) : [];
+    kills.push([60 + Math.floor(rnd() * (len - 2) * 60), killer, victimTeam + Math.floor(rnd() * 5), assists]);
+  }
+  kills.sort((a, b) => a[0] - b[0]);
+  const w1 = players.map(() => 60 + Math.floor(rnd() * 150));
+  return { id: String(7000 + n), v: 4, csm, kills, w1, drake1: (rnd() < 0.7) === win ? 100 : 200, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
     players, gold, teams: [{ id: 100, towers: win ? 9 : 3, drakes: win ? 3 : 1, barons: win ? 1 : 0 }, { id: 200, towers: win ? 2 : 8, drakes: win ? 1 : 3 }], owners: [owner] };
 }
 const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true),

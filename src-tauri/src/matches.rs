@@ -39,8 +39,10 @@ pub struct Entry {
 }
 
 /// Format of games stored now: 2 = players carry their position ("pos"); 3 = every stat for the
-/// details view ("x"), team objectives ("teams") and the gold of each player per minute ("gold").
-pub const GAME_VERSION: u8 = 3;
+/// details view ("x"), team objectives ("teams") and the gold of each player per minute ("gold");
+/// 4 = from the timeline also CS per minute ("csm"), every champion kill ("kills"), each player's
+/// first ward ("w1") and who took the first dragon ("drake1") – for the timeline tags.
+pub const GAME_VERSION: u8 = 4;
 /// Summoner's Rift queues (only there positions mean something)
 const SR_QUEUES: [i64; 7] = [400, 420, 430, 440, 480, 490, 700];
 
@@ -74,6 +76,7 @@ impl Matches {
             m.migrate_old(&data_dir.join("matches.json"));
         }
         m.read_index();
+        m.shrink_if_worth();
         if let Ok(t) = fs::read_to_string(m.dir.join("by.json")) {
             if let Ok(Value::Object(o)) = serde_json::from_str::<Value>(&t) {
                 m.by = o
@@ -285,7 +288,25 @@ impl Matches {
         if keep.len() == self.index.len() {
             return;
         }
-        let games = self.read_games(&keep);
+        self.rewrite(&keep);
+    }
+    /// Bytes of games.jsonl no game points to any more (older formats of upgraded games).
+    fn dead_bytes(&self) -> (u64, u64) {
+        let file = fs::metadata(self.dir.join("games.jsonl")).map_or(0, |m| m.len());
+        let live: u64 = self.index.values().map(|e| e.len as u64 + 1).sum();
+        (file.saturating_sub(live), file)
+    }
+    /// Upgraded games leave their old line behind: once that is over a megabyte and a third of
+    /// the file, the file is written again with only the current lines (at start-up).
+    fn shrink_if_worth(&mut self) {
+        let (dead, file) = self.dead_bytes();
+        if dead > 1_000_000 && dead * 3 > file {
+            let keep: Vec<String> = self.index.keys().cloned().collect();
+            self.rewrite(&keep);
+        }
+    }
+    fn rewrite(&mut self, keep: &[String]) {
+        let games = self.read_games(keep);
         if games.len() < keep.len() {
             return; // couldn't read them all: better keep a few unused games than lose some
         }
@@ -575,26 +596,92 @@ fn team(t: &Value) -> Value {
         "barons": num(&t["baronKills"]), "heralds": num(&t["riftHeraldKills"]), "grubs": num(&t["hordeKills"]),
         "bans": t["bans"].as_array().map(|b| b.iter().map(|x| num(&x["championId"])).filter(|c| c.as_i64().unwrap_or(0) > 0).collect::<Vec<_>>()).unwrap_or_default() })
 }
-/// The client's game timeline -> "gold": one list per minute with every player's total gold
-/// (in the order of "players"). Kept as long as the details view needs it (~1–2 KB).
+/// The client's game timeline -> per minute every player's total gold ("gold") and CS ("csm"),
+/// in the order of "players"; every champion kill as [second, killer, victim, [assists]] with
+/// player indexes (-1 = no champion, e.g. a tower); each player's first ward in seconds ("w1",
+/// null = none) and the team of the first dragon ("drake1"). About 3–4 KB per game.
 pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
     let Some(frames) = tl["frames"].as_array() else {
         return;
     };
-    let gold: Vec<Value> = frames
-        .iter()
-        .map(|f| {
-            let pf = &f["participantFrames"];
-            Value::Array(
-                participant_ids
-                    .iter()
-                    .map(|id| num(&pf[id.to_string().as_str()]["totalGold"]))
-                    .collect(),
-            )
-        })
-        .collect();
+    let per_minute = |f: &dyn Fn(&Value) -> Value| -> Vec<Value> {
+        frames
+            .iter()
+            .map(|fr| {
+                let pf = &fr["participantFrames"];
+                Value::Array(
+                    participant_ids
+                        .iter()
+                        .map(|id| f(&pf[id.to_string().as_str()]))
+                        .collect(),
+                )
+            })
+            .collect()
+    };
+    let gold = per_minute(&|p| num(&p["totalGold"]));
     if gold.len() > 1 {
         game["gold"] = Value::Array(gold);
+        game["csm"] = Value::Array(per_minute(&|p| {
+            json!(
+                num_of(p.get("minionsKilled")) as i64 + num_of(p.get("jungleMinionsKilled")) as i64
+            )
+        }));
+    }
+    // participant id -> index in "players"
+    let idx = |v: &Value| -> i64 {
+        let id = v.as_i64().unwrap_or(0);
+        participant_ids
+            .iter()
+            .position(|p| *p == id && id > 0)
+            .map_or(-1, |i| i as i64)
+    };
+    let sec = |e: &Value| num_of(e.get("timestamp")) as i64 / 1000;
+    let events = frames
+        .iter()
+        .filter_map(|f| f["events"].as_array())
+        .flatten();
+    let (mut kills, mut w1, mut drake1) = (
+        vec![],
+        vec![Value::Null; participant_ids.len()],
+        Value::Null,
+    );
+    for e in events {
+        match e["type"].as_str().unwrap_or("") {
+            "CHAMPION_KILL" => {
+                let assists: Vec<i64> = e["assistingParticipantIds"]
+                    .as_array()
+                    .map(|a| a.iter().map(idx).filter(|i| *i >= 0).collect())
+                    .unwrap_or_default();
+                kills.push(json!([
+                    sec(e),
+                    idx(&e["killerId"]),
+                    idx(&e["victimId"]),
+                    assists
+                ]));
+            }
+            "WARD_PLACED" if e["wardType"] != "UNDEFINED" => {
+                let i = idx(&e["creatorId"]);
+                if i >= 0 && w1[i as usize].is_null() {
+                    w1[i as usize] = json!(sec(e));
+                }
+            }
+            "ELITE_MONSTER_KILL" if drake1.is_null() && e["monsterType"] == "DRAGON" => {
+                let i = idx(&e["killerId"]);
+                let team = game["players"]
+                    .get(i.max(0) as usize)
+                    .filter(|_| i >= 0)
+                    .map(|p| p["team"].clone());
+                drake1 = team
+                    .or_else(|| e.get("killerTeamId").cloned())
+                    .unwrap_or(Value::Null);
+            }
+            _ => {}
+        }
+    }
+    if frames.len() > 1 {
+        game["kills"] = Value::Array(kills);
+        game["w1"] = Value::Array(w1);
+        game["drake1"] = drake1;
     }
 }
 /// The participant ids of a game detail, in the order compact() lists the players.
@@ -843,6 +930,58 @@ mod tests {
         );
         let games = read_entries(&m.games_file(), &m.entries(&["7".to_string()]));
         assert_eq!(games[0]["id"], "7");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn timeline_kills_wards_first_dragon_cs() {
+        let mut g = compact(&detail(9)).unwrap();
+        let pf = |cs: i64| {
+            (1..=10).map(|i| (i.to_string(), json!({ "totalGold": 500, "minionsKilled": cs * i, "jungleMinionsKilled": 1 }))).collect::<serde_json::Map<_, _>>()
+        };
+        let tl = json!({ "frames": [
+            { "participantFrames": pf(0), "events": [
+                { "type": "WARD_PLACED", "creatorId": 3, "wardType": "YELLOW_TRINKET", "timestamp": 95000 },
+                { "type": "WARD_PLACED", "creatorId": 3, "wardType": "SIGHT_WARD", "timestamp": 200000 },
+                { "type": "WARD_PLACED", "creatorId": 4, "wardType": "UNDEFINED", "timestamp": 50000 } ] },
+            { "participantFrames": pf(5), "events": [
+                { "type": "CHAMPION_KILL", "killerId": 1, "victimId": 7, "assistingParticipantIds": [2, 3], "timestamp": 130500 },
+                { "type": "CHAMPION_KILL", "killerId": 0, "victimId": 2, "timestamp": 150000 },
+                { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "killerId": 8, "timestamp": 400000 },
+                { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "killerId": 2, "timestamp": 900000 } ] } ] });
+        add_timeline(&mut g, &tl, &participant_ids(&detail(9)));
+        assert_eq!(g["csm"][1][0], 6); // 5 minions + 1 monster
+        assert_eq!(g["csm"][1][9], 51);
+        assert_eq!(g["kills"], json!([[130, 0, 6, [1, 2]], [150, -1, 1, []]]));
+        // first ward per player; "UNDEFINED" (not a real ward) doesn't count
+        assert_eq!(g["w1"][2], 95);
+        assert!(g["w1"][3].is_null());
+        // the first dragon: the team of its killer (participant 8 = index 7)
+        assert_eq!(g["drake1"], g["players"][7]["team"]);
+        assert_eq!(g["v"], 4);
+    }
+
+    #[test]
+    fn upgraded_games_leave_no_dead_weight() {
+        let dir = std::env::temp_dir().join(format!("rs-shrink-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let mut m = Matches::load(&dir);
+        let pad = "x".repeat(20_000);
+        for id in 1..=80 {
+            let mut old = compact(&detail(id)).unwrap();
+            old["v"] = json!(3);
+            old["pad"] = json!(pad);
+            assert!(m.insert(&old));
+            assert!(m.insert(&compact(&detail(id)).unwrap()));
+        }
+        let before = fs::metadata(m.games_file()).unwrap().len();
+        assert!(m.dead_bytes().0 > 1_000_000);
+        let m2 = Matches::load(&dir);
+        let after = fs::metadata(m2.games_file()).unwrap().len();
+        assert!(after * 3 < before, "{after} vs {before}");
+        assert_eq!(m2.count(), 80);
+        assert_eq!(m2.dead_bytes().0, 0);
+        assert!(m2.outdated(100).is_empty());
         let _ = fs::remove_dir_all(&dir);
     }
 }

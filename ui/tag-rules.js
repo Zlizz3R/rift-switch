@@ -47,6 +47,16 @@
     { id: 'laneGold', group: 'stats', type: 'metric', metric: 'goldDiff15', dir: 1, min: 6, stage: 'C', roles: ALL, period: 'season', dec: 0, signed: true,
       levels: { great: 500, master: 1000 /* V */, weak: -500 /* V */ } }, // TODO Schwelle prüfen (Meister, Schwach)
 
+    // from the timeline (game format 4)
+    { id: 'earlyFarm', group: 'stats', type: 'metric', metric: 'cs15', dir: 1, min: 6, stage: 'C', roles: NOT_SUP, period: 'season', dec: 0,
+      levels: { great: 120, master: 140 /* V */, weak: 85 /* V */ } },    // TODO Schwelle prüfen (Meister, Schwach)
+    { id: 'laneCs', group: 'stats', type: 'metric', metric: 'laneCs15', dir: 1, min: 6, stage: 'C', roles: NOT_SUP, period: 'season', dec: 1, signed: true,
+      levels: { great: 15, master: 25 /* V */, terrible: -15 } },         // TODO Schwelle prüfen (Meister)
+    { id: 'earlyShare', group: 'stats', type: 'metric', metric: 'share0to15', dir: 1, min: 6, stage: 'C', roles: NOT_SUP, period: 'season', pct: true,
+      levels: { great: 0.275 /* V */, master: 0.32 /* V */, weak: 0.15 /* V */ } }, // TODO Schwelle prüfen
+    { id: 'midShare', group: 'stats', type: 'metric', metric: 'share15to30', dir: 1, min: 6, stage: 'C', roles: NOT_SUP, period: 'season', pct: true,
+      levels: { great: 0.275, master: 0.32 /* V */, weak: 0.15 /* V */ } }, // TODO Schwelle prüfen (Meister, Schwach)
+
     // ---------- fight & play ----------
     { id: 'teamPlayer', group: 'fight', type: 'metric', metric: 'kp', dir: 1, min: 10, stage: 'B', roles: ALL, period: 'season', pct: true,
       levels: { great: 0.65, master: 0.75 /* V */ },                      // TODO Schwelle prüfen (Meister)
@@ -55,11 +65,22 @@
     { id: 'towerBreaker', group: 'fight', type: 'avg', metric: 'turretDmg', atLeast: 10000, min: 10, stage: 'B', roles: ALL, color: 'warn', period: 'season' },
     { id: 'noPinks', group: 'fight', type: 'avg', metric: 'pinks', below: 1 /* V */, min: 10, stage: 'B', roles: ALL, color: 'bad', period: 'season', dec: 1 }, // TODO Schwelle prüfen
 
+    { id: 'soloFighter', group: 'fight', type: 'avg', metric: 'soloKills', atLeast: 2.5, min: 6, stage: 'C', roles: ALL, color: 'good', period: 'season', dec: 1 },
+    { id: 'duelist', group: 'fight', type: 'avg', metric: 'duels', atLeast: 0.66, min: 10, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
+    { id: 'unkillable', group: 'fight', type: 'avg', metric: 'deaths10', below: 1, min: 6, stage: 'C', roles: ALL, color: 'good', period: 'season', dec: 1 },
+    { id: 'gankVictim', group: 'fight', type: 'avg', metric: 'gankDeaths15', atLeast: 2, min: 6, stage: 'C', roles: ALL, color: 'bad', period: 'season', dec: 1 },
+    { id: 'readyToRumble', group: 'fight', type: 'avg', metric: 'firstKill5', atLeast: 0.66, min: 6, stage: 'C', roles: ALL, color: 'warn', period: 'season', pct: true },
+    { id: 'earlyWarder', group: 'fight', type: 'avg', metric: 'ward3', atLeast: 0.9, min: 6, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
+    { id: 'dragonSlayer', group: 'fight', type: 'avg', metric: 'firstDrake', atLeast: 0.66, min: 10, stage: 'B', roles: ALL, color: 'good', period: 'season', pct: true },
+    { id: 'ganker', group: 'fight', type: 'avg', metric: 'gank', atLeast: 0.666, min: 6, stage: 'C', roles: ['jungle'], color: 'good', period: 'season', pct: true },
+    { id: 'aggroJungler', group: 'fight', type: 'avg', metric: 'takedowns15', atLeast: 4, min: 6, stage: 'C', roles: ['jungle'], color: 'warn', period: 'season', dec: 1 },
+    { id: 'passiveJungler', group: 'fight', type: 'avg', metric: 'takedowns15', below: 2, min: 6, stage: 'C', roles: ['jungle'], color: 'warn', period: 'season', dec: 1 },
+
     // ---------- mastery (all accounts together on the own accounts) ----------
     { id: 'mastery', group: 'mastery', type: 'mastery', stage: 'M', color: 'info', steps: { millionaire: 1000000, veteran: 500000, expert: 100000 }, max: 3 },
   ];
   // what may not stand next to each other (5.4); the first one wins
-  const TAG_CONFLICTS = [['otp', 'flexPool'], ['generalist', 'autofill'], ['hotStreak', 'lossStreak']];
+  const TAG_CONFLICTS = [['otp', 'flexPool'], ['generalist', 'autofill'], ['hotStreak', 'lossStreak'], ['unkillable', 'gankVictim'], ['aggroJungler', 'passiveJungler']];
   // a tag stays until its value is this much past the threshold the other way (no flicker)
   const TAG_HYSTERESIS = 0.05;
   // the main role: at least this share of the games, from this many games on

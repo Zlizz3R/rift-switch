@@ -103,6 +103,37 @@
     return Number.isFinite(row[i]) && Number.isFinite(row[j]) ? row[i] - row[j] : null;
   }
 
+  // ---------- timeline (game format 4: "csm", "kills" [second, killer, victim, [assists]], "w1", "drake1") ----------
+  const hasKills = g => Array.isArray(g.kills);
+  const pIdx = (g, p) => g.players.indexOf(p);
+  // CS of player i at minute m; null when the game has no such minute
+  const csAt = (g, i, m) => (g.csm && g.csm.length > m && g.csm[m] ? g.csm[m][i] : null);
+  // solo kill: a kill on a champion without any assist, by a champion (docs/plans 5.2)
+  const soloKills = (g, p) => g.kills.filter(k => k[1] === pIdx(g, p) && k[2] >= 0 && !k[3].length).length;
+  // solo death: killed by one enemy champion without assists; gank death: with at least one assist
+  const soloDeaths = (g, p) => g.kills.filter(k => k[2] === pIdx(g, p) && k[1] >= 0 && !k[3].length).length;
+  const deathsBefore = (g, p, sec) => g.kills.filter(k => k[2] === pIdx(g, p) && k[0] < sec).length;
+  const gankDeathsBefore = (g, p, sec) => g.kills.filter(k => k[2] === pIdx(g, p) && k[0] < sec && k[3].length > 0).length;
+  // kills and assists before a time; the first own kill
+  const takedownsBefore = (g, p, sec) => { const i = pIdx(g, p); return g.kills.filter(k => k[0] < sec && (k[1] === i || k[3].includes(i))).length; };
+  const killBefore = (g, p, sec) => g.kills.some(k => k[1] === pIdx(g, p) && k[0] < sec);
+  // farm share from minute a to b: own CS ÷ the team's CS in that time; null if not known
+  function farmShare(g, p, a, b) {
+    const i = pIdx(g, p);
+    const mine = csAt(g, i, b) != null && csAt(g, i, a) != null ? csAt(g, i, b) - csAt(g, i, a) : null;
+    const team = g.players.reduce((s, o, j) => (o.team === p.team && csAt(g, j, b) != null ? s + csAt(g, j, b) - (csAt(g, j, a) || 0) : s), 0);
+    return mine != null && team > 0 ? mine / team : null;
+  }
+  // a successful gank (jungle): a kill before 14:00 the jungler took part in, on an enemy laner
+  function gankedBefore(g, p, sec = 840) {
+    const i = pIdx(g, p);
+    return g.kills.some(k => {
+      const v = k[2] >= 0 ? g.players[k[2]] : null;
+      const r = v && role(g, v);
+      return k[0] < sec && (k[1] === i || k[3].includes(i)) && v && v.team !== p.team && r && r !== 'jungle';
+    });
+  }
+
   // ---------- which player rows count ----------
   // the own player of a game: its first own account (a game counts once)
   const me = g => g.players.find(p => p.puuid === (g.owners || [])[0]) || g.players[0];
@@ -161,7 +192,7 @@
   }
 
   const api = { REMAKE_SEC, ARAM_QUEUES, RANKED_QUEUES, winPct, isRemake, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
-    visMin, dmgShare, perGame, POSITIONS, roles, role, laneOpponent, goldDiffAt, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
+    visMin, dmgShare, perGame, POSITIONS, roles, role, laneOpponent, goldDiffAt, hasKills, csAt, soloKills, soloDeaths, deathsBefore, gankDeathsBefore, takedownsBefore, killBefore, farmShare, gankedBefore, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Stats = api;
 })(typeof window !== 'undefined' ? window : this);
