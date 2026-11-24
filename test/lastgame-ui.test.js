@@ -5,8 +5,8 @@ const { boot, P } = require('./harness');
 
 const player = (i, o = {}) => ({ puuid: 'x' + i, name: 'N' + i, tag: 'EUW', team: i < 5 ? 100 : 200, champ: 10 + i, pos: '', win: i < 5,
   k: 2, d: 3, a: 4, cs: 150, gold: 9000, dmg: 15000, vis: 20, lvl: 14, items: [0, 0, 0, 0, 0, 0, 0], spells: [4, 14], keystone: 0, sub: 0, ...o });
-// three hours ago: no post-game overview any more, so Live shows the small row
-const game = { id: '4242', t: Date.now() - 3 * 3600000, dur: 1800, q: 420, mode: 'CLASSIC', remake: false, v: 3,
+// 13 hours ago: no post-game overview any more (it stays up to 12 h), so Live shows the small row
+const game = { id: '4242', t: Date.now() - 13 * 3600000, dur: 1800, q: 420, mode: 'CLASSIC', remake: false, v: 3,
   players: [player(0, { puuid: P(1), champ: 420, k: 7, d: 0, a: 9, cs: 240 }), ...Array.from({ length: 9 }, (_, i) => player(i + 1))] };
 const replies = {
   matches: { index: [['4242', game.t, 420, P(1)]], waiting: 0, loadingOlder: false, clientUp: true },

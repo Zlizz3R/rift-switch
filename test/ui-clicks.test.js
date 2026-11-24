@@ -347,6 +347,8 @@ test('live page: only real penalties, with time left; a queue wait shows in the 
   const rows = app.$$('.pen-row');
   assert.equal(rows.length, 1, 'Unknown / GameVersionMissing are no penalties');
   assert.match(rows[0].textContent, /left/);
+  // no champ select: the helper is the folded champion pool – unfolded, the help is there
+  await app.click('[data-poolfold]');
   await app.click('[data-help="helper"]');
   assert.ok(app.visible('#helpBox'));
 }));
@@ -391,6 +393,10 @@ test('champ select helper: one counters page per enemy ranks the pool; pre-load 
   st.settings.champPool = [1, 3];
   return withApp({ state: st, replies: { champions: champs, counters: (enemy) => ({ ok: true, list: pages[enemy] || [] }) } }, async (app) => {
     await app.click('#navLive');
+    // outside champ select the helper is folded (kept as a setting); unfolded it is all there
+    assert.ok(!app.$('.helper'));
+    await app.click('[data-poolfold]');
+    assert.deepEqual(lastCall(app, 'set-setting').args, ['uiTabs', { pool: 'open' }]);
     assert.match(app.$('.helper').textContent, /My champion pool/);
     assert.equal(app.$$('.h-chip').length, 2);
     await app.type('#hEnemy', 'Darius');
@@ -775,7 +781,7 @@ test('live page: stands at once, even while the client and the champion list sti
   await app.click('#navLive');
   assert.ok(!app.$('#viewLive').hidden);
   assert.match(app.$('#liveBody').textContent, /Loading/);
-  assert.ok(app.$('#liveBody .helper'), 'the champ select helper is there right away');
+  assert.ok(app.$('#liveBody .pool-box'), 'the champion pool is there right away');
 }));
 
 // ---------- app behaviour ----------

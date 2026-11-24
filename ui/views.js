@@ -485,7 +485,10 @@ function renderLive(force) {
       ${cs.allies.map(playerRow).join('')}
       ${cs.hiddenNames ? `<p class="fine">${t('live.hidden')}</p>` : ''}
       ${cs.enemies.some(e => e.championId) ? `<div class="enemy-row">${t('live.enemies')}: ${cs.enemies.filter(e => e.championId).map(e => `<img class="ch" title="${esc((champById(e.championId) || {}).name || '')}" src="${champIcon(e.championId)}" alt="">`).join('')}</div>` : ''}
+      ${dmgMixHtml([{ label: t('live.enemies'), champs: cs.enemies.map(e => ({ puuid: '', champ: e.championId })) }, { label: t('live.allies'), champs: cs.allies.map(a => ({ puuid: a.puuid, champ: a.championId })) }])}
     </div>`);
+    // a new champ select ends the post-game overview
+    if (typeof pg !== 'undefined' && pg.game) pg.closedId = String(pg.game.id);
     // enemy laner known? (same position) -> preselect for the helper
     const opp = enemyPicks().find(p => p.laner);
     if (opp && (!helper.enemy || (helper.autoEnemy && helper.enemy !== opp.id))) { helper.enemy = opp.id; helper.autoEnemy = true; }
@@ -499,7 +502,7 @@ function renderLive(force) {
   if (last) parts.push(last);
   if (!liveData) parts.push(`<div class="live-card"><p class="fine">${t('live.loading')}</p></div>`);
   else if (!post && !last && (!parts.length || (parts.length === 1 && pens))) parts.push(`<div class="live-card"><p class="fine">${t('live.nothing')}</p></div>`);
-  parts.push(helperHtml());
+  parts.push(helperByPhase(d));
   // keep focus/scroll of the helper's inputs: only replace when something changed
   const html = parts.join('');
   if ($('liveBody').dataset.html !== html) { $('liveBody').innerHTML = html; $('liveBody').dataset.html = html; }

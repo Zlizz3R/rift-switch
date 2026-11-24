@@ -65,7 +65,7 @@ function scCard(p, enemyChamps) {
   const roles = Tags.mainRole(parts);
   const pos = SC_POS[String(p.position || '').toUpperCase()] || '';
   const live = Tags.liveTags({ games, puuid: p.puuid, champ, mastery: pts, position: pos, main: res.main, enemyChamps, bans: [], results: res.results });
-  const out = { p, n: parts.length, ag: Stats.aggregate(onChamp), pts, roles, pos, tags: [...live, ...Tags.pick(res.results)] };
+  const out = { p, n: parts.length, ag: Stats.aggregate(onChamp), pts, roles, pos, live, tags: Tags.pick(res.results) };
   if (scv.memo) scv.memo.set(key, out);
   return out;
 }
@@ -110,8 +110,12 @@ function scRank(label, r) {
 }
 const scRing = (pct, inner, cls = '') => `<div class="sc-ring ${cls}" style="--p:${pct == null ? 0 : Math.round(pct)}">${inner}</div>`;
 
-function scCardHtml(c, side, slot, guess) {
+function scCardHtml(c, side, slot, guess, ex = {}) {
   const p = c.p;
+  // live tags first, then the hints about this game (premades, met before, record), then the rest
+  const chips = [...c.live.map(scChip), ...(ex.chips || []), ...c.tags.map(scChip)];
+  const party = ex.party ? ` data-party="${ex.party}"` : '';
+  const pcls = ex.party ? ` pa${((ex.party - 1) % 2) + 1}${ex.joinR ? ' join-r' : ''}` : '';
   const tier = p.solo && p.solo.tier;
   const prog = ((S.scout && S.scout.players) || {})[p.puuid];
   const bar = prog && prog[1] && prog[0] < prog[1] ? `<i class="sc-bar" style="width:${Math.round((100 * prog[0]) / prog[1])}%"></i>` : '';
@@ -124,8 +128,8 @@ function scCardHtml(c, side, slot, guess) {
   const share = main && c.roles.total ? (100 * (c.roles.shares.get(main) || 0)) / c.roles.total : null;
   const role = main ? `${scRing(share, `<img src="${posIcon(main)}" alt="">`)}<small>${Math.round(share)} %</small>` : `${scRing(null, '<b>–</b>', 'none')}<small>${esc(t('scout.noRole'))}</small>`;
   const roleTip = main ? t(c.roles.main ? 'scout.roleTip' : 'scout.roleMostTip', { role: t('pos.' + main), pct: Math.round(share), n: c.roles.total }) : t('scout.noRole');
-  return `<div class="sc-card ${side}${p.puuid && liveData && p.puuid === liveData.me ? ' me' : ''}" data-sc="${esc(p.puuid || '')}"${tier && TIER_COLORS[tier] ? ` style="--rk:${TIER_COLORS[tier]}"` : ''}>
-    ${bar}
+  return `<div class="sc-card ${side}${p.puuid && liveData && p.puuid === liveData.me ? ' me' : ''}${pcls}" data-sc="${esc(p.puuid || '')}"${party}${tier && TIER_COLORS[tier] ? ` style="--rk:${TIER_COLORS[tier]}"` : ''}>
+    ${bar}${ex.party ? `<span class="sc-chain" title="${esc(ex.partyTip || '')}">${ex.chain ? '⛓ ' + ex.chain : '⛓'}</span>` : ''}
     <div class="sc-head">${p.iconId != null ? `<img class="sc-ic" src="${iconUrl(p.iconId)}" alt="">` : '<span class="sc-ic"></span>'}
       <span class="sc-name"><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.level ? ' · ' + esc(t('scout.level', { n: p.level })) : ''}</small></span>
       ${slot ? `<img class="sc-pos${guess ? ' guess' : ''}" src="${posIcon(slot)}" alt="" title="${esc(t('pos.' + slot) + (guess ? ' – ' + t('scout.guessed') : ''))}">` : ''}</div>
@@ -135,7 +139,7 @@ function scCardHtml(c, side, slot, guess) {
       <div class="sc-ranks">${scRank('Solo/Duo', p.solo)}${scRank('Flex', p.flex)}</div>
     </div>
     <div class="sc-rings"><div title="${esc(wrTip)}">${wr}</div><div title="${esc(roleTip)}">${role}</div></div>
-    <div class="sc-tags">${c.tags.length ? c.tags.map(scChip).join('') : `<span class="muted">${esc(c.n ? t('scout.noTags', { n: c.n }) : t('scout.noData'))}</span>`}</div>
+    <div class="sc-tags">${chips.length ? chips.join('') : `<span class="muted">${esc(c.n ? t('scout.noTags', { n: c.n }) : t('scout.noData'))}</span>`}</div>
   </div>`;
 }
 
@@ -148,8 +152,11 @@ function scoutBoardHtml(d) {
   const mineKey = g.teamTwo.some(p => p.puuid === d.me) ? 'teamTwo' : 'teamOne';
   const theirsKey = mineKey === 'teamOne' ? 'teamTwo' : 'teamOne';
   const champsOf = team => g[team].map(p => p.championId).filter(Boolean);
-  const row = (team, side, enemy) => scOrder(g[team].map(p => scCard(p, champsOf(enemy))), g.queueId)
-    .map(({ c, slot, guess }) => scCardHtml(c, side, slot, guess)).join('');
+  const laid = [[mineKey, theirsKey], [theirsKey, mineKey]].map(([team, enemy]) => scOrder(g[team].map(p => scCard(p, champsOf(enemy))), g.queueId));
+  const extras = typeof lmBoardExtras === 'function' ? lmBoardExtras(g, laid) : new Map();
+  const row = (i, side) => laid[i].map(({ c, slot, guess }) => scCardHtml(c, side, slot, guess, extras.get(c.p.puuid))).join('');
+  const team = k => g[k].map(p => ({ puuid: p.puuid, champ: p.championId }));
+  const mix = typeof dmgMixHtml === 'function' ? dmgMixHtml([{ label: t('live.enemies'), champs: team(theirsKey) }, { label: t('live.allies'), champs: team(mineKey) }]) : '';
   const sc = S.scout;
   let prog = '';
   if (sc && sc.of) {
@@ -162,12 +169,12 @@ function scoutBoardHtml(d) {
   const exact = !!(S.settings && S.settings.tagsLong);
   const opgg = g[theirsKey].filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
   return `<div class="live-card sc-board">
-    <div class="lc-head"><h3>${t('scout.title')}</h3>
+    <div class="lc-head"><h3>${t('scout.title')}</h3>${mix}
       <div class="seg sc-mode"><span>${t('scout.tags')}</span><button data-sctags="0"${exact ? '' : ' class="on"'}>${t('scout.short')}</button><button data-sctags="1"${exact ? ' class="on"' : ''}>${t('scout.exact')}</button></div>
       ${opgg.length ? `<button class="btn gold ext-btn multi-btn" data-ids="${esc(opgg.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button>` : ''}</div>
     ${prog}
-    <div class="sc-row">${row(mineKey, 'ally', theirsKey)}</div>
-    <div class="sc-row">${row(theirsKey, 'enemy', mineKey)}</div>
+    <div class="sc-row">${row(0, 'ally')}</div>
+    <div class="sc-row">${row(1, 'enemy')}</div>
   </div>`;
 }
 document.addEventListener('click', e => {

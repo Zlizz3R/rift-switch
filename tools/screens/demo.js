@@ -142,6 +142,10 @@ LG.slice(1).forEach(([puuid, , champ, , at], k) => {
   const list = Array.from({ length: 16 }, (_, j) => game(200 + k * 20 + j, rnd() < 0.55, puuid, at));
   scoutData[puuid] = { games: list.map(g => ({ ...g, owners: [puuid] })), mastery: { [champ]: 40000 + k * 61000, 103: 12000 } };
 });
+// Split Push Sam and Gank Plank queue together (two games in one team: a party); Shadow Step was
+// the own mid's lane opponent in an own game ("do I know them?", the record against Zed)
+for (const g of scoutData.e1.games.slice(0, 2)) { g.players[6].puuid = 'e2'; scoutData.e2.games.push({ ...g, owners: ['e2'] }); }
+games[2].players[7].puuid = 'e3';
 const scoutState = { of: 9, listed: 9, done: 131, total: 144, running: false, players: Object.fromEntries(LG.slice(1).map(([p], k) => [p, [k === 7 ? 9 : 16, 16]])) };
 const counters = { Zed: { share: 88, list: [{ name: 'Ahri', wr: 51.8, rating: 6.4 }, { name: 'Lulu', wr: 50.9, rating: 5.6 }, { name: 'Galio', wr: 53.2, rating: 7.1 }, { name: 'Malzahar', wr: 54.0, rating: 7.6 }, { name: 'Syndra', wr: 48.7, rating: 4.2 }] } };
 

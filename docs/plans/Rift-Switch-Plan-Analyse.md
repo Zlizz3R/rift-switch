@@ -595,7 +595,14 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Position, geschätzte Position blass, Rang-Tönung nach innen, Kreise Winrate-auf-Champion und Hauptrolle, Tags mit
   kurz/genau, Tag-Bereich scrollt, Ladebalken gesamt und je Karte). Live-Tags in `Tags.liveTags`. Am echten Spiel
   noch nicht gesehen (Ladebildschirm → Spielstart, Tempo von Stufe A).
-- [ ] Phase 5b – Mehr Live-Infos
+- [x] Phase 5b – Mehr Live-Infos – 24.11.2026: Nach-dem-Spiel-Übersicht bleibt bis zum nächsten Champ Select (höchstens
+  12 Std.) und zeigt die eigenen Tags vorher/nachher (▲/▼, Tooltip mit Werten, eine Zeile). Helper je Phase: ohne Spiel
+  eingeklappter „Champion-Pool“ (gemerkt), Champ Select voll, im Spiel weg. Schadensverteilung AD/AP/True je Team (Champ
+  Select und Spiel; Quelle Spieler → Champion-Schnitt → Schadensart von CommunityDragon, `champ-damage`; Hinweis ab
+  65 %). Premades: ≥ 2 frühere Spiele im selben Team (aus den gespeicherten Spielen, Stufe B statt A – die Match-Liste
+  hat keine Teams), Rahmen je Party (Violett/Magenta, nebeneinander verbunden, sonst ⛓ + Nummer, Hover hebt Partner
+  hervor); genau 1 gemeinsames Spiel = Hinweis-Tag auf beiden Karten. „Kenne ich den?“ gegen alle eigenen Spiele
+  (Klick öffnet das Spiel). Eigene Bilanz gegen den Champion des Lane-Gegners. Rechnen in `ui/insights.js`.
 - [ ] Phase 6 – Spielstilprofil gegen den Lane-Gegner
 - [ ] Phase 7 – Trends und Bestwerte
 - [ ] Phase 8 – Frühere Ranked-Seasons

@@ -2852,6 +2852,16 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         "live" => live::snapshot().await,
         "champions" => live::champions(data()).await,
         "counters" => live::counters(data(), &s(0), &s(1)).await,
+        "champ-damage" => {
+            let ids: Vec<i64> = a(0)
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_i64)
+                .take(20)
+                .collect();
+            live::damage_types(data(), &ids).await
+        }
         "tool" => with_busy(do_tool(s(0))).await,
         "open-multi" => {
             // op.gg multisearch for up to 5 Riot IDs (Clash opponents, picked tiles)

@@ -49,6 +49,7 @@ async function boot({ state = sampleState(), replies = {}, width = 1300, upTo = 
     if (ch === 'dashboard' || ch === 'collections' || ch === 'masteries') return [];
     if (ch === 'mastery-history' || ch === 'own-games' || ch === 'scout-games') return {};
     if (ch === 'others-storage') return { bytes: 0, games: 0 };
+    if (ch === 'champ-damage') return {};
     if (ch === 'mh-storage') return { bytes: 0, games: 0 };
     if (ch === 'mh-assets') return { items: {}, spells: {}, perks: {}, styles: {} };
     if (ch === 'live') return { clientUp: false };

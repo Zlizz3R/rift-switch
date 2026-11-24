@@ -290,6 +290,47 @@ fn cached(file: &Path, check: impl Fn(&Value) -> bool) -> Option<Value> {
     (now_ms() - c["at"].as_i64().unwrap_or(0) < 86_400_000 && check(&c)).then_some(c)
 }
 
+/// Each champion's damage type from CommunityDragon ("kPhysical" / "kMagic" / "kMixed"), only for
+/// the champions asked for (at most 10 new ones a call), kept on disk – it hardly ever changes.
+pub async fn damage_types(data_dir: &Path, ids: &[i64]) -> Value {
+    let file = data_dir.join("champion-damage.json");
+    let mut known: crate::accounts::Obj = std::fs::read_to_string(&file)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
+    let missing: Vec<i64> = ids
+        .iter()
+        .copied()
+        .filter(|i| *i > 0 && *i < 10_000 && !known.contains_key(&i.to_string()))
+        .take(10)
+        .collect();
+    let got = futures_util::future::join_all(missing.iter().map(|id| async move {
+        let url = format!("https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champions/{id}.json");
+        let t = web_json(&url, 6).await.and_then(|v| v["tacticalInfo"]["damageType"].as_str().map(String::from));
+        (*id, t)
+    }))
+    .await;
+    let mut changed = false;
+    for (id, t) in got {
+        if let Some(t) = t {
+            known.insert(id.to_string(), json!(t));
+            changed = true;
+        }
+    }
+    if changed {
+        let _ = std::fs::write(&file, Value::Object(known.clone()).to_string());
+    }
+    Value::Object(
+        ids.iter()
+            .filter_map(|i| {
+                known
+                    .get(&i.to_string())
+                    .map(|t| (i.to_string(), t.clone()))
+            })
+            .collect(),
+    )
+}
+
 static CHAMPS: Mutex<Option<Value>> = Mutex::new(None);
 pub async fn champions(data_dir: &Path) -> Value {
     if let Some(c) = CHAMPS.lock().unwrap().clone() {

@@ -6,7 +6,7 @@
 // Uses the globals of renderer.js / views.js / matches-view.js.
 
 const pg = { game: null, checked: 0, busy: false, key: '' };
-const PG_FRESH = 2 * 3600 * 1000;
+const PG_FRESH = 12 * 3600 * 1000;
 
 // the newest stored game of the signed-in account (the match history fills in right after a game)
 async function loadPostgame(force) {
@@ -142,10 +142,12 @@ function postgameHtml() {
   const g = pg.game;
   if (!g || g.remake || !g.players || g.players.length < 10) return '';
   const ended = g.t + (g.dur || 0) * 1000;
-  if (Date.now() - ended > PG_FRESH) return '';
+  // it stays until the next champ select (lobby and queue keep it), at most PG_FRESH
+  if (Date.now() - ended > PG_FRESH || pg.closedId === String(g.id)) return '';
   const mine = new Set(S.accounts.map(a => a.puuid));
   return `<div class="live-card pg-card"><div class="lc-head"><h3>${t('pg.title')} · ${esc(queueLabel(g))} · ${dur(g.dur)} · ${esc(ago(ended))}</h3>
       <button class="chip" id="pgOpen">${t('pg.open')}</button></div>
+    ${typeof pgTagsHtml === 'function' ? pgTagsHtml(g) : ''}
     ${pgTableHtml(g, assets, mine)}
     <p class="fine">${t('pg.note')}</p></div>`;
 }
