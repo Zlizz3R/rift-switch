@@ -551,6 +551,10 @@ Daten verschwinden aus allen Auswertungen) · Accountwechsel funktioniert unver�
   Änderungen). Übersicht → Unterreiter „Mastery“ (Top 5, Tabelle Champion × Account, Gesamt, Suche, Sortierung,
   Meilensteine, Spielzeit als Spanne mit Quellen in `ui/playtime-rules.js`, Eichung ab 10 Spielen zwischen zwei
   Lesungen). Ein „Laden“ für alles (Sammlung, Übersicht, Account-Panel), ein gemeinsamer Fortschritt.
+  Nachtrag 24.11.: Spielzeit auf Wunsch als ein Wert statt Spanne – Punkte ÷ 850 (Mitte aus ~500 vor und ~1.200
+  nach dem Umbau) × (Spiellänge + 7 Min. für Suche, Champ Select, Laden, Spielende); eigene Spiellänge ab 10
+  gespeicherten Spielen. Oben Gesamt-Mastery und Gesamtspielzeit. Eichung entfernt. Alle „Laden“-Knöpfe gleich.
+  Sammlung zählt statt Shards: Chromas, Wardskins, Profilbilder, Emotes, Finisher, Runenseiten.
   Offen: „meistgespielt“ bleibt in der Match history (nicht doppelt in der Mastery-Ansicht).
 - [x] Phase 2 – Kennzahlen an einer Stelle + „Letztes Spiel“ – 24.11.2026: `ui/stats.js` (KDA, KP, CS/min,
   Schaden/min, Vision/min, Schadensanteil, Winrate, Remakes, Zählweise je Spiel / je Teilnahme, Gruppierung).

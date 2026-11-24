@@ -223,17 +223,11 @@
     'mast.notReadTip': "下次在 League 打开时登录此账号会读取。",
     'mast.lvl': "等级 {n}",
     'mast.best': "你的账号中点数最多",
-    'mast.hours': "约 {lo}–{hi} 小时",
     'mast.showAll': "显示全部 {n} 个",
     'mast.noHits': "没有符合搜索的英雄。",
     'mast.msTip': "已达到 {m}\n{list}",
-    'mast.sumTime': "所有英雄合计：约 {lo}–{hi} 小时游戏时长",
-    'mast.tipGames': "根据点数估算：约 {lo}–{hi} 场",
-    'mast.tipRate': "每场点数：{lo}–{hi}（Riot 2024 年熟练度改版前 / 后）",
-    'mast.tipOwn': "改版后每场点数：{ppg}，根据你自己的对局测得（{n} 场）",
-    'mast.tipMin': "每场 {lo}–{hi} 分钟，含 {olo}–{ohi} 分钟排队、选人和加载",
+    
     'mast.tipAram': "部分对局为极地大乱斗（更短）——已计入",
-    'mast.tipOwnLen': "你保存的对局平均时长 {min} 分钟（{n} 场）",
     'mast.tipSrc': "来源：{src}",
     'last.title': "上一场对局",
     'last.open': "在对局记录中打开",
@@ -246,6 +240,14 @@
     'coll.total': "所有账号",
     'coll.countsLater': "炫彩、守卫皮肤、头像、表情、终结特效和符文页从下一次读取开始统计——登录时按\"加载\"，或登录该账号一次。",
     'coll.sub': "所有账号的英雄、皮肤、炫彩等——一次搜索全部",
+    'mast.hours': "约 {h} 小时",
+    'mast.totalPts': "熟练度积分（所有账号）",
+    'mast.tipGames': "积分 ÷ 每局 {ppg} ≈ {n} 局",
+    'mast.tipRate': "850 = Riot 2024 年熟练度改版前每局约 500 分与改版后约 1,200 分的中间值（按 50% 胜率）",
+    
+    'mast.tipMin': "召唤师峡谷每局 {min} 分钟（大乱斗 {aram} 分钟）",
+    'mast.tipOwnLen': "每局 {min} 分钟：你已保存对局的平均值（{n} 局）",
+    'mast.tipExtra': "+ 每局 {min} 分钟：排队、英雄选择、载入画面和赛后界面",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

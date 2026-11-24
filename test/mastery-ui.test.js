@@ -30,7 +30,11 @@ test('overview → mastery: points over all accounts, split per account, sorting
   assert.match(card.textContent, /2,214,330/);
   assert.match(card.textContent, /2M/);
   assert.match(card.textContent, /2 accounts/);
-  assert.match(card.textContent, /approx\. [\d,]+–[\d,]+ h/);
+  assert.match(card.textContent, /≈ [\d,]+ h/);             // one number, no range
+  // on top: all points together and the play time behind them
+  const tot = app.$('.mast-totals').textContent;
+  assert.match(tot, /Mastery points \(all accounts\)\s*[\d,]{7,}/);
+  assert.match(tot, /Play time \(approx\.\)\s*≈ [\d,]+ h/);
   // the table: a column per account, the one never read is marked, the best account highlighted
   assert.match(app.$('.mast-table thead').textContent, /not read yet/);
   const first = app.$('.mast-table tbody tr');

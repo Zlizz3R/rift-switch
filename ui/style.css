@@ -1285,9 +1285,9 @@ span.mh-ch { cursor: default; }
 .load-btn svg { width: 15px; height: 15px; flex: none; }
 .load-btn .lb-bar { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--teal); transition: width .3s; }
 .load-btn:disabled { cursor: default; }
-.d-actions .load-btn { flex-direction: column; gap: 5px; }
-.d-actions .load-btn svg { width: 17px; height: 17px; }
-.d-actions .load-btn:disabled { opacity: .55; }
+.load-btn:disabled { opacity: .6; }
+/* one look everywhere (Overview, Collection, account panel): the same button, its own size */
+.d-load { display: flex; justify-content: flex-end; margin: 2px 0 10px; }
 
 /* ---------- Overview → Mastery ---------- */
 .mast-top { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-bottom: 10px; }
@@ -1296,7 +1296,10 @@ span.mh-ch { cursor: default; }
 .mast-card b { font-size: 13px; }
 .mast-card .mc-pts { font-size: 20px; font-weight: 600; color: var(--gold2); line-height: 1.25; font-variant-numeric: tabular-nums; }
 .mast-card small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; }
-.mast-sum { color: var(--muted); font-size: 12px; margin: 2px 0 4px; }
+.mast-totals { display: flex; gap: 28px; margin: 0 0 14px; }
+.mast-totals div { display: flex; flex-direction: column; gap: 2px; }
+.mast-totals span { color: var(--muted); font-size: 11.5px; }
+.mast-totals b { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .mast-wrap { overflow-x: auto; }
 .mast-table th { white-space: nowrap; cursor: default; }
 .mast-table th[data-ms] { cursor: pointer; }

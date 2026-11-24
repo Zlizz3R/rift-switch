@@ -226,17 +226,11 @@
     'mast.notReadTip': "Lido no próximo login nesta conta com o League aberto.",
     'mast.lvl': "Nível {n}",
     'mast.best': "Mais pontos entre suas contas",
-    'mast.hours': "aprox. {lo}–{hi} h",
     'mast.showAll': "Mostrar todos os {n}",
     'mast.noHits': "Nenhum campeão corresponde à busca.",
     'mast.msTip': "{m} alcançado\n{list}",
-    'mast.sumTime': "Todos os campeões juntos: aprox. {lo}–{hi} h de jogo",
-    'mast.tipGames': "Estimado pelos pontos: aprox. {lo}–{hi} partidas",
-    'mast.tipRate': "Pontos por partida: {lo}–{hi} (antes / depois da reformulação da maestria pela Riot em 2024)",
-    'mast.tipOwn': "Pontos por partida desde a mudança: {ppg}, medidos nas suas partidas ({n} partidas)",
-    'mast.tipMin': "{lo}–{hi} min por partida, incl. {olo}–{ohi} min de fila, seleção e carregamento",
+    
     'mast.tipAram': "Parte das partidas foi ARAM (mais curtas) – incluídas",
-    'mast.tipOwnLen': "Suas partidas salvas duram em média {min} min ({n} partidas)",
     'mast.tipSrc': "Fontes: {src}",
     'last.title': "Última partida",
     'last.open': "Abrir no histórico",
@@ -249,6 +243,14 @@
     'coll.total': "Todas as contas",
     'coll.countsLater': "Cromas, skins de sentinela, ícones, emotes, finalizadores e páginas de runas são contados a partir da próxima leitura – aperte \"Carregar\" com a sessão iniciada ou entre na conta uma vez.",
     'coll.sub': "Campeões, skins, cromas e mais de todas as contas – pesquise tudo de uma vez",
+    'mast.hours': "≈ {h} h",
+    'mast.totalPts': "Pontos de maestria (todas as contas)",
+    'mast.tipGames': "Pontos ÷ {ppg} por partida ≈ {n} partidas",
+    'mast.tipRate': "850 = o meio entre ~500 pontos por partida antes da reformulação de maestria da Riot em 2024 e ~1.200 depois (com 50 % de vitórias)",
+    
+    'mast.tipMin': "{min} min por partida no Summoner's Rift ({aram} min no ARAM)",
+    'mast.tipOwnLen': "{min} min por partida: a média das suas partidas salvas ({n} partidas)",
+    'mast.tipExtra': "+ {min} min por partida para a fila, a seleção de campeões, a tela de carregamento e a tela pós-jogo",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

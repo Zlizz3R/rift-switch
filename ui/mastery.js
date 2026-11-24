@@ -3,7 +3,7 @@
 // the estimate live in mastmath.js, the numbers behind the estimate in playtime-rules.js.
 // Also the Overview's sub-tabs. Uses the globals of renderer.js / views.js / dashboard.js.
 
-const mast = { data: null, hist: null, games: null, q: '', sort: 'total', dir: -1, all: false, stamp: '' };
+const mast = { data: null, games: null, q: '', sort: 'total', dir: -1, all: false, stamp: '' };
 
 // ---------- Overview sub-tabs (the last one chosen is kept) ----------
 const dashTab = () => ((S.settings && S.settings.uiTabs) || {}).dash === 'mast' ? 'mast' : 'lp';
@@ -28,10 +28,8 @@ $('dashTabs').addEventListener('click', e => {
 const mastStamp = () => S.accounts.map(a => a.mastAt || 0).join(',');
 async function loadMast() {
   mast.stamp = mastStamp();
-  const [d, h, g, ch] = await Promise.all([api.masteries(), api.masteryHistory(), api.ownGames(),
-    champs.length ? null : api.champions()]);
+  const [d, g, ch] = await Promise.all([api.masteries(), api.ownGames(), champs.length ? null : api.champions()]);
   mast.data = Array.isArray(d) ? d : [];
-  mast.hist = h && typeof h === 'object' ? h : {};
   mast.games = g && typeof g === 'object' ? g : {};
   if (Array.isArray(ch) && ch.length) champs = ch;
   if (view === 'dash' && dashTab() === 'mast') renderMast();
@@ -46,44 +44,29 @@ api.onMatchesChanged(() => { if (view === 'dash' && dashTab() === 'mast') loadMa
 const mastName = id => (champById(id) || {}).name || '#' + id;
 const mastCompact = n => new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 const MS_LABEL = { 100000: '100k', 500000: '500k', 1000000: '1M', 2000000: '2M' };
-const mastHours = e => t('mast.hours', { lo: num(MastMath.roundNice(e.hLow)), hi: num(MastMath.roundNice(e.hHigh)) });
+const mastHours = e => t('mast.hours', { h: num(MastMath.roundNice(e.hours)) });
 
-// the estimate of one account on one champion: own readings and ARAM share where there are any
+// the estimate of one account on one champion: its own game length and ARAM share where known
+const mastLen = puuid => MastMath.avgMinutes((mast.games || {})[puuid] || []);
 function mastEstimate(puuid, id, pts) {
-  const games = (mast.games || {})[puuid] || [];
-  const cal = MastMath.calibrate((mast.hist || {})[puuid], games);
-  return MastMath.estimate(pts, { ppg: cal && cal.ppg, aram: MastMath.aramShare(games, id) });
+  return MastMath.estimate(pts, { min: MastMath.gameMinutes(mastLen(puuid)), aram: MastMath.aramShare((mast.games || {})[puuid], id) });
 }
-// a sum of estimates (accounts or champions): the ranges add up
+// a sum of estimates (accounts or champions)
 function mastSum(list) {
-  const s = { gLow: 0, gHigh: 0, hLow: 0, hHigh: 0, own: 0, aram: 0 };
-  for (const e of list) {
-    s.gLow += e.gLow; s.gHigh += e.gHigh; s.hLow += e.hLow; s.hHigh += e.hHigh;
-    if (e.ppg) s.own++;
-    if (e.aram) s.aram++;
-  }
+  const s = { games: 0, hours: 0, aram: 0 };
+  for (const e of list) { s.games += e.games; s.hours += e.hours; if (e.aram) s.aram++; }
   return s;
 }
-// what the estimate is based on – the tooltip of every play time
+// how the number comes about – the tooltip of every play time
 function mastTimeTip(e, puuids) {
-  const R = PLAYTIME_RULES, own = [];
-  for (const p of puuids || []) {
-    const cal = MastMath.calibrate((mast.hist || {})[p], (mast.games || {})[p]);
-    if (cal) own.push(cal);
-  }
-  const lines = [t('mast.tipGames', { lo: num(MastMath.roundNice(e.gLow)), hi: num(MastMath.roundNice(e.gHigh)) })];
-  if (own.length) {
-    const n = own.reduce((s, c) => s + c.games, 0), pts = own.reduce((s, c) => s + c.points, 0);
-    lines.push(t('mast.tipOwn', { ppg: num(Math.round(pts / n)), n }));
-  } else {
-    lines.push(t('mast.tipRate', { lo: num(R.pointsPerGame.before.low), hi: num(R.pointsPerGame.after.high) }));
-  }
-  lines.push(t('mast.tipMin', { lo: R.minutes.sr.low + R.overhead.low, hi: R.minutes.sr.high + R.overhead.high,
-    olo: R.overhead.low, ohi: R.overhead.high }));
-  if (e.aram) lines.push(t('mast.tipAram'));
+  const R = PLAYTIME_RULES;
+  const lines = [t('mast.tipGames', { n: num(MastMath.roundNice(e.games)), ppg: num(R.pointsPerGame) }), t('mast.tipRate')];
   const len = MastMath.avgMinutes([].concat(...(puuids || []).map(p => (mast.games || {})[p] || [])));
-  if (len.sr) lines.push(t('mast.tipOwnLen', { min: Math.round(len.sr), n: len.n }));
-  lines.push(t('mast.tipSrc', { src: 'Jack J Gaming (2023), lolvalue.com (2026), bo3.gg' }));
+  const m = MastMath.gameMinutes(len);
+  lines.push(m.sr !== R.minutes.sr ? t('mast.tipOwnLen', { min: Math.round(m.sr), n: len.srN }) : t('mast.tipMin', { min: R.minutes.sr, aram: R.minutes.aram }));
+  lines.push(t('mast.tipExtra', { min: R.extraMinutes }));
+  if (e.aram) lines.push(t('mast.tipAram'));
+  lines.push(t('mast.tipSrc', { src: 'Jack J Gaming (2023), lolvalue.com (2026), bo3.gg, gameriv.com' }));
   return lines.join('\n');
 }
 
@@ -151,8 +134,13 @@ function renderMast() {
         return `<td class="num${r.n > 1 && r.best === a.puuid ? ' best' : ''}" title="${esc((r.n > 1 && r.best === a.puuid ? t('mast.best') + '\n' : '') + mastHours(e) + '\n' + mastTimeTip(e, [a.puuid]))}">${num(v.pts)}${ms1 ? ` <i class="ms sm">${MS_LABEL[ms1]}</i>` : ''}<small>${t('mast.lvl', { n: v.lvl })}</small></td>`;
       }).join('')}</tr>`;
   }).join('');
-  el.innerHTML = `<div class="mast-top">${top}</div>
-    <p class="mast-sum" title="${esc(mastTimeTip(total, read.map(a => a.puuid)))}">${esc(t('mast.sumTime', { lo: num(MastMath.roundNice(total.hLow)), hi: num(MastMath.roundNice(total.hHigh)) }))}</p>
+  const pts = rows.reduce((x, r) => x + r.total, 0);
+  const tip = esc(mastTimeTip(total, read.map(a => a.puuid)));
+  el.innerHTML = `<div class="mast-totals">
+      <div><span>${t('mast.totalPts')}</span><b>${num(pts)}</b></div>
+      <div title="${tip}"><span>${t('mast.time')}</span><b>${esc(mastHours(total))}</b></div>
+    </div>
+    <div class="mast-top">${top}</div>
     <div class="mast-wrap"><table class="dash-table mast-table"><thead>${head}</thead><tbody>${body || `<tr><td colspan="${3 + accs.length}" class="muted">${t('mast.noHits')}</td></tr>`}</tbody></table></div>
     ${more ? `<button class="btn mast-more" data-mast-all>${t('mast.showAll', { n: more })}</button>` : ''}`;
 }

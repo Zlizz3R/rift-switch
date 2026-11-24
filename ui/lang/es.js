@@ -227,17 +227,11 @@
     'mast.notReadTip': "Se lee la próxima vez que entres en esta cuenta con League abierto.",
     'mast.lvl': "Nivel {n}",
     'mast.best': "Más puntos de tus cuentas",
-    'mast.hours': "aprox. {lo}–{hi} h",
     'mast.showAll': "Mostrar los {n}",
     'mast.noHits': "Ningún campeón coincide con la búsqueda.",
     'mast.msTip': "{m} alcanzado\n{list}",
-    'mast.sumTime': "Todos los campeones juntos: aprox. {lo}–{hi} h de juego",
-    'mast.tipGames': "Estimado a partir de los puntos: aprox. {lo}–{hi} partidas",
-    'mast.tipRate': "Puntos por partida: {lo}–{hi} (antes / después del cambio de maestría de Riot en 2024)",
-    'mast.tipOwn': "Puntos por partida desde el cambio: {ppg}, medidos en tus propias partidas ({n} partidas)",
-    'mast.tipMin': "{lo}–{hi} min por partida, incl. {olo}–{ohi} min de cola, selección y carga",
+    
     'mast.tipAram': "Parte de las partidas fueron ARAM (más cortas): incluidas",
-    'mast.tipOwnLen': "Tus partidas guardadas duran de media {min} min ({n} partidas)",
     'mast.tipSrc': "Fuentes: {src}",
     'last.title': "Última partida",
     'last.open': "Abrir en el historial",
@@ -250,6 +244,14 @@
     'coll.total': "Todas las cuentas",
     'coll.countsLater': "Los cromas, aspectos de guardián, iconos, gestos, remates y páginas de runas se cuentan desde la próxima lectura: pulsa \"Cargar\" con la sesión iniciada o inicia sesión una vez en la cuenta.",
     'coll.sub': "Campeones, aspectos, cromas y más de todas las cuentas: búscalo todo a la vez",
+    'mast.hours': "≈ {h} h",
+    'mast.totalPts': "Puntos de maestría (todas las cuentas)",
+    'mast.tipGames': "Puntos ÷ {ppg} por partida ≈ {n} partidas",
+    'mast.tipRate': "850 = el punto medio entre ~500 puntos por partida antes de la reforma de maestría de Riot en 2024 y ~1.200 después (con un 50 % de victorias)",
+    
+    'mast.tipMin': "{min} min por partida en la Grieta del Invocador ({aram} min en ARAM)",
+    'mast.tipOwnLen': "{min} min por partida: la media de tus partidas guardadas ({n} partidas)",
+    'mast.tipExtra': "+ {min} min por partida para la cola, la selección de campeón, la pantalla de carga y la de fin de partida",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

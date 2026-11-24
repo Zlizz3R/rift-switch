@@ -1,4 +1,4 @@
-// Mastery across accounts: the table, milestones, the calibration and the play time estimate.
+// Mastery across accounts: the table, milestones and the play time estimate.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const M = require('../ui/mastmath');
@@ -26,48 +26,28 @@ test('milestones: the highest one reached', () => {
   assert.equal(M.milestone(2214330), 2000000);
 });
 
-test('estimate: always a range over both point rates, ARAM makes it shorter', () => {
+test('estimate: points ÷ 850 × minutes per game, one number', () => {
   const e = M.estimate(2200000);
-  assert.equal(Math.round(e.gLow), Math.round(2200000 / R.pointsPerGame.after.high));
-  assert.equal(Math.round(e.gHigh), Math.round(2200000 / R.pointsPerGame.before.low));
-  assert.ok(e.hLow < e.hHigh);
-  const m = (k) => R.minutes.sr[k] + R.overhead[k];
-  assert.equal(Math.round(e.hHigh), Math.round((2200000 / R.pointsPerGame.before.low) * m('high') / 60));
-  assert.ok(M.estimate(2200000, { aram: 1 }).hHigh < e.hHigh);
-  // own readings replace the "after" rate
-  const own = M.estimate(2200000, { ppg: 1500 });
-  assert.equal(Math.round(own.gLow), Math.round(2200000 / 1500));
-  assert.equal(own.ppg, 1500);
-  assert.equal(M.estimate(0).hHigh, 0);
+  assert.equal(R.pointsPerGame, 850);
+  assert.equal(e.games, 2200000 / 850);
+  // 28.5 min in the game + 7 for queue, champ select, loading and the post-game screen
+  assert.equal(e.hours, (2200000 / 850) * (28.5 + 7) / 60);     // ≈ 1,530 h
+  assert.equal(M.roundNice(e.hours), 1500);
+  // ARAM is shorter; half ARAM: the mean of both lengths
+  assert.ok(M.estimate(2200000, { aram: 1 }).hours < e.hours);
+  assert.equal(M.estimate(850, { aram: 0.5 }).mins, (28.5 + 20) / 2 + 7);
+  // the account's own game length once it has enough games
+  const own = [...Array(10)].map((_, i) => game(i, 5, { dur: 2100 }));
+  assert.equal(M.gameMinutes(M.avgMinutes(own)).sr, 35);
+  assert.equal(M.gameMinutes(M.avgMinutes(own.slice(0, 9))).sr, 28.5);
+  assert.equal(M.estimate(0).hours, 0);
   assert.equal(M.roundNice(902), 900);
   assert.equal(M.roundNice(3080), 3100);
   assert.equal(M.roundNice(47.4), 47);
 });
 
 // [time, seconds, queue, champion, win, remake]
-const game = (t, champ, o = {}) => [t, o.dur ?? 1800, o.q ?? 420, champ, true, !!o.remake];
-test('calibration: points gained ÷ stored games between two readings, only with enough games', () => {
-  const end = (i) => 1000 * i * 4000;     // readings after each block of games
-  const hist = [{ at: 1, c: { 420: 1000 } }];
-  const games = [];
-  let pts = 1000;
-  for (let i = 1; i <= 6; i++) {
-    games.push(game(end(i) - 3000000, 420), game(end(i) - 2000000, 420));
-    pts += 2400;
-    hist.push({ at: end(i), c: { 420: pts } });
-  }
-  const c = M.calibrate(hist, games);
-  assert.equal(c.games, 12);
-  assert.equal(c.ppg, 1200);
-  // too few games: nothing to calibrate with (the estimate uses the sourced numbers)
-  assert.equal(M.calibrate(hist.slice(0, 3), games), null);
-  assert.equal(M.calibrate([], []), null);
-  // points without a stored game: the store missed one – that stretch is left out
-  const gap = [...hist, { at: end(7), c: { 420: pts + 5000 } }];
-  assert.equal(M.calibrate(gap, games).games, 12);
-  // remakes never count
-  assert.equal(M.calibrate(hist, games.map((g, i) => (i === 0 ? game(g[0], 420, { remake: true }) : g))).games, 11);
-});
+function game(t, champ, o = {}) { return [t, o.dur ?? 1800, o.q ?? 420, champ, true, !!o.remake]; }
 
 test('ARAM share and own game length', () => {
   const g = [game(1, 5), game(2, 5, { q: 450, dur: 1200 }), game(3, 7), game(4, 5, { remake: true })];

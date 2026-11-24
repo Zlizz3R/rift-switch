@@ -273,17 +273,11 @@
     'mast.notReadTip': "Read the next time you log in to this account with League open.",
     'mast.lvl': "Level {n}",
     'mast.best': "Most points of your accounts",
-    'mast.hours': "approx. {lo}–{hi} h",
     'mast.showAll': "Show all {n}",
     'mast.noHits': "No champion matches your search.",
     'mast.msTip': "{m} reached\n{list}",
-    'mast.sumTime': "All champions together: approx. {lo}–{hi} h of play time",
-    'mast.tipGames': "An estimate from the points: approx. {lo}–{hi} games",
-    'mast.tipRate': "Points per game: {lo}–{hi} (before / after Riot's 2024 mastery rework)",
-    'mast.tipOwn': "Points per game since the rework: {ppg}, measured on your own games ({n} games)",
-    'mast.tipMin': "{lo}–{hi} min per game, incl. {olo}–{ohi} min for queue, champ select and loading",
+    
     'mast.tipAram': "Part of the games were ARAM (shorter) – counted in",
-    'mast.tipOwnLen': "Your stored games last Ø {min} min ({n} games)",
     'mast.tipSrc': "Sources: {src}",
     'last.title': "Last game",
     'last.open': "Open in the match history",
@@ -296,6 +290,14 @@
     'coll.total': "All accounts",
     'coll.countsLater': "Chromas, ward skins, icons, emotes, finishers and rune pages are counted from the next reading – press \"Load\" while logged in, or log in to the account once.",
     'coll.sub': "Champions, skins, chromas and more of all accounts – search them all at once",
+    'mast.hours': "≈ {h} h",
+    'mast.totalPts': "Mastery points (all accounts)",
+    'mast.tipGames': "Points ÷ {ppg} per game ≈ {n} games",
+    'mast.tipRate': "850 = the middle of ~500 points per game before Riot's 2024 mastery rework and ~1,200 after (at a 50 % win rate)",
+    
+    'mast.tipMin': "{min} min per game on Summoner's Rift ({aram} min ARAM)",
+    'mast.tipOwnLen': "{min} min per game: the average of your stored games ({n} games)",
+    'mast.tipExtra': "+ {min} min per game for queue, champ select, loading screen and the post-game screen",
   };
 
   const de = {
@@ -552,17 +554,11 @@
     'mast.notReadTip': "Wird beim nächsten Einloggen mit offenem League gelesen.",
     'mast.lvl': "Level {n}",
     'mast.best': "Meiste Punkte deiner Accounts",
-    'mast.hours': "ca. {lo}–{hi} Std.",
     'mast.showAll': "Alle {n} anzeigen",
     'mast.noHits': "Kein Champion passt zur Suche.",
     'mast.msTip': "{m} erreicht\n{list}",
-    'mast.sumTime': "Alle Champions zusammen: ca. {lo}–{hi} Std. Spielzeit",
-    'mast.tipGames': "Geschätzt aus den Punkten: ca. {lo}–{hi} Spiele",
-    'mast.tipRate': "Punkte pro Spiel: {lo}–{hi} (vor / nach Riots Mastery-Umbau 2024)",
-    'mast.tipOwn': "Punkte pro Spiel seit dem Umbau: {ppg}, gemessen an deinen eigenen Spielen ({n} Spiele)",
-    'mast.tipMin': "{lo}–{hi} Min. pro Spiel, inkl. {olo}–{ohi} Min. für Suche, Champ Select und Laden",
+    
     'mast.tipAram': "Ein Teil der Spiele war ARAM (kürzer) – eingerechnet",
-    'mast.tipOwnLen': "Deine gespeicherten Spiele dauern Ø {min} Min. ({n} Spiele)",
     'mast.tipSrc': "Quellen: {src}",
     'last.title': "Letztes Spiel",
     'last.open': "In der Match history öffnen",
@@ -575,6 +571,14 @@
     'coll.total': "Alle Accounts",
     'coll.countsLater': "Chromas, Wardskins, Profilbilder, Emotes, Finisher und Runenseiten werden ab der nächsten Lesung gezählt – „Laden“ drücken, während du eingeloggt bist, oder dich einmal einloggen.",
     'coll.sub': "Champions, Skins, Chromas und mehr aller Accounts – alles auf einmal durchsuchen",
+    'mast.hours': "ca. {h} Std.",
+    'mast.totalPts': "Mastery-Punkte (alle Accounts)",
+    'mast.tipGames': "Punkte ÷ {ppg} pro Spiel ≈ {n} Spiele",
+    'mast.tipRate': "850 = die Mitte aus ~500 Punkten pro Spiel vor Riots Mastery-Umbau 2024 und ~1.200 danach (bei 50 % Winrate)",
+    
+    'mast.tipMin': "{min} Min. pro Spiel auf Summoner's Rift ({aram} Min. ARAM)",
+    'mast.tipOwnLen': "{min} Min. pro Spiel: der Schnitt deiner gespeicherten Spiele ({n} Spiele)",
+    'mast.tipExtra': "+ {min} Min. pro Spiel für Suche, Champ Select, Ladebildschirm und Spielende",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

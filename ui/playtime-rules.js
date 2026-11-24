@@ -1,29 +1,22 @@
 // The numbers behind the play time estimate (mastery points -> games -> hours), each with its source.
-// Only what is documented is in here; where a value is missing the range stays wider instead of
-// guessing. Sources checked 24.11.2026 (docs/plans/Pruefbericht.md).
+// One plain number, no range: points ÷ points per game × (minutes per game + 7 around it). Sources checked
+// 24.11.2026 (docs/plans/Pruefbericht.md).
 (function (root) {
   const PLAYTIME_RULES = {
-    // Riot rebuilt champion mastery with patch 14.10 (15 May 2024): different points per game since
-    rework: Date.UTC(2024, 4, 15),
-    pointsPerGame: {
-      // win ~900–1,100, loss ~100–300 → at a 50 % win rate 500–700 per game
-      before: { low: 500, high: 700, src: 'Jack J Gaming, 24.04.2023 – Solo/Duo, patch 13.7, ~1M games (win ~900–1,100, loss ~100–300)',
-        url: 'https://jackjgaming.substack.com/p/mastery-a-statistical-summary-of' },
-      // median of 146 measurements (two lookups on different days, points ÷ games in between)
-      after: { low: 1219, high: 1219, src: 'lolvalue.com, Oct. 2026 – median of 146 measurements',
-        url: 'https://lolvalue.com/lol-mastery-chart' },
-    },
-    // average game length in minutes; no sourced numbers per season were found, so one range for all
+    // Points per game at a 50 % win rate: ~500 before Riot's mastery rework (patch 14.10, May 2024),
+    // ~1,200 after. The points can't be split into before / after, so the middle of both: 850.
+    pointsPerGame: 850,
+    pointsSrc: 'Jack J Gaming 2023 (before: win ~900–1,100, loss ~100–300); lolvalue.com 2026 (after: median 1,219)',
+    // average game length in minutes when an account has too few stored games of its own
     minutes: {
-      sr: { low: 25, high: 32, src: 'tier averages ~26–31 min (e.g. Gold 30:06, Diamond 27:44, Challenger 25:52)',
-        url: 'https://bo3.gg/lol/news/this-rank-has-longest-game-time-lol' },
-      aram: { low: 20, high: 20, src: 'about 20 min on Howling Abyss',
-        url: 'https://gameriv.com/how-long-is-an-average-match-in-league-of-legends/' },
+      sr: 28.5,     // tier averages ~26–31 min (e.g. Gold 30:06, Challenger 25:52) – bo3.gg
+      aram: 20,     // about 20 min on Howling Abyss – gameriv.com
     },
-    // queue, champ select, loading screen and after the game, per game (plan: 5–10 min)
-    overhead: { low: 5, high: 10 },
-    // own readings: from this many games between two readings on, they replace the "after" value
-    minCalibGames: 10,
+    minutesSrc: 'bo3.gg, gameriv.com',
+    // on top of every game: queue, champ select, loading screen and the post-game screen
+    extraMinutes: 7,
+    // from this many stored games on a map, the account's own average length is used instead
+    minOwnGames: 10,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = PLAYTIME_RULES;
   else root.PLAYTIME_RULES = PLAYTIME_RULES;

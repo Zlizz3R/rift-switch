@@ -227,17 +227,11 @@
     'mast.notReadTip': "Lu à la prochaine connexion à ce compte avec League ouvert.",
     'mast.lvl': "Niveau {n}",
     'mast.best': "Le plus de points de tes comptes",
-    'mast.hours': "env. {lo}–{hi} h",
     'mast.showAll': "Afficher les {n}",
     'mast.noHits': "Aucun champion ne correspond.",
     'mast.msTip': "{m} atteint\n{list}",
-    'mast.sumTime': "Tous les champions ensemble : env. {lo}–{hi} h de jeu",
-    'mast.tipGames': "Estimé à partir des points : env. {lo}–{hi} parties",
-    'mast.tipRate': "Points par partie : {lo}–{hi} (avant / après la refonte de la maîtrise par Riot en 2024)",
-    'mast.tipOwn': "Points par partie depuis la refonte : {ppg}, mesurés sur tes propres parties ({n} parties)",
-    'mast.tipMin': "{lo}–{hi} min par partie, dont {olo}–{ohi} min de file, sélection et chargement",
+    
     'mast.tipAram': "Une partie des parties étaient en ARAM (plus courtes) – prises en compte",
-    'mast.tipOwnLen': "Tes parties enregistrées durent en moyenne {min} min ({n} parties)",
     'mast.tipSrc': "Sources : {src}",
     'last.title': "Dernière partie",
     'last.open': "Ouvrir dans l'historique",
@@ -250,6 +244,14 @@
     'coll.total': "Tous les comptes",
     'coll.countsLater': "Les chromas, skins de balise, icônes, emotes, finishers et pages de runes sont comptés à partir de la prochaine lecture – appuie sur « Charger » une fois connecté, ou connecte-toi une fois au compte.",
     'coll.sub': "Champions, skins, chromas et plus de tous les comptes – cherche tout en une fois",
+    'mast.hours': "≈ {h} h",
+    'mast.totalPts': "Points de maîtrise (tous les comptes)",
+    'mast.tipGames': "Points ÷ {ppg} par partie ≈ {n} parties",
+    'mast.tipRate': "850 = le milieu entre ~500 points par partie avant la refonte de la maîtrise de Riot en 2024 et ~1 200 après (à 50 % de victoires)",
+    
+    'mast.tipMin': "{min} min par partie sur la Faille de l'invocateur ({aram} min en ARAM)",
+    'mast.tipOwnLen': "{min} min par partie : la moyenne de tes parties enregistrées ({n} parties)",
+    'mast.tipExtra': "+ {min} min par partie pour la file, la sélection des champions, l'écran de chargement et l'écran de fin de partie",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;
