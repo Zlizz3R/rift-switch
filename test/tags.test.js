@@ -39,14 +39,15 @@ test('only ranked games count; the main role decides the key figures', () => {
   assert.equal(r.main, 'mid');
   const farm = get(r, 'farm')[0];
   assert.equal(farm.state, 'met');
-  assert.equal(farm.level, 'master');                     // 10 CS/min ≥ 9.5
+  assert.equal(farm.level, 'master');                     // 10 CS/min ≥ 7.8 (mid)
   assert.equal(farm.n, 12);
-  // the support isn't judged on farm or damage at all
+  // the support isn't judged on farm; damage against other supports: 20,000 in 30 min = 667/min ≥ 580
   const sup = run(Array.from({ length: 12 }, (_, i) => game({ ago: i + 1, at: 4 })));
   assert.equal(sup.role, 'support');
   assert.equal(get(sup, 'farm').length, 0);
-  assert.equal(get(sup, 'damage').length, 0);
-  // KDA has its own thresholds for supports: (3 + 5) / 2 = 4 → great, not master (5)
+  assert.equal(get(sup, 'damage')[0].level, 'master');
+  // every position has its own thresholds: (3 + 5) / 2 = 4 → great for a support (master 4.65),
+  // master for a mid (3.75)
   assert.equal(get(sup, 'kda')[0].level, 'great');
   assert.equal(get(run(Array.from({ length: 12 }, (_, i) => game({ ago: i + 1 }))), 'kda')[0].level, 'master');
 });
@@ -67,23 +68,24 @@ test('only this season: last year\'s ranked games are left out, in the live tags
 
 test('levels both ways: deaths – fewer is better', () => {
   const deaths = d => get(run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d } }))), 'deaths')[0];
-  assert.equal(deaths(8).level, 'weak');
-  assert.ok(T.isWeakness(deaths(8)));
+  // mid: weak from 8.2, terrible from 9.6, great up to 5.5, master up to 4.3
+  assert.equal(deaths(9).level, 'weak');
+  assert.ok(T.isWeakness(deaths(9)));
   assert.equal(deaths(10).level, 'terrible');
-  assert.equal(deaths(4).level, 'great');
-  assert.equal(deaths(2).level, 'master');
-  const mid = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d: 5 } })));
+  assert.equal(deaths(5).level, 'great');
+  assert.equal(deaths(4).level, 'master');
+  const mid = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d: 7 } })));
   assert.equal(get(mid, 'deaths')[0].state, 'not');
 });
 
 test('hysteresis: a tag shown before stays until 5 % past its threshold', () => {
   const at = cs => Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { cs } }));
-  // 7.8 CS/min: below 8.0 – not met without history, kept when "great" was shown before
-  assert.equal(get(run(at(234)), 'farm')[0].state, 'not');
-  assert.equal(get(run(at(234), { prev: new Set(['farm:great']) }), 'farm')[0].level, 'great');
-  // 7.5 is more than 5 % below: gone
-  assert.equal(get(run(at(225), { prev: new Set(['farm:great']) }), 'farm')[0].state, 'not');
-  assert.ok(T.keys(run(at(250)).results).has('farm:great'));
+  // mid, great from 7.3 CS/min: 7.2 – not met without history, kept when "great" was shown before
+  assert.equal(get(run(at(216)), 'farm')[0].state, 'not');
+  assert.equal(get(run(at(216), { prev: new Set(['farm:great']) }), 'farm')[0].level, 'great');
+  // 6.8 is more than 5 % below: gone
+  assert.equal(get(run(at(204), { prev: new Set(['farm:great']) }), 'farm')[0].state, 'not');
+  assert.ok(T.keys(run(at(225)).results).has('farm:great'));
 });
 
 test('champion and pool: OTP beats main on the same champion, flexible pool excludes OTP', () => {
@@ -165,7 +167,7 @@ test('timeline tags: solo kills, duels, early deaths, early farm, lane CS, wards
   assert.equal(get(r, 'earlyWarder').length, 0);                 // off: the client's timelines have no wards
   assert.equal(one('dragonSlayer').state, 'met');
   assert.equal(one('earlyFarm').value, 135);                     // 9 CS a minute → 135 at 15
-  assert.equal(one('earlyFarm').level, 'great');
+  assert.equal(one('earlyFarm').level, 'master');              // mid: master from 123
   assert.equal(one('laneCs').value, 45);                         // 135 − 90
   assert.equal(one('laneCs').level, 'master');
   assert.ok(Math.abs(one('earlyShare').value - 9 / 33) < 1e-9);  // 9 of 9 + 4 × 6

@@ -46,7 +46,7 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     await app.click(farm);
     const det = app.$('.tdetail').textContent;
     assert.match(det, /Ø 10\.0 CS\/min in 12 games/);
-    assert.match(det, /Threshold: 9\.5/);
+    assert.match(det, /Threshold: 7\.8/);
     assert.match(det, /Season \d{4}/);
     // no text key without a translation
     assert.doesNotMatch(app.$('#dashTags').innerHTML, /\btags?\.[a-zA-Z]+\.?[a-zA-Z]*\b(?![^<]*>)/);
