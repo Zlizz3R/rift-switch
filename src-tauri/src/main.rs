@@ -3955,6 +3955,11 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    //! The background part's own state handling, without a window: the encrypted login files,
+    //! what the window gets to see, and a saved login turning into its real account.
+    //! (One test: the app has one shared state.)
+    use super::*;
+
     #[test]
     fn a_game_ending_reads_the_history() {
         assert!(super::after_game(Some("InProgress"), "EndOfGame"));
@@ -3964,11 +3969,6 @@ mod tests {
         assert!(!super::after_game(None, "EndOfGame"));
         assert!(!super::after_game(Some("ChampSelect"), "Lobby"));
     }
-
-    //! The background part's own state handling, without a window: the encrypted login files,
-    //! what the window gets to see, and a saved login turning into its real account.
-    //! (One test: the app has one shared state.)
-    use super::*;
 
     const P1: &str = "11111111-1111-1111-1111-111111111111";
     const P2: &str = "22222222-2222-2222-2222-222222222222";
