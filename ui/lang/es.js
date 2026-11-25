@@ -236,6 +236,7 @@
     'mast.tipAram': "Parte de las partidas fueron ARAM (más cortas): incluidas",
     'mast.tipSrc': "Fuentes: {src}",
     'last.title': "Última partida",
+    'set.notifyOff': "Las notificaciones de Windows están desactivadas en este PC, así que no aparece nada. Actívalas en Configuración de Windows → Sistema → Notificaciones.",
     'm.noRiotClient': "No se encontró el Riot Client: instálalo (o ábrelo una vez a mano) y vuelve a intentarlo. No se cerró nada.",
     'm.restoreFailed': "No se pudo restaurar el inicio de sesión guardado (un archivo estaba bloqueado o dañado). Inicia sesión una vez a mano con «Mantener sesión iniciada» o guarda una contraseña para esta cuenta.",
     'reveal.export': "Rift Switch quiere exportar tus inicios de sesión guardados.",

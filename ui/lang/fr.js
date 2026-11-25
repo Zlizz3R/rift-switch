@@ -236,6 +236,7 @@
     'mast.tipAram': "Une partie des parties étaient en ARAM (plus courtes) – prises en compte",
     'mast.tipSrc': "Sources : {src}",
     'last.title': "Dernière partie",
+    'set.notifyOff': "Les notifications Windows sont désactivées sur ce PC, donc rien ne s’affiche. Active-les dans Paramètres Windows → Système → Notifications.",
     'm.noRiotClient': "Riot Client introuvable – installe-le (ou lance-le une fois à la main), puis réessaie. Rien n’a été fermé.",
     'm.restoreFailed': "La connexion enregistrée n’a pas pu être remise en place (un fichier était verrouillé ou abîmé). Connecte-toi une fois à la main avec « Rester connecté », ou enregistre un mot de passe pour ce compte.",
     'reveal.export': "Rift Switch veut exporter tes identifiants enregistrés.",

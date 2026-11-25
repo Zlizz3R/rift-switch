@@ -614,7 +614,7 @@ $('streamPill').onclick = () => { S.settings = { ...S.settings, streamer: false 
 function openSettings(open) {
   $('settingsDrawer').classList.toggle('open', open);
   $('navSettings').classList.toggle('active', open);
-  if (open) openDrawer(false);
+  if (open) { openDrawer(false); checkToasts(); }
   syncPush();
 }
 // an open side panel pushes the overview to the right instead of covering it
@@ -622,7 +622,13 @@ function syncPush() {
   document.querySelector('.body').classList.toggle('pushed',
     $('drawer').classList.contains('open') || $('settingsDrawer').classList.contains('open'));
 }
-document.querySelectorAll('[data-setting]').forEach(cb => cb.onchange = () => api.setSetting(cb.dataset.setting, cb.checked));
+document.querySelectorAll('[data-setting]').forEach(cb => cb.onchange = () => { api.setSetting(cb.dataset.setting, cb.checked); if (cb.dataset.setting === 'matchNotify') checkToasts(); });
+// the match notification is on but Windows shows no notifications at all: say so under it
+async function checkToasts() {
+  const on = $('notifyBox').checked;
+  const ok = on ? await api.toastsEnabled() : true;
+  $('notifyOff').hidden = !on || ok !== false;
+}
 $('langSelect').innerHTML = I18N.LANGS.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
 $('langSelect').onchange = () => {
   const l = $('langSelect').value;

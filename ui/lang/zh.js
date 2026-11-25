@@ -232,6 +232,7 @@
     'mast.tipAram': "部分对局为极地大乱斗（更短）——已计入",
     'mast.tipSrc': "来源：{src}",
     'last.title': "上一场对局",
+    'set.notifyOff': "此电脑已关闭 Windows 通知，因此不会显示任何内容。请在 Windows 设置 → 系统 → 通知 中开启。",
     'm.noRiotClient': "未找到 Riot Client——请先安装（或手动启动一次）后重试。没有关闭任何程序。",
     'm.restoreFailed': "无法恢复保存的登录（某个文件被锁定或已损坏）。请手动登录一次并勾选“保持登录”，或为此账号保存密码。",
     'reveal.export': "Rift Switch 想要导出你保存的登录信息。",

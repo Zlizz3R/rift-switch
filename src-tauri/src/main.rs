@@ -3298,6 +3298,8 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             Value::Null
         }
         "data-export" => do_export(a(0), a(1)).await,
+        // the match notification needs Windows notifications on (the settings say so if they aren't)
+        "toasts-enabled" => json!(winsys::toasts_enabled()),
         "diagnostics" => do_diagnostics().await,
         "data-import" => do_import(a(0)).await,
         "check-import-pass" => {

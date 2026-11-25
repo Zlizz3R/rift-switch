@@ -235,6 +235,7 @@
     'mast.tipAram': "Parte das partidas foi ARAM (mais curtas) – incluídas",
     'mast.tipSrc': "Fontes: {src}",
     'last.title': "Última partida",
+    'set.notifyOff': "As notificações do Windows estão desativadas neste PC, então nada aparece. Ative-as em Configurações do Windows → Sistema → Notificações.",
     'm.noRiotClient': "Riot Client não encontrado – instale-o (ou abra-o uma vez manualmente) e tente de novo. Nada foi fechado.",
     'm.restoreFailed': "Não foi possível restaurar o login salvo (um arquivo estava bloqueado ou danificado). Entre uma vez manualmente com “Manter conectado” ou salve uma senha para esta conta.",
     'reveal.export': "O Rift Switch quer exportar seus logins salvos.",

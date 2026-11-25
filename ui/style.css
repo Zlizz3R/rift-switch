@@ -1594,3 +1594,4 @@ span.mh-ch { cursor: default; }
 .tag-all-h small { color: var(--muted); font-weight: 400; }
 .tag-all .tag-sub { margin-top: 12px; }
 .tchip.tc-na { color: var(--muted); border: 1px dotted #364057; opacity: .55; font-weight: 500; cursor: default; }
+.set-warn { color: #e0a84a; margin: -2px 0 10px; }

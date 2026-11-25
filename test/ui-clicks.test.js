@@ -1000,3 +1000,19 @@ test('every button of every page can be clicked without a script error', () => w
     }
   }
 }));
+
+test('match notification: a note when Windows notifications are off (nothing would show)', async () => {
+  const st = sampleState();
+  st.settings.matchNotify = true;
+  await withApp({ state: st, replies: { 'toasts-enabled': false } }, async (app) => {
+    await app.click('#navSettings');
+    await app.settle();
+    assert.ok(app.visible('#notifyOff'));
+    assert.match(app.$('#notifyOff').textContent, /Windows notifications are turned off/);
+  });
+  await withApp({ state: st, replies: { 'toasts-enabled': true } }, async (app) => {
+    await app.click('#navSettings');
+    await app.settle();
+    assert.ok(!app.visible('#notifyOff'));
+  });
+});

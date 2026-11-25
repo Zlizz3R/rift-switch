@@ -46,6 +46,15 @@ pub fn set_app_id(id: &str) {
     }
 }
 
+/// Are Windows notifications on at all? (Settings → System → Notifications; off = no app's toast
+/// shows, ours neither). Not set = on.
+pub fn toasts_enabled() -> bool {
+    use winreg::enums::HKEY_CURRENT_USER;
+    winreg::RegKey::predef(HKEY_CURRENT_USER)
+        .open_subkey(r"Software\Microsoft\Windows\CurrentVersion\PushNotifications")
+        .and_then(|k| k.get_value::<u32, _>("ToastEnabled"))
+        .map_or(true, |v| v != 0)
+}
 /// A Windows notification (bottom right, Action Center). Shown under the app's own id when the
 /// installer's Start menu shortcut carries it, otherwise under PowerShell's id (a portable copy –
 /// Windows only shows notifications of apps it knows).
