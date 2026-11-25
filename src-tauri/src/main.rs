@@ -825,6 +825,11 @@ fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
 }
 
 const IN_GAME: [&str; 3] = ["GameStart", "InProgress", "Reconnect"];
+/// From a game (or its end screens) to the end screen or out of it: the game is over.
+fn after_game(was: Option<&str>, now: &str) -> bool {
+    const PLAYED: [&str; 6] = ["GameStart", "InProgress", "Reconnect", "WaitingForStats", "PreEndOfGame", "EndOfGame"];
+    was.is_some_and(|w| PLAYED.contains(&w)) && matches!(now, "EndOfGame" | "Lobby" | "None" | "Matchmaking")
+}
 /// A game is on (loading screen or running) – the phase comes from the client's events the moment
 /// it changes (else from the last tick): long request loops stop as soon as a game starts.
 fn game_on() -> bool {
@@ -3741,10 +3746,24 @@ fn on_lcu_event(ev: events::Event) {
                     if c.live.phase.as_deref() == Some(p) {
                         return false;
                     }
+                    let was = c.live.phase.clone();
                     c.live.phase = Some(p.to_string());
+                    // a game just ended: the own match list at once, so the game is stored before
+                    // the next one (Live's "do I know them?" needs it)
+                    if after_game(was.as_deref(), p) {
+                        c.last_profile_at = 0;
+                    }
                     true
                 });
                 if changed {
+                    if matches!(p, "EndOfGame" | "Lobby" | "None") {
+                        // the client lists a game only once its stats are in: read once more later
+                        tauri::async_runtime::spawn(async {
+                            sleep(25_000).await;
+                            with(|c| c.last_profile_at = 0);
+                            KICK.notify_one();
+                        });
+                    }
                     push();
                     if p == "ReadyCheck" {
                         match_found();
@@ -3936,6 +3955,16 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_game_ending_reads_the_history() {
+        assert!(super::after_game(Some("InProgress"), "EndOfGame"));
+        assert!(super::after_game(Some("EndOfGame"), "Lobby"));
+        assert!(super::after_game(Some("WaitingForStats"), "None"));
+        assert!(!super::after_game(Some("Lobby"), "Matchmaking"));
+        assert!(!super::after_game(None, "EndOfGame"));
+        assert!(!super::after_game(Some("ChampSelect"), "Lobby"));
+    }
+
     //! The background part's own state handling, without a window: the encrypted login files,
     //! what the window gets to see, and a saved login turning into its real account.
     //! (One test: the app has one shared state.)

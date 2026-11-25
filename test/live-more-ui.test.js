@@ -162,3 +162,25 @@ test('live board: the own lobby is a party, even without earlier games together'
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('live board: two others met once before – when, the other by his champion now, this one by his champion then', async () => {
+  // e4 played Jax (24) against e5 on Aatrox (266) three hours ago; now e4 is on 51, e5 on 117
+  const once = game({ 0: { puuid: 'e4', champ: 24 }, 5: { puuid: 'e5', champ: 266 } }, 3);
+  const app = await boot({ replies: {
+    live: { clientUp: true, phase: 'InProgress', me: P(1), inGame },
+    'scout-games': scoutReply({ e4: { games: [once] }, e5: { games: [once] } }),
+    matches: { index: [], waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': [],
+    champions: [{ id: 24, name: 'Jax' }, { id: 266, name: 'Aatrox' }, { id: 51, name: 'Caitlyn' }, { id: 117, name: 'Lulu' }],
+  } });
+  try {
+    await app.click('#navLive');
+    for (let i = 0; i < 4; i++) await app.settle();
+    const chip = id => [...app.$(`.sc-card[data-sc="${id}"]`).querySelectorAll('.tchip')].map(x => x.textContent).find(x => /against/.test(x));
+    const hours = new Date().getHours();
+    const day = hours >= 3 ? 'Today' : 'Yesterday';
+    assert.equal(chip('e4'), `${day}: against Lulu (as Jax)`);
+    assert.equal(chip('e5'), `${day}: against Caitlyn (as Aatrox)`);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

@@ -18,6 +18,18 @@ function lmNeedOwn() {
   lmx.ownLoading = true;
   allGames().then(g => { scv.own = g || []; lmx.ownLoading = false; scv.memo = new Map(); if (view === 'live') renderLive(true); });
 }
+// the id of the newest own stored game ("last game" means that one)
+function lmNewestOwn() {
+  let best = null;
+  for (const g of scv.own || []) if (!best || g.t > best.t) best = g;
+  return best ? String(best.id) : '';
+}
+// "Last game" (the newest own game) / "Today" / "Yesterday" / "3 days ago"
+function lmDay(at, last = false) {
+  if (last) return t('know.lastGame');
+  const d = Insights.daysAgo(at);
+  return d === 0 ? t('know.today') : d === 1 ? t('know.yesterday') : t('know.daysAgo', { n: d });
+}
 const lmOwnIds = () => S.accounts.filter(a => !a.placeholder).map(a => a.puuid);
 
 // ---------- damage mix ----------
@@ -104,10 +116,12 @@ function lmBoardExtras(g, rows) {
     // with an own account "do I know them?" says it (with more detail)
     if (!a || !b || ownIds.includes(h.a) || ownIds.includes(h.b)) continue;
     const when = new Date(h.g.t).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
+    const day = lmDay(h.g.t);
     for (const [me, other] of [[a, b], [b, a]]) {
       const pm = h.g.players.find(x => x.puuid === me.puuid), po = h.g.players.find(x => x.puuid === other.puuid);
       const tip = t('hint.tip', { when, a: champName(pm && pm.champ), b: champName(po && po.champ), res: t(pm && pm.win ? 'hint.won' : 'hint.lost') });
-      add(me.puuid, `<span class="tchip tc-info" title="${esc(tip)}">${esc(t(h.same ? 'hint.team' : 'hint.enemy', { champ: champName(other.championId) }))}</span>`);
+      // the other one by this game's champion (to find him on the board), this one by his champion then
+      add(me.puuid, `<span class="tchip tc-info" title="${esc(tip)}">${esc(t(h.same ? 'hint.team' : 'hint.enemy', { when: day, champ: champName(other.championId), then: champName(pm && pm.champ) }))}</span>`);
     }
   }
   // do I know them: every player against all own stored games
@@ -116,8 +130,8 @@ function lmBoardExtras(g, rows) {
     if (!p.puuid || own.includes(p.puuid)) continue;
     const m = Insights.meetings(scv.own || [], own, p.puuid, g.gameId);
     if (!m) continue;
-    const L = m.last, d = Insights.daysAgo(L.g.t);
-    const when = d === 0 ? t('know.lastGame') : d === 1 ? t('know.yesterday') : t('know.daysAgo', { n: d });
+    const L = m.last;
+    const when = lmDay(L.g.t, String(L.g.id) === lmNewestOwn());
     const acc = S.accounts.find(a => a.puuid === L.me.puuid);
     const tip = [t(L.same ? 'know.tipTeam' : 'know.tipEnemy', { champ: champName(L.them.champ), kda: `${L.them.k}/${L.them.d}/${L.them.a}`,
       res: t(L.win ? 'hint.won' : 'hint.lost'), when: new Date(L.g.t).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }), acc: acc ? dispName(acc) : '?' })];
