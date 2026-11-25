@@ -37,7 +37,7 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Panic-Hook schreibt Ort und Meldung in `error.log`, bevor `panic = "abort"` beendet.
 - [x] `tools/release.js` (`npm run release X.Y.Z [--push]`): alle Prüfungen des Release-Workflows vorab.
 - [ ] Code-Signing: SignPath Foundation (kostenlos für Open Source) oder Azure Trusted Signing (~10 $/Monat) – braucht eine Bewerbung/Identitätsprüfung durch den Nutzer.
-- [ ] Noch offen (Nutzer entscheidet): Session-/Tilt-Anzeige, winget-Manifest, Export als CSV.
+- [ ] Noch offen (Nutzer entscheidet): winget-Manifest, Export als CSV.
 
 ## Nicht gewollt – passt nicht zur Vision (25.11.2026)
 
@@ -53,6 +53,8 @@ Nicht wieder vorschlagen. Die Gründe des Nutzers:
 - **Decay-Kalender mit Warnung** – der Decay auf der Kachel reicht.
 - **Beute über alle Accounts** (Truhen, Schlüssel, Splitter zum Zerlegen) – die Kollektion gibt es schon;
   Splitter sind uninteressant.
+- **Session-Anzeige** (heute gespielt, LP heute) – geht schon mit dem Filter „Heute“ in der Match History.
+- **Tilt-Anzeige** (Hinweis nach Niederlagen in Folge) – wann der Tilt kommt, weiß man selbst am besten.
 
 ### 0. Aus dem Code-Review (25.11.2026) noch offen
 

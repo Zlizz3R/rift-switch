@@ -2,7 +2,7 @@
 
 **Worum es geht:** Rift Switch ist meine eigene Windows-App für League of Legends: ein Account-Switcher und
 Multi-Account-Companion (Tauri: Rust-Backend in `src-tauri/`, Oberfläche in `ui/`, 11 Sprachen). Das Projekt liegt in
-`C:\Users\bjarn\Documents\LoL-Switcher` (GitHub: `Zlizz3R/rift-switch`). **Lies zuerst die `README.md`.** Dort steht,
+`C:\Users\bjarn\Projekte\Rift-Switch` (GitHub: `Zlizz3R/rift-switch`). **Lies zuerst die `README.md`.** Dort steht,
 was die App kann, wie sie arbeitet und welche Verbindungen nach außen sie hat. Danach diesen Plan.
 
 Rift Switch bleibt ein **lokaler Multi-Account-Companion**: schnell, privat, ohne eigene Server. Dieser Plan erweitert
