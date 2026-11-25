@@ -344,11 +344,14 @@ test('every "?" opens its help page; Esc closes it', () => withApp({}, async (ap
 test('live page: only real penalties, with time left; a queue wait shows in the title bar', () => withApp({}, async (app) => {
   const st = sampleState({ live: { clientUp: true, puuid: P(1), phase: 'Lobby', waits: [{ code: 'LowPriorityQueue', until: Date.now() + 120000 }] } });
   st.accounts[0].penalties = { at: Date.now(), list: [{ code: 'LowPriorityQueue', until: Date.now() + 120000 }, { code: 'Unknown', until: 0 }, { code: 'GameVersionMissing', until: 0 }] };
+  // another own account, not signed in and not in the lobby: its penalty is no concern here
+  st.accounts[1].penalties = { at: Date.now(), list: [{ code: 'LEAVER_BUSTED', until: Date.now() + 3600000 }] };
   await app.push(st);
   assert.match(app.$('#live').textContent, /Wait \d:\d\d/);
   await app.click('#navLive');
   const rows = app.$$('.pen-row');
-  assert.equal(rows.length, 1, 'Unknown / GameVersionMissing are no penalties');
+  assert.equal(rows.length, 1, 'Unknown / GameVersionMissing are no penalties; other accounts are left out');
+  assert.doesNotMatch(app.$('.pen-card').textContent, /LeaverBuster/);
   assert.match(rows[0].textContent, /left/);
   // no champ select: the helper is the folded champion pool – unfolded, the help is there
   await app.click('[data-poolfold]');
@@ -383,18 +386,20 @@ test('live page after a game: the last game with both teams, MVP / ACE, bars wit
   });
 });
 
-test('champ select helper: one counters page per enemy ranks the pool; pre-load scans the pool; enemy picks are clickable', () => {
+test('champ select helper: one counters page per enemy ranks the pool; pre-load reads only the pool\'s own pages', () => {
   const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Malphite' }, { id: 5, name: "Cho'Gath" }];
   // counterstats: who does well against <enemy>
   const pages = {
     Darius: [{ name: 'Garen', wr: 48, rating: 4.1 }, { name: 'Illaoi', wr: 53, rating: 5.2 }],
     Malphite: [{ name: 'Garen', wr: 51, rating: 5.0 }],
     Garen: [{ name: 'Darius', wr: 52 }, { name: 'Malphite', wr: 49 }],
-    Illaoi: [{ name: 'Darius', wr: 47 }, { name: "Cho'Gath", wr: 50 }],
+    Illaoi: [{ name: 'Darius', wr: 47 }, { name: "Cho'Gath", wr: 46 }],
   };
   const st = sampleState();
   st.settings.champPool = [1, 3];
-  return withApp({ state: st, replies: { champions: champs, counters: (enemy) => ({ ok: true, list: pages[enemy] || [] }) } }, async (app) => {
+  // Cho'Gath's own page can't be read: the pool's pages answer for him
+  const counters = (enemy) => (enemy === "Cho'Gath" ? { ok: false, list: [] } : { ok: true, list: pages[enemy] || [] });
+  return withApp({ state: st, replies: { champions: champs, counters } }, async (app) => {
     await app.click('#navLive');
     // outside champ select the helper is folded (kept as a setting); unfolded it is all there
     assert.ok(!app.$('.helper'));
@@ -411,9 +416,40 @@ test('champ select helper: one counters page per enemy ranks the pool; pre-load 
     await app.click('#hPre');
     await new Promise((r) => setTimeout(r, 200));
     await app.settle();
-    const asked = app.called('counters').map((c) => c.args[0]);
-    for (const n of ['Garen', 'Illaoi', 'Malphite', "Cho'Gath"]) assert.ok(asked.includes(n), 'pre-load reaches ' + n);
-    assert.equal(asked.filter((n) => n === 'Darius').length, 1, 'nothing asked twice');
+    // one page per champion of the pool – not one per enemy they might meet
+    assert.deepEqual(app.called('counters').map((c) => c.args[0]), ['Darius', 'Garen', 'Illaoi']);
+    // an enemy whose page isn't there: turned round from Illaoi's page (Cho'Gath 46 % → Illaoi 54 %)
+    await app.type('#hEnemy', "Cho'Gath");
+    await new Promise((r) => setTimeout(r, 100));
+    await app.settle();
+    assert.deepEqual(app.$$('.h-res b').map((x) => x.textContent), ['Illaoi', 'Garen']);
+    assert.deepEqual(app.$$('.h-res .wr').map((x) => x.textContent), ['54%', '–'], 'Garen\'s page has no Cho\'Gath: no data');
+  });
+});
+
+test('champ select helper: "from match history" adds the champions played 3+ times on the lane', () => {
+  const POS = ['top', 'jungle', 'mid', 'bot', 'support'];
+  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Ahri' }];
+  // P(1) on top: Garen 3 games, Darius 1; Ahri 4 games but on mid
+  const g = (i, champ, pos) => {
+    const players = [...POS.map((r, j) => ({ puuid: `a${i}${j}`, team: 100, champ: 100 + j, pos: r, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] })),
+      ...POS.map((r, j) => ({ puuid: `b${i}${j}`, team: 200, champ: 110 + j, pos: r, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] }))];
+    const k = POS.indexOf(pos);
+    players[k] = { ...players[k], puuid: P(1), champ };
+    return { id: String(900 + i), t: Date.now() - (i + 1) * 86400000, dur: 1800, q: 420, mode: 'CLASSIC', players };
+  };
+  const games = [g(0, 1, 'top'), g(1, 1, 'top'), g(2, 1, 'top'), g(3, 2, 'top'), ...[4, 5, 6, 7].map(i => g(i, 4, 'mid'))];
+  const st = sampleState();
+  st.settings.champPool = [3];
+  st.settings.lane = 'top';
+  return withApp({ state: st, replies: { champions: champs, matches: { index: games.map(x => [x.id, x.t, x.q, P(1)]), waiting: 0 }, 'matches-get': games } }, async (app) => {
+    await app.click('#navLive');
+    await app.click('[data-poolfold]');
+    await app.click('#hFromMh');
+    await new Promise((r) => setTimeout(r, 50));
+    await app.settle();
+    assert.deepEqual(lastCall(app, 'set-setting').args, ['champPool', [3, 1]]);
+    assert.equal(app.$$('.h-chip').length, 2);
   });
 });
 

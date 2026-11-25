@@ -169,7 +169,7 @@
   }
 
   // ---------- one rule ----------
-  // d: { all, season, d30, d60, role rows, role, level, mastery, prev, now }
+  // d: { all, season, d7, d30, d60, role rows, role, level, mastery, prev, now }
   function evalRule(r, d) {
     const out = (state, o = {}) => ({ id: r.id, group: r.group, color: r.color || null, stage: r.stage, period: r.period || null, state, ...o });
     const few = (n, need) => out('few', { n, need });
@@ -304,7 +304,7 @@
     const all = St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && RANKED.includes(x.g.q) && x.g.t >= seasonFrom);
     const d = {
       all, now, level: ctx.level == null ? null : ctx.level, mastery: ctx.mastery || null, prev: ctx.prev || new Set(),
-      season: all.filter(x => x.g.t >= seasonFrom), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY),
+      season: all.filter(x => x.g.t >= seasonFrom), d7: all.filter(x => now - x.g.t <= 7 * DAY), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY),
     };
     const mr = mainRole(d.season);
     d.role = ctx.role || mr.main || mr.most || null;

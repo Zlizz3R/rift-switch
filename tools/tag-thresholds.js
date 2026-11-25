@@ -1,9 +1,18 @@
 // node tools/tag-thresholds.js [data folder] – the thresholds of the leveled tags (ui/tag-rules.js),
 // per position, from the stored ranked games of the OTHER players (the own accounts left out):
 // weak = lowest 25 %, terrible = lowest 10 %, great = best 33 %, master = best 16.6 % (deaths the
-// other way round). A season average lies between one game and a random mix of ten games, so each
-// threshold is the middle of both; lane differences are mirrored. Prints the distributions and the
-// rounded levels; copy those into tag-rules.js. Reads only.
+// other way round). Reads the own store (matches) and the one Live fills with the last games of the
+// players it meets (matches-others).
+//
+// Two ways, the better one wins per position and figure:
+// - REAL: every other player with at least 10 ranked games on the position, ALL of them together –
+//   exactly the way a tag judges a player. Used from 30 such players on.
+// - MODEL (until then): most other players appear in one or two games only, so the spread of season
+//   averages is estimated: single games spread too wide, so each threshold is the middle between the
+//   single games and averages of 10 games drawn from all players' games (fixed seed). Small counts
+//   (roams, steals, first blood) from those averages alone; lane differences mirrored.
+// Prints the distributions and the rounded levels with their source; copy those into tag-rules.js.
+// Reads only.
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const UI = path.join(__dirname, '..', 'ui') + path.sep;
 const St = require(UI + 'stats.js');
@@ -11,21 +20,25 @@ const T = require(UI + 'tags.js');
 const DIR = path.join(process.argv[2] || path.join(process.env.APPDATA || '', 'rift-switch'), 'matches');
 const own = new Set(Object.keys(JSON.parse(fs.readFileSync(path.join(DIR, 'by.json'), 'utf8'))));
 const games = new Map();
-for (const l of fs.readFileSync(path.join(DIR, 'games.jsonl'), 'utf8').split('\n')) {
+const OTHERS = path.join(path.dirname(DIR), 'matches-others', 'games.jsonl');
+const lines = [...fs.readFileSync(path.join(DIR, 'games.jsonl'), 'utf8').split('\n'),
+  ...(fs.existsSync(OTHERS) ? fs.readFileSync(OTHERS, 'utf8').split('\n') : [])];
+for (const l of lines) {
   if (!l.trim()) continue;
   let g; try { g = JSON.parse(l); } catch { continue; }
   if (g.remake || g.mode !== 'CLASSIC') continue;
   const old = games.get(String(g.id));
   if (!old || (g.v || 0) >= (old.v || 0)) games.set(String(g.id), g);
 }
-// objectives from the raw archive (as the backend stores them since format 5)
+// objectives from the raw archive for games stored before format 5 (newer games carry their own,
+// with the killer and the enemies who hit it – those are never replaced)
 let raw = '';
 try { raw = zlib.gunzipSync(fs.readFileSync(path.join(DIR, 'raw.jsonl.gz'))).toString('utf8'); } catch (e) { console.log('raw', e.message); }
 let withObj = 0;
 for (const l of raw.split('\n')) {
   if (!l.trim()) continue;
   let r; try { r = JSON.parse(l); } catch { continue; }
-  const g = games.get(String(r.id)); if (!g || !r.timeline || !r.game) continue;
+  const g = games.get(String(r.id)); if (!g || !r.timeline || !r.game || Array.isArray(g.obj)) continue;
   const puuidOf = new Map(r.game.participantIdentities.map(x => [x.participantId, x.player && x.player.puuid]));
   const idx = pid => g.players.findIndex(p => p.puuid && p.puuid === puuidOf.get(pid));
   const KIND = { DRAGON: 'D', BARON_NASHOR: 'B', RIFTHERALD: 'H', ATAKHAN: 'A', HORDE: 'G' };
@@ -44,19 +57,18 @@ const FIG = ['csMin', 'dmgMin', 'kda', 'deaths', 'visMin', 'kp', 'goldDiff15', '
 // fewer is better
 const DOWN = new Set(['deaths', 'caught', 'fbDeath', 'invaded']);
 const MIRROR = ['goldDiff15', 'laneCs15', 'xpDiff15'];
-// yes / no per game (first blood) or rare counts (steals): one game says nothing, the 10-game mix alone
-const RATE = new Set(['fbPart', 'fbDeath', 'steals']);
+// yes / no per game (first blood) or small counts (steals, roams, caught): one game sticks at 0, 1, 2 …
+// and says nothing – the 10-game mix alone
+const RATE = new Set(['fbPart', 'fbDeath', 'steals', 'roam', 'caught']);
 const by = {};
 let pg = 0;
 const rowsBy = {};
 for (const g of games.values()) for (const p of g.players) {
   if (own.has(p.puuid)) continue;
-  // objectives from every Summoner's Rift game (few have them); everything else ranked only
-  if (![420, 440].includes(g.q)) { if (g.obj) { const role = St.role(g, p); if (role) ((rowsBy[role] = rowsBy[role] || { r: [], o: [] }).o).push({ g, p }); } continue; }
+  if (![420, 440].includes(g.q)) continue;
   const role = St.role(g, p); if (!role) continue;
   pg++;
-  ((rowsBy[role] = rowsBy[role] || { r: [], o: [] }).r).push({ g, p });
-  if (g.obj) rowsBy[role].o.push({ g, p });
+  ((rowsBy[role] = rowsBy[role] || { r: [] }).r).push({ g, p });
   for (const f of FIG) {
     const { v, n } = T.METRICS[f]([{ g, p }]);
     if (v == null || !n) continue;
@@ -64,7 +76,8 @@ for (const g of games.values()) for (const p of g.players) {
   }
 }
 const q = (a, x) => a[Math.min(a.length - 1, Math.floor(a.length * x / 100))];
-console.log(`games ${games.size} (with objectives ${withObj}), other players' games ${pg}, own accounts left out: ${own.size}`);
+const objN = [...games.values()].filter(g => Array.isArray(g.obj)).length;
+console.log(`games ${games.size} (with objectives ${objN}, from the raw archive ${withObj}), other players' games ${pg}, own accounts left out: ${own.size}`);
 const out = {};
 for (const role of St.POSITIONS) {
   console.log('==', role);
@@ -83,7 +96,7 @@ const avg = {};
 for (const role of St.POSITIONS) {
   console.log('== 10-game averages', role);
   for (const f of FIG) {
-    const pool = f === 'objPart' ? (rowsBy[role] || {}).o || [] : (rowsBy[role] || {}).r || [];
+    const pool = (rowsBy[role] || {}).r || [];
     if (pool.length < 20) { console.log('  ' + f, 'too few', pool.length); continue; }
     const vals = [];
     for (let i = 0; i < 4000; i++) {
@@ -111,7 +124,7 @@ const levels = {};
 for (const role of St.POSITIONS) {
   for (const f of FIG) {
     const a = (single[role] || {})[f];
-    const pool = f === 'objPart' ? [] : (rowsBy[role] || {}).r || [];
+    const pool = (rowsBy[role] || {}).r || [];
     if (!a || pool.length < 20) continue;
     seed = 11;
     const vals = [];
@@ -140,13 +153,37 @@ for (const f of MIRROR) for (const role of St.POSITIONS) {
   for (const [k, p] of Object.entries(PCT)) lv[k] = (q(a, p) + q(vals, p)) / 2;
   (levels[f] = levels[f] || {})[role] = lv;
 }
+// REAL: other players' season averages over all their games on a position (at least REAL_MIN)
+const REAL_MIN = 10, REAL_PLAYERS = 30;
+const source = {};
+{
+  const seasonFrom = new Date(new Date().getFullYear(), 0, 1).getTime();
+  const per = {};   // role -> puuid -> rows
+  for (const role of St.POSITIONS) for (const x of (rowsBy[role] || {}).r || []) {
+    if (x.g.t < seasonFrom) continue;
+    ((per[role] = per[role] || {})[x.p.puuid] = per[role][x.p.puuid] || []).push(x);
+  }
+  console.log(`== real season averages (players with ${REAL_MIN}+ games on the position; used from ${REAL_PLAYERS} players on)`);
+  for (const role of St.POSITIONS) {
+    const players = Object.values(per[role] || {}).filter(r => r.length >= REAL_MIN);
+    console.log('  ' + role.padEnd(8), 'players', players.length);
+    if (players.length < REAL_PLAYERS) continue;
+    for (const f of FIG) {
+      const vals = players.map(r => T.METRICS[f](r)).filter(o => o.v != null && o.n >= REAL_MIN).map(o => o.v).sort((x, y) => x - y);
+      if (vals.length < REAL_PLAYERS) continue;
+      const down = DOWN.has(f);
+      (levels[f] = levels[f] || {})[role] = Object.fromEntries(Object.entries(PCT).map(([k, p]) => [k, q(vals, down ? 100 - p : p)]));
+      (source[f] = source[f] || {})[role] = `real, ${vals.length} players`;
+    }
+  }
+}
 const STEP = { csMin: 0.1, dmgMin: 10, kda: 0.05, deaths: 0.1, visMin: 0.01, kp: 0.01, goldDiff15: 50, cs15: 1, laneCs15: 1, share0to15: 0.005, share15to30: 0.005,
   objPart: 0.01, xpDiff15: 50, goldMin: 5, wardsKilled: 0.1, fbPart: 0.01, fbDeath: 0.01, roam: 0.05, caught: 0.05, steals: 0.01, invade: 1, invaded: 1 };
 const round = (f, v) => +(Math.round(v / STEP[f]) * STEP[f]).toFixed(3);
 const outLv = {};
 for (const [f, roles] of Object.entries(levels)) for (const [role, lv] of Object.entries(roles))
   ((outLv[f] = outLv[f] || {})[role] = Object.fromEntries(['great', 'master', 'weak', 'terrible'].map(k => [k, round(f, lv[k])])));
-for (const [f, roles] of Object.entries(outLv)) { console.log(f); for (const [r, lv] of Object.entries(roles)) console.log('  ', r.padEnd(8), JSON.stringify(lv)); }
+for (const [f, roles] of Object.entries(outLv)) { console.log(f); for (const [r, lv] of Object.entries(roles)) console.log('  ', r.padEnd(8), JSON.stringify(lv), (source[f] || {})[r] || 'model'); }
 
 // comeback / throw: how often a team 2,000 gold behind at 15 minutes still wins, and one ahead loses
 {

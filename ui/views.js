@@ -425,11 +425,22 @@ function playerRow(p) {
     ${p.gameName ? `<button class="chip" data-opgg="${esc(p.gameName + '#' + p.tagLine)}">op.gg</button>` : ''}
   </div>`;
 }
-// every account's known penalties (from its own last login) that haven't run out
+// the own accounts that matter on the Live page: the signed-in one and any in the lobby, champion
+// select or the game – another account's penalty is no concern here (its tile shows it)
+function liveAccounts() {
+  const d = liveData || {};
+  const ids = new Set([S.live && S.live.puuid, d.me].filter(Boolean));
+  const add = list => (list || []).forEach(p => p && p.puuid && ids.add(p.puuid));
+  if (d.lobby) add(d.lobby.members);
+  if (d.champSelect) add(d.champSelect.allies);
+  if (d.inGame) { add(d.inGame.teamOne); add(d.inGame.teamTwo); }
+  return (S.accounts || []).filter(a => ids.has(a.puuid));
+}
+// their known penalties (from each one's own last login) that haven't run out
 function activePenalties() {
   const now = Date.now();
   const out = [];
-  for (const a of S.accounts || []) {
+  for (const a of liveAccounts()) {
     const list = (a.penalties && a.penalties.list) || [];
     for (const p of list) if (isPenalty(p.code) && !(a.lowPrio && /lowpriority/i.test(p.code)) && (!p.until || p.until > now)) out.push({ a, p, asOf: a.penalties.at });
     if (a.lowPrio) out.push({ a, p: { code: 'LowPriorityQueue', low: a.lowPrio }, asOf: a.lowPrio.at });
@@ -511,16 +522,19 @@ function renderLive(force) {
 // counterstats.net has one page per champion: every champion with enough games against him on a
 // lane, with win rate and counter rating. One request per enemy covers the whole pool. Loaded in
 // the background as soon as an enemy is known – in champion select every enemy pick.
+// A matchup's win rates add up to 100 (Garen 53 % against Darius = Darius 47 % against Garen,
+// checked on 50+ pages): so the pages of my own champions answer every enemy too – "pre-load" needs
+// one request per champion of the pool, not one per possible enemy.
 const csCache = new Map();          // "enemyId|lane" -> { list: [{name, wr, rating}] (empty = no data), share: % of his games on this lane }
 const csKey = (id, lane) => id + '|' + lane;
 let csQueue = [], csBusy = false;
 const lane = () => (S.settings && S.settings.lane) || 'top';
-function want(ids, scan = false) {
+function want(ids) {
   const l = lane();
   for (const id of ids) {
     const k = csKey(id, l);
     if (!id || csCache.has(k) || csQueue.some(q => q.k === k)) continue;
-    csQueue.push({ k, id, l, scan });
+    csQueue.push({ k, id, l });
   }
   if (csQueue.length) runQueue();
 }
@@ -535,8 +549,6 @@ async function runQueue() {
     const c = champById(q.id);
     const r = c ? await api.counters(c.name, q.l) : null;
     if (r && r.ok) csCache.set(q.k, { list: r.list || [], share: r.share || 0 });
-    // a champion of my pool: everyone on its page plays against it on this lane -> load them too
-    if (q.scan && r && r.list) want(r.list.map(x => (champByName(x.name) || {}).id).filter(id => id && id !== q.id));
     helper.load = { done: helper.load.done + 1, total: Math.max(helper.load.total, helper.load.done + 1 + csQueue.length) };
     if (view === 'live') renderLive();
   }
@@ -544,19 +556,39 @@ async function runQueue() {
   csBusy = false;
   if (view === 'live') renderLive();
 }
-// "pre-load": every matchup my pool has on this lane according to counterstats
-function preloadPool() { want(pool(), true); }
+// "pre-load": the pages of my own champions – every enemy they meet on this lane is on them
+function preloadPool() { want(pool()); }
 
-// my pool against the chosen enemy, best first (wr undefined = still loading, null = no data)
+// my pool against the chosen enemy, best first (wr undefined = still loading, null = no data):
+// from the enemy's page, else turned round from my champion's own page (no counter rating there)
 function bestPicks() {
   if (!helper.enemy) return null;
-  const list = (csCache.get(csKey(helper.enemy, lane())) || {}).list;
+  const l = lane();
+  const list = (csCache.get(csKey(helper.enemy, l)) || {}).list;
+  const en = norm((champById(helper.enemy) || {}).name);
   return pool().filter(id => id !== helper.enemy).map(id => {
-    if (!list) return { id };
-    const n = norm((champById(id) || {}).name);
-    const hit = list.find(x => norm(x.name) === n);
-    return { id, wr: hit ? hit.wr : null, rating: hit ? hit.rating : null };
+    const hit = list && list.find(x => norm(x.name) === norm((champById(id) || {}).name));
+    if (hit) return { id, wr: hit.wr, rating: hit.rating };
+    const mine = (csCache.get(csKey(id, l)) || {}).list;
+    const back = mine && mine.find(x => norm(x.name) === en);
+    if (back) return { id, wr: 100 - back.wr, rating: null };
+    return list || mine ? { id, wr: null, rating: null } : { id };
   }).sort((x, y) => (y.wr ?? -1) - (x.wr ?? -1) || (y.rating ?? -1) - (x.rating ?? -1));
+}
+// the champions played on this lane in the own match history (all accounts): at least POOL_MIN
+// games in the last POOL_DAYS days, most played first, at most POOL_MAX
+const POOL_MIN = 3, POOL_DAYS = 180, POOL_MAX = 10;
+async function poolFromHistory() {
+  const games = (await allGames()) || [];
+  const role = lane() === 'adc' ? 'bot' : lane();
+  const own = new Set((S.accounts || []).map(a => a.puuid).filter(Boolean));
+  const since = Date.now() - POOL_DAYS * 86400000;
+  const count = new Map();
+  for (const g of games) {
+    if (Stats.isRemake(g) || g.t < since) continue;
+    for (const p of g.players || []) if (own.has(p.puuid) && p.champ && Stats.role(g, p) === role) count.set(p.champ, (count.get(p.champ) || 0) + 1);
+  }
+  return [...count].filter(([, n]) => n >= POOL_MIN).sort((a, b) => b[1] - a[1]).slice(0, POOL_MAX).map(([id]) => id);
 }
 // Riot doesn't show the enemies' positions in ranked: the likely laner is the enemy with the biggest
 // share of his games on this lane (counterstats), if it is a real one (15 % and more)
@@ -597,7 +629,8 @@ function helperHtml() {
       <select id="hLane">${['top', 'jungle', 'mid', 'adc', 'support'].map(l => `<option value="${l}" ${lane() === l ? 'selected' : ''}>${t('lane.' + l)}</option>`).join('')}</select></div>
     <div class="h-sub">${t('live.poolTitle')}</div>
     ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
-      <input id="hAdd" list="champList" placeholder="+ ${esc(t('live.addChamp'))}" spellcheck="false"></div>
+      <input id="hAdd" list="champList" placeholder="+ ${esc(t('live.addChamp'))}" spellcheck="false">
+      <button class="btn small" id="hFromMh" title="${esc(t('live.poolFromMhT'))}">${t('live.poolFromMh')}</button></div>
     ${picks.length ? `<div class="h-sub">${t('live.vsWho')}</div><div class="h-picks">${picks.map(x => `<button class="h-pick${x.id === helper.enemy ? ' on' : ''}${x.laner ? ' laner' : ''}" data-hpick="${x.id}" title="${esc((champById(x.id) || {}).name || '') + (x.guess ? ' – ' + t('live.likelyLaner', { n: Math.round(x.share) }) : '')}"><img src="${champIcon(x.id)}" alt="">${x.guess ? '<i class="h-guess">?</i>' : ''}</button>`).join('')}</div>` : ''}
     <div class="h-sub">${t('live.enemy')}</div>
     <div class="h-enemy">${helper.enemy ? `<img class="h-en" src="${champIcon(helper.enemy)}" alt="">` : ''}<input id="hEnemy" list="champList" placeholder="${esc(t('live.typeChamp'))}" spellcheck="false" value="${enemyName}"></div>
@@ -618,6 +651,14 @@ $('liveBody').addEventListener('click', async e => {
   const mb = e.target.closest('#clashAll, .multi-btn');
   if (mb) return api.openMulti((liveData && liveData.region) || (selected() && selected().region) || 'euw', mb.dataset.ids.split('|'));
   if (e.target.closest('#hPre')) { if (!pool().length) return toast(t('live.poolEmpty'), true); return preloadPool(); }
+  if (e.target.closest('#hFromMh')) {
+    const ids = await poolFromHistory();
+    if (!ids.length) return toast(t('live.poolNone', { lane: t('lane.' + lane()) }), true);
+    const add = ids.filter(id => !pool().includes(id));
+    savePool([...pool(), ...add]);
+    toast(t('live.poolAdded', { n: add.length }));
+    return renderLive(true);
+  }
   const del = e.target.closest('[data-hdel]');
   if (del) { savePool(pool().filter(id => id !== Number(del.dataset.hdel))); return renderLive(); }
   // "who are you playing against?" – a click on an enemy pick

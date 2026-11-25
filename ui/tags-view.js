@@ -1,8 +1,8 @@
 // Overview → Tags: every tag of tag-rules.js for one account or all of them together, on their
 // ranked games of this season. On top "Your strengths" and "To work on", below the met tags by
 // group; at the end "All possible tags" (folded): every tag – met, not met, too little data, not for
-// this role, only in Live – with the own value and the thresholds on hover. A click on
-// a tag shows the numbers behind it. Engine: tags.js. Uses the globals of renderer.js / views.js.
+// this role (the Live-only ones are left out) – with what it measures, the own value and the
+// thresholds on hover. A click on a tag shows the numbers behind it. Engine: tags.js. Uses the globals of renderer.js / views.js.
 
 const tagv = { role: '', games: null, mast: null, loading: false, open: '' };
 
@@ -68,9 +68,12 @@ function tagChip(x, i, pre = '', title = null) {
 // which way a threshold goes
 const tagSense = r => (r.type === 'poolTop' || r.minShare != null ? '>'
   : r.below != null || r.type === 'level' ? '<' : r.type === 'roleSpread' ? '≤' : '≥');
-// the hover text in "All possible tags": met or why not, the own value, the thresholds, the games
+// what a tag measures and what its value means ('tag.<id>.d')
+const tagDesc = id => t(`tag.${id}.d`);
+// the hover text in "All possible tags": what it measures, met or why not, the own value, the
+// thresholds of the role and where they come from, the games
 function tagWhy(x, role) {
-  const r = tagRule(x.id), lines = [];
+  const r = tagRule(x.id), lines = [tagDesc(x.id), ''];
   if (x.state === 'met') lines.push(tagText(x));
   else if (x.state === 'few') lines.push(x.unread ? t('tags.unread') : t('tags.few', { n: x.n, need: x.need }));
   else lines.push(t('tags.not'));
@@ -78,8 +81,9 @@ function tagWhy(x, role) {
   if (r.type === 'metric') {
     const lv = (role && r[role]) || r.levels;
     const good = r.dir > 0 ? '≥' : '≤', bad = r.dir > 0 ? '≤' : '≥';
-    lines.push(['master', 'great', 'weak', 'terrible'].filter(k => lv[k] != null)
+    lines.push((role ? t('tags.thFor', { role: t('pos.' + role) }) : t('tags.th')) + ': ' + ['master', 'great', 'weak', 'terrible'].filter(k => lv[k] != null)
       .map(k => `${t('tags.lv.' + k)} ${k === 'master' || k === 'great' ? good : bad} ${tagFmt(x, lv[k])}`).join(' · '));
+    lines.push(t('tags.thHow'));
   } else if (x.th != null && x.state !== 'few') lines.push(t('tags.needs', { th: `${tagSense(r)} ${tagFmt(x, x.th)}` }));
   if (x.n != null && x.state !== 'few' && x.id !== 'mastery') lines.push(`${t('perf.games')}: ${num(x.n)}`);
   return lines.join('\n');
@@ -88,7 +92,8 @@ function tagWhy(x, role) {
 const TAG_ALL_KEY = 'rs.tagsAll';
 const tagAllOpen = () => { try { return localStorage.getItem(TAG_ALL_KEY) === '1'; } catch { return false; } };
 function tagAllHtml(list, role, openX) {
-  const rules = TagRules.TAG_RULES.filter(r => !r.off);
+  // the Live-only tags are about the game being played – nothing to show here
+  const rules = TagRules.TAG_RULES.filter(r => !r.off && !r.live);
   const metN = new Set(list.filter(({ x }) => x.state === 'met').map(({ x }) => x.id)).size;
   const head = `<button class="tag-all-h" data-tagall>${tagAllOpen() ? '▾' : '▸'} ${esc(t('tags.all'))} <small>${esc(t('tags.allSub', { met: metN, total: rules.length }))}</small></button>`;
   if (!tagAllOpen()) return `<div class="tag-group tag-all">${head}</div>`;
@@ -96,9 +101,9 @@ function tagAllHtml(list, role, openX) {
     const chips = rules.filter(r => r.group === g).map(r => {
       const mine = list.filter(({ x }) => x.id === r.id);
       if (mine.length) return mine.map(({ x, i }) => tagChip(x, i, 'all|', tagWhy(x, role))).join('');
-      // nothing came out: only in Live, not judged for this role, or no data at all
-      const why = r.live ? t('tags.liveOnly') : r.roles && role && !r.roles.includes(role) ? t('tags.notRole', { role: t('pos.' + role) }) : t('tags.noData');
-      return `<span class="tchip tc-na" title="${esc(why)}">${esc(tagBaseName(r))}</span>`;
+      // nothing came out: not judged for this role, or no data at all
+      const why = r.roles && role && !r.roles.includes(role) ? t('tags.notRole', { role: t('pos.' + role) }) : t('tags.noData');
+      return `<span class="tchip tc-na" title="${esc(`${tagDesc(r.id)}\n\n${why}`)}">${esc(tagBaseName(r))}</span>`;
     }).join('');
     const det = openX && openX.all && openX.x.group === g ? tagDetail(openX.x) : '';
     return `<div class="tag-sub"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${chips}</div>${det}</div>`;
@@ -113,7 +118,7 @@ function tagDetail(x) {
   if (x.value != null && x.th != null) cells.push(`${t('tags.value')}: ${esc(tagFmt(x, x.value))}`, `${t('tags.th')}: ${esc(tagFmt(x, x.th))}`);
   if (x.n != null && x.id !== 'mastery') cells.push(`${t('perf.games')}: ${num(x.n)}`);
   if (tagPeriod(x)) cells.push(esc(tagPeriod(x)));
-  return `<div class="tdetail">${cells.join('<span>·</span>')}</div>`;
+  return `<div class="tdetail"><p class="tdesc">${esc(tagDesc(x.id))}</p>${cells.join('<span>·</span>')}</div>`;
 }
 
 // ---------- rendering ----------

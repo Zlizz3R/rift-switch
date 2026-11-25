@@ -1,9 +1,9 @@
-// Collection: RP, and the breakdown by rarity – one table per kind, a row per account.
+// Collection: RP, and the breakdown by rarity – a row per kind, folding out a row per account.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { boot, P, sampleState } = require('./harness');
 
-test('collection: RP per account; "by rarity" folds out a table per kind to compare accounts', async () => {
+test('collection: RP per account; "by rarity" shows the kinds, a kind folds out its accounts', async () => {
   const st = sampleState();
   st.accounts[0].profile = { be: 1200, rp: 3305 };
   const app = await boot({ state: st, replies: {
@@ -19,15 +19,24 @@ test('collection: RP per account; "by rarity" folds out a table per kind to comp
     assert.match(app.$(`.coll-table tr[data-cacc="${P(1)}"]`).textContent, /3,305/);
     assert.ok(!app.$('.coll-rar'), 'folded at first');
     await app.click('[data-collbd]');
+    // one table: a row per kind with all accounts together – skins and wards (chromas, icons: no data)
     const tables = app.$$('.coll-rar');
-    assert.equal(tables.length, 2);                          // skins and wards (chromas, icons: no data)
-    // only the rarities anyone has, lowest first, the same columns in every table (so they line up)
-    const heads = tb => [...tb.querySelectorAll('thead th')].slice(1).map(th => th.textContent);
-    assert.deepEqual(heads(tables[0]), ['No rarity', 'Epic', 'Legendary', 'Mythic', 'Transcendent']);
-    assert.deepEqual(heads(tables[1]), heads(tables[0]));
-    const p1 = [...tables[0].querySelectorAll('tbody tr')][0];
-    assert.deepEqual([...p1.querySelectorAll('td')].slice(1).map(td => td.textContent), ['10', '5', '2', '1', '1']);
-    assert.match(tables[0].querySelector('tfoot').textContent, /13/);   // no rarity: 10 + 3
+    assert.equal(tables.length, 1);
+    const kinds = () => app.$$('.coll-rar tr.rar-kind');
+    assert.deepEqual(kinds().map(r => r.dataset.rarkind), ['skin', 'ward']);
+    assert.equal(app.$$('.coll-rar tr.rar-acc').length, 0, 'accounts folded at first');
+    // only the rarities anyone has, lowest first
+    assert.deepEqual([...tables[0].querySelectorAll('thead th')].slice(1).map(th => th.textContent), ['No rarity', 'Epic', 'Legendary', 'Mythic', 'Transcendent']);
+    const cells = r => [...r.querySelectorAll('td')].slice(1).map(td => td.textContent);
+    assert.deepEqual(cells(kinds()[0]), ['13', '6', '2', '1', '1']);   // skins: 10 + 3 without rarity, 5 + 1 epic
+    // a click on a kind folds out its accounts, a second click folds them back
+    await app.click(kinds()[0]);
+    const accs = app.$$('.coll-rar tr.rar-acc');
+    assert.equal(accs.length, 2);
+    assert.deepEqual(cells(accs[0]), ['10', '5', '2', '1', '1']);
+    assert.ok(kinds()[0].nextElementSibling.classList.contains('rar-acc'));
+    await app.click(kinds()[0]);
+    assert.equal(app.$$('.coll-rar tr.rar-acc').length, 0);
     // folds back
     await app.click('[data-collbd]');
     assert.ok(!app.$('.coll-rar'));

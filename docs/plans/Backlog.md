@@ -4,41 +4,62 @@ Was noch offen ist – das Neueste oben. Erledigtes wird gestrichen oder mit Dat
 
 ## Offen
 
-### 1. Alle Accounts einmal neu laden (Spielformat 6) – *ich*
+### 1. Schwellen auf echte Spieler-Durchschnitte umstellen – *Claude, sobald genug Daten da sind*
 
-Seit 25.11.2026 speichert die App pro Spiel mehr aus der Timeline (Spielformat 6): XP, Jungle-CS und Positionen pro
-Minute, die Orte der Kills, bei Drachen/Baron/Herald/Atakhan den Killer und wie viele Gegner draufgehauen haben.
-Gespeicherte Spiele in älteren Formaten liest **Load** neu ein.
+Die Schwellen kommen bisher aus einem **Modell**: Fast alle fremden Spieler stecken nur in 1–2 gespeicherten Spielen,
+also wird geschätzt, wie Saison-Durchschnitte streuen (Mitte aus Einzelspielen und Mittelwerten von 10 gezogenen
+Spielen). Ein Tag bewertet einen Spieler dagegen immer mit **allen** seinen Spielen.
 
-- [ ] Mit jedem Account einmal einloggen und **Load** drücken (dauert einmalig länger).
-- [ ] Danach Bescheid geben – dann geht es mit Punkt 2 weiter.
+`tools/tag-thresholds.js` rechnet seit 25.11.2026 auch **echt**: alle Spiele jedes fremden Spielers mit 10+ Ranked-Spielen
+auf einer Rolle – auch aus dem Speicher, den Live mit den letzten 20 Spielen jedes Mitspielers füllt
+(`matches-others`). Ab 30 solchen Spielern pro Rolle ersetzt das das Modell (Ausgabe: „real“ statt „model“).
+Stand 25.11.2026: 1–3 Spieler pro Rolle, `matches-others` noch leer.
 
-### 2. Tag-Schwellen nachkalibrieren (nach Punkt 1) – *Claude*
+- [ ] Nach einigen Live-Spielen `node tools/tag-thresholds.js` laufen lassen; wo „real“ steht, die Werte übernehmen.
+- [ ] Bei „Roamer“ (nur Top, Mid, Support) und „Invader“ (nur Jungle) nachsehen, ob die anderen Rollen dazukommen können.
 
-Diese Tags haben vorläufige Schwellen aus den Rollenaufgaben, weil es noch keine Ranked-Spiele mit den neuen Daten gab:
+### 2. „Wird erwischt“ wieder einschalten – *nur mit genaueren Positionen*
 
-| Tag | Kennzahl |
-|---|---|
-| XP-Vorsprung / XP-Rückstand | `xpDiff15` |
-| Roamer | `roam` |
-| Wird erwischt | `caught` |
-| Objective-Dieb | `steals` |
-| Invader / Wird invadet | `invade`, `invaded` |
-| Objective-Jäger / Verpasst Objectives | `objPart` |
+Aus (`off: true`): Die Timeline hat Positionen nur einmal pro Minute. Selbst Killer und Assister, die nachweislich
+dabei waren, liegen dann in 37 % der Kills mehr als 2.500 Einheiten weg – „kein Mitspieler in der Nähe“ ist so nicht
+messbar. Erst wieder an, wenn es eine Quelle mit genauen Positionen gibt.
 
-- [ ] `node tools/tag-thresholds.js` laufen lassen (nur lesend) und die Werte pro Position in `ui/tag-rules.js`
-  übernehmen – nach demselben Schema wie die anderen: weak = schwächste 25 %, terrible = schwächste 10 %,
-  great = bestes Drittel, master = bestes Sechstel.
-- [ ] Die Kommentare „PROVISIONAL“ in `ui/tag-rules.js` entfernen.
-- [ ] Prüfen, ob die Karten-Zonen (`Stats.zone`: Lanes, River, Jungle je Seite) zu echten Positionen passen – z. B.
-  Stichproben von Kill-Orten gegen die Lane der Spieler.
-- [ ] Prüfen, ob „Objective-Dieb“ (letzter Schlag, mehr Gegner als Mitspieler dran) in echten Spielen sinnvoll trifft.
-- [ ] Prüfen, ob „Wird erwischt“ (Tod nach 15 Min., kein Mitspieler im Umkreis von 2.500, mindestens zwei Gegner)
-  zu oft oder zu selten anschlägt.
+### 3. „Ranked-Grinder“ – geändert 25.11.2026
 
-### 3. Schwellen gelegentlich auffrischen – *Claude, bei Bedarf*
+War 50 Spiele in 30 Tagen; Live kennt nur die letzten 20 Spiele eines Spielers, damit nie erreichbar. Jetzt 10
+Ranked-Spiele in 7 Tagen (≈ 43 im Monat). Beobachten, ob das zu oft anschlägt.
 
-Alle Schwellen stammen aus den gespeicherten Ranked-Spielen der anderen Spieler (Stand 25.11.2026: 186 Spiele,
-1.666 Spieler-Spiele, die eigenen Accounts herausgerechnet). Mit mehr Spielen werden sie genauer.
+## Erledigt
 
-- [ ] Gelegentlich `node tools/tag-thresholds.js` laufen lassen und große Abweichungen übernehmen.
+### ~~Tags für Live, Beschreibungen, Kollektion~~ – ✔ 25.11.2026
+
+- [x] „Alle möglichen Tags“: Live-Tags ganz entfernt; jeder Tag erklärt beim Hovern und Klicken, was er misst und
+  was der eigene Wert bedeutet, dazu die Schwellen der Rolle und woher sie kommen (11 Sprachen).
+- [x] Kein Tag braucht mehr als 10 Spiele (vorher 15 bei OTP, Pool, Rollen; Comeback/Throws jetzt 60 % von
+  mindestens 5 statt 40 % von 8; Late/Early Game 5 statt 8 pro Seite).
+- [x] Roams geprüft: nutzen die genauen Kill-Orte, 2.003 von 2.003 stimmen mit den Rohdaten überein.
+- [x] Kollektion „Nach Rarität“: erst die Arten (Skins, Chromas, Ward-Skins, Icons) mit allen Accounts zusammen,
+  ein Klick klappt die Accounts einer Art auf.
+
+### ~~Alle Accounts einmal neu laden (Spielformat 6)~~ – ✔ 25.11.2026
+
+Alle 186 gespeicherten Ranked-Spiele liegen im Spielformat 6 vor (XP, Jungle-CS, Positionen, Kill-Orte,
+Objectives mit Killer und Gegnern).
+
+### ~~Tag-Schwellen nachkalibrieren~~ – ✔ 25.11.2026
+
+- [x] `tools/tag-thresholds.js` korrigiert: Es überschrieb die Objectives aus Format 6 mit den älteren aus dem
+  Rohdaten-Archiv (ohne Killer und Gegner) – dadurch kam für „Objective-Dieb“ nichts heraus; für `objPart` rechnete es
+  keine Stufen. Kleine Zählwerte (Roams, Erwischt) kommen jetzt wie First Blood und Steals nur aus den 10-Spiele-Mischungen.
+- [x] Werte pro Position in `ui/tag-rules.js` übernommen, „PROVISIONAL“ entfernt:
+  XP-Vorsprung/-Rückstand, Roamer, Wird erwischt, Objective-Dieb, Invader / Wird invadet, Objective-Jäger.
+  Sonderfälle: Jungler sind bei 96 % der Objectives dabei – dort gibt es nur „verpasst Objectives“, keine gute Stufe.
+  Botlaner (Roamer) und Laner (Invader) fallen heraus: Bei ihnen wäre schon ein einziges Mal in zehn Spielen das
+  „beste Drittel“.
+- [x] Karten-Zonen geprüft: In Minute 3–8 stehen Toplaner zu 82 % in der Top-Zone, Midlaner zu 73 % in Mid, Botlaner
+  zu 85 % und Supports zu 73 % in Bot (der Rest meist Basis); Tode vor 10 Min. liegen genauso (Bot 90 %, Top 84 %,
+  Mid 66 % + 11 % River). Passt.
+- [x] „Objective-Dieb“ geprüft: 36 Treffer in 186 Spielen, 34 davon Jungler (Smite), Rest Top/Bot – sinnvoll.
+- [x] „Wird erwischt“ geprüft: 18 % der Tode nach 15 Min. zählen (1.325 von 7.206), im Schnitt 0,5–1,1 pro Spiel je
+  nach Rolle. Die Schwellen (schwächste 25 % / 10 %) liegen jetzt bei 0,5–1,3 statt 1,6–2,5 – vorher hätte der Tag
+  fast nie angeschlagen.

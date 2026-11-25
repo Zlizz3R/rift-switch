@@ -1391,6 +1391,7 @@ span.mh-ch { cursor: default; }
 .tdetail { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: baseline; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .tdetail b { color: var(--text); font-weight: 600; }
 .tdetail span { opacity: .5; }
+.tdetail .tdesc { flex-basis: 100%; margin: 0 0 2px; color: var(--text); opacity: .85; line-height: 1.45; }
 
 /* ---------- Settings: stored games ---------- */
 .store-box { border: 1px solid var(--line); border-radius: 10px; padding: 4px 12px; margin-bottom: 10px; }
@@ -1566,6 +1567,12 @@ span.mh-ch { cursor: default; }
 
 .coll-rar { table-layout: fixed; }
 .coll-rar col.rar-name { width: 200px; }
+.coll-rar tr.rar-kind { cursor: pointer; }
+.coll-rar tr.rar-kind td:first-child { color: var(--text); font-weight: 600; }
+.coll-rar tr.rar-kind:hover td { background: rgba(255,255,255,.03); }
+.coll-rar .rar-tw { display: inline-block; width: 14px; color: var(--muted); }
+.coll-rar tr.rar-acc td:first-child { padding-left: 30px; }
+.coll-rar tr.rar-acc td { font-size: 12px; color: var(--muted); }
 
 /* every card the same up to the tags: fixed heights, so rings and tags line up across a row */
 .sc-head { height: 32px; flex: none; }

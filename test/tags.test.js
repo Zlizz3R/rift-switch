@@ -219,7 +219,7 @@ test('roles: generalist = no role over 66 %; one role only = one role over 90 % 
   assert.deepEqual([one.vars.role, one.vars.pct, one.vars.n], ['mid', 95, 20]);
   assert.ok(T.isWeakness(one));
   assert.equal(get(on([...Array(18).fill(2), 0, 0]), 'oneRole')[0].state, 'not'); // exactly 90 %: not above
-  assert.equal(get(on(Array(10).fill(2)), 'oneRole')[0].state, 'few');            // under 15 games
+  assert.equal(get(on(Array(9).fill(2)), 'oneRole')[0].state, 'few');             // under 10 games
 });
 
 test('objectives: the share of the own team\'s dragons and barons the player was in on, per role', () => {
@@ -230,10 +230,13 @@ test('objectives: the share of the own team\'s dragons and barons the player was
   const o = get(r, 'objectives')[0];
   assert.equal(o.n, 10);
   assert.ok(Math.abs(o.value - 1 / 3) < 1e-9);
-  assert.equal(o.state, 'not');                                // mid: weak below 30 %, great from 60 %
-  // the jungler (index 1) was at all of them: great
+  assert.equal(o.state, 'not');                                // mid: weak below 14 %, great from 45 %
+  // the jungler (index 1) was at all of them: normal for a jungler – no good level there
   const jg = run(Array.from({ length: 10 }, () => { const x = g(); x.players[1] = { ...x.players[1], puuid: 'me' }; x.players[2] = { ...x.players[2], puuid: 'mid' }; return x; }));
-  assert.equal(get(jg, 'objectives')[0].level, 'master');
+  assert.equal(get(jg, 'objectives')[0].state, 'not');
+  // one who missed the first dragon in every game (2 of 3): far below the other junglers
+  const jgMiss = run(Array.from({ length: 10 }, () => { const x = g(); x.obj[0][3] = [2]; x.players[1] = { ...x.players[1], puuid: 'me' }; x.players[2] = { ...x.players[2], puuid: 'mid' }; return x; }));
+  assert.equal(get(jgMiss, 'objectives')[0].level, 'terrible');
   // older games without "obj": too little data
   assert.equal(get(run(Array.from({ length: 10 }, () => game({}))), 'objectives')[0].state, 'few');
 });
@@ -251,7 +254,7 @@ test('map zones: lanes, river, both jungles, bases (hundreds of map units)', () 
   assert.equal(St.zone(5, 5), 'base');
 });
 
-test('format 6 figures: XP lead, roams, getting caught, steals, invades', () => {
+test('format 6 figures: XP lead, roams, steals, invades; "caught" is off', () => {
   // "me" = blue mid (index 2), lane opponent = red mid (7)
   const g = () => {
     const x = game({});
@@ -262,8 +265,7 @@ test('format 6 figures: XP lead, roams, getting caught, steals, invades', () => 
     x.kills = [
       [500, 2, 5, [0], 10, 104],       // 8:20 me on the top lane: a roam
       [600, 2, 7, [], 60, 62],         // my own lane: no roam
-      [1200, 6, 2, [7], 120, 40],      // 20:00 me dead in the bot side lane, two enemies, no team mate near: caught
-      [1300, 7, 2, [], 120, 40],       // one enemy only: a duel, not caught
+      [1200, 6, 2, [7], 120, 40],      // 20:00 me dead in the bot side lane, two enemies, no team mate near
     ];
     x.obj = [[1000, 'B', 100, [2], 2, 3], [600, 'D', 100, [1, 2, 3], 2, 2]];   // baron stolen by me; the dragon contested
     return x;
@@ -272,7 +274,8 @@ test('format 6 figures: XP lead, roams, getting caught, steals, invades', () => 
   const one = id => get(r, id)[0];
   assert.equal(one('xpLead').value, 40);
   assert.equal(one('roamer').value, 1);
-  assert.equal(one('caught').value, 1);
+  // off: the minute places can't tell who was near at the moment of death
+  assert.equal(get(r, 'caught').length, 0);
   assert.equal(one('stealer').value, 1);
   assert.equal(one('stealer').level, 'master');
   // the jungler: minutes 3→4 and 4→5 fully in red's jungle, 2→3 and 5→6 half: 6 + 6 + 3 + 3 CS
@@ -283,7 +286,7 @@ test('format 6 figures: XP lead, roams, getting caught, steals, invades', () => 
   assert.equal(get(red, 'invaded')[0].value, 18);
   // older games (no places, no XP): too little data
   const old = run(Array.from({ length: 10 }, () => game({})));
-  for (const id of ['xpLead', 'roamer', 'caught', 'stealer']) assert.equal(get(old, id)[0].state, 'few', id);
+  for (const id of ['xpLead', 'roamer', 'stealer']) assert.equal(get(old, id)[0].state, 'few', id);
 });
 
 test('gold, wards, first blood, comebacks and throws, early / late game', () => {
@@ -295,11 +298,14 @@ test('gold, wards, first blood, comebacks and throws, early / late game', () => 
   const fb = run(Array.from({ length: 10 }, (_, i) => { const x = game({ ago: i + 1 }); x.kills = [i < 5 ? [200, 2, 7, []] : i < 8 ? [200, 7, 2, []] : [200, 6, 1, []]]; return x; }));
   assert.equal(get(fb, 'firstBlood')[0].level, 'master');
   assert.equal(get(fb, 'fbVictim')[0].level, 'terrible');
-  // 8 games 3,000 behind at 15, 4 of them won: comeback king; 8 ahead, 4 lost: throws leads
+  // 8 games 3,000 behind at 15, 5 of them won: comeback king; 8 ahead, 5 lost: throws leads
   const gold15 = d => Array.from({ length: 16 }, () => Array.from({ length: 10 }, (_, i) => (i < 5 ? 5000 + d / 5 : 5000)));
-  const cb = run(Array.from({ length: 16 }, (_, i) => { const x = game({ ago: i + 1, me: { win: i % 2 === 0 } }); x.gold = gold15(i < 8 ? -3000 : 3000); return x; }));
+  const cb = run(Array.from({ length: 16 }, (_, i) => { const x = game({ ago: i + 1, me: { win: i < 8 ? i < 5 : i >= 13 } }); x.gold = gold15(i < 8 ? -3000 : 3000); return x; }));
   assert.equal(get(cb, 'comeback')[0].state, 'met');
-  assert.deepEqual([get(cb, 'comeback')[0].n, get(cb, 'comeback')[0].vars.w], [8, 4]);
+  assert.deepEqual([get(cb, 'comeback')[0].n, get(cb, 'comeback')[0].vars.w], [8, 5]);
+  // 4 of 8 (50 %) is not clearly more than luck any more
+  const half = run(Array.from({ length: 8 }, (_, i) => { const x = game({ ago: i + 1, me: { win: i % 2 === 0 } }); x.gold = gold15(-3000); return x; }));
+  assert.equal(get(half, 'comeback')[0].state, 'not');
   assert.equal(get(cb, 'throws')[0].state, 'met');
   // 10 short games 3 won, 10 long ones 9 won: late game; not early game
   const ph = run(Array.from({ length: 20 }, (_, i) => game({ ago: i + 1, dur: i < 10 ? 20 * 60 : 35 * 60, me: { win: i < 10 ? i < 3 : i < 19 } })));

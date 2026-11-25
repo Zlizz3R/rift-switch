@@ -158,7 +158,7 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 - **Lobby, champion select and in game** – everyone's Solo/Duo and Flex rank, and a **Multi op.gg** button for the
   enemy team.
 - **Clash** – your next opponents with their ranks as soon as the bracket is out.
-- **Penalties & waiting times** of all your accounts.
+- **Penalties & waiting times** of the account you are on and your other accounts in the lobby or game.
 
 <img src="docs/screens/live-game.png" alt="Live: the ten players of a game as cards">
 
@@ -173,10 +173,11 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 
 <img src="docs/screens/helper.png" alt="Champ select helper: best picks against the enemy laner">
 
-Keep a pool of your champions. In champion select the enemy picks appear as pictures – Riot hides their positions,
-so the app marks the likely laner (by how often each champion plays your lane). Your pool is ranked by win rate and
-counter rating against him (counterstats.net). Every enemy pick loads in the background; *Pre-load all matchups*
-fetches your whole lane while you queue.
+Keep a pool of your champions – typed in, or *From match history*: every champion you played 3+ times on the lane in
+the last 180 days. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app
+marks the likely laner (by how often each champion plays your lane). Your pool is ranked by win rate and counter
+rating against him (counterstats.net). Every enemy pick loads in the background; *Pre-load all matchups* reads just
+your own champions' pages while you queue – a matchup's win rates add up to 100, so they answer every enemy.
 </details>
 
 ### 🔧 Tools & settings
@@ -265,6 +266,13 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
   GitHub Actions builds and publishes the installer, installed copies update themselves
 - Test copy on its own data folder: `$env:RS_DATA='<folder>'; .\src-tauri\target\debug\rift-switch.exe`
   (never touches autostart, the jump list or the real data)
+- **After every change** (AI helpers working on this project do all of this on their own):
+  1. run **all** tests: `npm test` (the window tests and `cargo test`);
+  2. **commit** – right away, without asking;
+  3. **build again** with `npm run dist`, so `Rift Switch.cmd` (it starts
+     `src-tauri\target\release\rift-switch.exe`) runs the new version right away. A running Rift Switch
+     locks that file – close it first (`taskkill /IM rift-switch.exe /F`, no need to ask).
+  **Pushing** only after asking.
 </details>
 
 ## Support

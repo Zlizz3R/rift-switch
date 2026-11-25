@@ -47,28 +47,40 @@ function collMatch(e, q) {
   if (!q) return true;
   return collNorm(e.name).includes(q) || collNorm(collChamp(e.champ)).includes(q);
 }
-// ---------- by rarity: one table per kind, a row per account (to compare them) ----------
+// ---------- by rarity: one table, a row per kind (all accounts together); a kind folds out its accounts ----------
 const COLL_RAR_KINDS = [['skin', 'coll.skins'], ['chroma', 'coll.n.chroma'], ['ward', 'coll.n.ward'], ['icon', 'coll.n.icon']];
 const collBdOpen = () => { try { return localStorage.getItem('rs.collBd') === '1'; } catch { return false; } };
+// the kinds folded out (all folded at first)
+const collBdKinds = () => { try { return new Set(JSON.parse(localStorage.getItem('rs.collBdKinds') || '[]')); } catch { return new Set(); } };
 function collRarityHtml(known, by) {
   const open = collBdOpen();
   const btn = `<button class="btn small coll-bd-btn${open ? ' open' : ''}" data-collbd>${t(open ? 'coll.bdHide' : 'coll.bdShow')}</button>`;
   if (!open) return `<div class="coll-bd">${btn}</div>`;
   const rowsOf = k => known.map(a => ({ a, r: ((by.get(a.puuid).counts || {}).rar || {})[k] })).filter(x => Array.isArray(x.r));
-  // one set of columns for every table – the rarities anyone has of any kind, lowest first – so
-  // each rarity sits in the same place in all of them
+  // the rarities anyone has of any kind, lowest first
   const cols = [0, 1, 2, 3, 4, 5, 6, 7].filter(i => COLL_RAR_KINDS.some(([k]) => rowsOf(k).some(x => x.r[i] > 0)));
-  const tables = !cols.length ? '' : COLL_RAR_KINDS.map(([k, label]) => {
-    const rows = rowsOf(k);
-    if (!rows.length || !rows.some(x => x.r.some(v => v > 0))) return '';
+  const kinds = COLL_RAR_KINDS.filter(([k]) => rowsOf(k).some(x => x.r.some(v => v > 0)));
+  if (!cols.length || !kinds.length) return `<div class="coll-bd">${btn}<p class="coll-foot">${t('coll.bdLater')}</p><p class="coll-foot">${t('coll.bdNote')}</p></div>`;
+  const unfolded = collBdKinds();
+  const cell = v => `<td>${v ? num(v) : '<span class="muted">0</span>'}</td>`;
+  const body = kinds.map(([k, label]) => {
+    const rows = rowsOf(k), on = unfolded.has(k);
     const sum = cols.map(i => rows.reduce((s, x) => s + (x.r[i] || 0), 0));
-    return `<table class="dash-table coll-table coll-rar"><colgroup><col class="rar-name">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>${t(label)}</th>${cols.map(i => `<th><i class="rar r${i}"></i>${t('rar.' + i)}</th>`).join('')}</tr></thead><tbody>
-      ${rows.map(({ a, r }) => `<tr><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => `<td>${r[i] ? num(r[i]) : '<span class="muted">0</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
-      ${rows.length > 1 ? `<tfoot><tr><td>${t('coll.total')}</td>${sum.map(v => `<td>${num(v)}</td>`).join('')}</tr></tfoot>` : ''}</table>`;
+    const head = `<tr class="rar-kind${on ? ' on' : ''}" data-rarkind="${k}"><td><span class="rar-tw">${on ? '▾' : '▸'}</span>${t(label)}</td>${sum.map(cell).join('')}</tr>`;
+    return head + (on ? rows.map(({ a, r }) => `<tr class="rar-acc"><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => cell(r[i])).join('')}</tr>`).join('') : '');
   }).join('');
-  return `<div class="coll-bd">${btn}${tables || `<p class="coll-foot">${t('coll.bdLater')}</p>`}<p class="coll-foot">${t('coll.bdNote')}</p></div>`;
+  return `<div class="coll-bd">${btn}<table class="dash-table coll-table coll-rar"><colgroup><col class="rar-name">${cols.map(() => '<col>').join('')}</colgroup>
+    <thead><tr><th></th>${cols.map(i => `<th><i class="rar r${i}"></i>${t('rar.' + i)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
+    <p class="coll-foot">${t('coll.bdNote')}</p></div>`;
 }
 document.addEventListener('click', e => {
+  const kind = e.target.closest('[data-rarkind]');
+  if (kind) {
+    const s = collBdKinds();
+    if (s.has(kind.dataset.rarkind)) s.delete(kind.dataset.rarkind); else s.add(kind.dataset.rarkind);
+    try { localStorage.setItem('rs.collBdKinds', JSON.stringify([...s])); } catch { /* not kept */ }
+    return renderColl();
+  }
   if (!e.target.closest('[data-collbd]')) return;
   try { localStorage.setItem('rs.collBd', collBdOpen() ? '0' : '1'); } catch { /* not kept */ }
   renderColl();

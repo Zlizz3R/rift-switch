@@ -12,17 +12,20 @@
   const ALL = ['top', 'jungle', 'mid', 'bot', 'support'];
   const NOT_SUP = ['top', 'jungle', 'mid', 'bot'];
   const TAG_RULES = [
+    // No tag needs more than 10 games: Live knows only the last 20 games of a player (and some of
+    // them are ARAM or normals), so a higher minimum would hide the tag there.
+
     // ---------- champion & pool ----------
-    { id: 'otp', group: 'pool', type: 'champShare', share: 0.8, pct: true, min: 15, stage: 'A', color: 'good', period: 'season' },
-    { id: 'main', group: 'pool', type: 'champRecent', games: 11, days: 60, stage: 'A', color: 'good', period: 'd60' },
+    { id: 'otp', group: 'pool', type: 'champShare', share: 0.8, pct: true, min: 10, stage: 'A', color: 'good', period: 'season' },
+    { id: 'main', group: 'pool', type: 'champRecent', games: 10, days: 60, stage: 'A', color: 'good', period: 'd60' },
     { id: 'greatWith', group: 'pool', type: 'champWinrate', pct: true, games: 6, winrate: 0.6, min: 6, stage: 'A', color: 'good', period: 'season' },
     { id: 'newTo', group: 'pool', type: 'live', live: true, games: 2, days: 30, mastery: 20000, stage: 'A+M+L', color: 'warn' },
-    { id: 'flexPool', group: 'pool', type: 'pool', champs: 5, maxShare: 0.4, min: 15, stage: 'A', color: 'info', period: 'season' },
+    { id: 'flexPool', group: 'pool', type: 'pool', champs: 5, maxShare: 0.4, min: 10, stage: 'A', color: 'info', period: 'season' },
     // the other way round: three champions take more than 90 % of the games
-    { id: 'smallPool', group: 'pool', type: 'poolTop', champs: 3, share: 0.9, pct: true, min: 15, stage: 'A', color: 'bad', period: 'season' },
-    { id: 'generalist', group: 'pool', type: 'roleSpread', pct: true, maxShare: 0.66, min: 15, stage: 'A', color: 'info', period: 'season' },
+    { id: 'smallPool', group: 'pool', type: 'poolTop', champs: 3, share: 0.9, pct: true, min: 10, stage: 'A', color: 'bad', period: 'season' },
+    { id: 'generalist', group: 'pool', type: 'roleSpread', pct: true, maxShare: 0.66, min: 10, stage: 'A', color: 'info', period: 'season' },
     // the other way round: more than 90 % of the games on one role
-    { id: 'oneRole', group: 'pool', type: 'roleSpread', pct: true, minShare: 0.9, min: 15, stage: 'A', color: 'bad', period: 'season' },
+    { id: 'oneRole', group: 'pool', type: 'roleSpread', pct: true, minShare: 0.9, min: 10, stage: 'A', color: 'bad', period: 'season' },
     { id: 'mainTaken', group: 'pool', type: 'live', live: true, stage: 'A+L', color: 'warn' },
     { id: 'mainBanned', group: 'pool', type: 'live', live: true, stage: 'A+L', color: 'warn' },
     { id: 'autofill', group: 'pool', type: 'live', live: true, min: 10, stage: 'A+L', color: 'warn' },
@@ -31,7 +34,8 @@
     { id: 'hotStreak', group: 'form', type: 'streak', win: true, n: 3, min: 3, stage: 'A', color: 'good', period: 'all' },
     { id: 'lossStreak', group: 'form', type: 'streak', win: false, n: 3, min: 3, stage: 'A', color: 'bad', period: 'all' },
     { id: 'backAgain', group: 'form', type: 'break', days: 14, within: 3, min: 1, stage: 'A', color: 'warn', period: 'all' },
-    { id: 'grinder', group: 'form', type: 'count', games: 50, days: 30, stage: 'A', color: 'info', period: 'd30' },
+    // 10 ranked games in 7 days (about 43 a month): reachable with the 20 games Live knows
+    { id: 'grinder', group: 'form', type: 'count', games: 10, days: 7, stage: 'A', color: 'info', period: 'd7' },
     { id: 'smurf', group: 'form', type: 'level', below: 100, stage: 'A', color: 'warn' },
 
     // ---------- key figures with levels (per role; dir 1 = more is better) ----------
@@ -124,15 +128,15 @@
       mid: { great: 1.9, master: 2.5, weak: 0.6, terrible: 0.5 },
       bot: { great: 2.1, master: 3.4, weak: 1.3, terrible: 0.7 },
       support: { great: 7.7, master: 9.6, weak: 5, terrible: 3.6 } },
-    // XP lead over the lane opponent at 15 minutes (game format 6). PROVISIONAL – no stored games
-    // with XP yet: a spread like the gold lead's, a bit smaller; recalculate after the next Load
+    // XP lead over the lane opponent at 15 minutes (game format 6; percentiles per position as above,
+    // 186 games of format 6, 25.11.2026)
     { id: 'xpLead', group: 'stats', type: 'metric', metric: 'xpDiff15', dir: 1, min: 6, stage: 'C', roles: ALL, period: 'season', dec: 0, signed: true,
-      levels: { great: 300, master: 700, weak: -450, terrible: -900 },
-      top: { great: 400, master: 850, weak: -600, terrible: -1150 },
-      jungle: { great: 250, master: 550, weak: -350, terrible: -700 },
-      mid: { great: 300, master: 700, weak: -450, terrible: -900 },
-      bot: { great: 300, master: 700, weak: -450, terrible: -900 },
-      support: { great: 200, master: 500, weak: -350, terrible: -650 } },
+      levels: { great: 400, master: 950, weak: -700, terrible: -1200 },
+      top: { great: 600, master: 1300, weak: -900, terrible: -1700 },
+      jungle: { great: 300, master: 750, weak: -500, terrible: -1050 },
+      mid: { great: 400, master: 950, weak: -700, terrible: -1200 },
+      bot: { great: 250, master: 600, weak: -450, terrible: -800 },
+      support: { great: 250, master: 500, weak: -350, terrible: -700 } },
 
     // ---------- fight & play ----------
     // kill participation (percentiles per position as above)
@@ -144,38 +148,50 @@
       bot: { great: 0.51, master: 0.55, weak: 0.4, terrible: 0.34 },
       support: { great: 0.56, master: 0.61, weak: 0.47, terrible: 0.41 } },
     // dragons and barons of the own team the player was in on – the role decides what is normal
-    // (no ranked games with this data yet: thresholds from the roles' jobs; recalculate like the
-    // others once games of format 5 are stored)
+    // (percentiles per position as above). The jungler smites nearly all of them (a 10-game mix:
+    // 96 % in the middle, 90 % for the lowest tenth): no good level there, only missing some
     { id: 'objectives', group: 'fight', type: 'metric', metric: 'objPart', dir: 1, min: 10, stage: 'C', roles: ALL, period: 'season', pct: true,
-      levels: { great: 0.6, master: 0.75, weak: 0.3, terrible: 0.15 },  // mid
-      top: { great: 0.45, master: 0.6, weak: 0.15, terrible: 0.05 },
-      jungle: { great: 0.85, master: 0.95, weak: 0.55, terrible: 0.4 },
-      bot: { great: 0.7, master: 0.8, weak: 0.4, terrible: 0.25 },
-      support: { great: 0.75, master: 0.85, weak: 0.45, terrible: 0.3 } },
+      levels: { great: 0.45, master: 0.56, weak: 0.14, terrible: 0.1 },  // mid
+      top: { great: 0.32, master: 0.43, weak: 0.1, terrible: 0.08 },
+      jungle: { weak: 0.93, terrible: 0.89 },
+      bot: { great: 0.62, master: 0.81, weak: 0.22, terrible: 0.18 },
+      support: { great: 0.69, master: 0.84, weak: 0.43, terrible: 0.23 } },
     // first blood: in on it in a third of the games / its victim in a fifth (10-game mixes per position)
     { id: 'firstBlood', group: 'fight', type: 'metric', metric: 'fbPart', dir: 1, min: 10, stage: 'C', roles: ALL, period: 'season', pct: true,
       levels: { great: 0.3, master: 0.45 } },
     { id: 'fbVictim', group: 'fight', type: 'metric', metric: 'fbDeath', dir: -1, min: 10, stage: 'C', roles: ALL, period: 'season', pct: true,
       levels: { weak: 0.2, terrible: 0.3 }, jungle: { weak: 0.15, terrible: 0.25 } },
-    // a team 2,000 gold behind at 15 wins 17.9 % of the games (and one ahead loses as often): 40 % of
-    // at least 8 such games is clearly more than luck (an average player gets there about 1 in 20)
-    { id: 'comeback', group: 'fight', type: 'avg', metric: 'comeback', atLeast: 0.4, min: 8, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
-    { id: 'throws', group: 'fight', type: 'avg', metric: 'throws', atLeast: 0.4, min: 8, stage: 'C', roles: ALL, color: 'bad', period: 'season', pct: true },
-    // win rate in games over 32 minutes against under 25 – only a clear difference (see tags.js 'phase')
-    { id: 'lateGame', group: 'fight', type: 'phase', late: true, short: 25, long: 32, diff: 0.15, min: 8, stage: 'A', color: 'info', period: 'season' },
-    { id: 'earlyGame', group: 'fight', type: 'phase', late: false, short: 25, long: 32, diff: 0.15, min: 8, stage: 'A', color: 'info', period: 'season' },
-    // from the places of game format 6. PROVISIONAL – no stored games with places yet: thresholds
-    // from the roles' jobs; recalculate (node tools/tag-thresholds.js) after the next Load
-    { id: 'roamer', group: 'fight', type: 'metric', metric: 'roam', dir: 1, min: 6, stage: 'C', roles: ['top', 'mid', 'bot', 'support'], period: 'season', dec: 2,
-      levels: { great: 0.8, master: 1.3 }, top: { great: 0.3, master: 0.6 }, bot: { great: 0.3, master: 0.6 }, support: { great: 0.6, master: 1.0 } },
-    { id: 'caught', group: 'fight', type: 'metric', metric: 'caught', dir: -1, min: 6, stage: 'C', roles: ALL, period: 'season', dec: 2,
-      levels: { weak: 1.6, terrible: 2.2 }, support: { weak: 1.8, terrible: 2.5 } },
+    // a team 2,000 gold behind at 15 wins 17.9 % of the games (and one ahead loses as often): 60 % of
+    // at least 5 such games is clearly more than luck (an average player gets there about 1 in 23)
+    { id: 'comeback', group: 'fight', type: 'avg', metric: 'comeback', atLeast: 0.6, min: 5, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
+    { id: 'throws', group: 'fight', type: 'avg', metric: 'throws', atLeast: 0.6, min: 5, stage: 'C', roles: ALL, color: 'bad', period: 'season', pct: true },
+    // win rate in games over 32 minutes against under 25 – only a clear difference (see tags.js 'phase';
+    // its test for "clear" keeps 5 games a side honest)
+    { id: 'lateGame', group: 'fight', type: 'phase', late: true, short: 25, long: 32, diff: 0.15, min: 5, stage: 'A', color: 'info', period: 'season' },
+    { id: 'earlyGame', group: 'fight', type: 'phase', late: false, short: 25, long: 32, diff: 0.15, min: 5, stage: 'A', color: 'info', period: 'season' },
+    // from the places of game format 6 (percentiles per position as above; roams, getting caught and
+    // steals are small counts, so from the 10-game mixes alone). Checked against 186 games: the map
+    // zones fit (minutes 3–8: tops 82 % on the top lane, mids 73 % mid, bots 85 % bot; early deaths
+    // the same); kill places match the raw timeline exactly; 36 steals, 34 of them by junglers.
+    // Bot laners roam and laners invade so rarely that a single time would be the best third: not
+    // for them
+    { id: 'roamer', group: 'fight', type: 'metric', metric: 'roam', dir: 1, min: 6, stage: 'C', roles: ['top', 'mid', 'support'], period: 'season', dec: 2,
+      levels: { great: 1, master: 1.2 }, top: { great: 0.4, master: 0.7 }, support: { great: 0.5, master: 0.7 } },
+    // off: "no team mate near" needs places at the moment of death, the timeline has them once a
+    // minute – even killers and assisters, who were there, show up more than 2,500 units away in 37 %
+    // of the kills (checked 25.11.2026). Back on with a source of exact places
+    { id: 'caught', off: true, group: 'fight', type: 'metric', metric: 'caught', dir: -1, min: 6, stage: 'C', roles: ALL, period: 'season', dec: 2,
+      levels: { weak: 1.1, terrible: 1.3 },  // mid
+      top: { weak: 1.3, terrible: 1.5 },
+      jungle: { weak: 0.8, terrible: 1 },
+      bot: { weak: 0.7, terrible: 0.9 },
+      support: { weak: 0.5, terrible: 0.7 } },
     { id: 'stealer', group: 'fight', type: 'metric', metric: 'steals', dir: 1, min: 10, stage: 'C', roles: ALL, period: 'season', dec: 2,
-      levels: { great: 0.05, master: 0.1 }, jungle: { great: 0.1, master: 0.2 } },
-    { id: 'invader', group: 'fight', type: 'metric', metric: 'invade', dir: 1, min: 6, stage: 'C', roles: ['jungle', 'top', 'mid'], period: 'season', dec: 0,
-      levels: { great: 8, master: 16 }, jungle: { great: 30, master: 45 } },
+      levels: { great: 0.1, master: 0.2 } },
+    { id: 'invader', group: 'fight', type: 'metric', metric: 'invade', dir: 1, min: 6, stage: 'C', roles: ['jungle'], period: 'season', dec: 0,
+      levels: { great: 22, master: 29 } },
     { id: 'invaded', group: 'fight', type: 'metric', metric: 'invaded', dir: -1, min: 6, stage: 'C', roles: ['jungle'], period: 'season', dec: 0,
-      levels: { weak: 30, terrible: 45 } },
+      levels: { weak: 28, terrible: 37 } },
     { id: 'carry', group: 'fight', type: 'carry', pct: true, share: 0.28, kp: 0.5, min: 10, stage: 'B', roles: NOT_SUP, color: 'good', period: 'season' },
     { id: 'towerBreaker', group: 'fight', type: 'avg', metric: 'turretDmg', atLeast: 10000, min: 10, stage: 'B', roles: ALL, color: 'good', period: 'season' },
     { id: 'noPinks', group: 'fight', type: 'avg', metric: 'pinks', below: 1 /* V */, min: 10, stage: 'B', roles: ALL, color: 'bad', period: 'season', dec: 1 }, // TODO Schwelle prüfen
