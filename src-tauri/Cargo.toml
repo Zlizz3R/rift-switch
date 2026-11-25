@@ -29,6 +29,7 @@ subtle = "2"
 winreg = "0.52"
 windows = { version = "0.58", features = [
   "Win32_Foundation",
+  "Win32_Globalization",
   "Win32_Security_Cryptography",
   "Win32_System_Memory",
   "Win32_System_Diagnostics_ToolHelp",

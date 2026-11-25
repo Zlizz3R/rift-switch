@@ -186,7 +186,7 @@
     'tools.refresh': "Actualizar rangos",
     'tools.refreshT': "Recarga ahora rangos, iconos y niveles de todas las cuentas (League debe estar abierto).",
     'live.addChamp': "Añadir campeón",
-    'live.poolFromMh': "Desde el historial",
+    'live.poolFromMh': "Añadir desde el historial",
     'live.poolFromMhT': "Añade los campeones que jugaste al menos 3 veces en esta línea en los últimos 180 días – todas tus cuentas, los más jugados primero (como máximo 10).",
     'live.poolAdded': "{n} campeones añadidos desde tu historial",
     'live.poolNone': "Ningún campeón con 3 o más partidas como {lane} en los últimos 180 días de tu historial.",

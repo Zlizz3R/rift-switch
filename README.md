@@ -179,8 +179,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 
 <img src="docs/screens/helper.png" alt="Champ select helper: best picks against the enemy laner">
 
-Keep a pool of your champions – typed in, or *From match history*: every champion you played 3+ times on the lane in
-the last 180 days. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app
+Keep a pool of your champions – typed in, or *Add from match history*: every champion you played 3+ times on the lane in
+the last 180 days. The lane is your main role from the match history until you pick one. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app
 marks the likely laner (by how often each champion plays your lane). Your pool is ranked by win rate and counter
 rating against him (counterstats.net). Every enemy pick loads in the background; *Pre-load all matchups* reads just
 your own champions' pages while you queue – a matchup's win rates add up to 100, so they answer every enemy.

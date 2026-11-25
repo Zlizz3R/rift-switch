@@ -11,13 +11,55 @@ pub const LANGS: [&str; 11] = [
 pub fn defaults() -> Obj {
     json!({
         "autostart": false, "startMinimized": false, "askedStart": false, "updateCheck": true, "autoAccept": false, "matchNotify": false, "autoPlay": true, "confirmSwitch": true,
-        "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "tile": null,
+        "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "laneChosen": false, "tile": null,
         "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": "", "uiTabs": null,
         "othersLimit": "1000", "tagsLong": false
     })
     .as_object()
     .unwrap()
     .clone()
+}
+
+/// The app's language for Windows' display languages ("de-DE", "zh-Hans-CN", …, most preferred
+/// first): the first one the app has, else English.
+pub fn lang_for(tags: &[String]) -> &'static str {
+    tags.iter()
+        .filter_map(|t| {
+            let base = t.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
+            LANGS.iter().find(|l| **l == base).copied()
+        })
+        .next()
+        .unwrap_or("en")
+}
+
+/// Windows' display languages of this user, most preferred first (empty if Windows doesn't say).
+#[cfg(not(test))]
+fn windows_langs() -> Vec<String> {
+    use windows::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
+    let (mut n, mut len) = (0u32, 0u32);
+    // SAFETY: first call asks for the size, the second fills a buffer of that size
+    unsafe {
+        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut n, windows::core::PWSTR::null(), &mut len).is_err() || len == 0 {
+            return vec![];
+        }
+        let mut buf = vec![0u16; len as usize];
+        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut n, windows::core::PWSTR(buf.as_mut_ptr()), &mut len).is_err() {
+            return vec![];
+        }
+        String::from_utf16_lossy(&buf)
+            .split('\0')
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect()
+    }
+}
+#[cfg(test)]
+fn windows_langs() -> Vec<String> {
+    vec![]
+}
+/// The language on the very first start: Windows' own (see lang_for).
+pub fn first_lang() -> &'static str {
+    lang_for(&windows_langs())
 }
 
 fn switches(v: &Value) -> Value {
@@ -139,6 +181,12 @@ mod tests {
         assert_eq!(clean_setting("autoPlay", &json!("yes")), Some(json!(true)));
         assert_eq!(clean_setting("uiScale", &json!("999")), Some(json!("100")));
         assert_eq!(clean_setting("lang", &json!("xx")), Some(json!("en")));
+        let l = |v: &[&str]| lang_for(&v.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+        assert_eq!(l(&["de-DE", "en-US"]), "de");
+        assert_eq!(l(&["nl-NL", "pt-BR"]), "pt");
+        assert_eq!(l(&["zh-Hans-CN"]), "zh");
+        assert_eq!(l(&["nl-NL"]), "en");
+        assert_eq!(l(&[]), "en");
         assert_eq!(
             clean_setting("theme", &json!("pink")),
             Some(json!("system"))

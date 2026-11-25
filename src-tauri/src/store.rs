@@ -94,7 +94,19 @@ pub fn normalize(raw: Value) -> State {
         .remove("active")
         .and_then(|v| v.as_str().map(String::from));
     let mut settings = defaults();
-    if let Some(Value::Object(s)) = o.remove("settings") {
+    let saved = o.remove("settings");
+    // the very first start (nothing saved yet): Windows' display language, if the app has it
+    if !saved.as_ref().is_some_and(|s| s.get("lang").is_some()) {
+        settings.insert("lang".into(), json!(crate::settings::first_lang()));
+    }
+    // one-time: a lane picked before the helper followed the main role stays picked
+    let old_lane = saved.as_ref().is_some_and(|s| {
+        s.get("laneChosen").is_none() && s.get("lane").and_then(Value::as_str).is_some_and(|l| l != "top")
+    });
+    if old_lane {
+        settings.insert("laneChosen".into(), json!(true));
+    }
+    if let Some(Value::Object(s)) = saved {
         for (k, v) in s {
             settings.insert(k, v);
         }
@@ -451,6 +463,13 @@ mod tests {
 
     #[test]
     fn migrations_damaged_file_atomic_write() {
+        // the first start: a language for sure (Windows' own, in tests none: English); a lane picked
+        // before stays picked, the default one follows the main role
+        assert_eq!(normalize(Value::Null).settings["lang"], "en");
+        assert_eq!(normalize(json!({ "settings": { "lang": "de" } })).settings["lang"], "de");
+        assert_eq!(normalize(json!({ "settings": { "lane": "mid" } })).settings["laneChosen"], true);
+        assert_eq!(normalize(json!({ "settings": { "lane": "top" } })).settings["laneChosen"], false);
+        assert_eq!(normalize(json!({ "settings": { "lane": "mid", "laneChosen": false } })).settings["laneChosen"], false);
         let s = normalize(json!({ "settings": { "sort": "custom", "autoPlay": false } }));
         assert_eq!(s.settings["sort"], "level");
         assert_eq!(s.settings["autoPlay"], true);

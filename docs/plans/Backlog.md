@@ -9,9 +9,9 @@ Was noch offen ist – das Neueste oben. Erledigtes wird gestrichen oder mit Dat
 Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-tauri/tauri.conf.json`, Notizen in `ui/changelog.js`, Tag `v1.3.0` pushen – der Nutzer hat das Pushen dafür freigegeben).
 
 - [x] **Live: 200er-Liste + Details für 50 Ranked-Spiele** – ✔ 25.11.2026. Lite-Spiele (Format 0) aus der Liste, 365 Tage; volle Details für die neuesten 50 Ranked-Spiele, 30 Tage. Das Fenster hält die Spiele (`scv.games`) über Spiele hinweg und schickt ihre Schlüssel (`k`) mit – Premades werden nicht neu übertragen; ein Lite-Spiel, zu dem ein weiterer Spieler dazukam, kommt neu.
-- [ ] **Sprache beim ersten Start aus Windows übernehmen** (eine der 11 Sprachen, sonst Englisch).
-- [ ] **Lane im Champ Select Helper** standardmäßig aus der Hauptrolle der Match History (`Tags.mainRole`; Lane `adc` = Rolle `bot`).
-- [ ] **Knopf umbenennen:** "Aus der Match History" → "Aus der Match History hinzufügen" / "Add from match history" (`live.poolFromMh`, 11 Sprachen).
+- [x] ✔ 25.11.2026 **Sprache beim ersten Start aus Windows übernehmen** (eine der 11 Sprachen, sonst Englisch).
+- [x] ✔ 25.11.2026 **Lane im Champ Select Helper** standardmäßig aus der Hauptrolle der Match History (`Tags.mainRole`; Lane `adc` = Rolle `bot`).
+- [x] ✔ 25.11.2026 **Knopf umbenennen:** "Aus der Match History" → "Aus der Match History hinzufügen" / "Add from match history" (`live.poolFromMh`, 11 Sprachen).
 - [ ] Sortierung bleibt "nach Level" (Nutzer-Entscheidung).
 - [x] Match-Benachrichtigung: kam nicht, weil Windows-Benachrichtigungen beim Nutzer ganz aus sind (`PushNotificationsToastEnabled = 0`). Die Einstellungen weisen jetzt darauf hin.
 

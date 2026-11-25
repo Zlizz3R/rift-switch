@@ -529,7 +529,22 @@ function renderLive(force) {
 const csCache = new Map();          // "enemyId|lane" -> { list: [{name, wr, rating}] (empty = no data), share: % of his games on this lane }
 const csKey = (id, lane) => id + '|' + lane;
 let csQueue = [], csBusy = false;
-const lane = () => (S.settings && S.settings.lane) || 'top';
+// the lane: the one picked in the helper, else the main role of the own games (the last 180 days),
+// else Top. ("adc" here = role "bot" in the match history)
+const laneAuto = { games: null, lane: null };
+function mainLane() {
+  const games = typeof scv !== 'undefined' ? scv.own : null;
+  if (!games) { if (typeof lmNeedOwn === 'function') lmNeedOwn(); return null; }
+  if (laneAuto.games !== games) {
+    const own = (S.accounts || []).map(a => a.puuid).filter(Boolean);
+    const since = Date.now() - POOL_DAYS * 86400000;
+    const r = Tags.mainRole(Stats.byParticipation(games.filter(g => g.t >= since), own)).most;
+    laneAuto.games = games;
+    laneAuto.lane = r === 'bot' ? 'adc' : r || null;
+  }
+  return laneAuto.lane;
+}
+const lane = () => (S.settings && S.settings.laneChosen && S.settings.lane) || mainLane() || 'top';
 function want(ids) {
   const l = lane();
   for (const id of ids) {
@@ -683,7 +698,7 @@ $('liveBody').addEventListener('change', e => {
     if (helper.enemy) want([helper.enemy]);
     renderLive(true);
   }
-  if (e.target.id === 'hLane') { S.settings = { ...S.settings, lane: e.target.value }; api.setSetting('lane', e.target.value); if (helper.enemy) want([helper.enemy]); renderLive(); }
+  if (e.target.id === 'hLane') { S.settings = { ...S.settings, lane: e.target.value, laneChosen: true }; api.setSetting('lane', e.target.value); api.setSetting('laneChosen', true); if (helper.enemy) want([helper.enemy]); renderLive(); }
 });
 
 $('mmFix').onclick = async () => {

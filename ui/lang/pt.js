@@ -185,7 +185,7 @@
     'tools.refresh': "Atualizar elos",
     'tools.refreshT': "Recarrega agora elos, ícones e níveis de todas as contas (o League precisa estar aberto).",
     'live.addChamp': "Adicionar campeão",
-    'live.poolFromMh': "Do histórico",
+    'live.poolFromMh': "Adicionar do histórico",
     'live.poolFromMhT': "Adiciona os campeões que você jogou pelo menos 3 vezes nesta rota nos últimos 180 dias – todas as suas contas, os mais jogados primeiro (no máximo 10).",
     'live.poolAdded': "{n} campeões adicionados do seu histórico",
     'live.poolNone': "Nenhum campeão com 3 ou mais partidas como {lane} nos últimos 180 dias do seu histórico.",

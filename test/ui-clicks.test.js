@@ -475,6 +475,7 @@ test('champ select helper: "from match history" adds the champions played 3+ tim
   const st = sampleState();
   st.settings.champPool = [3];
   st.settings.lane = 'top';
+  st.settings.laneChosen = true;
   return withApp({ state: st, replies: { champions: champs, matches: { index: games.map(x => [x.id, x.t, x.q, P(1)]), waiting: 0 }, 'matches-get': games } }, async (app) => {
     await app.click('#navLive');
     await app.click('[data-poolfold]');
@@ -483,6 +484,43 @@ test('champ select helper: "from match history" adds the champions played 3+ tim
     await app.settle();
     assert.deepEqual(lastCall(app, 'set-setting').args, ['champPool', [3, 1]]);
     assert.equal(app.$$('.h-chip').length, 2);
+  });
+});
+
+test('champ select helper: the lane follows the main role until one is picked', () => {
+  const POS = ['top', 'jungle', 'mid', 'bot', 'support'];
+  const champs = [{ id: 1, name: 'Garen' }, { id: 4, name: 'Ahri' }];
+  const g = (i, champ, pos) => {
+    const players = [...POS.map((r, j) => ({ puuid: `a${i}${j}`, team: 100, champ: 100 + j, pos: r, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] })),
+      ...POS.map((r, j) => ({ puuid: `b${i}${j}`, team: 200, champ: 110 + j, pos: r, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] }))];
+    const k = POS.indexOf(pos);
+    players[k] = { ...players[k], puuid: P(1), champ };
+    return { id: String(900 + i), t: Date.now() - (i + 1) * 86400000, dur: 1800, q: 420, mode: 'CLASSIC', players };
+  };
+  // mostly mid: 4 Ahri games on mid, 1 Garen on top
+  const games = [g(0, 1, 'top'), ...[1, 2, 3, 4].map(i => g(i, 4, 'mid'))];
+  const st = sampleState();
+  st.settings.champPool = [];
+  st.settings.lane = 'top';
+  return withApp({ state: st, replies: { champions: champs, matches: { index: games.map(x => [x.id, x.t, x.q, P(1)]), waiting: 0 }, 'matches-get': games } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 50));
+    await app.settle();
+    await app.click('[data-poolfold]');
+    app.w.eval('renderLive(true)');
+    await app.settle();
+    assert.equal(app.$('#hLane').value, 'mid');
+    await app.click('#hFromMh');
+    await new Promise((r) => setTimeout(r, 50));
+    await app.settle();
+    assert.deepEqual(lastCall(app, 'set-setting').args, ['champPool', [4]]);
+    // picked by hand: it stays
+    const sel = app.$('#hLane');
+    sel.value = 'support';
+    sel.dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.deepEqual(app.called('set-setting').map(c => c.args).filter(x => x[0].startsWith('lane')), [['lane', 'support'], ['laneChosen', true]]);
+    assert.equal(app.$('#hLane').value, 'support');
   });
 });
 

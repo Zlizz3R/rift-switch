@@ -182,7 +182,7 @@
     'tools.refresh': "刷新段位",
     'tools.refreshT': "立即重新加载所有账号的段位、头像和等级（需要英雄联盟运行）。",
     'live.addChamp': "添加英雄",
-    'live.poolFromMh': "从对局记录导入",
+    'live.poolFromMh': "从对局记录添加",
     'live.poolFromMhT': "添加近 180 天内你在此路上至少玩过 3 场的英雄——包括你所有账号，按场数排序（最多 10 个）。",
     'live.poolAdded': "已从对局记录添加 {n} 个英雄",
     'live.poolNone': "近 180 天的对局记录中没有在 {lane} 打过 3 场及以上的英雄。",
