@@ -1164,15 +1164,21 @@ async fn match_page(puuid: &str, beg: usize, end: usize, timeout: u64) -> Option
     .await?;
     mh["games"]["games"].as_array().cloned()
 }
+/// The League client hands out one page per player and client session: the FIRST request decides
+/// its size (later ones get the same answer, whatever range they ask for – checked 25.11.2026).
+/// At most 200 games come back (0–199; asking for more still gives 200), about 800 KB and 12–14 s
+/// the first time, then about 0.2 s. So the own accounts always ask for all 200 at once.
+pub const HISTORY_MAX: usize = 200;
 pub async fn history_summary(puuid: &str) -> Option<HistorySummary> {
     Some(summarize_games(
-        &match_page(puuid, 0, 50, 6000).await?,
+        &match_page(puuid, 0, HISTORY_MAX - 1, 30_000).await?,
         now_ms(),
     ))
 }
-/// One page of an account's match list (older games: higher beg) -> [{ id, t, q }].
+/// A player's match list -> [{ id, t, q }] (see HISTORY_MAX: the first request per client session
+/// sets how many games every later one gets).
 pub async fn match_list(puuid: &str, beg: usize, end: usize) -> Option<Vec<Value>> {
-    let g = match_page(puuid, beg, end, 8000).await?;
+    let g = match_page(puuid, beg, end, if end - beg > 50 { 30_000 } else { 8000 }).await?;
     Some(
         g.iter()
             .map(|g| json!({ "id": g["gameId"], "t": g["gameCreation"], "q": g["queueId"] }))

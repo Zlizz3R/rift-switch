@@ -506,6 +506,7 @@ impl Matches {
             .collect()
     }
 
+    #[cfg(test)]
     pub fn known(&self, puuid: &str) -> usize {
         self.by
             .iter()

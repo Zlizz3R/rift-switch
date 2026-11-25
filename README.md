@@ -141,8 +141,9 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 <img src="docs/screens/matches.png" alt="Match history with a game opened">
 
 - **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed.
-  One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and every game the
-  client still has. Your own games also keep the client's raw data (gzip, up to 2 × 100 MB); other players'
+  One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and the 200 newest
+  games of every account – the most the League client hands out. Rift Switch keeps them all, so the history grows
+  with every Load. Your own games also keep the client's raw data (gzip, up to 2 × 100 MB); other players'
   games (from Live) stay 30 days and at most 1 GB (Settings → Data: 500 MB to 5 GB).
 - **Filters**: account, any combination of queues, time or your own dates, wins/losses, champion, sorting, and more
   (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,

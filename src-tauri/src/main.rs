@@ -63,6 +63,9 @@ struct Core {
     last_saved: u64,
     last_pushed: u64,
     last_rank_sweep: i64,
+    /// when the other own accounts' match lists were read last (every 30 minutes: the client sends
+    /// all 200 games each time, and they can't have played here meanwhile)
+    history_at: HashMap<String, i64>,
     last_profile_at: i64,
     gen: u64, // bumped by switch/add: results of a tick that started before are thrown away
     ticking: bool,
@@ -108,6 +111,7 @@ impl Core {
             last_saved: 0,
             last_pushed: 0,
             last_rank_sweep: 0,
+            history_at: HashMap::new(),
             last_profile_at: 0,
             gen: 0,
             ticking: false,
@@ -1144,7 +1148,9 @@ async fn tick_inner(my_gen: u64) {
                 }
                 upsert(u);
             }
-            if let Some(hs) = riot::history_summary(&aid).await {
+            let due = with(|c| now_ms() - c.history_at.get(&aid).copied().unwrap_or(0) > 1_800_000);
+            if let Some(hs) = if due { riot::history_summary(&aid).await } else { None } {
+                with(|c| c.history_at.insert(aid.clone(), now_ms()));
                 merge_history(&aid, &hs, false);
             }
         }
@@ -1238,7 +1244,8 @@ async fn load_all() -> Value {
                     .is_some_and(|p| IN_GAME.contains(&p))
         })
     };
-    // every account's match list on this server, page by page, as far as the client goes
+    // every account's match list on this server: the 200 newest games the client hands out (paging
+    // doesn't work – it answers every later request with the first page, see riot::HISTORY_MAX)
     let (accs, region) = with(|c| {
         let region = c
             .live
@@ -1258,21 +1265,11 @@ async fn load_all() -> Value {
         .collect();
     for (i, id) in accs.iter().enumerate() {
         load_step("lists", i, accs.len());
-        for _ in 0..100 {
-            if in_game() {
-                break;
-            }
-            let beg = with(|c| c.mh.known(id));
-            let Some(list) = riot::match_list(id, beg, beg + 20).await else {
-                break;
-            };
-            let added = with(|c| {
-                c.mh.note(id, &list);
-                c.mh.known(id) - beg
-            });
-            if list.is_empty() || added == 0 {
-                break; // the client has nothing older
-            }
+        if in_game() {
+            break;
+        }
+        if let Some(list) = riot::match_list(id, 0, riot::HISTORY_MAX - 1).await {
+            with(|c| c.mh.note(id, &list));
         }
     }
     // then the details of every game missing them, and of games stored in an older format

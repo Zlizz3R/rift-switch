@@ -12,3 +12,7 @@ tools/screens/site/
 tools/screens/frames/
 # inspiration screenshots for the analysis plan (third-party pictures, other players: local only)
 docs/plans/screenshots/
+
+# exports of the app (accounts, maybe logins) never go into the repository
+*rift-switch-backup*.json
+*.rsbackup
