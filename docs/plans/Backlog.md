@@ -4,7 +4,7 @@ Was noch offen ist – das Neueste oben. Erledigtes wird gestrichen oder mit Dat
 
 ## Offen
 
-### A. Weiter mit Version 1.3 (Stand 25.11.2026, abgebrochen) – *Claude*
+### A. Version 1.3 – ✔ 25.11.2026 fertig (1.2.2 wurde nie veröffentlicht und steckt in 1.3.0)
 
 Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-tauri/tauri.conf.json`, Notizen in `ui/changelog.js`, Tag `v1.3.0` pushen – der Nutzer hat das Pushen dafür freigegeben).
 
