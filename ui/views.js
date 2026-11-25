@@ -449,17 +449,42 @@ function activePenalties() {
   }
   return out.sort((x, y) => (x.p.until || Infinity) - (y.p.until || Infinity));
 }
+// one penalty: what it is, and the time left (or the low priority queue's games and wait)
+const penLeftHtml = (p, asOf) => (p.low && typeof p.low === 'object' ? `<span class="pen-left">${esc(lowPrioText(p.low) || t('pen.noEnd'))}</span>`
+  : p.until ? `<span class="pen-left" data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</span>`
+  : p.low ? `<span class="pen-left">${esc(t('pen.perGame', { m: Math.max(1, Math.round(p.low / 60)) }))}</span>`
+  : `<span class="pen-left none"${asOf ? ` title="${esc(t('pen.asOf', { date: fmtDate(asOf) }))}"` : ''}>${t('pen.noEnd')}</span>`);
+// the lobby's members: their penalties sit on their own rows (see lobbyHtml)
+const lobbyIds = () => new Set((((liveData || {}).lobby || {}).members || []).map(m => m.puuid).filter(Boolean));
 function penaltiesHtml() {
-  const list = activePenalties();
+  const inLobby = lobbyIds();
+  const list = activePenalties().filter(x => !inLobby.has(x.a.puuid));
   if (!list.length) return '';
   return `<div class="live-card pen-card"><div class="lc-head"><h3>${t('pen.title')} <span class="info" title="${esc(t('pen.note'))}">?</span></h3></div>
     ${list.map(({ a, p, asOf }) => `<div class="pen-row">
       <span class="pen-av">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}</span>
       <div class="pen-name"><b>${esc(dispName(a))}</b><small>${esc(reasonText({ code: p.code, args: p.args }))}</small></div>
-      ${p.low ? `<span class="pen-left">${esc(lowPrioText(p.low) || t('pen.noEnd'))}</span>` : p.until ? `<span class="pen-left" data-until="${p.until}">${esc(p.until - Date.now() < 86400000 ? t('pen.left', { t: leftText(p.until) }) : leftText(p.until))}</span>`
-        : `<span class="pen-left none" title="${esc(t('pen.asOf', { date: fmtDate(asOf) }))}">${t('pen.noEnd')}</span>`}
+      ${penLeftHtml(p, asOf)}
     </div>`).join('')}
 </div>`;
+}
+// the lobby: each member's row, and right under it whatever keeps them (and so the lobby) waiting –
+// the client's own word for the party, and for the own accounts what their last login knew
+function lobbyHtml(members) {
+  const pens = activePenalties();
+  const rows = members.map(m => {
+    const list = pens.filter(x => x.a.puuid === m.puuid).map(x => ({ p: x.p, asOf: x.asOf }));
+    for (const p of m.penalties || []) {
+      const low = /lowpriority/i.test(p.code);
+      if (!list.some(x => x.p.code === p.code || (low && /lowpriority/i.test(x.p.code)))) list.push({ p, asOf: 0 });
+    }
+    const row = playerRow(m);
+    if (!list.length) return row;
+    return `<div class="p-pen-wrap">${row.replace('class="p-row', 'class="p-row has-pen')}<div class="p-pens">${list.map(({ p, asOf }) =>
+      `<div class="p-pen"><span>${esc(reasonText({ code: p.code, args: p.args }))}</span>${penLeftHtml(p, asOf)}</div>`).join('')}</div></div>`;
+  });
+  const n = rows.filter(r => r.startsWith('<div class="p-pen-wrap')).length;
+  return `<div class="live-card"><div class="lc-head"><h3>${t('live.lobby')}</h3>${n ? `<span class="pen-badge">${esc(t('pen.title'))}: ${n}</span>` : ''}</div>${rows.join('')}</div>`;
 }
 // running countdowns (live page, title bar) tick every second while there is one
 setInterval(() => {
@@ -489,7 +514,7 @@ function renderLive(force) {
   if (d.inGame && (d.inGame.teamOne.length || d.inGame.teamTwo.length)) parts.push(scoutBoardHtml(d));
   if (pens && d.inGame) parts.push(pens);
   if (d.lobby && d.lobby.members.length) {
-    parts.push(`<div class="live-card"><div class="lc-head"><h3>${t('live.lobby')}</h3></div>${d.lobby.members.map(playerRow).join('')}</div>`);
+    parts.push(lobbyHtml(d.lobby.members));
   }
   if (d.champSelect) {
     const cs = d.champSelect;

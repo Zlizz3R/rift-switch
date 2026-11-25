@@ -370,6 +370,28 @@ test('live page: only real penalties, with time left; a queue wait shows in the 
   assert.ok(app.visible('#helpBox'));
 }));
 
+test('live page: in the lobby each penalty sits on its player\'s row – own accounts and the others the client names', () => {
+  const st = sampleState({ live: { clientUp: true, puuid: P(1), phase: 'Lobby', waits: [] } });
+  st.accounts[0].lowPrio = { at: Date.now(), games: 2, perGame: 60 };
+  const m = (puuid, name, o = {}) => ({ puuid, summonerId: name, gameName: name, tagLine: 'EUW', iconId: 1, position: 'TOP', solo: null, flex: null, ...o });
+  const live = { clientUp: true, phase: 'Lobby', me: P(1), lobby: { queueId: 420, members: [m(P(1), 'Me'), m('f1', 'Friend', { penalties: [{ code: 'QueueDodger', until: Date.now() + 300000 }] }), m('f2', 'Clean')] } };
+  return withApp({ state: st, replies: { live } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 60));
+    await app.settle();
+    // no separate penalty card: everything is in the lobby
+    assert.ok(!app.$('.pen-card'));
+    const wraps = app.$$('.p-pen-wrap');
+    assert.equal(wraps.length, 2);
+    assert.match(wraps[0].textContent, /Me/);
+    assert.match(wraps[0].querySelector('.p-pens').textContent, /2 games/);
+    assert.match(wraps[1].textContent, /Friend/);
+    assert.match(wraps[1].querySelector('.p-pen .pen-left').textContent, /left/);
+    assert.equal(app.$$('.p-row').length, 3);
+    assert.match(app.$('.pen-badge').textContent, /2/);
+  });
+});
+
 test('live page after a game: the last game with both teams, MVP / ACE, bars with the best = 100 %; opens in the match history', () => {
   const pl = (i) => ({ puuid: i === 0 ? P(1) : 'x' + i, name: 'N' + i, tag: 'EUW', team: i < 5 ? 100 : 200, win: i < 5, champ: i + 1, lvl: 12, k: i, d: 2, a: 3, cs: 150 + i,
     gold: 9000 + i * 100, dmg: 10000 + i * 1000, vis: 20, spells: [4, 14], keystone: 8112, sub: 8300, items: [3031, 0, 0, 0, 0, 0, 3340], x: { taken: 20000 + i * 500 } });

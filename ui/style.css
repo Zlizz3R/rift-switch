@@ -757,6 +757,13 @@ body.locked #passBox { background: var(--bg); }
 .pen-name small { color: #ef8a8e; }
 .pen-left { font-variant-numeric: tabular-nums; font-weight: 700; color: #ff8a8e; white-space: nowrap; }
 .pen-left.none { color: var(--muted); font-weight: 500; }
+/* a lobby member with a penalty: the row in red, the penalty right under it */
+.p-pen-wrap { border-radius: 9px; border: 1px solid rgba(229,72,77,.45); background: rgba(229,72,77,.06); }
+.p-pen-wrap .p-row { background: none; }
+.p-pens { display: flex; flex-direction: column; gap: 2px; padding: 0 10px 7px 54px; }
+.p-pen { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: #ef8a8e; }
+.p-pen .pen-left { font-size: 12px; }
+.pen-badge { font-size: 11px; font-weight: 700; color: #ff8a8e; padding: 2px 8px; border-radius: 999px; background: rgba(229,72,77,.12); border: 1px solid rgba(229,72,77,.4); }
 .live .wait { color: #ff8a8e; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 

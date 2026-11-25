@@ -59,6 +59,7 @@ async fn player(r: Ref) -> Option<Value> {
         }
     };
     p["position"] = json!(r.position);
+    p["summonerId"] = json!(r.summoner_id);
     p["championId"] = if r.champion_id.is_null() {
         json!(0)
     } else {
@@ -139,7 +140,74 @@ async fn lobby() -> Option<Value> {
             ..Default::default()
         })
         .collect();
-    Some(json!({ "queueId": lb["gameConfig"]["queueId"], "members": players(refs).await }))
+    let queue = lb["gameConfig"]["queueId"].as_i64().unwrap_or(0);
+    let (mut members, elig, search) = tokio::join!(
+        players(refs),
+        lcu("/lol-lobby/v2/eligibility/party", 3000, "POST"),
+        lcu("/lol-matchmaking/v1/search", 2000, "GET"),
+    );
+    // whose penalty it is: the client names the summoner of each restriction of the party
+    let pens = member_penalties(elig.as_ref(), search.as_ref(), queue, now_ms());
+    for m in members.iter_mut() {
+        if let Some(l) = pens.get(m["summonerId"].as_str().unwrap_or("")) {
+            m["penalties"] = json!(l);
+        }
+    }
+    Some(json!({ "queueId": lb["gameConfig"]["queueId"], "members": members }))
+}
+
+/// The penalties of the lobby's members by summoner id: the party's eligibility for this queue
+/// (each restriction names its summoners) and a running queue's waits (low priority, lockouts).
+fn member_penalties(elig: Option<&Value>, search: Option<&Value>, queue: i64, now: i64) -> HashMap<String, Vec<Value>> {
+    let mut out: HashMap<String, Vec<Value>> = HashMap::new();
+    let ids = |v: &Value| -> Vec<String> {
+        let mut l: Vec<String> = v["summonerIds"].as_array().into_iter().flatten().map(id_of).filter(|s| !s.is_empty()).collect();
+        if let Some(s) = v["summonerIdsString"].as_str() {
+            l.extend(s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()));
+        }
+        l.sort();
+        l.dedup();
+        l
+    };
+    let mut add = |id: String, p: Value| {
+        let l = out.entry(id).or_default();
+        if !l.iter().any(|x| x["code"] == p["code"]) {
+            l.push(p);
+        }
+    };
+    let q = elig.and_then(Value::as_array).and_then(|l| l.iter().find(|x| x["queueId"].as_i64() == Some(queue)));
+    for r in q.map(|q| &q["restrictions"]).and_then(Value::as_array).into_iter().flatten() {
+        let code = r["restrictionCode"].as_str().unwrap_or("");
+        if !riot::is_penalty(code) {
+            continue;
+        }
+        let until = r["expiredTimestamp"].as_i64().unwrap_or(0);
+        for id in ids(r) {
+            add(id, json!({ "code": code, "args": if r["restrictionArgs"].is_null() { json!({}) } else { r["restrictionArgs"].clone() }, "until": until }));
+        }
+    }
+    if let Some(s) = search {
+        let lp = &s["lowPriorityData"];
+        let secs = lp["penaltyTimeRemaining"].as_f64().unwrap_or(0.0);
+        for id in lp["penalizedSummonerIds"].as_array().into_iter().flatten().map(id_of) {
+            add(id, json!({ "code": "LowPriorityQueue", "until": if secs > 0.0 { now + (secs * 1000.0) as i64 } else { 0 }, "low": lp["penaltyTime"].as_f64().unwrap_or(0.0) as i64 }));
+        }
+        for e in s["errors"].as_array().into_iter().flatten() {
+            let secs = e["penaltyTimeRemaining"].as_f64().unwrap_or(0.0);
+            let id = id_of(&e["penalizedSummonerId"]);
+            if secs > 0.0 && !id.is_empty() {
+                add(id, json!({ "code": e["errorType"].as_str().unwrap_or("QueueLockout"), "until": now + (secs * 1000.0) as i64 }));
+            }
+        }
+    }
+    out
+}
+fn id_of(v: &Value) -> String {
+    match v {
+        Value::String(s) => s.clone(),
+        Value::Number(n) => n.to_string(),
+        _ => String::new(),
+    }
 }
 
 async fn champ_select() -> Option<Value> {
@@ -635,6 +703,29 @@ pub async fn counters(data_dir: &Path, enemy: &str, lane: &str) -> Value {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn lobby_penalties_name_their_player() {
+        let elig = serde_json::json!([
+            { "queueId": 440, "restrictions": [{ "restrictionCode": "QueueLockout", "summonerIds": [9] }] },
+            { "queueId": 420, "restrictions": [
+                { "restrictionCode": "QueueDodger", "summonerIds": [7], "expiredTimestamp": 5000, "restrictionArgs": { "x": 1 } },
+                { "restrictionCode": "TeamSizeRestriction", "summonerIds": [7, 8] },
+                { "restrictionCode": "LeaverBusted", "summonerIdsString": "8, 7" } ] }
+        ]);
+        let search = serde_json::json!({ "lowPriorityData": { "penalizedSummonerIds": [8], "penaltyTime": 60, "penaltyTimeRemaining": 30 },
+            "errors": [{ "errorType": "QUEUE_DODGER", "penaltyTimeRemaining": 10, "penalizedSummonerId": 7 }] });
+        let p = super::member_penalties(Some(&elig), Some(&search), 420, 1000);
+        let codes = |id: &str| p.get(id).map(|l| l.iter().map(|x| x["code"].as_str().unwrap().to_string()).collect::<Vec<_>>()).unwrap_or_default();
+        assert_eq!(codes("7"), vec!["QueueDodger", "LeaverBusted", "QUEUE_DODGER"]);
+        assert_eq!(codes("8"), vec!["LeaverBusted", "LowPriorityQueue"]);
+        // another queue's restriction and a team-size one are no penalty of anyone here
+        assert!(codes("9").is_empty());
+        assert_eq!(p["8"][1]["until"], 31_000);
+        assert_eq!(p["8"][1]["low"], 60);
+        assert_eq!(p["7"][0]["until"], 5000);
+        assert!(super::member_penalties(None, None, 420, 0).is_empty());
+    }
+
     #[test]
     fn lobby_party_only_with_others_and_recent() {
         let now = 10 * 3600 * 1000;

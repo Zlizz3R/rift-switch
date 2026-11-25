@@ -161,7 +161,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 - **Lobby, champion select and in game** – everyone's Solo/Duo and Flex rank, and a **Multi op.gg** button for the
   enemy team.
 - **Clash** – your next opponents with their ranks as soon as the bracket is out.
-- **Penalties & waiting times** of the account you are on and your other accounts in the lobby or game.
+- **Penalties & waiting times** right on the row of whoever has them in the lobby – your own accounts and the other
+  players the client names – and of the account you are on in champion select or a game.
 
 <img src="docs/screens/live-game.png" alt="Live: the ten players of a game as cards">
 
