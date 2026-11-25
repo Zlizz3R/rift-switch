@@ -209,7 +209,7 @@ public static class RiotType {
 }
 '@
 
-$target = if ($env:RS_AUTOFILL_TARGET) { $env:RS_AUTOFILL_TARGET } else { 'Riot Client' }   # override only for testing
+$target = if ($env:RS_AUTOFILL_TARGET) { $env:RS_AUTOFILL_TARGET } else { 'Riot Client' }   # override only for testing (the app passes it on only in a test copy)
 $procs = Get-Process -Name $target -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }
 # after a restart: only a Riot Client started since then (never an older window left over)
 if ($cred.since) {

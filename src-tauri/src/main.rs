@@ -792,6 +792,11 @@ fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
 }
 
 const IN_GAME: [&str; 3] = ["GameStart", "InProgress", "Reconnect"];
+/// A game is on (loading screen or running) – the phase comes from the client's events the moment
+/// it changes (else from the last tick): long request loops stop as soon as a game starts.
+fn game_on() -> bool {
+    with(|c| c.live.phase.as_deref().is_some_and(|p| IN_GAME.contains(&p)))
+}
 /// League must not be closed now (champion select or a game)
 const RISKY_PHASES: [&str; 5] = [
     "ChampSelect",
@@ -810,8 +815,9 @@ async fn tick_inner(my_gen: u64) {
     // could cost a frame. Ranks, history and the other accounts follow when the game is over.
     let first = riot::gameflow_phase().await;
     if let Some(p) = first.as_deref().filter(|p| IN_GAME.contains(p)) {
+        // also right after the app started (account not known yet): it is learnt after the game
         let changed = with(|c| {
-            if c.live.puuid.is_none() || stale_in(c, my_gen) {
+            if stale_in(c, my_gen) {
                 return None;
             }
             let ch = c.live.phase.as_deref() != Some(p);
@@ -819,12 +825,10 @@ async fn tick_inner(my_gen: u64) {
             c.live.client_up = true;
             Some(ch)
         });
-        if let Some(ch) = changed {
-            if ch {
-                push();
-            }
-            return;
+        if changed == Some(true) {
+            push();
         }
+        return;
     }
     let cur = if first.is_some() {
         riot::current_account().await
@@ -1060,7 +1064,7 @@ async fn tick_inner(my_gen: u64) {
         let list: Vec<Obj> = with(|c| c.st.accounts.clone());
         let n = list.len();
         for (i, a) in list.into_iter().enumerate() {
-            if stale() {
+            if stale() || game_on() {
                 return;
             }
             load_step("ranks", i, n);
@@ -1119,14 +1123,14 @@ async fn tick_inner(my_gen: u64) {
         }
         save();
     }
-    if !stale() && !with(|c| c.mh.missing().is_empty()) {
+    if !stale() && !game_on() && !with(|c| c.mh.missing().is_empty()) {
         let got = fill_games(if win_shown() { 8 } else { 3 }).await;
         if got > 0 && win_shown() {
             emit("matches-changed", Value::Null);
         }
     }
     // older Summoner's Rift games get their positions – only while the window is open
-    if !stale() && win_shown() {
+    if !stale() && !game_on() && win_shown() {
         let ids: Vec<String> = with(|c| {
             let failed = &c.failed_games;
             c.mh.outdated(64)
@@ -1319,9 +1323,13 @@ async fn fetch_game(id: String) -> Option<(Value, Value, Option<Value>)> {
     }
     Some((c, g, tl))
 }
+/// The own games: one after the other, stopping when a game starts (Live's scouting has its own pace).
 async fn fetch_games(ids: Vec<String>) -> usize {
     let mut got = 0;
     for id in ids {
+        if game_on() {
+            break;
+        }
         match fetch_game(id.clone()).await {
             Some((c, raw, tl)) => {
                 if with(|c2| {
@@ -1972,15 +1980,28 @@ async fn do_switch(id: String) -> Value {
             }
         }
     }
+    // nothing to start League with: say so before anything is closed
+    if !riot::riot_client_found() {
+        return err_key("m.noRiotClient");
+    }
     sw_start(&id, &["close", "client", "signin", "play", "launch"]);
     if !save_active_before_leaving().await {
         sw_clear();
         return err_key("m.closeFailed");
     }
-    match &session {
+    let restored = match &session {
         Some(s) => riot::restore_session(s),
-        None => riot::clear_session(),
+        None => {
+            riot::clear_session();
+            true
+        }
+    };
+    // the sign-in couldn't be put back: with a password it is typed instead, else say so
+    if !restored && cred.is_none() {
+        sw_clear();
+        return err_key("m.restoreFailed");
     }
+    let session = session.filter(|_| restored);
     with(|c| {
         c.st.active = Some(id.clone());
         c.expecting = Some(id.clone());
@@ -1989,7 +2010,10 @@ async fn do_switch(id: String) -> Value {
     });
     save();
     let started = now_ms();
-    riot::launch_league(pl);
+    if !riot::launch_league(pl) {
+        sw_clear();
+        return err_key("m.noRiotClient");
+    }
     sw_step("client", "");
     if let Some(cr) = &cred {
         tauri::async_runtime::spawn(auto_login(
@@ -2023,7 +2047,10 @@ async fn do_add_new(c_in: Value) -> Value {
     });
     save();
     let started = now_ms();
-    riot::launch_league("live");
+    if !riot::launch_league("live") {
+        with(|c| c.pending_add = false);
+        return err_key("m.noRiotClient");
+    }
     if let Some((u, p)) = cred {
         tauri::async_runtime::spawn(auto_login(u.clone(), p, u, 1500, Some(started)));
     }
@@ -2195,7 +2222,9 @@ async fn do_tool(what: String) -> Value {
                         .as_ref(),
                 )
             });
-            riot::launch_league(pl);
+            if !riot::launch_league(pl) {
+                return json!({ "ok": false });
+            }
             tauri::async_runtime::spawn(auto_play(pl));
             json!({ "ok": true })
         }
@@ -2331,7 +2360,43 @@ async fn do_diagnostics() -> Value {
     }
 }
 
-async fn do_export(pass: Value) -> Value {
+/// "Is it really you?" before saved passwords leave their safe: Windows Hello (PIN, fingerprint,
+/// face) – or, given `app_pass` (where Hello isn't set up), the app password.
+/// Some(true) = confirmed, Some(false) = not, None = no Windows Hello on this PC.
+async fn confirm_owner(app_pass: Option<&str>, why: &str) -> Option<bool> {
+    if let Some(p) = app_pass {
+        let lock = with(|c| c.st.lock.clone());
+        let p = p.to_string();
+        return Some(
+            lock.is_some()
+                && tokio::task::spawn_blocking(move || {
+                    secrets::lock_matches(lock.as_ref(), Some(&p))
+                })
+                .await
+                .unwrap_or(false),
+        );
+    }
+    let hwnd = window()
+        .and_then(|w| w.hwnd().ok())
+        .map(|h| h.0 as isize)
+        .unwrap_or(0);
+    let msg = tr(why, &[]);
+    match tokio::task::spawn_blocking(move || secrets::windows_confirm(hwnd, &msg)).await {
+        Ok(Ok(v)) => Some(v),
+        Ok(Err(_)) => None,
+        Err(_) => Some(false),
+    }
+}
+/// pass: the export password (logins go along, encrypted with it) or null (no logins).
+/// With logins, Windows Hello (or the app password, `app_pass`) confirms it first – like showing one.
+async fn do_export(pass: Value, app_pass: Value) -> Value {
+    if pass.as_str().is_some_and(|p| p.chars().count() >= 8) {
+        match confirm_owner(app_pass.as_str(), "reveal.export").await {
+            Some(true) => {}
+            Some(false) => return json!({ "ok": false, "denied": true }),
+            None => return json!({ "ok": false, "noHello": true }),
+        }
+    }
     let Some(file) = pick_file(true).await else {
         return json!({ "ok": false });
     };
@@ -2624,32 +2689,10 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             if !is_id(&id) {
                 return json!({ "ok": false });
             }
-            let pass = a(1);
-            let confirmed = if let Some(p) = pass.as_str() {
-                let lock = with(|c| c.st.lock.clone());
-                let p = p.to_string();
-                lock.is_some()
-                    && tokio::task::spawn_blocking(move || {
-                        secrets::lock_matches(lock.as_ref(), Some(&p))
-                    })
-                    .await
-                    .unwrap_or(false)
-            } else {
-                let hwnd = window()
-                    .and_then(|w| w.hwnd().ok())
-                    .map(|h| h.0 as isize)
-                    .unwrap_or(0);
-                let msg = tr("reveal.why", &[]);
-                match tokio::task::spawn_blocking(move || secrets::windows_confirm(hwnd, &msg))
-                    .await
-                {
-                    Ok(Ok(v)) => v,
-                    Ok(Err(_)) => return json!({ "ok": false, "noHello": true }),
-                    Err(_) => false,
-                }
-            };
-            if !confirmed {
-                return json!({ "ok": false });
+            match confirm_owner(a(1).as_str(), "reveal.why").await {
+                Some(true) => {}
+                Some(false) => return json!({ "ok": false }),
+                None => return json!({ "ok": false, "noHello": true }),
             }
             match load_cred(&id) {
                 Some((_, p)) => json!({ "ok": true, "p": p }),
@@ -3230,7 +3273,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             }
             Value::Null
         }
-        "data-export" => do_export(a(0)).await,
+        "data-export" => do_export(a(0), a(1)).await,
         "diagnostics" => do_diagnostics().await,
         "data-import" => do_import(a(0)).await,
         "check-import-pass" => {

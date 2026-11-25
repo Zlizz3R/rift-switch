@@ -46,7 +46,7 @@
     win: what => call('win', what),
     openExternal: url => call('open-external', url),
     setSetting: (k, v) => call('set-setting', k, v),
-    dataExport: pass => call('data-export', pass || null),
+    dataExport: (pass, appPass) => call('data-export', pass || null, appPass == null ? null : appPass),
     diagnostics: () => call('diagnostics'),
     dataImport: pass => call('data-import', pass || null),
     checkImportPass: pass => call('check-import-pass', pass),

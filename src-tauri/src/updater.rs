@@ -15,12 +15,15 @@ struct Up {
     version: Option<String>,
     error: Option<String>,
     file: Option<PathBuf>,
+    /// the installer's SHA-256 from the release: checked once more right before it runs
+    sha: Option<String>,
 }
 static STATE: Mutex<Up> = Mutex::new(Up {
     status: "off",
     version: None,
     error: None,
     file: None,
+    sha: None,
 });
 
 pub fn get() -> Value {
@@ -183,6 +186,7 @@ async fn run() -> Result<Option<()>, String> {
     let mut s = STATE.lock().unwrap();
     s.status = "ready";
     s.file = Some(file);
+    s.sha = Some(want);
     Ok(Some(()))
 }
 
@@ -206,8 +210,9 @@ pub fn install_now() -> bool {
     let mut s = STATE.lock().unwrap();
     let ok = match (&s.file, s.status) {
         (Some(f), "ready") => {
-            f.exists()
-                && std::process::Command::new(f)
+            // the file lies in a folder the user can write to: still the one that was checked?
+            let same = std::fs::read(f).is_ok_and(|b| s.sha.as_deref() == Some(sha256_hex(&b).as_str()));
+            same && std::process::Command::new(f)
                     .args(["/P", "/R"])
                     .spawn()
                     .is_ok()

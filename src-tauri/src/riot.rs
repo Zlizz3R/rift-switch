@@ -1240,11 +1240,14 @@ pub fn clear_session() {
     let _ = std::fs::remove_dir_all(&d);
     let _ = std::fs::create_dir_all(&d);
 }
-pub fn restore_session(json: &str) {
+/// Puts a saved sign-in back into the Riot Client's Data folder. false: it couldn't (unreadable
+/// snapshot, a file locked or not written) – the folder is emptied then, never left half-mixed.
+pub fn restore_session(json: &str) -> bool {
     let Ok(v) = serde_json::from_str::<Value>(json) else {
-        return;
+        return false;
     };
     clear_session();
+    let mut ok = true;
     for (rel, b64) in v["files"].as_object().into_iter().flatten() {
         // only plain relative paths inside the Data folder (no "..", no drive or root)
         let rel_path = PathBuf::from(rel.replace('/', "\\"));
@@ -1256,12 +1259,22 @@ pub fn restore_session(json: &str) {
             continue;
         }
         let full = rc_data().join(rel_path);
-        if let (Some(dir), Some(b)) = (full.parent(), b64.as_str().and_then(|s| B64.decode(s).ok()))
-        {
-            let _ = std::fs::create_dir_all(dir);
-            let _ = std::fs::write(&full, b);
-        }
+        let written = match (full.parent(), b64.as_str().and_then(|s| B64.decode(s).ok())) {
+            (Some(dir), Some(b)) => std::fs::create_dir_all(dir).is_ok() && std::fs::write(&full, b).is_ok(),
+            _ => false,
+        };
+        ok &= written;
     }
+    // the file that holds the remembered login must be there
+    ok &= rc_data().join("RiotGamesPrivateSettings.yaml").exists();
+    if !ok {
+        clear_session();
+    }
+    ok
+}
+/// Is the Riot Client where the app would start it from?
+pub fn riot_client_found() -> bool {
+    Path::new(&riot_client_exe()).exists()
 }
 
 // ---------- processes ----------
@@ -1345,10 +1358,11 @@ pub fn show_riot_client() {
         .stderr(std::process::Stdio::null())
         .spawn();
 }
-pub fn launch_league(pl: &str) {
+/// Starts the Riot Client with League; false when it couldn't be started (not installed, moved).
+pub fn launch_league(pl: &str) -> bool {
     use std::os::windows::process::CommandExt;
     let pl = if pl == "pbe" { "pbe" } else { "live" };
-    let _ = std::process::Command::new(riot_client_exe())
+    std::process::Command::new(riot_client_exe())
         .args([
             "--launch-product=league_of_legends",
             &format!("--launch-patchline={pl}"),
@@ -1357,7 +1371,8 @@ pub fn launch_league(pl: &str) {
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
-        .spawn();
+        .spawn()
+        .is_ok()
 }
 
 // ---------- Riot Client API ----------
@@ -1483,6 +1498,13 @@ async fn run_script(name: &str, stdin: Option<String>, timeout: Duration) -> Str
     .stdout(std::process::Stdio::piped())
     .stderr(std::process::Stdio::null())
     .kill_on_drop(true);
+    // the scripts' test switches (another target window, a picture instead of the screen) only in a
+    // test copy (RS_DATA): a leftover variable must never send a typed login elsewhere
+    if std::env::var_os("RS_DATA").is_none() {
+        for k in ["RS_AUTOFILL_TARGET", "RS_AUTOFILL_IMAGE", "RS_AUTOFILL_PROBE"] {
+            cmd.env_remove(k);
+        }
+    }
     let Ok(mut child) = cmd.spawn() else {
         return "error".into();
     };

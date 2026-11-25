@@ -825,17 +825,33 @@ test('export: a clear choice – without logins, or with logins under their own 
   assert.ok(app.visible('#expBox'));
   assert.match(app.$('#expBox').textContent, /Never in the file/);
   await app.click('[data-exp="plain"]');
-  assert.deepEqual(lastCall(app, 'data-export').args, [null]);
+  assert.deepEqual(lastCall(app, 'data-export').args, [null, null]);
   await app.click('#exportBtn');
   await app.click('[data-exp="logins"]');
   assert.ok(app.visible('#passBox'));
   app.$('#passIn').value = app.$('#passAgain').value = 'longpassword';
   await app.submit('#passForm');
-  assert.deepEqual(lastCall(app, 'data-export').args, ['longpassword']);
+  assert.deepEqual(lastCall(app, 'data-export').args, ['longpassword', null]);
   await app.click('#exportBtn');
   await app.click('[data-exp="cancel"]');
   assert.equal(app.called('data-export').length, 2);
 }));
+
+test('export with logins: without Windows Hello the app password confirms it first', () => {
+  // the backend asks Windows Hello itself; where it isn't set up, the app password is asked here
+  const exp = (pass, app) => (pass && app == null ? { ok: false, noHello: true } : app === 'apppass' ? { ok: true, n: 3 } : { ok: false, denied: true });
+  return withApp({ state: sampleState({ hasLock: true }), replies: { 'data-export': exp } }, async (app) => {
+    await app.click('#exportBtn');
+    await app.click('[data-exp="logins"]');
+    app.$('#passIn').value = app.$('#passAgain').value = 'longpassword';
+    await app.submit('#passForm');
+    assert.ok(app.visible('#passBox'), 'now the app password');
+    assert.match(app.$('#passBox').textContent, /app password to export the saved logins/);
+    app.$('#passIn').value = 'apppass';
+    await app.submit('#passForm');
+    assert.deepEqual(lastCall(app, 'data-export').args, ['longpassword', 'apppass']);
+  });
+});
 
 test('diagnostics, what\'s new and the data sources', () => withApp({ state: sampleState({ version: '1.2.0' }), replies: { diagnostics: { ok: true } } }, async (app) => {
   await app.click('#navTools');

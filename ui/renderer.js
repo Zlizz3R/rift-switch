@@ -651,7 +651,15 @@ $('exportBtn').onclick = async () => {
     pass = await passBox({ title: t('exp.logins'), text: t('pw.exportText'), ok: t('pw.withLogins'), confirm: true, min: 8 });
     if (pass === null) return;
   }
-  const r = await api.dataExport(pass);
+  // with logins: Windows Hello first (or, without it, the app password) – like showing a password
+  let r = await api.dataExport(pass);
+  if (r && r.noHello) {
+    if (!S.hasLock) return toast(t('reveal.noHello'), true);
+    const app = await passBox({ title: t('exp.logins'), text: t('reveal.askExport'), ok: t('pw.withLogins') });
+    if (app === null) return;
+    r = await api.dataExport(pass, app);
+    if (r && r.denied) return toast(t('pw.wrong'), true);
+  }
   if (r && r.ok) toast(t('set.exported', { n: r.n }));
   else if (r && r.error) toast(t('set.ioFailed', { e: r.error }), true);
 };
