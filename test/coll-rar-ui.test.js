@@ -25,18 +25,18 @@ test('collection: RP per account; "by rarity" shows the kinds, a kind folds out 
     const kinds = () => app.$$('.coll-rar tr.rar-kind');
     assert.deepEqual(kinds().map(r => r.dataset.rarkind), ['skin', 'ward']);
     // ward skins exist only as Rare, Epic and Mythic (and plain): the other cells stay empty
-    assert.deepEqual([...kinds()[1].querySelectorAll('td')].slice(1).map(td => td.textContent), ['2', '0', '0', '', '1', '', '', '']);
+    assert.deepEqual([...kinds()[1].querySelectorAll('td')].slice(1).map(td => td.textContent), ['2', '0', '0', '1', '', '', '', '']);
     assert.equal(app.$$('.coll-rar tr.rar-acc').length, 0, 'accounts folded at first');
     // every rarity, lowest first – also the ones nobody has (Rare, Ultimate, Exalted)
     assert.deepEqual([...tables[0].querySelectorAll('thead th')].slice(1).map(th => th.textContent),
-      ['No rarity', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Ultimate', 'Exalted', 'Transcendent']);
+      ['No rarity', 'Rare', 'Epic', 'Mythic', 'Legendary', 'Ultimate', 'Exalted', 'Transcendent']);
     const cells = r => [...r.querySelectorAll('td')].slice(1).map(td => td.textContent);
-    assert.deepEqual(cells(kinds()[0]), ['13', '0', '6', '2', '1', '0', '0', '1']);   // skins: 10 + 3 without rarity, 5 + 1 epic
+    assert.deepEqual(cells(kinds()[0]), ['13', '0', '6', '1', '2', '0', '0', '1']);   // skins: 10 + 3 without rarity, 5 + 1 epic
     // a click on a kind folds out its accounts, a second click folds them back
     await app.click(kinds()[0]);
     const accs = app.$$('.coll-rar tr.rar-acc');
     assert.equal(accs.length, 2);
-    assert.deepEqual(cells(accs[0]), ['10', '0', '5', '2', '1', '0', '0', '1']);
+    assert.deepEqual(cells(accs[0]), ['10', '0', '5', '1', '2', '0', '0', '1']);
     assert.ok(kinds()[0].nextElementSibling.classList.contains('rar-acc'));
     await app.click(kinds()[0]);
     assert.equal(app.$$('.coll-rar tr.rar-acc').length, 0);

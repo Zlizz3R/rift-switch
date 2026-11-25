@@ -61,8 +61,9 @@ function collRarityHtml(known, by) {
   const btn = `<button class="btn small coll-bd-btn${open ? ' open' : ''}" data-collbd>${t(open ? 'coll.bdHide' : 'coll.bdShow')}</button>`;
   if (!open) return `<div class="coll-bd">${btn}</div>`;
   const rowsOf = k => known.map(a => ({ a, r: ((by.get(a.puuid).counts || {}).rar || {})[k] })).filter(x => Array.isArray(x.r));
-  // every rarity there is, lowest first – also the ones nobody owns yet (Exalted, Transcendent …)
-  const cols = [0, 1, 2, 3, 4, 5, 6, 7];
+  // every rarity there is, lowest first – also the ones nobody owns yet (Exalted, Transcendent …).
+  // Mythic (4) sits below Legendary (3) here, whatever Riot's numbers say
+  const cols = [0, 1, 2, 4, 3, 5, 6, 7];
   const kinds = COLL_RAR_KINDS.filter(([k]) => rowsOf(k).some(x => x.r.some(v => v > 0)));
   if (!kinds.length) return `<div class="coll-bd">${btn}<p class="coll-foot">${t('coll.bdLater')}</p><p class="coll-foot">${t('coll.bdNote')}</p></div>`;
   const unfolded = collBdKinds();
