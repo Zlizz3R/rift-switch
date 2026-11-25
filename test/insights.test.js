@@ -77,3 +77,24 @@ test('tag changes: new, gone, level up/down, value; "too little data" is no chan
   assert.equal(by.kda.dir, -1);
   assert.deepEqual(I.tagDiff(before, before), []);
 });
+
+test('whose lane: counts per champion and role, every enemy on its own lane', () => {
+  // champion 100 always top, 101 jungle (Smite), 102 mid, 103 bot, 104 support – 3 games
+  const games = [game(), game(), game()];
+  const c = I.roleCounts(games);
+  assert.equal(c.get(101).get('jungle'), 3);
+  // a champion played both top and mid: mid is taken by a surer one, so he goes top
+  c.set(500, new Map([['mid', 6], ['top', 4]]));
+  const g = I.guessLanes([500, 102, 101, 999], c);
+  const by = Object.fromEntries(g.map(x => [x.champ, x]));
+  assert.equal(by[102].role, 'mid');
+  assert.equal(by[500].role, 'top');
+  assert.equal(by[500].share, 0.4);
+  assert.equal(by[101].role, 'jungle');
+  // never seen: some free lane, no share
+  assert.ok(['bot', 'support'].includes(by[999].role));
+  assert.equal(by[999].share, null);
+  assert.equal(new Set(g.map(x => x.role)).size, 4);
+  // a position already known wins
+  assert.equal(I.guessLanes([102], c, { 102: 'support' })[0].role, 'support');
+});

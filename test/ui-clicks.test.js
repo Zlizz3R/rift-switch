@@ -535,6 +535,44 @@ test('champ select helper: the lane follows the main role until one is picked', 
   });
 });
 
+test('champ select helper: both teams lane by lane – mine as assigned, the enemies guessed from the stored games', () => {
+  const POS = ['top', 'jungle', 'mid', 'bot', 'support'];
+  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Lee Sin' }, { id: 4, name: 'Ahri' }];
+  // stored games: Lee Sin (3) jungles, Ahri (4) mid, Darius (2) top
+  const g = (i) => {
+    const players = [...POS.map((r, j) => ({ puuid: `a${i}${j}`, team: 100, champ: [2, 3, 4, 50, 51][j], pos: r, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] })),
+      ...POS.map((r, j) => ({ puuid: `b${i}${j}`, team: 200, champ: 110 + j, pos: r, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] }))];
+    players[0] = { ...players[0], puuid: P(1) };
+    return { id: String(700 + i), t: Date.now() - (i + 1) * 86400000, dur: 1800, q: 420, mode: 'CLASSIC', players };
+  };
+  const games = [g(0), g(1), g(2)];
+  const st = sampleState();
+  st.settings.champPool = [1];
+  const live = { clientUp: true, phase: 'ChampSelect', region: 'EUW', me: P(1),
+    champSelect: { myPosition: 'middle', hiddenNames: true, allies: [],
+      team: [{ championId: 4, position: 'middle', me: true }, { championId: 1, position: 'top' }, { championId: 0, position: 'jungle' }],
+      enemies: [{ championId: 3, position: '' }, { championId: 2, position: '' }] } };
+  return withApp({ state: st, replies: { champions: champs, live, matches: { index: games.map(x => [x.id, x.t, x.q, P(1)]), waiting: 0 }, 'matches-get': games,
+    counters: () => ({ ok: true, list: [] }) } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 100));
+    await app.settle();
+    app.w.eval('renderLive(true)');
+    await app.settle();
+    const rows = app.$$('.h-lane');
+    assert.equal(rows.length, 5);
+    // the assigned position decides the helper's lane
+    assert.equal(app.$('#hLane').value, 'mid');
+    assert.ok(rows[2].classList.contains('mine'));
+    assert.match(rows[0].querySelector('.h-ally').textContent, /Garen/);
+    assert.match(rows[0].querySelector('.h-foe').textContent, /Darius.*100 %/);
+    assert.match(rows[1].querySelector('.h-foe').textContent, /Lee Sin/);
+    assert.match(rows[1].querySelector('.h-foe').title, /100 % of 3 stored games on this lane/);
+    assert.equal(rows[2].querySelector('.h-foe').textContent.trim(), '');
+    assert.deepEqual(app.errors.map(String), []);
+  });
+});
+
 test('champ select helper: "who are you playing against?" shows the enemy picks, a click chooses one', () => {
   const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 4, name: 'Malphite' }];
   const st = sampleState();

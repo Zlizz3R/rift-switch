@@ -123,6 +123,7 @@
     'det.goldLead': "गोल्ड बढ़त – ऊपर: {a} आगे, नीचे: {b} आगे",
     'det.players': "खिलाड़ी", 'det.compare': "दो खिलाड़ियों की तुलना", 'det.kills': "किल", 'det.deaths': "मौतें", 'det.assists': "असिस्ट", 'det.phys': "शारीरिक क्षति", 'det.magic': "जादुई क्षति", 'det.true': "ट्रू क्षति", 'det.mitig': "रोकी गई क्षति", 'det.heal': "हीलिंग", 'det.spent': "खर्च सोना", 'det.csMin': "CS / मिनट", 'det.wards': "वार्ड लगाए", 'det.wardsKilled': "वार्ड नष्ट", 'det.pinks': "कंट्रोल वार्ड", 'det.cc': "क्राउड कंट्रोल", 'det.turretDmg': "टावर पर क्षति", 'det.obj': "उद्देश्यों पर क्षति", 'det.spree': "सबसे बड़ी किलिंग स्प्री", 'det.crit': "सबसे बड़ा क्रिटिकल",
     'tile.pbeTitle': "टेस्ट सर्वर (PBE)", 'tile.pbeText': "यहाँ रैंक्ड नहीं – नई चीज़ें आज़माने के लिए", 'pen.lowPrio': "लो प्रायोरिटी", 'pen.short': "दंड",
+    'live.lanes': "लेन – आपकी टीम और विरोधी (अनुमान)", 'live.laneGuess': "{n} सहेजे गए मैचों में से {pct} % इस लेन पर", 'live.laneGuessNone': "अनुमान – इस चैंपियन का कोई सहेजा मैच नहीं", 'party.lobby': "आपकी लॉबी: {names}",
     'live.vsWho': "आप किसके ख़िलाफ़ खेल रहे हैं?", 'live.ratingT': "काउंटर रेटिंग {r} (counterstats.net) – जितनी ऊँची, लेन उतनी आसान",
     'live.preloadBtn': "सभी मैचअप पहले से लोड करें", 'live.preloadT': "counterstats.net के अनुसार इस लेन पर आपके पूल के सामने आने वाला हर चैंपियन लोड करता है (आमतौर पर 30–50) – कतार में क्लिक करें। एक दिन सहेजा रहता है।",
     'live.poolTitle': "मेरा चैंपियन पूल", 'live.bestVs': "{name} के ख़िलाफ़ सबसे अच्छे पिक", 'live.preload': "मैचअप लोड हो रहे हैं {n} / {total} …",

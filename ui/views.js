@@ -544,7 +544,11 @@ function mainLane() {
   }
   return laneAuto.lane;
 }
-const lane = () => (S.settings && S.settings.laneChosen && S.settings.lane) || mainLane() || 'top';
+// in champion select with an assigned position: that one (Riot says it)
+const CS_LANE = { top: 'top', jungle: 'jungle', middle: 'mid', bottom: 'adc', utility: 'support' };
+const CS_ROLE = { top: 'top', jungle: 'jungle', middle: 'mid', bottom: 'bot', utility: 'support' };
+const csLane = () => { const cs = typeof liveData !== 'undefined' && liveData && liveData.champSelect; return (cs && CS_LANE[cs.myPosition]) || null; };
+const lane = () => csLane() || (S.settings && S.settings.laneChosen && S.settings.lane) || mainLane() || 'top';
 function want(ids) {
   const l = lane();
   for (const id of ids) {
@@ -616,8 +620,50 @@ function guessLaner(picks) {
     p.share = c ? c.share : null;
     if (p.share >= 15 && (!best || p.share > best.share)) best = p;
   }
+  if (!best && picks.length) {
+    const role = { top: 'top', jungle: 'jungle', mid: 'mid', adc: 'bot', support: 'support' }[lane()];
+    const g = laneGuess(picks.map(p => p.id)).find(x => x.role === role && x.share != null);
+    if (g) { best = picks.find(p => p.id === g.champ); best.share = g.share * 100; }
+  }
   if (best) { best.laner = true; best.guess = true; }
   return picks;
+}
+// the enemies on their likely lanes, from how often each champion is played where in every stored
+// game (own and Live's); the counts are worked out once per set of games
+const laneCounts = { games: null, other: null, counts: new Map() };
+function laneGuess(champIds) {
+  const own = typeof scv !== 'undefined' ? scv.own : null;
+  if (!own) { if (typeof lmNeedOwn === 'function') lmNeedOwn(); }
+  const other = typeof scv !== 'undefined' ? scv.games.size : 0;
+  if (laneCounts.games !== own || laneCounts.other !== other) {
+    laneCounts.games = own; laneCounts.other = other;
+    laneCounts.counts = Insights.roleCounts([...(own || []), ...(typeof scv !== 'undefined' ? scv.games.values() : [])]);
+  }
+  return Insights.guessLanes(champIds, laneCounts.counts);
+}
+// both teams lane by lane: the own team as Riot assigned it, the enemies guessed
+function laneRows() {
+  const cs = (liveData || {}).champSelect;
+  if (!cs) return null;
+  const mine = (cs.team || []).filter(c => CS_ROLE[c.position]);
+  const enemies = cs.enemies.map(e => e.championId).filter(Boolean);
+  if (!mine.length && !enemies.length) return null;
+  const guess = laneGuess(enemies);
+  return Stats.POSITIONS.map(r => ({ role: r, ally: mine.find(c => CS_ROLE[c.position] === r) || null, enemy: guess.find(x => x.role === r) || null }));
+}
+function laneRowsHtml(rows) {
+  const icon = (id, cls = '') => (id ? `<img class="${cls}" src="${champIcon(id)}" alt="">` : '<span class="h-empty"></span>');
+  const myRole = { top: 'top', jungle: 'jungle', mid: 'mid', adc: 'bot', support: 'support' }[lane()];
+  return `<div class="h-sub">${t('live.lanes')}</div><div class="h-lanes">${rows.map(x => {
+    const name = id => esc((champById(id) || {}).name || '');
+    const e = x.enemy;
+    const tip = e ? `${name(e.champ)} – ${e.share == null ? t('live.laneGuessNone') : t('live.laneGuess', { pct: Math.round(e.share * 100), n: e.n })}` : '';
+    return `<div class="h-lane${x.role === myRole ? ' mine' : ''}">
+      <span class="h-ally">${icon(x.ally && x.ally.championId)}${x.ally && x.ally.championId ? `<b>${name(x.ally.championId)}</b>` : ''}</span>
+      <img class="h-pos" src="${posIcon(x.role)}" alt="${esc(t('pos.' + x.role))}" title="${esc(t('pos.' + x.role))}">
+      <span class="h-foe"${tip ? ` title="${esc(tip)}"` : ''}>${e ? `<b>${name(e.champ)}</b>${icon(e.champ)}<i class="h-pct">${e.share == null ? '?' : Math.round(e.share * 100) + ' %'}</i>` : ''}</span>
+    </div>`;
+  }).join('')}</div>`;
 }
 // enemy champions picked right now (champion select, or the game running)
 function enemyPicks() {
@@ -647,6 +693,7 @@ function helperHtml() {
     ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}
       <input id="hAdd" list="champList" placeholder="+ ${esc(t('live.addChamp'))}" spellcheck="false">
       <button class="btn small" id="hFromMh" title="${esc(t('live.poolFromMhT'))}">${t('live.poolFromMh')}</button></div>
+    ${(() => { const rows = laneRows(); return rows ? laneRowsHtml(rows) : ''; })()}
     ${picks.length ? `<div class="h-sub">${t('live.vsWho')}</div><div class="h-picks">${picks.map(x => `<button class="h-pick${x.id === helper.enemy ? ' on' : ''}${x.laner ? ' laner' : ''}" data-hpick="${x.id}" title="${esc((champById(x.id) || {}).name || '') + (x.guess ? ' – ' + t('live.likelyLaner', { n: Math.round(x.share) }) : '')}"><img src="${champIcon(x.id)}" alt="">${x.guess ? '<i class="h-guess">?</i>' : ''}</button>`).join('')}</div>` : ''}
     <div class="h-sub">${t('live.enemy')}</div>
     <div class="h-enemy">${helper.enemy ? `<img class="h-en" src="${champIcon(helper.enemy)}" alt="">` : ''}<input id="hEnemy" list="champList" placeholder="${esc(t('live.typeChamp'))}" spellcheck="false" value="${enemyName}"></div>

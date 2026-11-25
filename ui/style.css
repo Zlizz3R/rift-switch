@@ -931,6 +931,18 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .h-pre { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
 
 .h-picks { display: flex; gap: 8px; flex-wrap: wrap; }
+/* both teams lane by lane: own team left, the guessed enemy right, my lane marked */
+.h-lanes { display: flex; flex-direction: column; gap: 4px; }
+.h-lane { display: grid; grid-template-columns: 1fr 22px 1fr; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; border: 1px solid transparent; }
+.h-lane.mine { border-color: rgba(200,170,110,.45); background: rgba(200,170,110,.07); }
+.h-lane img:not(.h-pos) { width: 30px; height: 30px; border-radius: 6px; display: block; }
+.h-lane .h-pos { width: 20px; height: 20px; opacity: .8; }
+.h-ally, .h-foe { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; }
+.h-foe { justify-content: flex-end; }
+.h-ally b, .h-foe b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h-foe img { opacity: .9; }
+.h-pct { font-style: normal; font-size: 11px; color: var(--muted); min-width: 34px; text-align: right; }
+.h-empty { width: 30px; height: 30px; border-radius: 6px; border: 1px dashed var(--line); display: block; }
 .h-pick { padding: 0; border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer; position: relative; opacity: .75; transition: opacity .15s, border-color .15s, transform .15s; }
 .h-pick img { width: 40px; height: 40px; border-radius: 6px; display: block; }
 .h-pick:hover { opacity: 1; transform: translateY(-1px); }

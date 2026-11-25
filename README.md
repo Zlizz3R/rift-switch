@@ -169,7 +169,7 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   on this champion, main role, mastery and tags – from each player's 200 newest games (all ten players' details
   for the newest 50 ranked ones), loaded from the client while the loading screen runs, with a
   progress bar; during the game it goes on slower (one game at a time, a round every 4 seconds, only while the
-  window is open), so the game stays smooth. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
+  window is open), so the game stays smooth. **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.
 - **After the game**: the game's full details open right on the Live page – both teams, MVP / ACE, lane against
   lane, the gold lead, two players side by side – and what changed in your tags (▲ / ▼).
@@ -181,7 +181,9 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 <img src="docs/screens/helper.png" alt="Champ select helper: best picks against the enemy laner">
 
 Keep a pool of your champions – typed in, or *Add from match history*: every champion you played 3+ times on the lane in
-the last 180 days. The lane is your main role from the match history until you pick one. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app
+the last 180 days. The lane is the one Riot assigned you, else your main role from the match history until you pick one. Both teams
+are shown lane by lane: yours as assigned, the enemies guessed from how often each champion plays each lane in every
+stored game. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app
 marks the likely laner (by how often each champion plays your lane). Your pool is ranked by win rate and counter
 rating against him (counterstats.net). Every enemy pick loads in the background; *Pre-load all matchups* reads just
 your own champions' pages while you queue – a matchup's win rates add up to 100, so they answer every enemy.

@@ -64,7 +64,12 @@ function lmBoardExtras(g, rows) {
   for (const row of rows) {
     const team = row.map(x => x.c.p.puuid).filter(Boolean);
     let num = 0;
-    for (const found of Insights.parties(pairs, team).slice(0, 2)) {
+    // the own lobby: those in it who are in this team (the client said so – no guessing needed);
+    // the parties found in earlier games only for the others
+    const lobby = (g.party || []).filter(p => team.includes(p));
+    const fromLobby = lobby.length > 1 ? [lobby] : [];
+    const found2 = Insights.parties(pairs, team).map(x => x.filter(p => !lobby.includes(p) || lobby.length < 2)).filter(x => x.length > 1);
+    for (const found of [...fromLobby, ...found2].slice(0, 2)) {
       party++; num++;
       // Flex can't be queued as four: four premades means the fifth is one too
       const extra = g.queueId === 440 && found.length === 4 && team.length === 5 ? team.find(p => !found.includes(p)) : null;
@@ -76,6 +81,12 @@ function lmBoardExtras(g, rows) {
           continue;
         }
         const others = grp.filter(x => x !== p);
+        const nameOf = o => { const q = byId.get(o) || {}; return q.gameName ? `${q.gameName}#${q.tagLine}` : '?'; };
+        if (found === fromLobby[0]) {
+          const e = out.get(p) || { chips: [] };
+          out.set(p, Object.assign(e, { party, num, size: grp.length, partyTip: t('party.lobby', { names: others.map(nameOf).join(', ') }) }));
+          continue;
+        }
         const sameGames = others.map(o => (pairs.get([p, o].sort().join('|')) || { same: [] }).same).flat();
         const last = sameGames.sort((a, b) => b.t - a.t)[0];
         const tip = t('party.tip', { names: others.map(o => { const q = byId.get(o) || {}; return q.gameName ? `${q.gameName}#${q.tagLine}` : '?'; }).join(', '),

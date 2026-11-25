@@ -161,7 +161,53 @@
     return out.filter(x => x.dir).sort((p, q) => rank[p.kind] - rank[q.kind] || Math.abs((q.to - q.from) / (q.from || 1)) - Math.abs((p.to - p.from) / (p.from || 1)));
   }
 
-  const api = { together, parties, onceMet, meetings, daysAgo, recordVs, damageMix, tagDiff };
+  // ---------- whose lane is it? ----------
+  // games: every known game → Map champion → Map role → games on it (Summoner's Rift, positions known)
+  function roleCounts(games) {
+    const out = new Map();
+    const seen = new Set();
+    for (const g of games) {
+      const id = String(g.id);
+      if (seen.has(id) || St.isRemake(g)) continue;
+      seen.add(id);
+      for (const p of g.players || []) {
+        const r = St.role(g, p);
+        if (!r || !p.champ) continue;
+        if (!out.has(p.champ)) out.set(p.champ, new Map());
+        const m = out.get(p.champ);
+        m.set(r, (m.get(r) || 0) + 1);
+      }
+    }
+    return out;
+  }
+  // The enemies' positions (Riot hides them in ranked): every champion on its own lane, the
+  // arrangement that fits best how often each champion is played on each lane (all 120 tried).
+  // champs: up to 5 champion ids; counts: roleCounts(); known: { champ: role } already sure
+  // → [{ champ, role, share (0..1 of his known games on that role, null without any), n }]
+  function guessLanes(champs, counts, known = {}) {
+    const R = St.POSITIONS;
+    const list = champs.filter(Boolean).slice(0, 5);
+    const prob = (c, r) => {
+      if (known[c]) return known[c] === r ? 1 : 1e-6;
+      const m = counts.get(c);
+      const n = m ? [...m.values()].reduce((s, x) => s + x, 0) : 0;
+      return ((m && m.get(r)) || 0) + 0.2 / (n + 1) / R.length + 1e-9 / (n + 1);
+    };
+    const lp = list.map(c => R.map(r => Math.log(prob(c, r))));
+    let best = null, bestS = -Infinity;
+    const walk = (i, used, perm, s) => {
+      if (i === list.length) { if (s > bestS) { bestS = s; best = perm.slice(); } return; }
+      for (let r = 0; r < R.length; r++) if (!(used & (1 << r))) { perm.push(r); walk(i + 1, used | (1 << r), perm, s + lp[i][r]); perm.pop(); }
+    };
+    walk(0, 0, [], 0);
+    return list.map((c, i) => {
+      const role = R[best[i]], m = counts.get(c);
+      const n = m ? [...m.values()].reduce((s, x) => s + x, 0) : 0;
+      return { champ: c, role, n, share: known[c] ? 1 : n ? ((m.get(role) || 0) / n) : null, sure: !!known[c] };
+    });
+  }
+
+  const api = { together, parties, onceMet, meetings, daysAgo, recordVs, damageMix, tagDiff, roleCounts, guessLanes };
   if (node) module.exports = api;
   else root.Insights = api;
 })(typeof window !== 'undefined' ? window : this);

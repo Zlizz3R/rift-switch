@@ -143,3 +143,22 @@ test('live board: in Flex four premades mean all five; the badge shows five head
     assert.ok(!app.$('.sc-card[data-sc="e5"]').dataset.party);
   } finally { app.close(); }
 });
+
+test('live board: the own lobby is a party, even without earlier games together', async () => {
+  const app = await boot({ replies: {
+    live: { clientUp: true, phase: 'InProgress', me: P(1), inGame: { ...inGame, party: [P(1), 'a3', 'someone-else'] } },
+    'scout-games': { players: {}, games: [] },
+    matches: { index: [], waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': [],
+  } });
+  try {
+    await app.click('#navLive');
+    for (let i = 0; i < 4; i++) await app.settle();
+    const c = id => app.$(`.sc-card[data-sc="${id}"]`);
+    assert.ok(c(P(1)).dataset.party && c(P(1)).dataset.party === c('a3').dataset.party);
+    assert.equal(c('a3').querySelector('.sc-party .sc-ppl').dataset.n, '2');
+    assert.match(c('a3').querySelector('.sc-party').closest('[title]').title, /Your lobby: G/);
+    assert.ok(!c('a2').dataset.party);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

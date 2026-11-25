@@ -1056,6 +1056,8 @@ async fn tick_inner(my_gen: u64) {
 
     // lobby / queue: the low priority queue or a dodge timer shows up here
     if matches!(phase.as_deref(), Some("Lobby" | "Matchmaking")) {
+        // who is in the own lobby: a party in the game that follows (Live)
+        live::watch_party().await;
         let (waits, low) = riot::queue_wait_now().await;
         let changed = with(|c| {
             let lp =

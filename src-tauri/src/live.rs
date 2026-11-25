@@ -93,8 +93,42 @@ fn or_zero(a: &Value, b: &Value) -> Value {
     }
 }
 
+/// The members of the own lobby when it was last seen (when, puuids): they are a party in the game
+/// that follows – the client shows no parties once the game has started.
+static PARTY: Mutex<(i64, Vec<String>)> = Mutex::new((0, Vec::new()));
+/// A lobby is a party for this long after it was last seen (queue, champion select, a long game).
+const PARTY_AGE: i64 = 3 * 3600 * 1000;
+fn note_party(lb: &Value) {
+    let ids: Vec<String> = lb["members"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|m| m["puuid"].as_str().filter(|p| !p.is_empty()).map(String::from))
+        .collect();
+    *PARTY.lock().unwrap_or_else(|e| e.into_inner()) = (now_ms(), ids);
+}
+/// Read the own lobby (called while in the lobby or the queue, also without the window).
+pub async fn watch_party() {
+    if let Some(lb) = lcu("/lol-lobby/v2/lobby", 3000, "GET").await {
+        note_party(&lb);
+    }
+}
+/// The own party of the game being played: the last lobby's members, if more than one and recent.
+pub fn party() -> Vec<String> {
+    let p = PARTY.lock().unwrap_or_else(|e| e.into_inner());
+    party_of(&p, now_ms())
+}
+fn party_of(p: &(i64, Vec<String>), now: i64) -> Vec<String> {
+    if p.1.len() > 1 && now - p.0 < PARTY_AGE {
+        p.1.clone()
+    } else {
+        vec![]
+    }
+}
+
 async fn lobby() -> Option<Value> {
     let lb = lcu("/lol-lobby/v2/lobby", 3000, "GET").await?;
+    note_party(&lb);
     let members = lb["members"].as_array()?;
     let refs = members
         .iter()
@@ -130,9 +164,12 @@ async fn champ_select() -> Option<Value> {
     let enemies: Vec<Value> = cs["theirTeam"].as_array().into_iter().flatten()
         .map(|c| json!({ "championId": or_zero(&c["championId"], &c["championPickIntent"]), "position": sv(c, "assignedPosition") })).collect();
     let hidden = my.len() > allies.len();
+    // every cell of the own team, also the ones whose names are hidden: champion and position
+    let team: Vec<Value> = my.iter()
+        .map(|c| json!({ "championId": or_zero(&c["championId"], &c["championPickIntent"]), "position": sv(c, "assignedPosition"), "me": c["cellId"] == cs["localPlayerCellId"] })).collect();
     Some(
         json!({ "myPosition": sv(&me, "assignedPosition"), "myChampion": or_zero(&me["championId"], &me["championPickIntent"]),
-        "allies": allies, "enemies": enemies, "hiddenNames": hidden }),
+        "allies": allies, "team": team, "enemies": enemies, "hiddenNames": hidden }),
     )
 }
 
@@ -157,7 +194,7 @@ async fn in_game() -> Option<Value> {
         return None;
     }
     let (one, two) = tokio::join!(players(team(&gd["teamOne"])), players(team(&gd["teamTwo"])));
-    Some(json!({ "queueId": gd["queue"]["id"], "teamOne": one, "teamTwo": two }))
+    Some(json!({ "queueId": gd["queue"]["id"], "teamOne": one, "teamTwo": two, "party": party() }))
 }
 
 static CLASH: Mutex<Option<(i64, Value)>> = Mutex::new(None);
@@ -598,6 +635,20 @@ pub async fn counters(data_dir: &Path, enemy: &str, lane: &str) -> Value {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn lobby_party_only_with_others_and_recent() {
+        let now = 10 * 3600 * 1000;
+        let two = (now - 1000, vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(super::party_of(&two, now), vec!["a", "b"]);
+        // alone in the lobby: no party
+        assert!(super::party_of(&(now, vec!["a".to_string()]), now).is_empty());
+        // seen too long ago
+        assert!(super::party_of(&(now - super::PARTY_AGE - 1, two.1.clone()), now).is_empty());
+        let lb = serde_json::json!({ "members": [{ "puuid": "x" }, { "puuid": "" }, { "puuid": "y" }] });
+        super::note_party(&lb);
+        assert_eq!(super::party(), vec!["x", "y"]);
+    }
+
     use super::*;
     #[test]
     fn counterstats_pages() {

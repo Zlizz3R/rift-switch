@@ -123,6 +123,7 @@
     'det.goldLead': "گولڈ برتری – اوپر: {a} آگے، نیچے: {b} آگے",
     'det.players': "کھلاڑی", 'det.compare': "دو کھلاڑیوں کا موازنہ", 'det.kills': "کِلز", 'det.deaths': "اموات", 'det.assists': "اسسٹس", 'det.phys': "جسمانی نقصان", 'det.magic': "جادوئی نقصان", 'det.true': "ٹرو نقصان", 'det.mitig': "روکا گیا نقصان", 'det.heal': "ہیلنگ", 'det.spent': "خرچ سونا", 'det.csMin': "CS / منٹ", 'det.wards': "وارڈ لگائے", 'det.wardsKilled': "وارڈ تباہ", 'det.pinks': "کنٹرول وارڈ", 'det.cc': "کراؤڈ کنٹرول", 'det.turretDmg': "ٹاورز کو نقصان", 'det.obj': "اہداف کو نقصان", 'det.spree': "سب سے بڑی کِلنگ اسپری", 'det.crit': "سب سے بڑا کریٹیکل",
     'tile.pbeTitle': "ٹیسٹ سرور (PBE)", 'tile.pbeText': "یہاں رینکڈ نہیں – نیا مواد آزمائیں", 'pen.lowPrio': "لو پرائیورٹی", 'pen.short': "سزا",
+    'live.lanes': "لینز – آپ کی ٹیم اور مخالف (اندازہ)", 'live.laneGuess': "{n} محفوظ میچز میں سے {pct} % اس لین پر", 'live.laneGuessNone': "اندازہ – اس چیمپیئن کا کوئی محفوظ میچ نہیں", 'party.lobby': "آپ کی لابی: {names}",
     'live.vsWho': "آپ کس کے خلاف کھیل رہے ہیں؟", 'live.ratingT': "کاؤنٹر ریٹنگ {r} (counterstats.net) – جتنی زیادہ، لین اتنی آسان",
     'live.preloadBtn': "تمام میچ اپ پہلے سے لوڈ کریں", 'live.preloadT': "counterstats.net کے مطابق اس لین پر آپ کے پول کا سامنا کرنے والے ہر چیمپئن کو لوڈ کرتا ہے (عموماً 30–50) – قطار میں کلک کریں۔ ایک دن محفوظ رہتا ہے۔",
     'live.poolTitle': "میرا چیمپئن پول", 'live.bestVs': "{name} کے خلاف بہترین پک", 'live.preload': "میچ اپ لوڈ ہو رہے ہیں {n} / {total} …",
