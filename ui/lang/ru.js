@@ -560,6 +560,17 @@
     'tag.invaded.weak': "Лес отнимают",
     'tag.invaded.terrible': "Лес захвачен",
     'tag.invaded.t': "Ø {v} CS, отданных врагам в своём лесу за игру ({n} игр)",
+    'tags.all': "Все возможные теги",
+    'tags.allSub': "Выполнено {met} из {total} · наведите на тег, чтобы увидеть своё значение",
+    'tags.yours': "Ваше значение: {v}",
+    'tags.needs': "Нужно: {th}",
+    'tags.lv.master': "Мастер",
+    'tags.lv.great': "Хорошо",
+    'tags.lv.weak': "Слабо",
+    'tags.lv.terrible': "Очень слабо",
+    'tags.notRole': "Не оценивается для роли «{role}»",
+    'tags.liveOnly': "Только в Live, во время игры",
+    'tags.noData': "Пока нет данных",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

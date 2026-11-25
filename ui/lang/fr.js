@@ -561,6 +561,17 @@
     'tag.invaded.weak': "Se fait envahir",
     'tag.invaded.terrible': "Jungle prise",
     'tag.invaded.t': "Ø {v} CS perdus face aux ennemis dans sa jungle par partie en {n} parties",
+    'tags.all': "Tous les tags possibles",
+    'tags.allSub': "{met} sur {total} remplis · survolez un tag pour voir votre valeur",
+    'tags.yours': "Ta valeur : {v}",
+    'tags.needs': "Requis : {th}",
+    'tags.lv.master': "Maître",
+    'tags.lv.great': "Bon",
+    'tags.lv.weak': "Faible",
+    'tags.lv.terrible': "Très faible",
+    'tags.notRole': "Non évalué pour {role}",
+    'tags.liveOnly': "Seulement dans Live, pendant une partie",
+    'tags.noData': "Pas encore de données",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

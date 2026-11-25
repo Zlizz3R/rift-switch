@@ -607,6 +607,17 @@
     'tag.invaded.weak': "Gets invaded",
     'tag.invaded.terrible': "Jungle taken over",
     'tag.invaded.t': "Ø {v} CS lost to enemies in the own jungle per game in {n} games",
+    'tags.all': "All possible tags",
+    'tags.allSub': "{met} of {total} met · hover a tag for your value",
+    'tags.yours': "Your value: {v}",
+    'tags.needs': "Needed: {th}",
+    'tags.lv.master': "Master",
+    'tags.lv.great': "Good",
+    'tags.lv.weak': "Weak",
+    'tags.lv.terrible': "Very weak",
+    'tags.notRole': "Not judged for {role}",
+    'tags.liveOnly': "Only in Live, during a game",
+    'tags.noData': "No data for this yet",
   };
 
   const de = {
@@ -1197,6 +1208,17 @@
     'tag.invaded.weak': "Wird invadet",
     'tag.invaded.terrible': "Jungle übernommen",
     'tag.invaded.t': "Ø {v} CS pro Spiel an Gegner im eigenen Jungle verloren, in {n} Spielen",
+    'tags.all': "Alle möglichen Tags",
+    'tags.allSub': "{met} von {total} erfüllt · über einen Tag fahren zeigt deinen Wert",
+    'tags.yours': "Dein Wert: {v}",
+    'tags.needs': "Nötig: {th}",
+    'tags.lv.master': "Meister",
+    'tags.lv.great': "Gut",
+    'tags.lv.weak': "Schwach",
+    'tags.lv.terrible': "Sehr schwach",
+    'tags.notRole': "Wird für {role} nicht bewertet",
+    'tags.liveOnly': "Nur in Live, während eines Spiels",
+    'tags.noData': "Dafür noch keine Daten",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

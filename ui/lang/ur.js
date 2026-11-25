@@ -559,6 +559,17 @@
     'tag.invaded.weak': "انویڈ ہوتا ہے",
     'tag.invaded.terrible': "جنگل پر قبضہ",
     'tag.invaded.t': "{n} گیمز میں فی گیم اپنے جنگل میں دشمنوں سے اوسط {v} CS کھوئے",
+    'tags.all': "تمام ممکنہ ٹیگز",
+    'tags.allSub': "{total} میں سے {met} پورے · اپنی قدر دیکھنے کے لیے ٹیگ پر ہوور کریں",
+    'tags.yours': "آپ کی قدر: {v}",
+    'tags.needs': "درکار: {th}",
+    'tags.lv.master': "ماسٹر",
+    'tags.lv.great': "اچھا",
+    'tags.lv.weak': "کمزور",
+    'tags.lv.terrible': "بہت کمزور",
+    'tags.notRole': "{role} کے لیے نہیں جانچا جاتا",
+    'tags.liveOnly': "صرف Live میں، گیم کے دوران",
+    'tags.noData': "اس کے لیے ابھی ڈیٹا نہیں",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

@@ -558,6 +558,17 @@
     'tag.invaded.weak': "يُغزى",
     'tag.invaded.terrible': "الغابة مُحتلة",
     'tag.invaded.t': "متوسط {v} CS مفقودة للخصوم في الغابة الخاصة لكل مباراة في {n} مباراة",
+    'tags.all': "كل الوسوم الممكنة",
+    'tags.allSub': "تحقق {met} من {total} · مرّر فوق وسم لرؤية قيمتك",
+    'tags.yours': "قيمتك: {v}",
+    'tags.needs': "المطلوب: {th}",
+    'tags.lv.master': "خبير",
+    'tags.lv.great': "جيد",
+    'tags.lv.weak': "ضعيف",
+    'tags.lv.terrible': "ضعيف جدًا",
+    'tags.notRole': "لا يُقيَّم لدور {role}",
+    'tags.liveOnly': "فقط في Live أثناء مباراة",
+    'tags.noData': "لا توجد بيانات لهذا بعد",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

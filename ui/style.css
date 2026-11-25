@@ -1574,3 +1574,9 @@ span.mh-ch { cursor: default; }
 .sc-champ > span { height: 44px; justify-content: center; }
 .sc-ranks { height: 40px; }
 .sc-rings { height: 42px; flex: none; align-items: center; }
+
+/* Overview → Tags: every tag of the catalogue, folded */
+.tag-all-h { display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left; font-weight: 600; color: var(--text); }
+.tag-all-h small { color: var(--muted); font-weight: 400; }
+.tag-all .tag-sub { margin-top: 12px; }
+.tchip.tc-na { color: var(--muted); border: 1px dotted #364057; opacity: .55; font-weight: 500; cursor: default; }

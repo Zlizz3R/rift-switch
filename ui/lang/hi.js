@@ -559,6 +559,17 @@
     'tag.invaded.weak': "इनवेड होता है",
     'tag.invaded.terrible': "जंगल पर कब्ज़ा",
     'tag.invaded.t': "{n} गेम में प्रति गेम अपने जंगल में दुश्मनों से औसत {v} CS गँवाए",
+    'tags.all': "सभी संभव टैग",
+    'tags.allSub': "{total} में से {met} पूरे · अपना मान देखने के लिए टैग पर होवर करें",
+    'tags.yours': "आपका मान: {v}",
+    'tags.needs': "ज़रूरी: {th}",
+    'tags.lv.master': "मास्टर",
+    'tags.lv.great': "अच्छा",
+    'tags.lv.weak': "कमज़ोर",
+    'tags.lv.terrible': "बहुत कमज़ोर",
+    'tags.notRole': "{role} के लिए नहीं आँका जाता",
+    'tags.liveOnly': "सिर्फ़ Live में, गेम के दौरान",
+    'tags.noData': "इसके लिए अभी कोई डेटा नहीं",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

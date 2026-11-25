@@ -1,7 +1,7 @@
 // Overview → Tags: every tag of tag-rules.js for one account or all of them together, on their
-// ranked games of this season. On top "Your strengths" and "To work on", below every tag by group –
-// met (in colour) or not enough data (dashed, with how many games are missing); tags that don't
-// apply are left out. A click on
+// ranked games of this season. On top "Your strengths" and "To work on", below the met tags by
+// group; at the end "All possible tags" (folded): every tag – met, not met, too little data, not for
+// this role, only in Live – with the own value and the thresholds on hover. A click on
 // a tag shows the numbers behind it. Engine: tags.js. Uses the globals of renderer.js / views.js.
 
 const tagv = { role: '', games: null, mast: null, loading: false, open: '' };
@@ -52,13 +52,58 @@ const TAG_COLOR = { master: 'master', great: 'good', weak: 'warn', terrible: 'ba
 const tagColor = x => TAG_COLOR[x.level] || x.color || 'info';
 const tagPeriod = x => (x.period === 'season' ? t('perf.season', { y: new Date().getFullYear() }) : x.period ? t('tags.p.' + x.period) : '');
 
-function tagChip(x, i) {
-  const key = `${x.id}:${x.champ || ''}:${i}`;
-  if (x.state === 'met') return `<button class="tchip tc-${tagColor(x)}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(tagText(x))}">${esc(tagName(x))}</button>`;
-  const r = tagRule(x.id), lv = r.type === 'metric' ? (r.levels.great != null ? '.great' : '.weak') : '';
-  const name = x.id === 'mastery' ? t('dash.tabMast') : t(`tag.${x.id}${lv}`, { champ: '…' });
+// a tag's name when it has no level: the first level's name ("Great farmer", "Gets caught")
+function tagBaseName(r) {
+  if (r.id === 'mastery') return t('dash.tabMast');
+  const lv = r.type === 'metric' ? (r.levels.great != null ? '.great' : '.weak') : '';
+  return t(`tag.${r.id}${lv}`, { champ: '…' });
+}
+// pre: 'all|' for the chips of "All possible tags" (their own open detail); title: the hover text
+function tagChip(x, i, pre = '', title = null) {
+  const key = `${pre}${x.id}:${x.champ || ''}:${i}`;
+  if (x.state === 'met') return `<button class="tchip tc-${tagColor(x)}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(title || tagText(x))}">${esc(tagName(x))}</button>`;
   const why = x.state === 'few' ? (x.unread ? t('tags.unread') : t('tags.few', { n: x.n, need: x.need })) : t('tags.not');
-  return `<button class="tchip tc-${x.state}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(why)}">${esc(name)}${x.state === 'few' && !x.unread ? ` <i>${x.n}/${x.need}</i>` : ''}</button>`;
+  return `<button class="tchip tc-${x.state}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(title || why)}">${esc(tagBaseName(tagRule(x.id)))}${x.state === 'few' && !x.unread ? ` <i>${x.n}/${x.need}</i>` : ''}</button>`;
+}
+// which way a threshold goes
+const tagSense = r => (r.type === 'poolTop' || r.minShare != null ? '>'
+  : r.below != null || r.type === 'level' ? '<' : r.type === 'roleSpread' ? '≤' : '≥');
+// the hover text in "All possible tags": met or why not, the own value, the thresholds, the games
+function tagWhy(x, role) {
+  const r = tagRule(x.id), lines = [];
+  if (x.state === 'met') lines.push(tagText(x));
+  else if (x.state === 'few') lines.push(x.unread ? t('tags.unread') : t('tags.few', { n: x.n, need: x.need }));
+  else lines.push(t('tags.not'));
+  if (x.state !== 'few' && x.value != null && x.id !== 'mastery') lines.push(t('tags.yours', { v: tagFmt(x, x.value) }));
+  if (r.type === 'metric') {
+    const lv = (role && r[role]) || r.levels;
+    const good = r.dir > 0 ? '≥' : '≤', bad = r.dir > 0 ? '≤' : '≥';
+    lines.push(['master', 'great', 'weak', 'terrible'].filter(k => lv[k] != null)
+      .map(k => `${t('tags.lv.' + k)} ${k === 'master' || k === 'great' ? good : bad} ${tagFmt(x, lv[k])}`).join(' · '));
+  } else if (x.th != null && x.state !== 'few') lines.push(t('tags.needs', { th: `${tagSense(r)} ${tagFmt(x, x.th)}` }));
+  if (x.n != null && x.state !== 'few' && x.id !== 'mastery') lines.push(`${t('perf.games')}: ${num(x.n)}`);
+  return lines.join('\n');
+}
+// every tag of the catalogue, by group (folded; the state is remembered)
+const TAG_ALL_KEY = 'rs.tagsAll';
+const tagAllOpen = () => { try { return localStorage.getItem(TAG_ALL_KEY) === '1'; } catch { return false; } };
+function tagAllHtml(list, role, openX) {
+  const rules = TagRules.TAG_RULES.filter(r => !r.off);
+  const metN = new Set(list.filter(({ x }) => x.state === 'met').map(({ x }) => x.id)).size;
+  const head = `<button class="tag-all-h" data-tagall>${tagAllOpen() ? '▾' : '▸'} ${esc(t('tags.all'))} <small>${esc(t('tags.allSub', { met: metN, total: rules.length }))}</small></button>`;
+  if (!tagAllOpen()) return `<div class="tag-group tag-all">${head}</div>`;
+  const body = Tags.GROUPS.map(g => {
+    const chips = rules.filter(r => r.group === g).map(r => {
+      const mine = list.filter(({ x }) => x.id === r.id);
+      if (mine.length) return mine.map(({ x, i }) => tagChip(x, i, 'all|', tagWhy(x, role))).join('');
+      // nothing came out: only in Live, not judged for this role, or no data at all
+      const why = r.live ? t('tags.liveOnly') : r.roles && role && !r.roles.includes(role) ? t('tags.notRole', { role: t('pos.' + role) }) : t('tags.noData');
+      return `<span class="tchip tc-na" title="${esc(why)}">${esc(tagBaseName(r))}</span>`;
+    }).join('');
+    const det = openX && openX.all && openX.x.group === g ? tagDetail(openX.x) : '';
+    return `<div class="tag-sub"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${chips}</div>${det}</div>`;
+  }).join('');
+  return `<div class="tag-group tag-all">${head}${body}</div>`;
 }
 // the numbers behind one tag
 function tagDetail(x) {
@@ -95,26 +140,30 @@ function renderTagsView() {
   const list = res.results.map((x, i) => ({ x, i }));
   const chips = f => list.filter(({ x }) => f(x)).map(({ x, i }) => tagChip(x, i)).join('');
   const strong = chips(Tags.isStrength), weak = chips(Tags.isWeakness);
-  const openX = list.find(({ x, i }) => `${x.id}:${x.champ || ''}:${i}` === tagv.open);
+  const openKey = tagv.open.replace(/^all\|/, '');
+  const found = list.find(({ x, i }) => `${x.id}:${x.champ || ''}:${i}` === openKey);
+  const openX = found && { ...found, all: tagv.open.startsWith('all|') };
   const top = `<div class="tag-top">
       <div><span class="d-sec-t">${t('tags.strengths')}</span><div class="tchips">${strong || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
       <div><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
     </div>`;
   const groups = Tags.GROUPS.map(g => {
-    const inG = list.filter(({ x }) => x.group === g && x.state !== 'not');
+    // only the met ones here; everything else is in "All possible tags"
+    const inG = list.filter(({ x }) => x.group === g && x.state === 'met');
     if (!inG.length) return '';
-    // met first, then too little data
-    const order = { met: 0, few: 1 };
-    const sorted = [...inG].sort((a, b) => order[a.x.state] - order[b.x.state]);
-    const det = openX && openX.x.group === g ? tagDetail(openX.x) : '';
-    return `<div class="tag-group"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${sorted.map(({ x, i }) => tagChip(x, i)).join('')}</div>${det}</div>`;
+    const det = openX && !openX.all && openX.x.group === g ? tagDetail(openX.x) : '';
+    return `<div class="tag-group"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${inG.map(({ x, i }) => tagChip(x, i)).join('')}</div>${det}</div>`;
   }).join('');
-  el.innerHTML = `${top}${groups}<p class="coll-foot">${t('tags.basis')}</p>`;
+  el.innerHTML = `${top}${groups}${tagAllHtml(list, res.role, openX)}<p class="coll-foot">${t('tags.basis')}</p>`;
 }
 
 $('dashTags').addEventListener('click', e => {
   const r = e.target.closest('[data-trole]');
   if (r) { tagv.role = r.dataset.trole; tagv.open = ''; return renderTagsView(); }
+  if (e.target.closest('[data-tagall]')) {
+    try { localStorage.setItem(TAG_ALL_KEY, tagAllOpen() ? '0' : '1'); } catch { /* private mode: stays as it is */ }
+    return renderTagsView();
+  }
   const c = e.target.closest('[data-tag]');
   if (c) { tagv.open = tagv.open === c.dataset.tag ? '' : c.dataset.tag; renderTagsView(); }
 });

@@ -560,6 +560,17 @@
     'tag.invaded.weak': "É invadido",
     'tag.invaded.terrible': "Selva tomada",
     'tag.invaded.t': "Ø {v} CS perdidos para inimigos na própria selva por partida em {n} partidas",
+    'tags.all': "Todas as tags possíveis",
+    'tags.allSub': "{met} de {total} atingidas · passe o mouse para ver seu valor",
+    'tags.yours': "Seu valor: {v}",
+    'tags.needs': "Necessário: {th}",
+    'tags.lv.master': "Mestre",
+    'tags.lv.great': "Bom",
+    'tags.lv.weak': "Fraco",
+    'tags.lv.terrible': "Muito fraco",
+    'tags.notRole': "Não avaliado para {role}",
+    'tags.liveOnly': "Só no Live, durante uma partida",
+    'tags.noData': "Ainda sem dados para isso",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

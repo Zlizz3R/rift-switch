@@ -36,11 +36,26 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     assert.match(strong, /Survivor/);
     // mastery over all accounts; OTP of Ahri (12 of 12 – but under 15 games: too little data)
     assert.match(app.$('#tagBody').textContent, /Millionaire: Illaoi/);
-    // tags that don't apply aren't shown at all
-    assert.equal(app.$$('.tchip.tc-not').length, 0);
-    assert.doesNotMatch(app.$('#tagBody').innerHTML, /Not met/);
-    const otp = app.$$('.tchip.tc-few').find(c => /OTP/.test(c.textContent));
+    // the groups show only met tags; the rest is in "All possible tags", folded at first
+    assert.equal(app.$$('.tag-group:not(.tag-all) .tchip.tc-not, .tag-group:not(.tag-all) .tchip.tc-few').length, 0);
+    assert.ok(!app.$('.tag-all .tchip'));
+    assert.match(app.$('.tag-all-h').textContent, /All possible tags/);
+    await app.click('[data-tagall]');
+    const all = () => app.$('.tag-all');
+    const otp = [...all().querySelectorAll('.tchip.tc-few')].find(c => /OTP/.test(c.textContent));
     assert.match(otp.textContent, /12\/15/);
+    // hover: the own value and the thresholds of this role (mid: weak ≤ 6.4 … master ≥ 7.8)
+    const farmAll = [...all().querySelectorAll('.tchip')].find(c => /Great farmer/.test(c.textContent));
+    assert.match(farmAll.title, /Master ≥ 7\.8 · Good ≥ 7\.3 · Weak ≤ 6\.4 · Very weak ≤ 5\.9/);
+    assert.match(all().querySelector('.tchip.tc-not').title, /Not met\nYour value: /);
+    // tags only in Live
+    const live = [...all().querySelectorAll('.tchip.tc-na')].find(c => /Autofill/i.test(c.textContent));
+    assert.equal(live.title, 'Only in Live, during a game');
+    // a click in "All possible tags" opens the numbers there
+    await app.click(farmAll);
+    assert.ok(all().querySelector('.tdetail'));
+    await app.click('[data-tagall]');
+    assert.ok(!app.$('.tag-all .tchip'));
     // a click: the numbers behind the tag
     const farm = app.$$('.tag-group .tchip').find(c => /Great farmer/.test(c.textContent));
     await app.click(farm);

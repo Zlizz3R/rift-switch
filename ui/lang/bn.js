@@ -558,6 +558,17 @@
     'tag.invaded.weak': "ইনভেড হয়",
     'tag.invaded.terrible': "জঙ্গল দখল",
     'tag.invaded.t': "{n} গেমে প্রতি গেমে নিজের জঙ্গলে শত্রুর কাছে গড়ে {v} CS হারানো",
+    'tags.all': "সব সম্ভাব্য ট্যাগ",
+    'tags.allSub': "{total}টির মধ্যে {met}টি পূর্ণ · নিজের মান দেখতে ট্যাগে হোভার করুন",
+    'tags.yours': "আপনার মান: {v}",
+    'tags.needs': "প্রয়োজন: {th}",
+    'tags.lv.master': "মাস্টার",
+    'tags.lv.great': "ভালো",
+    'tags.lv.weak': "দুর্বল",
+    'tags.lv.terrible': "খুব দুর্বল",
+    'tags.notRole': "{role}-এর জন্য বিচার করা হয় না",
+    'tags.liveOnly': "শুধু Live-এ, গেম চলার সময়",
+    'tags.noData': "এর জন্য এখনও ডেটা নেই",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

@@ -557,6 +557,17 @@
     'tag.invaded.weak': "常被反野",
     'tag.invaded.terrible': "野区被占",
     'tag.invaded.t': "{n} 场平均每场被反野 {v} 补刀",
+    'tags.all': "所有可能的标签",
+    'tags.allSub': "已达成 {met}/{total} · 悬停查看你的数值",
+    'tags.yours': "你的数值：{v}",
+    'tags.needs': "需要：{th}",
+    'tags.lv.master': "大师",
+    'tags.lv.great': "良好",
+    'tags.lv.weak': "较弱",
+    'tags.lv.terrible': "很弱",
+    'tags.notRole': "不评估{role}",
+    'tags.liveOnly': "仅在对局中的实时页面",
+    'tags.noData': "暂无数据",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;
