@@ -491,6 +491,19 @@
     'perf.pin': "点击：在对局记录顶部显示这些对局",
     'perf.unfold': "点击：展开或收起英雄",
     'rad.basis': "每条轴：你的平均值对比同场对线对手的平均值——数字是差距：+13% = 好 13%，−8% = 差 8%；阵亡越少越好。中间圈表示\"与对手持平\"。虚线：少于 10 局。不计总分。",
+    'coll.rp': "点券",
+    'coll.bdShow': "按稀有度 ▾",
+    'coll.bdHide': "按稀有度 ▴",
+    'coll.bdNote': "稀有度来自客户端自身的游戏数据。表情和终结特效没有稀有度。",
+    'coll.bdLater': "从下一次读取开始统计——登录时按\"加载\"。",
+    'rar.0': "无稀有度",
+    'rar.1': "稀有",
+    'rar.2': "史诗",
+    'rar.3': "传说",
+    'rar.4': "神话",
+    'rar.5': "终极",
+    'rar.6': "至臻",
+    'rar.7': "超凡",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

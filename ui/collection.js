@@ -47,6 +47,32 @@ function collMatch(e, q) {
   if (!q) return true;
   return collNorm(e.name).includes(q) || collNorm(collChamp(e.champ)).includes(q);
 }
+// ---------- by rarity: one table per kind, a row per account (to compare them) ----------
+const COLL_RAR_KINDS = [['skin', 'coll.skins'], ['chroma', 'coll.n.chroma'], ['ward', 'coll.n.ward'], ['icon', 'coll.n.icon']];
+const collBdOpen = () => { try { return localStorage.getItem('rs.collBd') === '1'; } catch { return false; } };
+function collRarityHtml(known, by) {
+  const open = collBdOpen();
+  const btn = `<button class="btn small coll-bd-btn${open ? ' open' : ''}" data-collbd>${t(open ? 'coll.bdHide' : 'coll.bdShow')}</button>`;
+  if (!open) return `<div class="coll-bd">${btn}</div>`;
+  const tables = COLL_RAR_KINDS.map(([k, label]) => {
+    const rows = known.map(a => ({ a, r: ((by.get(a.puuid).counts || {}).rar || {})[k] })).filter(x => Array.isArray(x.r));
+    if (!rows.length) return '';
+    // the rarities anyone has, the rarest first, "no rarity" last
+    const cols = [7, 6, 5, 4, 3, 2, 1, 0].filter(i => rows.some(x => x.r[i] > 0));
+    if (!cols.length) return '';
+    const sum = cols.map(i => rows.reduce((s, x) => s + (x.r[i] || 0), 0));
+    return `<table class="dash-table coll-table coll-rar"><thead><tr><th>${t(label)}</th>${cols.map(i => `<th><i class="rar r${i}"></i>${t('rar.' + i)}</th>`).join('')}</tr></thead><tbody>
+      ${rows.map(({ a, r }) => `<tr><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => `<td>${r[i] ? num(r[i]) : '<span class="muted">0</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
+      ${rows.length > 1 ? `<tfoot><tr><td>${t('coll.total')}</td>${sum.map(v => `<td>${num(v)}</td>`).join('')}</tr></tfoot>` : ''}</table>`;
+  }).join('');
+  return `<div class="coll-bd">${btn}${tables || `<p class="coll-foot">${t('coll.bdLater')}</p>`}<p class="coll-foot">${t('coll.bdNote')}</p></div>`;
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-collbd]')) return;
+  try { localStorage.setItem('rs.collBd', collBdOpen() ? '0' : '1'); } catch { /* not kept */ }
+  renderColl();
+});
+
 // the counted things beside champions and skins (riot.rs counts_of)
 const COLL_COUNTS = ['chroma', 'ward', 'icon', 'emote', 'finisher', 'runes'];
 // read before these were counted: say once that the next "Load" fills them in
@@ -88,21 +114,22 @@ function renderColl() {
     const cell = v => `<td>${v == null ? '<span class="muted">–</span>' : num(v)}</td>`;
     const rows = sorted.map(a => {
       const c = by.get(a.puuid);
-      if (!c) return `<tr class="unread" data-cacc="${esc(a.puuid)}"><td><span class="dash-name">${esc(dispName(a))}</span></td><td colspan="${COLL_COUNTS.length + 4}" class="muted">${t('coll.notRead')}</td></tr>`;
-      const be = a.profile && a.profile.be;
+      if (!c) return `<tr class="unread" data-cacc="${esc(a.puuid)}"><td><span class="dash-name">${esc(dispName(a))}</span></td><td colspan="${COLL_COUNTS.length + 5}" class="muted">${t('coll.notRead')}</td></tr>`;
+      const pr = a.profile || {};
+      const wallet = k => (pr[k] == null || hides('wallet') ? null : pr[k]);
       return `<tr data-cacc="${esc(a.puuid)}"><td><span class="dash-name">${esc(dispName(a))}</span></td>${nums(c).map(cell).join('')}
-        ${cell(be == null || hides('wallet') ? null : be)}<td class="muted">${esc(fmtDate(c.at))}</td></tr>`;
+        ${cell(wallet('be'))}${cell(wallet('rp'))}<td class="muted">${esc(fmtDate(c.at))}</td></tr>`;
     });
     // all accounts together (a number nobody has read yet stays "–")
     let foot2 = '';
     if (known.length > 1) {
       const all = known.map(a => nums(by.get(a.puuid)));
       const sum = all[0].map((_, i) => all.some(r => r[i] != null) ? all.reduce((x, r) => x + (r[i] || 0), 0) : null);
-      foot2 = `<tfoot><tr><td>${t('coll.total')}</td>${sum.map(cell).join('')}<td></td><td></td></tr></tfoot>`;
+      foot2 = `<tfoot><tr><td>${t('coll.total')}</td>${sum.map(cell).join('')}<td></td><td></td><td></td></tr></tfoot>`;
     }
-    const head = ['coll.champs', 'coll.skins', ...COLL_COUNTS.map(k => 'coll.n.' + k), 'p.be', 'coll.asOf'];
+    const head = ['coll.champs', 'coll.skins', ...COLL_COUNTS.map(k => 'coll.n.' + k), 'p.be', 'coll.rp', 'coll.asOf'];
     el.innerHTML = `<table class="dash-table coll-table"><thead><tr><th>${t('dash.account')}</th>${head.map(k => `<th>${t(k)}</th>`).join('')}</tr></thead><tbody>
-      ${rows.join('')}</tbody>${foot2}</table>${collCountsHint(known, by)}`;
+      ${rows.join('')}</tbody>${foot2}</table>${collCountsHint(known, by)}${collRarityHtml(known, by)}`;
     return;
   }
   if (!known.length) { el.innerHTML = `<div class="chart-empty">${t('coll.empty')}</div>`; return; }

@@ -202,7 +202,7 @@ function rankTip(r) {
   const [tier, div, lp] = r;
   return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
 }
-let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, more: {}, filter: { puuid: '', queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, more: {}, filter: { accs: new Set(), queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
 function queueLabel(g) {
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440, 710, 4310].includes(g.q) ? ' ' + t('mh.ranked') : '');
@@ -256,9 +256,15 @@ async function loadMatches() {
   try {
     if (!champs.length) champs = (await api.champions()) || [];   // names for the champion filter
     if (!assets || !Object.keys(assets.items || {}).length) assets = (await api.matchesAssets()) || null;
-    const d = await api.matches({ puuid: mh.filter.puuid || null, queue: [...mh.filter.queues].join(',') || null });
+    // one account: the app filters already; several: all games – kept when one of the chosen played
+    // (and that one counts as "me" in the game); filtered here in both cases
+    const accs = mh.filter.accs;
+    const d = await api.matches({ puuid: accs.size === 1 ? [...accs][0] : null, queue: [...mh.filter.queues].join(',') || null });
     if (d) {
-      const games = await mhGames(d.index);
+      const index = accs.size
+        ? d.index.filter(r => r.slice(3).some(o => accs.has(o))).map(r => [r[0], r[1], r[2], ...r.slice(3).filter(o => accs.has(o))])
+        : d.index;
+      const games = await mhGames(index);
       mh.data = { games, waiting: d.waiting, clientUp: d.clientUp, assets: assets || {} };
     }
   } catch (e) { console.warn('matches', e); }
@@ -271,9 +277,11 @@ function renderMatches() {
   if (view !== 'matches') return;
   const accs = S.accounts.filter(a => !a.placeholder);
   const d = mh.data;
-  $('mhAccount').innerHTML = `<option value="">${esc(t('mh.allAccounts'))}</option>`
-    + accs.map(a => `<option value="${esc(a.puuid)}">${esc(dispName(a))}</option>`).join('');
-  $('mhAccount').value = mh.filter.puuid;
+  // accounts as chips, like the queues: "All", or any of them
+  const sel = mh.filter.accs;
+  $('mhAccs').hidden = accs.length < 2;
+  $('mhAccs').innerHTML = `<button data-mhaccs=""${!sel.size ? ' class="on"' : ''}>${esc(t('mh.allAccounts'))}</button>`
+    + accs.map(a => `<button data-mhaccs="${esc(a.puuid)}"${sel.has(a.puuid) ? ' class="on"' : ''}>${esc(dispName(a))}</button>`).join('');
   document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq ? mh.filter.queues.has(b.dataset.mhq) : !mh.filter.queues.size));
   // the shared "Load" (views.js) loads everything, the whole match history too
   refreshLoadBtns();
@@ -505,7 +513,7 @@ function gameRowShort(g) {
 async function openGame(id) {
   id = String(id);
   showView('matches');
-  mh.filter.puuid = ''; mh.filter.queues.clear(); mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
+  mh.filter.accs = new Set(); mh.filter.queues.clear(); mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
   $('mhChamp').value = '';
   mh.open.add(id);
   await loadMatches();
@@ -516,7 +524,7 @@ async function openGame(id) {
 }
 // the match history with a set of games on top (a row of the Overview), every filter off
 function openMatchesPinned(ids, label) {
-  mh.filter.puuid = ''; mh.filter.queues = new Set();
+  mh.filter.accs = new Set(); mh.filter.queues = new Set();
   mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.show = 40;
   mh.pinIds = new Set(ids.map(String)); mh.pinLabel = label;
   $('mhChamp').value = '';
@@ -525,7 +533,7 @@ function openMatchesPinned(ids, label) {
 }
 // the match history with some filters set (from the Overview): account, queue groups, champion, time
 function openMatchesWith({ puuid = '', queues = [], champ = 0, range = 'all', from = '', to = '' } = {}) {
-  mh.filter.puuid = puuid; mh.filter.queues = new Set(queues);
+  mh.filter.accs = new Set(puuid ? [puuid] : []); mh.filter.queues = new Set(queues);
   mh.f = { ...MH_DEFAULT, champ, range, from, to }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
   $('mhChamp').value = champ ? champName(champ) : '';
   showView('matches');
@@ -536,7 +544,15 @@ document.addEventListener('click', e => {
 });
 
 // filters
-$('mhAccount').onchange = () => { mh.filter.puuid = $('mhAccount').value; loadMatches(); };
+// accounts: like the queues – from "All" a click picks just that one, then add or remove, none = all
+$('mhAccs').addEventListener('click', e => {
+  const b = e.target.closest('[data-mhaccs]');
+  if (!b) return;
+  const id = b.dataset.mhaccs, set = mh.filter.accs;
+  if (!id) set.clear(); else if (set.has(id)) set.delete(id); else set.add(id);
+  mh.show = 40;
+  loadMatches();
+});
 // queues: any combination ("All" clears it); a click adds or removes one
 document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => {
   const q = b.dataset.mhq, set = mh.filter.queues;
@@ -556,7 +572,7 @@ $('viewMatches').addEventListener('click', e => {
   // a champion of the top list: only his games (again: all games)
   // an account of the breakdown: only its games
   const ac = e.target.closest('[data-mhacc]');
-  if (ac) { mh.filter.puuid = ac.dataset.mhacc; loadMatches(); return; }
+  if (ac) { mh.filter.accs = new Set([ac.dataset.mhacc]); loadMatches(); return; }
   const ch = e.target.closest('[data-mhchamp]');
   if (ch) { const id = +ch.dataset.mhchamp; setFilter({ champ: mh.f.champ === id ? 0 : id }); return; }
   const pin = e.target.closest('[data-pin]');

@@ -494,6 +494,19 @@
     'perf.pin': "Clique: estas partidas no topo do histórico",
     'perf.unfold': "Clique: mostrar ou ocultar os campeões",
     'rad.basis': "Cada eixo: sua média contra a dos oponentes de rota nas mesmas partidas – o número é a diferença: +13 % = 13 % melhor, −8 % = 8 % pior; em mortes, menos é melhor. O anel do meio = \"tão bom quanto o oponente\". Tracejado: menos de 10 partidas. Sem nota total.",
+    'coll.rp': "RP",
+    'coll.bdShow': "Por raridade ▾",
+    'coll.bdHide': "Por raridade ▴",
+    'coll.bdNote': "Raridades dos dados de jogo do cliente. Emotes e finalizadores não têm.",
+    'coll.bdLater': "Contado a partir da próxima leitura – aperte \"Carregar\" com a sessão iniciada.",
+    'rar.0': "Sem raridade",
+    'rar.1': "Raro",
+    'rar.2': "Épico",
+    'rar.3': "Lendário",
+    'rar.4': "Mítico",
+    'rar.5': "Supremo",
+    'rar.6': "Exaltado",
+    'rar.7': "Transcendente",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

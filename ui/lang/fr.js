@@ -495,6 +495,19 @@
     'perf.pin': "Clic : ces parties en haut de l’historique",
     'perf.unfold': "Clic : afficher ou masquer ses champions",
     'rad.basis': "Chaque axe : ta moyenne face à celle de tes adversaires de voie dans les mêmes parties – le chiffre est l’écart : +13 % = 13 % mieux, −8 % = 8 % moins bien ; pour les morts, moins c’est mieux. L’anneau du milieu = « aussi bon que l’adversaire ». En pointillés : moins de 10 parties. Pas de note globale.",
+    'coll.rp': "RP",
+    'coll.bdShow': "Par rareté ▾",
+    'coll.bdHide': "Par rareté ▴",
+    'coll.bdNote': "Raretés issues des données de jeu du client. Les emotes et finishers n’en ont pas.",
+    'coll.bdLater': "Compté à partir de la prochaine lecture – appuie sur « Charger » une fois connecté.",
+    'rar.0': "Sans rareté",
+    'rar.1': "Rare",
+    'rar.2': "Épique",
+    'rar.3': "Légendaire",
+    'rar.4': "Mythique",
+    'rar.5': "Ultime",
+    'rar.6': "Exalté",
+    'rar.7': "Transcendant",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

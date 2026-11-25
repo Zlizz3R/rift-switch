@@ -5,7 +5,7 @@
 use crate::accounts::{num_of, Obj};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use serde_json::{json, Value};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
@@ -504,6 +504,152 @@ pub fn counts_of(inv: &Value, perks: &Value, skins: &Value) -> Option<Value> {
     (!out.is_empty()).then(|| Value::Object(out))
 }
 
+// ---------- rarities (the client's game data) ----------
+
+/// Rarity of skins, chromas, ward skins and icons, from the client's own game data. Riot's ladder:
+/// 0 none, 1 Rare, 2 Epic, 3 Legendary, 4 Mythic, 5 Ultimate, 6 Exalted, 7 Transcendent – skins name
+/// it ("kEpic"), the others give the number (checked against the skins, 25.11.2026).
+#[derive(Default)]
+pub struct GameData {
+    pub patchline: String,
+    pub at: i64,
+    pub skin: HashMap<i64, u8>,
+    pub skin_info: HashMap<i64, (String, String)>,
+    pub chroma: HashMap<i64, u8>,
+    pub ward: HashMap<i64, u8>,
+    pub icon: HashMap<i64, u8>,
+}
+pub fn rarity_of_name(s: &str) -> u8 {
+    match s {
+        "kRare" => 1,
+        "kEpic" => 2,
+        "kLegendary" => 3,
+        "kMythic" => 4,
+        "kUltimate" => 5,
+        "kExalted" => 6,
+        "kTranscendent" => 7,
+        _ => 0,
+    }
+}
+fn rarity_num(v: &Value) -> u8 {
+    let list = v["rarities"].as_array();
+    let pick = list
+        .and_then(|l| l.iter().find(|r| r["region"] == "riot").or(l.first()))
+        .and_then(|r| r["rarity"].as_u64())
+        .unwrap_or(0);
+    pick.min(7) as u8
+}
+/// skins.json / ward-skins.json / summoner-icons.json → the maps
+pub fn game_data_of(skins: &Value, wards: &Value, icons: &Value) -> GameData {
+    let mut g = GameData::default();
+    let list: Vec<&Value> = match skins {
+        Value::Object(o) => o.values().collect(),
+        Value::Array(a) => a.iter().collect(),
+        _ => vec![],
+    };
+    for s in list {
+        let Some(id) = s["id"].as_i64() else { continue };
+        if s["isBase"] != true {
+            g.skin
+                .insert(id, rarity_of_name(s["rarity"].as_str().unwrap_or("")));
+            g.skin_info.insert(
+                id,
+                (
+                    s["name"].as_str().unwrap_or("").to_string(),
+                    s["tilePath"].as_str().unwrap_or("").to_string(),
+                ),
+            );
+        }
+        for c in s["chromas"].as_array().into_iter().flatten() {
+            if let Some(cid) = c["id"].as_i64() {
+                g.chroma.insert(cid, rarity_num(c));
+            }
+        }
+    }
+    for w in wards.as_array().into_iter().flatten() {
+        if let Some(id) = w["id"].as_i64() {
+            g.ward.insert(id, rarity_num(w));
+        }
+    }
+    for i in icons.as_array().into_iter().flatten() {
+        if let Some(id) = i["id"].as_i64() {
+            g.icon.insert(id, rarity_num(i));
+        }
+    }
+    g
+}
+static GAME_DATA: Mutex<Option<std::sync::Arc<GameData>>> = Mutex::new(None);
+/// The game data of the running client (once per patchline, again after 12 hours).
+pub async fn game_data() -> Option<std::sync::Arc<GameData>> {
+    let pl = patchline().to_string();
+    if let Some(g) = GAME_DATA.lock().unwrap().clone() {
+        if g.patchline == pl && now_ms() - g.at < 12 * 3600 * 1000 {
+            return Some(g);
+        }
+    }
+    let (s, w, i) = tokio::join!(
+        lcu("/lol-game-data/assets/v1/skins.json", 15000, "GET"),
+        lcu("/lol-game-data/assets/v1/ward-skins.json", 10000, "GET"),
+        lcu("/lol-game-data/assets/v1/summoner-icons.json", 15000, "GET"),
+    );
+    let s = s?;
+    let mut g = game_data_of(
+        &s,
+        w.as_ref().unwrap_or(&Value::Null),
+        i.as_ref().unwrap_or(&Value::Null),
+    );
+    if g.skin.is_empty() {
+        return None;
+    }
+    g.patchline = pl;
+    g.at = now_ms();
+    let g = std::sync::Arc::new(g);
+    *GAME_DATA.lock().unwrap() = Some(g.clone());
+    Some(g)
+}
+/// Owned items by rarity: { skin: [8], chroma: [8], ward: [8], icon: [8] } (index = rarity).
+/// skins: the owned skin ids of skins-minimal when there are any – the same skins the collection
+/// counts (on PBE the inventory lists many more as owned); else the inventory's.
+pub fn rarities_of(inv: &Value, g: &GameData, skins: &[i64]) -> Value {
+    let mut out = Obj::new();
+    let items = inv.as_array().map(|a| a.as_slice()).unwrap_or(&[]);
+    let owned = |ty: &str| -> Vec<i64> {
+        items
+            .iter()
+            .filter(|x| x["inventoryType"] == ty && x["owned"] == true)
+            .filter_map(|x| x["itemId"].as_i64())
+            .collect()
+    };
+    let count = |ids: &[i64], map: &HashMap<i64, u8>| -> Option<Value> {
+        let mut n = [0u32; 8];
+        let mut any = false;
+        for id in ids {
+            if let Some(r) = map.get(id) {
+                n[*r as usize] += 1;
+                any = true;
+            }
+        }
+        any.then(|| json!(n))
+    };
+    let all_skins = owned("CHAMPION_SKIN");
+    let skin_ids = if skins.is_empty() {
+        all_skins.clone()
+    } else {
+        skins.to_vec()
+    };
+    for (k, ids, map) in [
+        ("skin", &skin_ids, &g.skin),
+        ("chroma", &all_skins, &g.chroma),
+        ("ward", &owned("WARD_SKIN"), &g.ward),
+        ("icon", &owned("SUMMONER_ICON"), &g.icon),
+    ] {
+        if let Some(v) = count(ids, map) {
+            out.insert(k.into(), v);
+        }
+    }
+    Value::Object(out)
+}
+
 /// The owned champions (ids) of the inventory – the second source when champions-minimal is empty.
 pub fn champs_of_inventory(inv: &Value) -> Vec<Value> {
     let mut ids: Vec<i64> = inv
@@ -597,11 +743,43 @@ pub async fn profile_data(me: &Obj) -> Obj {
             c["champs"] = json!(inv_champs);
         }
     }
-    let counts = counts_of(
+    let mut counts = counts_of(
         inv.as_ref().unwrap_or(&Value::Null),
         perks.as_ref().unwrap_or(&Value::Null),
         skins.as_ref().unwrap_or(&Value::Null),
     );
+    // by rarity, from the client's game data; and the skins list when skins-minimal was empty
+    if let (Some(inv), Some(gd)) = (
+        inv.as_ref()
+            .filter(|i| i.as_array().is_some_and(|a| !a.is_empty())),
+        game_data().await,
+    ) {
+        if let Some(c) = counts.as_mut().and_then(Value::as_object_mut) {
+            let owned_skins: Vec<i64> = skins
+                .as_ref()
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter(|x| x["ownership"]["owned"] == true && real_skin(x))
+                .filter_map(|x| x["id"].as_i64())
+                .collect();
+            c.insert("rar".into(), rarities_of(inv, &gd, &owned_skins));
+        }
+        let c = p_coll.get_or_insert_with(|| json!({ "at": now_ms() }));
+        if c.get("skins").is_none() {
+            let list: Vec<Value> = inv
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|x| x["inventoryType"] == "CHAMPION_SKIN" && x["owned"] == true)
+                .filter_map(|x| x["itemId"].as_i64())
+                .filter_map(|id| gd.skin_info.get(&id).map(|(n, t)| json!([id, n, t])))
+                .collect();
+            if !list.is_empty() {
+                c["skins"] = json!(list);
+            }
+        }
+    }
     if let Some(n) = counts {
         p_coll.get_or_insert_with(|| json!({}))["counts"] = n;
     }
@@ -1578,6 +1756,40 @@ mod tests {
         assert_eq!(
             low_prio_of_restrictions(&json!({ "restrictions": [] })),
             (0, None)
+        );
+    }
+
+    #[test]
+    fn rarities_by_kind() {
+        let skins = json!({
+            "1000": { "id": 1000, "isBase": true, "rarity": "kNoRarity" },
+            "1001": { "id": 1001, "isBase": false, "rarity": "kEpic", "name": "Goth Annie", "tilePath": "/t.jpg",
+                      "chromas": [{ "id": 1014, "rarities": [{ "region": "riot", "rarity": 2 }] }] },
+            "1002": { "id": 1002, "isBase": false, "rarity": "kTranscendent", "name": "X" }
+        });
+        let wards = json!([{ "id": 5, "rarities": [{ "region": "riot", "rarity": 4 }] }, { "id": 6, "rarities": [] }]);
+        let icons = json!([{ "id": 29, "rarities": [{ "region": "TENCENT", "rarity": 1 }, { "region": "riot", "rarity": 6 }] }]);
+        let g = game_data_of(&skins, &wards, &icons);
+        assert!(!g.skin.contains_key(&1000)); // base skins aren't owned skins
+        let it = |ty: &str, id: i64| json!({ "inventoryType": ty, "itemId": id, "owned": true });
+        let inv = json!([
+            it("CHAMPION_SKIN", 1001),
+            it("CHAMPION_SKIN", 1002),
+            it("CHAMPION_SKIN", 1014),
+            it("WARD_SKIN", 5),
+            it("WARD_SKIN", 6),
+            it("SUMMONER_ICON", 29)
+        ]);
+        let r = rarities_of(&inv, &g, &[]);
+        assert_eq!(r["skin"], json!([0, 0, 1, 0, 0, 0, 0, 1]));
+        assert_eq!(r["chroma"], json!([0, 0, 1, 0, 0, 0, 0, 0]));
+        assert_eq!(r["ward"], json!([1, 0, 0, 0, 1, 0, 0, 0]));
+        assert_eq!(r["icon"], json!([0, 0, 0, 0, 0, 0, 1, 0])); // the "riot" entry counts
+        assert_eq!(rarity_of_name("kExalted"), 6);
+        // with the collection's own skin list: only those skins count
+        assert_eq!(
+            rarities_of(&inv, &g, &[1001])["skin"],
+            json!([0, 0, 1, 0, 0, 0, 0, 0])
         );
     }
 }

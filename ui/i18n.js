@@ -541,6 +541,19 @@
     'perf.pin': "Click: these games on top of the match history",
     'perf.unfold': "Click: show or hide its champions",
     'rad.basis': "Each axis: your average against your lane opponents' average in the same games – the number is the difference: +13 % = 13 % better, −8 % = 8 % worse; for deaths fewer is better. The middle ring is \"as good as the opponent\". Dashed: fewer than 10 games. No total score.",
+    'coll.rp': "RP",
+    'coll.bdShow': "By rarity ▾",
+    'coll.bdHide': "By rarity ▴",
+    'coll.bdNote': "Rarities from the client's own game data. Emotes and finishers have none.",
+    'coll.bdLater': "Counted from the next reading – press \"Load\" while logged in.",
+    'rar.0': "No rarity",
+    'rar.1': "Rare",
+    'rar.2': "Epic",
+    'rar.3': "Legendary",
+    'rar.4': "Mythic",
+    'rar.5': "Ultimate",
+    'rar.6': "Exalted",
+    'rar.7': "Transcendent",
   };
 
   const de = {
@@ -1065,6 +1078,19 @@
     'perf.pin': "Klick: diese Spiele oben in der Match history",
     'perf.unfold': "Klick: Champions ein- oder ausklappen",
     'rad.basis': "Jede Achse: dein Schnitt gegen den Schnitt deiner Lane-Gegner in denselben Spielen – die Zahl ist der Unterschied: +13 % = 13 % besser, −8 % = 8 % schlechter; bei Toden ist weniger besser. Der mittlere Ring heißt „so gut wie der Gegner“. Gestrichelt: weniger als 10 Spiele. Kein Gesamtwert.",
+    'coll.rp': "RP",
+    'coll.bdShow': "Nach Rarität ▾",
+    'coll.bdHide': "Nach Rarität ▴",
+    'coll.bdNote': "Raritäten aus den Spieldaten des Clients. Emotes und Finisher haben keine.",
+    'coll.bdLater': "Wird ab der nächsten Lesung gezählt – „Laden“ drücken, während du eingeloggt bist.",
+    'rar.0': "Ohne Rarität",
+    'rar.1': "Rare",
+    'rar.2': "Epic",
+    'rar.3': "Legendary",
+    'rar.4': "Mythic",
+    'rar.5': "Ultimate",
+    'rar.6': "Exalted",
+    'rar.7': "Transcendent",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

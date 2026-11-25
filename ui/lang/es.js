@@ -495,6 +495,19 @@
     'perf.pin': "Clic: estas partidas arriba en el historial",
     'perf.unfold': "Clic: mostrar u ocultar sus campeones",
     'rad.basis': "Cada eje: tu media frente a la de tus rivales de línea en las mismas partidas; el número es la diferencia: +13 % = 13 % mejor, −8 % = 8 % peor; en muertes, menos es mejor. El anillo central es «igual que el rival». Discontinuo: menos de 10 partidas. Sin nota total.",
+    'coll.rp': "RP",
+    'coll.bdShow': "Por rareza ▾",
+    'coll.bdHide': "Por rareza ▴",
+    'coll.bdNote': "Rarezas según los datos de juego del cliente. Los gestos y remates no tienen.",
+    'coll.bdLater': "Se cuenta desde la próxima lectura: pulsa «Cargar» con la sesión iniciada.",
+    'rar.0': "Sin rareza",
+    'rar.1': "Raro",
+    'rar.2': "Épico",
+    'rar.3': "Legendario",
+    'rar.4': "Mítico",
+    'rar.5': "Definitivo",
+    'rar.6': "Exaltado",
+    'rar.7': "Trascendente",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

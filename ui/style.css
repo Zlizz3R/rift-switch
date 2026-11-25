@@ -1544,3 +1544,13 @@ span.mh-ch { cursor: default; }
 
 .rd-bar b.up { color: #4cc38a; } .rd-bar b.down { color: #e5737a; }
 .pr-role td:first-child { cursor: pointer; }
+
+/* ---------- collection by rarity ---------- */
+.coll-bd { margin-top: 14px; }
+.coll-bd .coll-rar { margin-top: 10px; }
+.coll-rar th:first-child { color: var(--text); font-weight: 600; }
+.rar { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; transform: rotate(45deg); vertical-align: 1px; background: #4a5672; }
+.rar.r1 { background: #6fa8dc; } .rar.r2 { background: #9b6cf0; } .rar.r3 { background: #e0a84a; } .rar.r4 { background: #c94fd6; }
+.rar.r5 { background: #f0c860; } .rar.r6 { background: #ff7b5c; } .rar.r7 { background: linear-gradient(135deg, #7fe0ff, #f0a0ff); }
+
+.mh-accs { display: inline-flex; flex-wrap: wrap; margin: 0 0 10px; }
