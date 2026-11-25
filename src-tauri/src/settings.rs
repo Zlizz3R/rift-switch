@@ -13,7 +13,7 @@ pub fn defaults() -> Obj {
         "autostart": false, "startMinimized": false, "askedStart": false, "updateCheck": true, "autoAccept": false, "matchNotify": false, "autoPlay": true, "confirmSwitch": true,
         "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "laneChosen": false, "tile": null,
         "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": "", "uiTabs": null,
-        "othersLimit": "1000", "tagsLong": false, "tagTier": "2"
+        "othersLimit": "1000", "tagsLong": false, "tagTier": "2", "appearOffline": false
     })
     .as_object()
     .unwrap()

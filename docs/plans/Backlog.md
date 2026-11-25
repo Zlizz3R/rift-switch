@@ -37,6 +37,9 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Panic-Hook schreibt Ort und Meldung in `error.log`, bevor `panic = "abort"` beendet.
 - [x] `tools/release.js` (`npm run release X.Y.Z [--push]`): alle Prüfungen des Release-Workflows vorab.
 - [ ] Code-Signing: SignPath Foundation (kostenlos für Open Source) oder Azure Trusted Signing (~10 $/Monat) – braucht eine Bewerbung/Identitätsprüfung durch den Nutzer.
+- [x] Aus dem Vergleich (25.11.2026): zufälliger Skin mit Chroma (Champ Select), Offline erscheinen (Einstellungen),
+  Sprache von League (Tools), Login-Name / Passwort kopieren im Panel (Passwort nach Windows Hello, nicht im
+  Zwischenablage-Verlauf, nach 30 s gelöscht). Noch nicht mit dem echten Client ausprobiert.
 - [ ] Noch offen (Nutzer entscheidet): winget-Manifest, Export als CSV.
 
 ## Nicht gewollt – passt nicht zur Vision (25.11.2026)
@@ -55,6 +58,10 @@ Nicht wieder vorschlagen. Die Gründe des Nutzers:
   Splitter sind uninteressant.
 - **Session-Anzeige** (heute gespielt, LP heute) – geht schon mit dem Filter „Heute“ in der Match History.
 - **Tilt-Anzeige** (Hinweis nach Niederlagen in Folge) – wann der Tilt kommt, weiß man selbst am besten.
+- **Desktop-Verknüpfung pro Account** – müllt den Desktop zu.
+- **TFT** und **Valorant** – Rift Switch bleibt eine reine LoL-App.
+- **Discord-Status** (Rich Presence) – Apps sollen Discord nicht übernehmen.
+- **Ränge oder alte Saisons über OP.GG** – Rift Switch fragt keine fremden Server nach Account-Daten.
 
 ### 0. Aus dem Code-Review (25.11.2026) noch offen
 

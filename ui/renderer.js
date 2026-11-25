@@ -529,6 +529,7 @@ function renderProfile() {
     </div>
     ${(p.topMastery || []).length ? `<div class="top-m">${p.topMastery.map(m => `<div class="tm"><img src="${CHAMP_ICON(m.id)}" alt=""><b>${t('p.mLevel', { n: m.level })}</b><span>${t('p.points', { n: num(m.points) })}</span></div>`).join('')}</div>` : ''}`
     : `<div class="chart-empty">${t('p.loadLater')}</div>`}
+    ${a.hasCred ? `<div class="p-login"><span class="p-open">${t('p.login')}</span><button class="chip" data-pcopy="user">${t('p.copyUser')}</button><button class="chip" data-pcopy="pass" title="${esc(t('p.copyPassT'))}">${t('p.copyPass')}</button></div>` : ''}
     <div class="p-actions">
       <span class="p-open">${t('p.openWith')}</span>${SITES.map(([k, n]) => `<button class="chip" data-site="${k}">${n}</button>`).join('')}
       <span class="grow"></span>
@@ -552,6 +553,8 @@ $('profileBox').addEventListener('click', e => {
   const site = e.target.closest('[data-site]');
   if (site && a) return openSite(a, site.dataset.site);
   if (e.target.closest('[data-pswitch]')) { const id = profileFor; closeProfile(); switchTo(id); }
+  const cp = e.target.closest('[data-pcopy]');
+  if (cp) copyLogin(profileFor, cp.dataset.pcopy);
 });
 
 // ---------- tile editor ----------
@@ -1246,6 +1249,20 @@ $('optManual').onclick = async () => {
   if (!r.ok) toast(errText(r), true);
 };
 
+// a saved login on the clipboard: the name at once, the password after Windows Hello (or the app
+// password where Hello isn't set up); kept out of the clipboard history, cleared after 30 s
+async function copyLogin(id, what) {
+  let r = await api.copyLogin(id, what);
+  if (r && r.noHello) {
+    if (!S.hasLock) return toast(t('reveal.noHello'), true);
+    const p = await passBox({ title: t('p.copyPass'), text: t('reveal.askCopy'), ok: t('p.copyPass') });
+    if (p === null) return;
+    r = await api.copyLogin(id, what, p);
+    if (!(r && r.ok)) return toast(t('pw.wrong'), true);
+  }
+  if (r && r.ok) toast(t(what === 'pass' ? 'copy.pass' : 'copy.user'));
+  else if (!(r && r.denied)) toast(t('copy.failed'), true);
+}
 // the saved password of the login details: shown after Windows Hello (PIN, fingerprint …)
 // confirms it's you – or the app password where Windows Hello isn't set up
 async function revealSaved() {

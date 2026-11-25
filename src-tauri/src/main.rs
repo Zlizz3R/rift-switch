@@ -944,6 +944,7 @@ async fn tick_inner(my_gen: u64) {
         return;
     };
     let id = cur_id.unwrap();
+    keep_offline().await;
     let now = now_ms();
     // first login of an account that was only saved so far; and: is it the one that was picked?
     let wrong = with(|c| {
@@ -2578,6 +2579,53 @@ async fn confirm_owner(app_pass: Option<&str>, why: &str) -> Option<bool> {
         Err(_) => Some(false),
     }
 }
+/// what: "user" | "pass". → { ok } or { ok: false, noHello / denied / noLogin / failed }
+async fn copy_login(id: &str, what: &str, app_pass: Option<&str>) -> Value {
+    if !is_id(id) {
+        return json!({ "ok": false, "noLogin": true });
+    }
+    let Some((u, p)) = load_cred(id) else {
+        return json!({ "ok": false, "noLogin": true });
+    };
+    let text = if what == "pass" {
+        match confirm_owner(app_pass, "reveal.copy").await {
+            Some(true) => p,
+            Some(false) => return json!({ "ok": false, "denied": true }),
+            None => return json!({ "ok": false, "noHello": true }),
+        }
+    } else {
+        u
+    };
+    let Some(seq) = tokio::task::spawn_blocking(move || winsys::copy_private(&text))
+        .await
+        .ok()
+        .flatten()
+    else {
+        return json!({ "ok": false, "failed": true });
+    };
+    tauri::async_runtime::spawn(async move {
+        sleep(30_000).await;
+        let _ = tokio::task::spawn_blocking(move || winsys::clear_clipboard_if(seq)).await;
+    });
+    json!({ "ok": true })
+}
+
+/// Appear offline: while it is on, the own chat status is set back to "offline" whenever it is
+/// something else (the client sets "chat" after every start); switched off, "chat" once.
+static OFFLINE_SET: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+async fn keep_offline() {
+    use std::sync::atomic::Ordering;
+    if with(|c| c.st.set_bool("appearOffline")) {
+        if riot::chat_status().await.is_some_and(|s| s != "offline")
+            && riot::set_chat_status("offline").await
+        {
+            OFFLINE_SET.store(true, Ordering::Relaxed);
+        }
+    } else if OFFLINE_SET.swap(false, Ordering::Relaxed) {
+        let _ = riot::set_chat_status("chat").await;
+    }
+}
+
 /// pass: the export password (logins go along, encrypted with it) or null (no logins).
 /// With logins, Windows Hello (or the app password, `app_pass`) confirms it first – like showing one.
 async fn do_export(pass: Value, app_pass: Value) -> Value {
@@ -3199,6 +3247,14 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             Ok(_) => json!({ "state": "inGame" }),
             Err(_) => json!({ "state": "missingOrExpired" }),
         },
+        // champion select: a random owned skin of the picked champion, maybe in one of its chromas
+        "random-skin" => riot::random_skin().await,
+        // League's own language: which ones there are and which is set; set one (League closed)
+        "client-language" => riot::client_language(),
+        "client-language-set" => riot::set_client_language(&s(0), riot::league_running()),
+        // a saved login on the clipboard (kept out of the clipboard history, cleared after 30 s):
+        // the name as it is, the password only after Windows Hello (or the app password)
+        "copy-login" => copy_login(&s(0), &s(1), a(2).as_str()).await,
         "tool" => with_busy(do_tool(s(0))).await,
         "open-multi" => {
             // op.gg multisearch for up to 5 Riot IDs (Clash opponents, picked tiles)
@@ -3535,6 +3591,9 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 }
                 if k == "autostart" {
                     apply_autostart();
+                }
+                if k == "appearOffline" {
+                    tauri::async_runtime::spawn(keep_offline());
                 }
                 save();
             }

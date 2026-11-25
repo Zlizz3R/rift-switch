@@ -184,3 +184,77 @@ pub fn set_jump_list(exe: &Path, tasks: &[(String, String, String)]) {
         let _ = list.CommitList();
     }
 }
+
+/// Puts a login name or password on the clipboard so that Windows keeps it out of the clipboard
+/// history (Win+V), cloud sync and clipboard monitors. → the clipboard's sequence number after
+/// it (to clear it later only if nothing else was copied since), None if it couldn't be opened.
+pub fn copy_private(text: &str) -> Option<u32> {
+    use windows::core::w;
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::System::DataExchange::{
+        CloseClipboard, EmptyClipboard, GetClipboardSequenceNumber, OpenClipboard,
+        RegisterClipboardFormatW, SetClipboardData,
+    };
+    use windows::Win32::System::Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
+    const CF_UNICODETEXT: u32 = 13;
+    // SAFETY: the clipboard is opened, filled with memory the system takes over, and closed
+    unsafe {
+        let mut opened = false;
+        for _ in 0..10 {
+            if OpenClipboard(None).is_ok() {
+                opened = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(30));
+        }
+        if !opened {
+            return None;
+        }
+        let put = |fmt: u32, bytes: &[u8]| -> bool {
+            let Ok(h) = GlobalAlloc(GMEM_MOVEABLE, bytes.len().max(1)) else {
+                return false;
+            };
+            let p = GlobalLock(h) as *mut u8;
+            if p.is_null() {
+                return false;
+            }
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), p, bytes.len());
+            let _ = GlobalUnlock(h);
+            SetClipboardData(fmt, HANDLE(h.0)).is_ok()
+        };
+        let _ = EmptyClipboard();
+        let wide: Vec<u8> = text
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        let ok = put(CF_UNICODETEXT, &wide);
+        let zero = 0u32.to_le_bytes();
+        for f in [
+            w!("ExcludeClipboardContentFromMonitorProcessing"),
+            w!("CanIncludeInClipboardHistory"),
+            w!("CanUploadToCloudClipboard"),
+        ] {
+            let id = RegisterClipboardFormatW(f);
+            if id != 0 {
+                put(id, &zero);
+            }
+        }
+        let _ = CloseClipboard();
+        ok.then(|| GetClipboardSequenceNumber())
+    }
+}
+/// Empties the clipboard – only if it still holds what copy_private put there (sequence number).
+pub fn clear_clipboard_if(seq: u32) {
+    use windows::Win32::System::DataExchange::{
+        CloseClipboard, EmptyClipboard, GetClipboardSequenceNumber, OpenClipboard,
+    };
+    // SAFETY: open, empty, close
+    unsafe {
+        if GetClipboardSequenceNumber() != seq || OpenClipboard(None).is_err() {
+            return;
+        }
+        let _ = EmptyClipboard();
+        let _ = CloseClipboard();
+    }
+}

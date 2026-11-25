@@ -219,6 +219,8 @@
           <button class="tool-card" data-tool="openLogs"><b data-i18n="tools.openLogs"></b><span data-i18n="tools.openLogsT"></span></button>
           <button class="tool-card" data-tool="openData"><b data-i18n="tools.openData"></b><span data-i18n="tools.openDataT"></span></button>
           <button class="tool-card" id="toolDiag"><b data-i18n="tools.diag"></b><span data-i18n="tools.diagT"></span></button>
+          <div class="tool-card tool-lang"><b data-i18n="tools.lang"></b><span data-i18n="tools.langT"></span>
+            <div class="tl-row"><select id="clientLang"></select><button class="btn small" id="clientLangSet" data-i18n="tools.langSet"></button></div></div>
         </div>
       </section>
     </main>
@@ -303,6 +305,8 @@
       <label class="toggle"><input type="checkbox" id="notifyBox" data-setting="matchNotify"><span class="sw"></span>
         <span><b data-i18n="set.notify"></b><small data-i18n="set.notifyT"></small></span></label>
       <p class="fine set-warn" id="notifyOff" hidden data-i18n="set.notifyOff"></p>
+      <label class="toggle"><input type="checkbox" data-setting="appearOffline"><span class="sw"></span>
+        <span><b data-i18n="set.offline"></b><small data-i18n="set.offlineT"></small></span></label>
 
       <div class="set-g" data-i18n="set.gPrivacy"></div>
       <div class="toggle-wrap">

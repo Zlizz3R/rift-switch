@@ -69,9 +69,18 @@ Werbung und laufen oft über Overwolf.
   ohne Gesamtwertung. Matchup-Daten kommen bei uns aus counterstats.net – das bleibt die eine Stelle mit fremden
   Statistiken.
 
-## Vorschlag für die Reihenfolge
+## Entschieden (25.11.2026)
 
-1. Code-Signing über die SignPath Foundation beantragen (du), danach baue ich das Signieren in den Release ein.
-2. Desktop-Verknüpfung pro Account.
-3. TFT (Rang und Start).
-4. Kleinigkeiten: Login-Daten kopieren, Client-Sprache, zufälliger Skin.
+- **Umgesetzt:** zufälliger Skin mit Chroma, Offline erscheinen, Sprache von League, Login kopieren (Passwort nach
+  Windows Hello).
+- **Nicht gewollt:** Desktop-Verknüpfungen, TFT, Valorant, Discord-Status, Ränge oder alte Saisons über OP.GG
+  (siehe Backlog).
+- **Offen:** Code-Signing über die SignPath Foundation – die Bewerbung macht der Nutzer.
+
+## OP.GG: Scraping und die MCP-Schnittstelle
+
+OP.GGs Nutzungsbedingungen verbieten das automatische Auslesen der Webseite (Scraping). Lost League Manager
+liest aber keine Seiten aus: Es ruft `https://mcp-api.op.gg/mcp` auf – OP.GGs öffentliche MCP-Schnittstelle, die
+eigentlich für KI-Assistenten gedacht ist (Werkzeuge wie `lol_get_summoner_profile`, `lol_list_summoner_matches`).
+Ob OP.GG erlaubt, sie als Datenquelle einer App zu nutzen, ist nicht geklärt. Für Rift Switch ändert das nichts:
+keine Account-Daten an fremde Server.

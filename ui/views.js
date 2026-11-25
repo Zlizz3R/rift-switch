@@ -59,6 +59,7 @@ function showView(v, o = {}) {
     navButtons();
   }
   view = v;
+  if (v === 'tools') fillClientLang();
   openDrawer(false); openSettings(false);
   $('viewPlayer').hidden = v !== 'player';
   $('viewAccounts').hidden = v !== 'accounts';
@@ -405,6 +406,35 @@ document.querySelectorAll('[data-tool]').forEach(b => b.onclick = async () => {
   toast(r && r.ok ? t('tools.done') : t('tools.failed'), !(r && r.ok));
 });
 
+// League's own language (Tools): the languages League has, the one set now; League must be closed
+async function fillClientLang() {
+  const r = await api.clientLanguage();
+  const sel = $('clientLang');
+  if (!sel || !r || !Array.isArray(r.list)) return;
+  let names = null;
+  try { names = new Intl.DisplayNames([locale()], { type: 'language' }); } catch { /* codes only */ }
+  const label = l => { try { return (names && names.of(l.replace('_', '-'))) || l; } catch { return l; } };
+  sel.innerHTML = r.list.map(l => ({ l, n: label(l) })).sort((a, b) => a.n.localeCompare(b.n, locale()))
+    .map(x => `<option value="${esc(x.l)}"${x.l === r.current ? ' selected' : ''}>${esc(x.n)}</option>`).join('');
+}
+$('clientLangSet').onclick = async () => {
+  const sel = $('clientLang');
+  if (!sel.value) return;
+  const r = await api.setClientLanguage(sel.value);
+  if (r && r.ok) return toast(t('tools.langDone', { lang: sel.selectedOptions[0].textContent }));
+  toast(t({ leagueOpen: 'tools.langOpen', notFound: 'tools.langNone' }[r && r.why] || 'tools.langFailed'), true);
+};
+// champion select: a random owned skin (and chroma) of the picked champion
+document.addEventListener('click', async e => {
+  const b = e.target.closest('#rndSkin');
+  if (!b) return;
+  b.disabled = true;
+  const r = await api.randomSkin();
+  b.disabled = false;
+  if (r && r.ok) return toast(t(r.chroma ? 'skin.setChroma' : 'skin.set', { skin: r.skin, chroma: r.chroma }));
+  toast(t({ noChamp: 'skin.noChamp', noSkins: 'skin.noSkins' }[r && r.why] || 'skin.failed'), true);
+});
+
 // ---------- Live: lobby check, champ select helper, Clash ----------
 let liveData = null, liveTimer = null, champs = [];
 let helper = { enemy: 0, load: null };
@@ -746,7 +776,8 @@ function helperHtml() {
   const load = helper.load;
   const picks = enemyPicks();
   const enemyName = esc((champById(helper.enemy) || {}).name || '');
-  return `<datalist id="champList">${opts}</datalist><div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')} <button class="help-btn" data-help="helper" title="${esc(t('help.open'))}">?</button></h3>
+  const rnd = liveData && liveData.champSelect ? `<button class="btn small rnd-skin" id="rndSkin" title="${esc(t('live.rndSkinT'))}">${t('live.rndSkin')}</button>` : '';
+  return `<datalist id="champList">${opts}</datalist><div class="live-card helper"><div class="lc-head"><h3>${t('live.helper')} <button class="help-btn" data-help="helper" title="${esc(t('help.open'))}">?</button></h3>${rnd}
       <select id="hLane">${['top', 'jungle', 'mid', 'adc', 'support'].map(l => `<option value="${l}" ${lane() === l ? 'selected' : ''}>${t('lane.' + l)}</option>`).join('')}</select></div>
     <div class="h-sub">${t('live.poolTitle')}</div>
     ${p.length ? '' : `<p class="fine">${t('live.poolEmpty')}</p>`}<div class="h-pool">${p.map(id => `<span class="h-chip"><img src="${champIcon(id)}" alt="">${esc((champById(id) || {}).name || id)}<button data-hdel="${id}">×</button></span>`).join('')}

@@ -304,6 +304,225 @@ pub async fn replay(game_id: u64, action: &str) -> Value {
         None => json!({ "state": "missingOrExpired" }),
     }
 }
+// ---------- appear offline ----------
+
+/// The own chat status ("chat", "away", "dnd", "offline", "mobile" …), None without League.
+pub async fn chat_status() -> Option<String> {
+    get("/lol-chat/v1/me")
+        .await
+        .and_then(|m| m["availability"].as_str().map(String::from))
+}
+/// Sets the own chat status the way the client's status menu does ("offline": friends see you
+/// offline; "chat": online again).
+pub async fn set_chat_status(availability: &str) -> bool {
+    lcu_json(
+        "/lol-chat/v1/me",
+        "PUT",
+        &json!({ "availability": availability }),
+    )
+    .await
+    .is_some()
+}
+
+// ---------- a random skin in champion select ----------
+
+/// An owned skin: (id, name, its owned chromas as (id, name)).
+pub type Skin = (i64, String, Vec<(i64, String)>);
+
+/// The owned skins of the champion picked in champion select (the client's skin carousel), each
+/// with its owned chromas: [(id, name, [(chroma id, chroma name)])]. The base skin only when there
+/// is nothing else.
+pub fn owned_skins(carousel: &Value) -> Vec<Skin> {
+    let owned = |s: &Value| s["unlocked"] == true && s["disabled"] != true;
+    let all: Vec<(Skin, bool)> = carousel
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|s| owned(s))
+        .filter_map(|s| {
+            let id = s["id"].as_i64()?;
+            let chromas = s["childSkins"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|c| owned(c))
+                .filter_map(|c| {
+                    Some((
+                        c["id"].as_i64()?,
+                        c["name"].as_str().unwrap_or("").to_string(),
+                    ))
+                })
+                .collect();
+            let base = s["isBase"] == true || id % 1000 == 0;
+            Some((
+                (id, s["name"].as_str().unwrap_or("").to_string(), chromas),
+                base,
+            ))
+        })
+        .collect();
+    let skins: Vec<Skin> = all.iter().filter(|s| !s.1).map(|s| s.0.clone()).collect();
+    if skins.is_empty() {
+        all.into_iter().map(|s| s.0).collect()
+    } else {
+        skins
+    }
+}
+/// One of them by two random numbers (0..1): the skin, then the skin itself or one of its chromas.
+/// → (id to select, skin name, chroma name or "")
+pub fn pick_skin(skins: &[Skin], r1: f64, r2: f64) -> Option<(i64, String, String)> {
+    let at = |n: usize, r: f64| ((r.clamp(0.0, 0.999_999) * n as f64) as usize).min(n - 1);
+    let (id, name, chromas) = skins.get(at(skins.len().max(1), r1))?;
+    // the skin without a chroma counts as one choice next to its chromas
+    let k = at(chromas.len() + 1, r2);
+    Some(match k {
+        0 => (*id, name.clone(), String::new()),
+        _ => (chromas[k - 1].0, name.clone(), chromas[k - 1].1.clone()),
+    })
+}
+/// Picks and selects a random owned skin (and chroma) for the champion in champion select.
+/// → { ok, skin, chroma } or { ok: false, why: "noChamp" | "noSkins" | "failed" }
+pub async fn random_skin() -> Value {
+    let Some(list) = get("/lol-champ-select/v1/skin-carousel-skins").await else {
+        return json!({ "ok": false, "why": "noChamp" });
+    };
+    if list.as_array().is_none_or(|a| a.is_empty()) {
+        return json!({ "ok": false, "why": "noChamp" });
+    }
+    let skins = owned_skins(&list);
+    if skins.len() < 2 && skins.iter().all(|s| s.2.is_empty()) {
+        return json!({ "ok": false, "why": "noSkins" });
+    }
+    let (r1, r2) = (rand::random::<f64>(), rand::random::<f64>());
+    let Some((id, skin, chroma)) = pick_skin(&skins, r1, r2) else {
+        return json!({ "ok": false, "why": "noSkins" });
+    };
+    let ok = lcu_json(
+        "/lol-champ-select/v1/session/my-selection",
+        "PATCH",
+        &json!({ "selectedSkinId": id }),
+    )
+    .await
+    .is_some();
+    if ok {
+        json!({ "ok": true, "skin": skin, "chroma": chroma })
+    } else {
+        json!({ "ok": false, "why": "failed" })
+    }
+}
+
+// ---------- the League client's language ----------
+
+/// The languages League offers (when its settings don't list them).
+pub const CLIENT_LOCALES: [&str; 22] = [
+    "en_US", "en_GB", "de_DE", "es_ES", "es_MX", "fr_FR", "it_IT", "pl_PL", "ro_RO", "el_GR",
+    "cs_CZ", "hu_HU", "pt_BR", "ru_RU", "tr_TR", "ja_JP", "ko_KR", "zh_TW", "vi_VN", "th_TH",
+    "ar_AE", "en_AU",
+];
+/// The two files that hold League's language: the client's own settings and the Riot Client's
+/// settings for League (it writes the first one from the second when it starts League).
+fn locale_files() -> Vec<PathBuf> {
+    let (live, _) = league_dirs();
+    let data = std::env::var_os("PROGRAMDATA")
+        .map_or_else(|| PathBuf::from(r"C:\ProgramData"), PathBuf::from);
+    vec![
+        PathBuf::from(live).join("Config").join("LeagueClientSettings.yaml"),
+        data.join(r"Riot Games\Metadata\league_of_legends.live\league_of_legends.live.product_settings.yaml"),
+    ]
+}
+/// The value of every `locale: "…"` line (only the key `locale`, not `default_locale`).
+pub fn yaml_locale(text: &str) -> Option<String> {
+    text.lines().find_map(|l| {
+        let v = l
+            .trim_start()
+            .strip_prefix("locale:")?
+            .trim()
+            .trim_matches('"');
+        (!v.is_empty()).then(|| v.to_string())
+    })
+}
+/// The text with every `locale: "…"` line set to `loc` (indentation and line ends kept), or None
+/// when there is no such line.
+pub fn set_yaml_locale(text: &str, loc: &str) -> Option<String> {
+    let mut hit = false;
+    let out: Vec<String> = text
+        .split_inclusive('\n')
+        .map(|l| {
+            let body = l.trim_end_matches(['\r', '\n']);
+            let ind = &body[..body.len() - body.trim_start().len()];
+            if body.trim_start().starts_with("locale:") {
+                hit = true;
+                format!("{ind}locale: \"{loc}\"{}", &l[body.len()..])
+            } else {
+                l.to_string()
+            }
+        })
+        .collect();
+    hit.then(|| out.concat())
+}
+/// The languages League has here (from the Riot Client's list, else the known ones) and the one set now.
+pub fn client_language() -> Value {
+    let files = locale_files();
+    let cur = files.iter().find_map(|f| {
+        std::fs::read_to_string(f)
+            .ok()
+            .as_deref()
+            .and_then(yaml_locale)
+    });
+    let listed: Vec<String> = std::fs::read_to_string(&files[1])
+        .ok()
+        .and_then(|t| {
+            let l = t
+                .lines()
+                .find(|l| l.trim_start().starts_with("available_locales:"))?;
+            let inner = l.split_once('[')?.1.split_once(']')?.0;
+            Some(
+                inner
+                    .split(',')
+                    .map(|x| x.trim().trim_matches('"').to_string())
+                    .filter(|x| x.len() == 5)
+                    .collect(),
+            )
+        })
+        .unwrap_or_default();
+    let list: Vec<String> = if listed.is_empty() {
+        CLIENT_LOCALES.iter().map(|s| s.to_string()).collect()
+    } else {
+        listed
+    };
+    json!({ "current": cur, "list": list, "found": files.iter().any(|f| f.exists()) })
+}
+/// Sets League's language (League must be closed: it writes its settings back when it quits).
+/// → { ok } or { ok: false, why: "leagueOpen" | "notFound" | "invalid" | "failed" }
+pub fn set_client_language(loc: &str, league_open: bool) -> Value {
+    let valid = loc.len() == 5
+        && loc.as_bytes()[2] == b'_'
+        && loc.chars().all(|c| c.is_ascii_alphabetic() || c == '_');
+    if !valid {
+        return json!({ "ok": false, "why": "invalid" });
+    }
+    if league_open {
+        return json!({ "ok": false, "why": "leagueOpen" });
+    }
+    let mut done = 0;
+    for f in locale_files() {
+        let Ok(t) = std::fs::read_to_string(&f) else {
+            continue;
+        };
+        let Some(new) = set_yaml_locale(&t, loc) else {
+            continue;
+        };
+        if std::fs::write(&f, new).is_err() {
+            return json!({ "ok": false, "why": "failed" });
+        }
+        done += 1;
+    }
+    if done == 0 {
+        json!({ "ok": false, "why": "notFound" })
+    } else {
+        json!({ "ok": true })
+    }
+}
+
 /// The client's replay metadata in short: { state, progress (0–100) }.
 pub fn replay_state(m: &Value) -> Value {
     let state = m["state"].as_str().unwrap_or("checking");
@@ -1662,6 +1881,63 @@ pub async fn dismiss_pbe_dialog() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn random_skin_from_owned_skins_and_chromas() {
+        let carousel = json!([
+            { "id": 103000, "name": "Ahri", "unlocked": true, "isBase": true, "childSkins": [] },
+            { "id": 103001, "name": "Dynasty Ahri", "unlocked": false, "childSkins": [] },
+            { "id": 103015, "name": "K/DA Ahri", "unlocked": true, "childSkins": [
+                { "id": 103101, "name": "Ruby", "unlocked": true },
+                { "id": 103102, "name": "Pearl", "unlocked": false } ] },
+            { "id": 103016, "name": "Elderwood Ahri", "unlocked": true, "disabled": true, "childSkins": [] },
+            { "id": 103027, "name": "Arcade Ahri", "unlocked": true }
+        ]);
+        let skins = owned_skins(&carousel);
+        // not owned, disabled and the base skin are left out; only owned chromas
+        assert_eq!(
+            skins.iter().map(|s| s.0).collect::<Vec<_>>(),
+            vec![103015, 103027]
+        );
+        assert_eq!(skins[0].2, vec![(103101, "Ruby".to_string())]);
+        // first skin, without a chroma / with its chroma; the last skin
+        assert_eq!(
+            pick_skin(&skins, 0.0, 0.2),
+            Some((103015, "K/DA Ahri".into(), String::new()))
+        );
+        assert_eq!(
+            pick_skin(&skins, 0.1, 0.9),
+            Some((103101, "K/DA Ahri".into(), "Ruby".into()))
+        );
+        assert_eq!(pick_skin(&skins, 1.0, 0.0).unwrap().0, 103027);
+        // only the base skin owned: it stays the one choice
+        let base = owned_skins(
+            &json!([{ "id": 1000, "name": "Annie", "unlocked": true, "isBase": true }]),
+        );
+        assert_eq!(base.len(), 1);
+        assert_eq!(pick_skin(&[], 0.5, 0.5), None);
+    }
+
+    #[test]
+    fn client_language_in_the_yaml_files() {
+        let client =
+            "install:\r\n    globals:\r\n        locale: \"en_US\"\r\n        region: \"EUW\"\r\n";
+        assert_eq!(yaml_locale(client).as_deref(), Some("en_US"));
+        let out = set_yaml_locale(client, "de_DE").unwrap();
+        assert_eq!(
+            out,
+            "install:\r\n    globals:\r\n        locale: \"de_DE\"\r\n        region: \"EUW\"\r\n"
+        );
+        // the Riot Client's file: default_locale stays, locale changes
+        let product = "locale_data:\n    available_locales: [\"de_DE\", \"en_US\"]\n    default_locale: \"en_US\"\nsettings:\n    locale: \"en_US\"\n";
+        let out = set_yaml_locale(product, "fr_FR").unwrap();
+        assert!(
+            out.contains("default_locale: \"en_US\"") && out.contains("    locale: \"fr_FR\"\n")
+        );
+        assert_eq!(set_yaml_locale("other: 1\n", "de_DE"), None);
+        assert!(!set_client_language("de-DE", false)["ok"].as_bool().unwrap());
+        assert_eq!(set_client_language("de_DE", true)["why"], "leagueOpen");
+    }
 
     #[test]
     fn replay_state_in_short() {

@@ -514,6 +514,11 @@ h1 { white-space: nowrap; }
 .tool-card { text-align: left; padding: 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 6px; }
 .tool-card:hover { border-color: var(--gold); }
 .tool-card b { font-size: 13.5px; }
+.tool-lang:hover { border-color: var(--line); }
+.tl-row { display: flex; gap: 8px; margin-top: 4px; }
+.tl-row select { flex: 1; min-width: 0; }
+.helper .rnd-skin { margin-left: auto; margin-right: 8px; }
+.p-login { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .tool-card span { font-size: 12px; color: var(--muted); }
 .tool-card.busy { opacity: .5; pointer-events: none; }
 
