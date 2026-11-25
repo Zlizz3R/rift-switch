@@ -23,10 +23,15 @@ function radarSvg(axes, size = 220) {
   }).join('');
   return `<svg class="radar" viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px">${rings}${spokes}${shape}${dots}${labels}</svg>`;
 }
+// the difference to the opponent: +13 / −8 / ±0
+function radarDiff(ratio) {
+  const d = Math.round((ratio - 1) * 100);
+  return d > 0 ? '+' + d : d < 0 ? '−' + Math.abs(d) : '±0';
+}
 const radarVal = (a, v) => (v == null ? '–' : a.axis.pct ? Math.round(v * 100) + ' %' : v.toLocaleString(locale(), { maximumFractionDigits: a.axis.dec, minimumFractionDigits: a.axis.dec }));
 function radarTip(a) {
   if (a.ratio == null) return t('rad.few', { axis: t('rad.' + a.id), n: a.n, min: Radar.MIN });
-  return t('rad.tip', { axis: t('rad.' + a.id), pct: Math.round(a.ratio * 100), mine: radarVal(a, a.mine), theirs: radarVal(a, a.theirs), n: num(a.n) });
+  return t('rad.tip', { axis: t('rad.' + a.id), pct: radarDiff(a.ratio), mine: radarVal(a, a.mine), theirs: radarVal(a, a.theirs), n: num(a.n) });
 }
 // the same values as bars around 100 %
 function radarBars(axes) {
@@ -34,7 +39,7 @@ function radarBars(axes) {
     if (a.ratio == null) return `<div class="rd-bar few" title="${esc(radarTip(a))}"><span>${esc(t('rad.' + a.id))}</span><i class="rd-track"></i><b>–</b></div>`;
     const d = Math.max(-1, Math.min(1, a.ratio - 1));
     const w = Math.abs(d) * 50;
-    return `<div class="rd-bar" title="${esc(radarTip(a))}"><span>${esc(t('rad.' + a.id))}</span><i class="rd-track"><i class="${d >= 0 ? 'up' : 'down'}" style="${d >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i></i><b>${Math.round(a.ratio * 100)} %</b></div>`;
+    return `<div class="rd-bar" title="${esc(radarTip(a))}"><span>${esc(t('rad.' + a.id))}</span><i class="rd-track"><i class="${d >= 0 ? 'up' : 'down'}" style="${d >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i></i><b class="${a.ratio > 1.005 ? 'up' : a.ratio < 0.995 ? 'down' : ''}">${radarDiff(a.ratio)} %</b></div>`;
   }).join('')}</div>`;
 }
 

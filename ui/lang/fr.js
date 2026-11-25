@@ -461,7 +461,6 @@
     'rad.tower': "Tours",
     'rad.tip': "{axis} {pct} % · Ø {mine} contre {theirs} · {n} parties",
     'rad.few': "{axis} : trop peu de parties ({n} sur {min})",
-    'rad.basis': "Chaque axe : ta valeur ÷ celle de ton adversaire de voie dans la même partie, en moyenne. 100 % (l’anneau du milieu) = aussi bon que l’adversaire ; pour les morts, l’inverse. En pointillés : moins de 10 parties. Pas de note globale.",
     'rad.allChamps': "Tous les champions",
     'rad.none': "Aucune partie avec un adversaire de voie connu pour ces filtres.",
     'rad.flip': "Clic : style de jeu face à l’adversaire de voie",
@@ -493,6 +492,9 @@
     'ov.accT': "Clic : dans l’analyse ou non · Ctrl+clic : seulement celui-ci",
     'ov.none': "Aucun compte choisi – active-en un en haut.",
     'sw.play_updatePct': "League se met à jour ({pct} %) – Jouer suit juste après",
+    'perf.pin': "Clic : ces parties en haut de l’historique",
+    'perf.unfold': "Clic : afficher ou masquer ses champions",
+    'rad.basis': "Chaque axe : ta moyenne face à celle de tes adversaires de voie dans les mêmes parties – le chiffre est l’écart : +13 % = 13 % mieux, −8 % = 8 % moins bien ; pour les morts, moins c’est mieux. L’anneau du milieu = « aussi bon que l’adversaire ». En pointillés : moins de 10 parties. Pas de note globale.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

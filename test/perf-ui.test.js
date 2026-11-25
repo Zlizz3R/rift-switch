@@ -37,10 +37,10 @@ test('performance: key figures and roles add up, a role unfolds, a champion open
     assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex · Season \d{4}/);
     assert.match(app.$('.perf-bar .pk').textContent, /Games\s*14/);
     const roles = app.$$('.perf-table tr.pr-role');
-    assert.deepEqual(roles.map(r => r.dataset.prow), ['jungle', 'mid']);
+    assert.deepEqual(roles.map(r => r.querySelector('[data-prow]').dataset.prow), ['jungle', 'mid']);
     assert.equal(roles.reduce((s, r) => s + Number(r.children[1].textContent), 0), 14);
     // unfold mid: its champions, Ahri first
-    await app.click('tr[data-prow="mid"]');
+    await app.click('[data-prow="mid"]');
     const champRows = app.$$('tr.pr-champ');
     assert.equal(champRows.length, 10);
     assert.match(champRows[0].textContent, /Ahri\s*4/);
@@ -52,16 +52,22 @@ test('performance: key figures and roles add up, a role unfolds, a champion open
     await app.click('[data-prole=""]');
     // all queues: ARAM shows up as "no lane"
     await app.click('[data-pq=""]');
-    assert.ok(app.$('tr[data-prow="none"]'));
-    // a champion: the match history with this champion and the same queues
+    assert.ok(app.$('[data-prow="none"]'));
+    // a champion row: its games on top of the match history (every filter off, like "pentakills first")
     await app.click('[data-pq="solo"]');
     await app.click('[data-pq="flex"]');
-    assert.ok(app.$('tr[data-prow="mid"]').classList.contains('open'), 'an unfolded role stays open');
-    await app.click('tr.pr-champ[data-pchamp="103"]');
+    assert.ok(app.$('[data-prow="mid"]').closest('tr').classList.contains('open'), 'an unfolded role stays open');
+    await app.click('tr.pr-champ[data-ppin="mid|103"]');
     await app.settle();
     assert.ok(app.visible('#viewMatches'));
-    assert.equal(app.$('#mhChamp').value, 'Ahri');
-    assert.ok(app.$('[data-mhq="solo"]').classList.contains('on') && app.$('[data-mhq="flex"]').classList.contains('on'));
+    assert.equal(app.$('#mhChamp').value, '');
+    assert.match(app.$('.mh-sec.pin').textContent, /Mid · Ahri · 4/);
+    // the role row's figures: all its games
+    await app.click('#navDash');
+    await app.settle();
+    app.$('tr.pr-role[data-ppin="jungle|"] td:nth-child(2)').click();
+    await app.settle();
+    assert.match(app.$('.mh-sec.pin').textContent, /Jungle · 1/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
@@ -96,7 +102,7 @@ test('play style: a radar against the lane opponent on the main role, the same v
     const bars = app.$$('.rd-bar');
     assert.equal(bars.length, 7);
     // 13 mid games with a lane opponent: farm has a value; 100 % = as good as him
-    assert.match(bars[0].textContent, /Farm\s*100 %/);
+    assert.match(bars[0].textContent, /Farm\s*±0 %/);
     assert.match(bars[0].title, /13 games/);
     // the lane phase needs the gold per minute: none stored – dashed, no value (not 0)
     assert.ok(bars[5].classList.contains('few'));
@@ -128,11 +134,13 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
     // ARAM on as well
     await app.click('[data-pq="aram"]');
     assert.match(app.$('#perfLine').textContent, /^6 games · Solo\/Duo \+ ARAM/);
-    // the accounts: one bar for all tabs; the account of all these games off → nothing
+    // the accounts like the match history's chips: from "All" a click picks just that account
     assert.ok(app.visible('#ovAccs'));
-    await app.click(`[data-ovacc="${P(1)}"]`);
+    await app.click(`[data-ovacc="${P(2)}"]`);
     assert.match(app.$('#perfBody').textContent, /No games match/);
+    assert.ok(app.$(`[data-ovacc="${P(2)}"]`).classList.contains('on'));
     assert.ok(!app.$(`[data-ovacc="${P(1)}"]`).classList.contains('on'));
+    assert.ok(!app.$('[data-ovacc=""]').classList.contains('on'));
     // the same choice on another tab; the LP history shows it in its own chips (no second bar)
     await app.click('[data-dt="stats"]');
     assert.match(app.$('#perfBody').textContent, /No games match/);

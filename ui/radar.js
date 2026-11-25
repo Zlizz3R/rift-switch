@@ -1,6 +1,7 @@
-// Play style against the lane opponent (docs/plans Phase 6): per axis the own value ÷ the lane
-// opponent's in the same game, averaged over the games. 100 % = as good as the opponent; deaths the
-// other way round (fewer is better). Games without a clear lane opponent don't count; an axis with
+// Play style against the lane opponent (docs/plans Phase 6): per axis the own average ÷ the lane
+// opponents' average over the same games (a ratio per game and then a mean would let one game with a
+// near-zero opponent – 300 tower damage – blow it up). 1 = as good as the opponent; deaths the other
+// way round (fewer is better). Shown as the difference: +13 % = 13 % better. Games without a clear lane opponent don't count; an axis with
 // fewer than MIN games has no value (never 0). No total score. No DOM; window and tests.
 (function (root) {
   const node = typeof module !== 'undefined' && module.exports;
@@ -26,14 +27,14 @@
         if (!o) continue;
         const x = a.of(g, p), y = a.of(g, o);
         if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) continue;
-        // deaths: theirs ÷ mine (with at least 1, so 0 deaths isn't infinite); else mine ÷ theirs
-        const r = a.invert ? Math.max(1, y) / Math.max(1, x) : y > 0 ? x / y : null;
-        if (r == null) continue;
-        ratios.push(r); mine.push(x); theirs.push(y);
+        ratios.push(1); mine.push(x); theirs.push(y);
       }
       const avg = l => (l.length ? l.reduce((s, v) => s + v, 0) / l.length : null);
       const n = ratios.length;
-      return { id: a.id, ratio: n >= MIN ? avg(ratios) : null, mine: avg(mine), theirs: avg(theirs), n, axis: a };
+      const m = avg(mine), th = avg(theirs);
+      // deaths: theirs ÷ mine (at least 1 death per game on both sides, so 0 isn't infinite)
+      const ratio = n < MIN || m == null ? null : a.invert ? Math.max(1, th) / Math.max(1, m) : th > 0 ? m / th : null;
+      return { id: a.id, ratio, mine: m, theirs: th, n, axis: a };
     });
   }
   const api = { MIN, AXES, radar };

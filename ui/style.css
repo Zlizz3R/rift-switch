@@ -1541,3 +1541,6 @@ span.mh-ch { cursor: default; }
 /* ---------- Overview: the accounts that count (ovfilter.js) ---------- */
 .ov-accs { display: inline-flex; flex-wrap: wrap; margin: -4px 0 14px; }
 .ov-accs button.in { color: var(--text); }
+
+.rd-bar b.up { color: #4cc38a; } .rd-bar b.down { color: #e5737a; }
+.pr-role td:first-child { cursor: pointer; }

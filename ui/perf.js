@@ -137,9 +137,10 @@ function perfStatsHtml(parts, ag) {
   const body = roles.map(r => {
     const open = isOpen(r.role);
     const icon = r.role === 'none' ? '' : `<img class="pr-ic" src="${posIcon(r.role)}" alt="">`;
-    const champsHtml = open ? PerfMath.sortRows(r.champs, perf.sort, perf.dir).map(c => `<tr class="pr-champ" data-pchamp="${c.champ}" title="${esc(t('perf.open'))}">
+    const champsHtml = open ? PerfMath.sortRows(r.champs, perf.sort, perf.dir).map(c => `<tr class="pr-champ" data-ppin="${r.role}|${c.champ}" title="${esc(t('perf.pin'))}">
         <td><span class="mast-ch"><img src="${CHAMP_ICON(c.champ)}" alt="" loading="lazy">${esc(perfChamp(c.champ))}</span></td>${perfCells(c)}</tr>`).join('') : '';
-    return `<tr class="pr-role${open ? ' open' : ''}" data-prow="${r.role}"><td><span class="pr-name"><i class="pr-chev"></i>${icon}${esc(t('pos.' + r.role))}</span></td>${perfCells(r)}</tr>${champsHtml}`;
+    // the name unfolds the role; the figures pin its games in the match history
+    return `<tr class="pr-role${open ? ' open' : ''}" data-ppin="${r.role}|" title="${esc(t('perf.pin'))}"><td data-prow="${r.role}" title="${esc(t('perf.unfold'))}"><span class="pr-name"><i class="pr-chev"></i>${icon}${esc(t('pos.' + r.role))}</span></td>${perfCells(r)}</tr>${champsHtml}`;
   }).join('');
   return `${perfBarHtml(ag)}${perfTrendHtml(parts)}<div class="mast-wrap"><table class="dash-table perf-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
@@ -162,6 +163,13 @@ function perfChampsHtml(parts, ag) {
 }
 
 // ---------- clicks ----------
+// a row of the role table: its games on top of the match history (like "pentakills first")
+function perfPin(role, champ) {
+  const rows = PerfMath.select(perf.games, perfF()).filter(x => PerfMath.roleOf(x) === role && (!champ || x.p.champ === +champ));
+  const ids = [...new Set(rows.map(x => String(x.g.id)))];
+  const label = [t('pos.' + role), champ ? perfChamp(+champ) : ''].filter(Boolean).join(' · ');
+  openMatchesPinned(ids, label);
+}
 // a champion: the match history with the same account, queue, time and this champion
 function perfOpen(champ) {
   const f = perf.f;
@@ -189,7 +197,9 @@ $('dashPerf').addEventListener('click', e => {
   if (e.target.closest('[data-pall]')) { perf.all = !perf.all; return renderPerf(); }
   const ch = e.target.closest('[data-pchamp]');
   if (ch) return perfOpen(+ch.dataset.pchamp);
+  const fold = e.target.closest('[data-prow]');
+  if (fold) { const k = fold.dataset.prow; if (perf.open.has(k)) perf.open.delete(k); else perf.open.add(k); return renderPerf(); }
+  const pp = e.target.closest('[data-ppin]');
+  if (pp) return perfPin(...pp.dataset.ppin.split('|'));
   if (e.target.closest('.oc-row.all')) return perfOpen(0);
-  const r = e.target.closest('[data-prow]');
-  if (r) { const k = r.dataset.prow; if (perf.open.has(k)) perf.open.delete(k); else perf.open.add(k); renderPerf(); }
 });

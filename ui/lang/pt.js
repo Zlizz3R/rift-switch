@@ -460,7 +460,6 @@
     'rad.tower': "Torres",
     'rad.tip': "{axis} {pct} % · Ø {mine} contra {theirs} · {n} partidas",
     'rad.few': "{axis}: poucas partidas ({n} de {min})",
-    'rad.basis': "Cada eixo: seu valor ÷ o do oponente de rota na mesma partida, na média. 100 % (o anel do meio) = tão bom quanto o oponente; para mortes, o contrário. Tracejado: menos de 10 partidas. Sem nota total.",
     'rad.allChamps': "Todos os campeões",
     'rad.none': "Nenhuma partida com oponente de rota conhecido para estes filtros.",
     'rad.flip': "Clique: estilo contra o oponente de rota",
@@ -492,6 +491,9 @@
     'ov.accT': "Clique: dentro ou fora da análise · Ctrl+clique: só esta",
     'ov.none': "Nenhuma conta escolhida – ative uma acima.",
     'sw.play_updatePct': "League está atualizando ({pct} %) – logo depois vem Jogar",
+    'perf.pin': "Clique: estas partidas no topo do histórico",
+    'perf.unfold': "Clique: mostrar ou ocultar os campeões",
+    'rad.basis': "Cada eixo: sua média contra a dos oponentes de rota nas mesmas partidas – o número é a diferença: +13 % = 13 % melhor, −8 % = 8 % pior; em mortes, menos é melhor. O anel do meio = \"tão bom quanto o oponente\". Tracejado: menos de 10 partidas. Sem nota total.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

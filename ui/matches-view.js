@@ -284,14 +284,15 @@ function renderMatches() {
   const list = MatchFilter.filterGames(d.games, mh.f);
   $('mhSummary').innerHTML = summaryHtml(list);
   if (!list.length) { $('mhList').innerHTML = `<div class="mh-empty">${t('mh.noMatch')}</div>`; return; }
-  const isPinned = g => mh.pin && !g.remake && Math.min(5, MatchFilter.me(g).multi || 0) === mh.pin;
-  const pinned = mh.pin ? list.filter(isPinned) : [];
+  // pinned: games of a multikill kind, or a set of games (a row of the Overview)
+  const isPinned = g => (mh.pinIds ? mh.pinIds.has(String(g.id)) : mh.pin && !g.remake && Math.min(5, MatchFilter.me(g).multi || 0) === mh.pin);
+  const pinned = mh.pin || mh.pinIds ? list.filter(isPinned) : [];
   const rest = pinned.length ? list.filter(g => !isPinned(g)) : list;
   const shown = rest.slice(0, mh.show);
   loadRanks(pinned.concat(shown));
   const rows = gs => gs.map(g => gameRow(g, d.assets || {})).join('');
   $('mhList').innerHTML = (pinned.length
-      ? `<div class="mh-sec pin"><span>${esc(t(MULTI[mh.pin]))} · ${pinned.length}</span><button class="mh-unpin" data-pin="${mh.pin}" title="${esc(t('mh.unpin'))}">✕</button></div>`
+      ? `<div class="mh-sec pin"><span>${esc(mh.pinIds ? mh.pinLabel : t(MULTI[mh.pin]))} · ${pinned.length}</span><button class="mh-unpin" data-pin="${mh.pinIds ? 'ids' : mh.pin}" title="${esc(t('mh.unpin'))}">✕</button></div>`
         + rows(pinned) + (rest.length ? `<div class="mh-sec">${esc(t('mh.otherGames'))}</div>` : '')
       : '')
     + rows(shown)
@@ -370,7 +371,7 @@ $('mhChamp').oninput = () => {
 };
 for (const [id, k] of [['mhMinK', 'minKills'], ['mhMaxD', 'maxDeaths'], ['mhMinKda', 'minKda']]) $(id).oninput = () => setFilter({ [k]: $(id).value });
 $('mhAdvBtn').onclick = () => { mh.adv = !mh.adv; renderMatches(); };
-$('mhReset').onclick = () => { mh.pin = 0; mh.f = { ...MH_DEFAULT }; $('mhChamp').value = ''; renderMatches(); };
+$('mhReset').onclick = () => { mh.pin = 0; mh.pinIds = null; mh.f = { ...MH_DEFAULT }; $('mhChamp').value = ''; renderMatches(); };
 
 // totals of what the filters show, plus a few records (click one to jump to that game)
 // "34 h 12 min" / "48 min"
@@ -504,7 +505,7 @@ function gameRowShort(g) {
 async function openGame(id) {
   id = String(id);
   showView('matches');
-  mh.filter.puuid = ''; mh.filter.queues.clear(); mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.show = 40;
+  mh.filter.puuid = ''; mh.filter.queues.clear(); mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
   $('mhChamp').value = '';
   mh.open.add(id);
   await loadMatches();
@@ -513,10 +514,19 @@ async function openGame(id) {
   const row = find();
   if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1200); }
 }
+// the match history with a set of games on top (a row of the Overview), every filter off
+function openMatchesPinned(ids, label) {
+  mh.filter.puuid = ''; mh.filter.queues = new Set();
+  mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.show = 40;
+  mh.pinIds = new Set(ids.map(String)); mh.pinLabel = label;
+  $('mhChamp').value = '';
+  showView('matches');
+  setTimeout(() => { const l = $('mhList'); if (l) l.scrollIntoView({ block: 'start' }); }, 50);
+}
 // the match history with some filters set (from the Overview): account, queue groups, champion, time
 function openMatchesWith({ puuid = '', queues = [], champ = 0, range = 'all', from = '', to = '' } = {}) {
   mh.filter.puuid = puuid; mh.filter.queues = new Set(queues);
-  mh.f = { ...MH_DEFAULT, champ, range, from, to }; mh.pin = 0; mh.show = 40;
+  mh.f = { ...MH_DEFAULT, champ, range, from, to }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
   $('mhChamp').value = champ ? champName(champ) : '';
   showView('matches');
 }
@@ -551,6 +561,7 @@ $('viewMatches').addEventListener('click', e => {
   if (ch) { const id = +ch.dataset.mhchamp; setFilter({ champ: mh.f.champ === id ? 0 : id }); return; }
   const pin = e.target.closest('[data-pin]');
   if (pin) {
+    if (pin.dataset.pin === 'ids' || mh.pinIds) { mh.pinIds = null; mh.pin = pin.dataset.pin === 'ids' ? 0 : Number(pin.dataset.pin); renderMatches(); return; }
     mh.pin = mh.pin === Number(pin.dataset.pin) ? 0 : Number(pin.dataset.pin);
     renderMatches();
     if (mh.pin) $('mhList').scrollIntoView({ behavior: 'smooth', block: 'start' });

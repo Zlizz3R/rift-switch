@@ -461,7 +461,6 @@
     'rad.tower': "Torres",
     'rad.tip': "{axis} {pct} % · Ø {mine} frente a {theirs} · {n} partidas",
     'rad.few': "{axis}: muy pocas partidas ({n} de {min})",
-    'rad.basis': "Cada eje: tu valor ÷ el de tu rival de línea en la misma partida, de media. 100 % (el anillo central) = igual de bueno que el rival; en muertes al revés. Discontinuo: menos de 10 partidas. Sin nota total.",
     'rad.allChamps': "Todos los campeones",
     'rad.none': "No hay partidas con rival de línea conocido para estos filtros.",
     'rad.flip': "Clic: estilo frente al rival de línea",
@@ -493,6 +492,9 @@
     'ov.accT': "Clic: dentro o fuera del análisis · Ctrl+clic: solo esta",
     'ov.none': "Ninguna cuenta elegida: activa una arriba.",
     'sw.play_updatePct': "League se está actualizando ({pct} %): luego se pulsa Jugar",
+    'perf.pin': "Clic: estas partidas arriba en el historial",
+    'perf.unfold': "Clic: mostrar u ocultar sus campeones",
+    'rad.basis': "Cada eje: tu media frente a la de tus rivales de línea en las mismas partidas; el número es la diferencia: +13 % = 13 % mejor, −8 % = 8 % peor; en muertes, menos es mejor. El anillo central es «igual que el rival». Discontinuo: menos de 10 partidas. Sin nota total.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

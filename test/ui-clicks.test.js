@@ -864,9 +864,12 @@ test('overview: every account in one LP chart, the period in numbers, a goal per
   assert.match(row.textContent, /\+160/);
   assert.match(row.textContent, /G4 → G2/);
   assert.match(app.$('.dash-stats').textContent, /4/);   // 4 ranked games together
-  // a chip hides that account's line
+  // like the match history's chips: from "all" a click shows just that account, clicking it again
+  // (none left) brings all of them back
   await app.click(`[data-dchip="${P(2)}"]`);
-  assert.equal(app.$$('.dash-chart path.acc').length, 2);
+  assert.equal(app.$$('.dash-chart path.acc').length, 1);
+  await app.click(`[data-dchip="${P(2)}"]`);
+  assert.equal(app.$$('.dash-chart path.acc').length, 3);
   // goal: saved and shown with the LP left
   await app.type(`select[data-goal="${P(1)}"]`, 'PLATINUM:IV');
   assert.deepEqual(app.called('goal').pop().args, [P(1), { tier: 'PLATINUM', division: 'IV' }, 'solo']);

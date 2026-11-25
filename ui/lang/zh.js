@@ -457,7 +457,6 @@
     'rad.tower': "推塔",
     'rad.tip': "{axis} {pct}% · 平均 {mine} 对 {theirs} · {n} 局",
     'rad.few': "{axis}：对局太少（{n}/{min}）",
-    'rad.basis': "每条轴：同一局中你的数值 ÷ 对线对手的数值，按对局取平均。100%（中间圈）= 与对手持平；阵亡则反之。虚线：少于 10 局。不计算总分。",
     'rad.allChamps': "所有英雄",
     'rad.none': "在此筛选下没有已知对线对手的对局。",
     'rad.flip': "点击：对线对手比较风格",
@@ -489,6 +488,9 @@
     'ov.accT': "点击：加入或移出统计 · Ctrl+点击：只看这个",
     'ov.none': "未选择账号——请在上方选择。",
     'sw.play_updatePct': "英雄联盟正在更新（{pct}%）——完成后立即开始",
+    'perf.pin': "点击：在对局记录顶部显示这些对局",
+    'perf.unfold': "点击：展开或收起英雄",
+    'rad.basis': "每条轴：你的平均值对比同场对线对手的平均值——数字是差距：+13% = 好 13%，−8% = 差 8%；阵亡越少越好。中间圈表示\"与对手持平\"。虚线：少于 10 局。不计总分。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

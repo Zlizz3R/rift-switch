@@ -1,6 +1,7 @@
 // Overview: which accounts count – one choice for every tab (LP history, Performance, Champions,
-// Play style, Mastery, Tags, Seasons), as chips that switch on and off; "All" brings every account
-// back, Ctrl+click keeps only that one. Kept in this browser profile (a viewer's convenience).
+// Play style, Mastery, Tags, Seasons), chips like the match history's queues: from "All" a click
+// picks just that account, further clicks add or remove one, none left = "All" again.
+// Ctrl+click keeps only that one. Kept in this browser profile (a viewer's convenience).
 // The LP history shows the same choice in its coloured chips (dashboard.js).
 
 const ovf = { off: new Set() };
@@ -12,8 +13,14 @@ const ovOn = id => !ovf.off.has(id);
 const ovChosen = () => ovAccs().filter(a => ovOn(a.puuid));
 
 function ovToggle(id, only) {
-  if (only) ovf.off = new Set(ovAccs().map(a => a.puuid).filter(x => x !== id));
-  else if (ovf.off.has(id)) ovf.off.delete(id); else ovf.off.add(id);
+  const all = ovAccs().map(a => a.puuid);
+  const allOn = !all.some(x => ovf.off.has(x));
+  if (only || allOn) ovf.off = new Set(all.filter(x => x !== id));
+  else if (ovf.off.has(id)) ovf.off.delete(id);
+  else {
+    ovf.off.add(id);
+    if (all.every(x => ovf.off.has(x))) ovf.off.clear();   // none left: all of them again
+  }
   ovSave();
   ovRefresh();
 }
@@ -25,7 +32,7 @@ function renderOvAccs() {
   el.hidden = dashTab() === 'lp' || accs.length < 2;
   const all = !accs.some(a => ovf.off.has(a.puuid));
   el.innerHTML = `<button data-ovacc=""${all ? ' class="on"' : ''} title="${esc(t('ov.allT'))}">${t('mh.allAccounts')}</button>` +
-    accs.map(a => `<button data-ovacc="${esc(a.puuid)}"${ovOn(a.puuid) && !all ? ' class="on"' : ovOn(a.puuid) ? ' class="in"' : ''} title="${esc(t('ov.accT'))}">${esc(dispName(a))}</button>`).join('');
+    accs.map(a => `<button data-ovacc="${esc(a.puuid)}"${ovOn(a.puuid) && !all ? ' class="on"' : ''} title="${esc(t('ov.accT'))}">${esc(dispName(a))}</button>`).join('');
 }
 // a new choice: the bar and the open tab again
 function ovRefresh() {

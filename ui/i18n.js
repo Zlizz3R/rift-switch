@@ -507,7 +507,6 @@
     'rad.tower': "Towers",
     'rad.tip': "{axis} {pct} % · Ø {mine} vs. {theirs} · {n} games",
     'rad.few': "{axis}: too few games ({n} of {min})",
-    'rad.basis': "Each axis: your value ÷ your lane opponent's in the same game, averaged over the games. 100 % (the middle ring) = as good as the opponent; for deaths the other way round. Dashed: fewer than 10 games. No total score.",
     'rad.allChamps': "All champions",
     'rad.none': "No games with a known lane opponent for these filters.",
     'rad.flip': "Click: play style against the lane opponent",
@@ -539,6 +538,9 @@
     'ov.accT': "Click: in or out of the evaluation · Ctrl+click: only this one",
     'ov.none': "No account chosen – switch one on above.",
     'sw.play_updatePct': "League is updating ({pct} %) – Play follows right after",
+    'perf.pin': "Click: these games on top of the match history",
+    'perf.unfold': "Click: show or hide its champions",
+    'rad.basis': "Each axis: your average against your lane opponents' average in the same games – the number is the difference: +13 % = 13 % better, −8 % = 8 % worse; for deaths fewer is better. The middle ring is \"as good as the opponent\". Dashed: fewer than 10 games. No total score.",
   };
 
   const de = {
@@ -1029,7 +1031,6 @@
     'rad.tower': "Türme",
     'rad.tip': "{axis} {pct} % · Ø {mine} gegen {theirs} · {n} Spiele",
     'rad.few': "{axis}: zu wenige Spiele ({n} von {min})",
-    'rad.basis': "Jede Achse: dein Wert ÷ der deines Lane-Gegners im selben Spiel, gemittelt über die Spiele. 100 % (der mittlere Ring) = so gut wie der Gegner; bei Toden umgekehrt. Gestrichelt: weniger als 10 Spiele. Kein Gesamtwert.",
     'rad.allChamps': "Alle Champions",
     'rad.none': "Keine Spiele mit bekanntem Lane-Gegner für diese Filter.",
     'rad.flip': "Klick: Spielstil gegen den Lane-Gegner",
@@ -1061,6 +1062,9 @@
     'ov.accT': "Klick: in die Auswertung oder raus · Strg+Klick: nur dieser",
     'ov.none': "Kein Account gewählt – oben einen anwählen.",
     'sw.play_updatePct': "League wird aktualisiert ({pct} %) – Play kommt direkt danach",
+    'perf.pin': "Klick: diese Spiele oben in der Match history",
+    'perf.unfold': "Klick: Champions ein- oder ausklappen",
+    'rad.basis': "Jede Achse: dein Schnitt gegen den Schnitt deiner Lane-Gegner in denselben Spielen – die Zahl ist der Unterschied: +13 % = 13 % besser, −8 % = 8 % schlechter; bei Toden ist weniger besser. Der mittlere Ring heißt „so gut wie der Gegner“. Gestrichelt: weniger als 10 Spiele. Kein Gesamtwert.",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)
