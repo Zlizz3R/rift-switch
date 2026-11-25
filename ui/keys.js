@@ -32,8 +32,8 @@ const VIEWS = ['accounts', 'dash', 'coll', 'live', 'matches', 'tools'];
 document.addEventListener('keydown', async e => {
   if (e.defaultPrevented || e.altKey) return;
   const ctrl = e.ctrlKey || e.metaKey, k = e.key;
-  // Ctrl+F / Ctrl+K: search the accounts – works from anywhere
-  if (ctrl && (k === 'f' || k === 'k')) {
+  // Ctrl+F: search the accounts – works from anywhere (Ctrl+K: the player search, player-view.js)
+  if (ctrl && k === 'f') {
     e.preventDefault();
     if (anyOverlay()) return;
     showView('accounts'); $('search').focus(); $('search').select();

@@ -154,7 +154,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 - **Click a name** (here, on Live or after a game): the **player page** – any player's rank, key figures, roles,
   champions, traits, recent games and the games with you, from their 200 newest games (all of them read in detail),
   with *Open with* (op.gg …). **Back / forward** arrows in the title bar (also Alt+← / Alt+→ and the mouse's side
-  buttons) go through the pages like a browser.
+  buttons) go through the pages like a browser. The **search** in the title bar (Ctrl+K) finds anyone: suggestions
+  from everyone in your games, any other Riot ID looked up through the client (without a tag: your server's, like EUW).
 - **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each
   minute), and any two players side by side.
 
@@ -173,9 +174,9 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 - **The ten players of your game** from the loading screen on: two rows, lane opponents face to face, rank, win rate
   on this champion, main role, mastery and traits in three tiers (*Key*: what you can act on, *More*, *All* – the rest of a card behind
   "+n") – from each player's 200 newest games (all ten players' details
-  for the newest 50 ranked ones), loaded from the client while the loading screen runs, with a
-  progress bar; during the game it goes on slower (one game at a time, a round every 4 seconds, only while the
-  window is open), so the game stays smooth. **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
+  for the newest 50 ranked ones), loaded from the client as fast as it answers – every match list at once, then 12
+  games at a time, each game and its timeline together – with a progress bar; during the game a little gentler (6 at
+  a time, only while the window is open), and a short pause when the client starts refusing. **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.
 - **After the game**: the game's full details open right on the Live page – both teams, MVP / ACE, lane against
   lane, the gold lead, two players side by side – and what changed in your tags (▲ / ▼).

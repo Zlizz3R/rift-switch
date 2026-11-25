@@ -165,3 +165,103 @@ $('viewPlayer').addEventListener('click', e => {
   const q = e.target.closest('[data-plq]');
   if (q && !q.disabled) { plv.queue = q.dataset.plq; renderPlayer(); }
 });
+
+// ---------- the search in the title bar: any player by Riot ID ----------
+// Suggestions from everyone in the own stored games (and the current Live game); Enter or a click
+// opens the player page – a Riot ID nobody knows yet is looked up through the client (find-player).
+const pls = { list: [], at: -1, busy: false };
+// everyone known: puuid → { puuid, gameName, tagLine, n: games with you }
+function plKnown() {
+  const mine = new Set((S.accounts || []).map(a => a.puuid));
+  const by = new Map();
+  const add = (puuid, name, tag, n = 0) => {
+    if (!puuid || !name || mine.has(puuid)) return;
+    const x = by.get(puuid) || { puuid, gameName: name, tagLine: tag || '', n: 0 };
+    x.n += n;
+    by.set(puuid, x);
+  };
+  for (const g of scv.own || []) for (const p of g.players || []) add(p.puuid, p.name, p.tag, 1);
+  const ig = S.live && S.live.inGame;
+  for (const c of ig ? [...(ig.teamOne || []), ...(ig.teamTwo || [])] : []) add(c.puuid, c.gameName, c.tagLine);
+  return [...by.values()];
+}
+const plNorm = x => String(x || '').toLowerCase().replace(/\s+/g, '');
+function plSuggest(q) {
+  const n = plNorm(q);
+  if (!n) return [];
+  const [qn, qt] = n.split('#');
+  return plKnown()
+    .map(x => {
+      const name = plNorm(x.gameName), tag = plNorm(x.tagLine);
+      if (qt != null && qt !== '' && !tag.startsWith(qt)) return null;
+      const score = name === qn ? 0 : name.startsWith(qn) ? 1 : name.includes(qn) ? 2 : -1;
+      return score < 0 ? null : { ...x, score };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.score - b.score || b.n - a.n || a.gameName.localeCompare(b.gameName))
+    .slice(0, 8);
+}
+function plDrawSuggest() {
+  const box = $('plSuggest'), q = $('plSearch').value.trim();
+  if (!q) { box.hidden = true; return; }
+  pls.list = plSuggest(q);
+  const rows = pls.list.map((x, i) => `<button class="pl-sug${i === pls.at ? ' on' : ''}" data-plsug="${i}"><span>${esc(x.gameName)}</span><small>#${esc(x.tagLine)}</small>`
+    + `<span class="n">${x.n ? esc(t('pl.searchWith', { n: x.n })) : ''}</span></button>`).join('');
+  box.innerHTML = rows + `<div class="pl-sug-hint">${esc(t(pls.busy ? 'pl.searching' : 'pl.searchEnter'))}</div>`;
+  box.hidden = false;
+}
+async function plGo() {
+  const inp = $('plSearch'), q = inp.value.trim();
+  const pick = pls.list[pls.at >= 0 ? pls.at : -1];
+  // a suggestion chosen – or the only one that fits the typed name exactly
+  const exact = pls.list.find(x => plNorm(x.gameName + (q.includes('#') ? '#' + x.tagLine : '')) === plNorm(q));
+  const hit = pick || exact;
+  if (hit) return plOpenFound(hit);
+  if (!q || pls.busy) return;
+  pls.busy = true;
+  plDrawSuggest();
+  let r = null;
+  try { r = await api.findPlayer(q); } catch (e) { console.warn('find', e); }
+  pls.busy = false;
+  if (r && r.puuid) return plOpenFound(r);
+  plDrawSuggest();
+  toast(t('pl.notFound', { q }), true);
+}
+function plOpenFound(x) {
+  const inp = $('plSearch');
+  inp.value = '';
+  inp.blur();
+  $('plSuggest').hidden = true;
+  pls.at = -1;
+  openPlayer({ puuid: x.puuid, gameName: x.gameName, tagLine: x.tagLine, region: x.region });
+}
+(function plSearchInit() {
+  const inp = $('plSearch');
+  if (!inp) return;
+  inp.addEventListener('focus', () => {
+    // the own games for the suggestions (once)
+    if (!scv.own) allGames().then(g => { if (g && !scv.own) scv.own = g; if (document.activeElement === inp) plDrawSuggest(); }).catch(() => {});
+    plDrawSuggest();
+  });
+  inp.addEventListener('input', () => { pls.at = -1; plDrawSuggest(); });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const n = pls.list.length;
+      if (n) pls.at = (pls.at + (e.key === 'ArrowDown' ? 1 : n - 1 + (pls.at < 0 ? 1 : 0))) % n;
+      plDrawSuggest();
+    } else if (e.key === 'Enter') { e.preventDefault(); plGo(); }
+    else if (e.key === 'Escape') { inp.value = ''; inp.blur(); $('plSuggest').hidden = true; }
+  });
+  inp.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== inp) $('plSuggest').hidden = true; }, 150));
+  $('plSuggest').addEventListener('mousedown', e => {
+    const b = e.target.closest('[data-plsug]');
+    if (!b) return;
+    e.preventDefault();
+    plOpenFound(pls.list[Number(b.dataset.plsug)]);
+  });
+  // Ctrl+K: into the search
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k' && !e.shiftKey && !e.altKey) { e.preventDefault(); inp.focus(); inp.select(); }
+  });
+})();

@@ -1677,3 +1677,14 @@ span.mh-ch { cursor: default; }
 .pl-rest { margin-top: 10px; }
 .tchip.tc-more { color: var(--muted); background: rgba(255,255,255,.05); border-color: var(--line); cursor: pointer; }
 .tchip.tc-more:hover { color: var(--text); }
+/* the player search in the title bar */
+.pl-search { position: relative; -webkit-app-region: no-drag; display: flex; align-items: center; }
+.pl-search > svg { position: absolute; left: 8px; width: 13px; height: 13px; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; pointer-events: none; }
+.pl-search input { width: 190px; height: 26px; padding: 0 8px 0 27px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font-size: 12px; transition: width .15s; }
+.pl-search input:focus { width: 250px; outline: none; border-color: var(--gold); }
+.pl-suggest { position: absolute; top: 31px; left: 0; min-width: 250px; z-index: 60; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.pl-sug { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 6px; text-align: left; font-size: 12.5px; color: var(--text); }
+.pl-sug small { color: var(--muted); font-size: 11px; }
+.pl-sug .n { margin-left: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.pl-sug.on, .pl-sug:hover { background: var(--panel2); }
+.pl-sug-hint { padding: 6px 8px; color: var(--muted); font-size: 11.5px; }

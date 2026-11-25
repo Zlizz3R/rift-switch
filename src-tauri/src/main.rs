@@ -1365,15 +1365,15 @@ async fn fill_games(max: usize) -> usize {
 /// One game from the client: its details, compacted, with the parts of its timeline we keep –
 /// and the client's raw answers (details, timeline) for the own games' archive.
 async fn fetch_game(id: String) -> Option<(Value, Value, Option<Value>)> {
-    let g = riot::lcu(&format!("/lol-match-history/v1/games/{id}"), 6000, "GET").await?;
+    // the game and its timeline at the same time (the timeline is only used when the game came)
+    let (gp, tp) = (
+        format!("/lol-match-history/v1/games/{id}"),
+        format!("/lol-match-history/v1/game-timelines/{id}"),
+    );
+    let (g, tl) = tokio::join!(riot::lcu(&gp, 10_000, "GET"), riot::lcu(&tp, 10_000, "GET"));
+    let g = g?;
     let mut c = matches::compact(&g)?;
     let pids = matches::participant_ids(&g);
-    let tl = riot::lcu(
-        &format!("/lol-match-history/v1/game-timelines/{id}"),
-        6000,
-        "GET",
-    )
-    .await;
     if let Some(tl) = &tl {
         matches::add_timeline(&mut c, tl, &pids);
     }
@@ -1407,12 +1407,16 @@ async fn fetch_games(ids: Vec<String>) -> usize {
 // ---------- scouting: the other players of the current game (Live) ----------
 // Their match lists first (stage A, kept 30 minutes: the 200 newest games, each with that player's
 // own numbers – stored as "lite" games), then the details + timeline of their newest 50 ranked
-// games (stages B + C) – all into a store of their own (matches-others). Champion select: the allies the client shows,
-// 2 at a time. Loading screen: all ten, 4 at a time. As soon as the game runs (game time > 0):
-// slower, so the game stays smooth – one request at a time, one round every IN_GAME_GAP. After the
-// game: the rest for the same players at full speed. Only while the window is open, never in a test
-// copy that mustn't talk to Riot.
-const IN_GAME_GAP: i64 = 4000;
+// games (stages B + C) – all into a store of their own (matches-others). As fast as the client
+// answers: every match list at once, then PAR_FAST games at a time, the next round right after the
+// last one. As soon as the game runs (game time > 0) a little gentler – PAR_IN_GAME at a time, one
+// round every IN_GAME_GAP – so the game stays smooth. When the client starts refusing (more than half
+// of a round failed) a short pause, BACK_OFF. After the game: the rest for the same players at full
+// speed. Only while the window is open, never in a test copy that mustn't talk to Riot.
+const PAR_FAST: usize = 12;
+const PAR_IN_GAME: usize = 6;
+const IN_GAME_GAP: i64 = 700;
+const BACK_OFF: i64 = 3000;
 /// Other players' games: loaded when Live needs them, let go when the window goes to the tray.
 static OTHERS: Mutex<Option<matches::Matches>> = Mutex::new(None);
 fn others<R>(f: impl FnOnce(&mut matches::Matches) -> R) -> R {
@@ -1456,6 +1460,8 @@ struct Scout {
     running: bool,
     // the last round while the game runs (rounds are spaced IN_GAME_GAP apart then)
     slow_at: i64,
+    // no round before this (the client refused much of the last one)
+    pause_until: i64,
 }
 static SCOUT: Mutex<Option<Scout>> = Mutex::new(None);
 fn scout<R>(f: impl FnOnce(&mut Scout) -> R) -> R {
@@ -1524,14 +1530,23 @@ async fn scout_loop() {
             scout(|s| s.pruned_at = now);
             others(|o| o.prune_old(now));
         }
-        if scout_round().await {
-            emit("scout-changed", scout_snapshot());
-        } else if look_round().await {
-            let p = look(|l| l.puuid.clone());
-            emit(
-                "player-changed",
-                json!({ "puuid": p, "progress": look_snapshot(&p) }),
-            );
+        // a round that did something: the next one right away (until there is nothing left)
+        loop {
+            if scout_round().await {
+                emit("scout-changed", scout_snapshot());
+            } else if look_round().await {
+                let p = look(|l| l.puuid.clone());
+                emit(
+                    "player-changed",
+                    json!({ "puuid": p, "progress": look_snapshot(&p) }),
+                );
+            } else {
+                break;
+            }
+            if !win_shown() {
+                break;
+            }
+            sleep(40).await;
         }
     }
 }
@@ -1552,13 +1567,16 @@ async fn scout_round() -> bool {
             .map(|a| str_of(a, "puuid").to_string())
             .collect()
     });
+    if now_ms() < scout(|s| s.pause_until) {
+        return false;
+    }
     let (mut targets, par) = match phase.as_str() {
         "ChampSelect" => {
             scout(|s| s.running = false);
             let Some(cs) = riot::lcu("/lol-champ-select/v1/session", 3000, "GET").await else {
                 return false;
             };
-            (puuids_of(&[&cs["myTeam"]]), 2)
+            (puuids_of(&[&cs["myTeam"]]), PAR_FAST)
         }
         "GameStart" | "InProgress" | "Reconnect" => {
             let running = scout(|s| s.running);
@@ -1578,12 +1596,12 @@ async fn scout_round() -> bool {
             let gd = &gs["gameData"];
             (
                 puuids_of(&[&gd["teamOne"], &gd["teamTwo"]]),
-                if running { 1 } else { 4 },
+                if running { PAR_IN_GAME } else { PAR_FAST },
             )
         }
         "WaitingForStats" | "PreEndOfGame" | "EndOfGame" => {
             scout(|s| s.running = false);
-            (scout(|s| s.targets.clone()), 2)
+            (scout(|s| s.targets.clone()), PAR_FAST)
         }
         _ => {
             scout(|s| s.running = false);
@@ -1612,7 +1630,6 @@ async fn scout_round() -> bool {
         targets
             .iter()
             .filter(|p| s.listed.get(*p).is_none_or(|t| now - t > 1_800_000))
-            .take(par)
             .cloned()
             .collect()
     });
@@ -1645,7 +1662,12 @@ async fn scout_round() -> bool {
     if ids.is_empty() {
         return new_targets;
     }
-    for id in fetch_into_others(ids).await {
+    let asked = ids.len();
+    let failed = fetch_into_others(ids).await;
+    if failed.len() * 2 > asked {
+        scout(|s| s.pause_until = now_ms() + BACK_OFF);
+    }
+    for id in failed {
         scout(|s| *s.failed.entry(id).or_insert(0) += 1);
     }
     true
@@ -1756,7 +1778,7 @@ async fn look_round() -> bool {
     let ids: Vec<String> = others(|o| o.missing_all(&p))
         .into_iter()
         .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
-        .take(4)
+        .take(PAR_FAST)
         .collect();
     if ids.is_empty() {
         return false;
@@ -3315,6 +3337,26 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 });
             }
             json!({ "ids": ids, "games": games, "info": info, "mastery": look(|l| l.mastery.clone()), "progress": look_snapshot(&p) })
+        }
+        // the search for the player page: "Name#Tag" (without a tag: the server's own, like EUW) →
+        // { puuid, gameName, tagLine, region, … } or null – through the client, like adding an account
+        "find-player" => {
+            let q = s(0);
+            let q = q.trim();
+            if q.is_empty() || q.len() > 60 || riot::offline_test() {
+                return Value::Null;
+            }
+            let (gn, tl) = match q.rsplit_once('#') {
+                Some((g, t)) => (g.trim().to_string(), t.trim().to_string()),
+                None => (q.to_string(), riot::region().await),
+            };
+            if gn.is_empty() || tl.is_empty() {
+                return Value::Null;
+            }
+            riot::lookup_riot_id(&gn, &tl)
+                .await
+                .map(Value::Object)
+                .unwrap_or(Value::Null)
         }
         "scout-games" => {
             let ids: Vec<String> = a(0)

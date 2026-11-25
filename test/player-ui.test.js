@@ -88,3 +88,42 @@ test('trait tiers: what to act on first, background last; another champion\'s tr
   assert.equal(Tags.tierOf({ id: 'oneRole' }, { position: 'top', main: 'top' }), 3);
   assert.equal(Tags.tierOf({ id: 'smallPool' }), 3);
 });
+
+test('player search: suggestions from your games, Enter opens; an unknown Riot ID is looked up through the client', async () => {
+  const app = await boot({ replies: {
+    'player-games': () => ({ ids: lite.map(g => g.id), games: lite, info, mastery: null, progress: { listed: true, done: 12, total: 12 } }),
+    'find-player': (q) => (String(q).toLowerCase() === 'caps#euw' ? { puuid: 'x2', gameName: 'Caps', tagLine: 'EUW', region: 'EUW' } : null),
+  } });
+  try {
+    const inp = app.$('#plSearch');
+    assert.ok(inp && /Name#Tag/.test(inp.placeholder));
+    app.w.eval(`scv.own = [{ id: '1', t: 1, players: [{ puuid: 'x1', name: 'Faker', tag: 'KR1' }, { puuid: 'x3', name: 'Fakeman', tag: 'EUW' }, { puuid: '${P(1)}', name: 'Me', tag: 'EUW' }] },
+      { id: '2', t: 2, players: [{ puuid: 'x1', name: 'Faker', tag: 'KR1' }] }]`);
+    await app.type(inp, 'fak');
+    const sug = app.$$('.pl-sug');
+    assert.equal(sug.length, 2);
+    // most games with you first
+    assert.match(sug[0].textContent, /Faker#KR12 games with you/);
+    await app.key('ArrowDown', inp);
+    assert.ok(app.$$('.pl-sug')[0].classList.contains('on'));
+    await app.key('Enter', inp);
+    await app.settle();
+    assert.ok(app.visible('#viewPlayer'));
+    assert.match(app.$('#plHead').textContent, /Faker/);
+    assert.equal(inp.value, '');
+    assert.equal(app.called('find-player').length, 0, 'known: no lookup');
+    // somebody never met: through the client
+    await app.type(inp, 'Caps#EUW');
+    assert.equal(app.$$('.pl-sug').length, 0);
+    await app.key('Enter', inp);
+    await app.settle();
+    assert.deepEqual(app.called('find-player').pop().args, ['Caps#EUW']);
+    assert.equal(app.called('player-games').pop().args[0], 'x2');
+    // not found: a message
+    await app.type(inp, 'Nobody#X');
+    await app.key('Enter', inp);
+    await app.settle();
+    assert.match(app.$('#toast').textContent, /No player “Nobody#X” found/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

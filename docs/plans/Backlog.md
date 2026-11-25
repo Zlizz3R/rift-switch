@@ -24,6 +24,8 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Vor/Zurück-Pfeile in der Titelleiste (auch Alt+←/→, Maus-Seitentasten).
 - [x] „Tags“ heißen jetzt „Traits“ (DE auch „Traits“).
 - [x] Live: Traits in drei Stufen (Wichtig / Mehr / Alle), Rest einer Karte hinter „+n“.
+- [x] Live lädt viel schneller: alle Match-Listen auf einmal, dann 12 Spiele gleichzeitig ohne Pause zwischen den Runden, Spiel + Timeline parallel; im Spiel 6 gleichzeitig statt 1 alle 4 s; kurze Pause, wenn der Client ablehnt. Die Spieler-Seite lädt ebenso 12 gleichzeitig.
+- [x] Spielersuche in der Titelleiste (Strg+K): Vorschläge aus allen Spielern deiner Spiele, sonst Riot ID über den Client (ohne Tag: der eigene Server).
 - [ ] Als 1.3.2 veröffentlichen (Tag auf main; die Tags v1.3.0/v1.3.1 haben keinen Release – die Läufe scheiterten an „Tag nicht auf main“ und `cargo fmt`).
 
 ### 0. Aus dem Code-Review (25.11.2026) noch offen

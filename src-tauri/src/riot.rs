@@ -329,7 +329,7 @@ pub async fn ranked_for(puuid: &str, own: bool) -> Option<Obj> {
     Some(o)
 }
 
-async fn region() -> String {
+pub async fn region() -> String {
     get("/riotclient/region-locale")
         .await
         .and_then(|r| r["region"].as_str().map(String::from))
