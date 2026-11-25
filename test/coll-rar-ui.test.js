@@ -21,11 +21,12 @@ test('collection: RP per account; "by rarity" folds out a table per kind to comp
     await app.click('[data-collbd]');
     const tables = app.$$('.coll-rar');
     assert.equal(tables.length, 2);                          // skins and wards (chromas, icons: no data)
-    // only the rarities anyone has, rarest first, "no rarity" last
-    assert.deepEqual([...tables[0].querySelectorAll('thead th')].slice(1).map(th => th.textContent),
-      ['Transcendent', 'Mythic', 'Legendary', 'Epic', 'No rarity']);
+    // only the rarities anyone has, lowest first, the same columns in every table (so they line up)
+    const heads = tb => [...tb.querySelectorAll('thead th')].slice(1).map(th => th.textContent);
+    assert.deepEqual(heads(tables[0]), ['No rarity', 'Epic', 'Legendary', 'Mythic', 'Transcendent']);
+    assert.deepEqual(heads(tables[1]), heads(tables[0]));
     const p1 = [...tables[0].querySelectorAll('tbody tr')][0];
-    assert.deepEqual([...p1.querySelectorAll('td')].slice(1).map(td => td.textContent), ['1', '1', '2', '5', '10']);
+    assert.deepEqual([...p1.querySelectorAll('td')].slice(1).map(td => td.textContent), ['10', '5', '2', '1', '1']);
     assert.match(tables[0].querySelector('tfoot').textContent, /13/);   // no rarity: 10 + 3
     // folds back
     await app.click('[data-collbd]');

@@ -54,14 +54,15 @@ function collRarityHtml(known, by) {
   const open = collBdOpen();
   const btn = `<button class="btn small coll-bd-btn${open ? ' open' : ''}" data-collbd>${t(open ? 'coll.bdHide' : 'coll.bdShow')}</button>`;
   if (!open) return `<div class="coll-bd">${btn}</div>`;
-  const tables = COLL_RAR_KINDS.map(([k, label]) => {
-    const rows = known.map(a => ({ a, r: ((by.get(a.puuid).counts || {}).rar || {})[k] })).filter(x => Array.isArray(x.r));
-    if (!rows.length) return '';
-    // the rarities anyone has, the rarest first, "no rarity" last
-    const cols = [7, 6, 5, 4, 3, 2, 1, 0].filter(i => rows.some(x => x.r[i] > 0));
-    if (!cols.length) return '';
+  const rowsOf = k => known.map(a => ({ a, r: ((by.get(a.puuid).counts || {}).rar || {})[k] })).filter(x => Array.isArray(x.r));
+  // one set of columns for every table – the rarities anyone has of any kind, lowest first – so
+  // each rarity sits in the same place in all of them
+  const cols = [0, 1, 2, 3, 4, 5, 6, 7].filter(i => COLL_RAR_KINDS.some(([k]) => rowsOf(k).some(x => x.r[i] > 0)));
+  const tables = !cols.length ? '' : COLL_RAR_KINDS.map(([k, label]) => {
+    const rows = rowsOf(k);
+    if (!rows.length || !rows.some(x => x.r.some(v => v > 0))) return '';
     const sum = cols.map(i => rows.reduce((s, x) => s + (x.r[i] || 0), 0));
-    return `<table class="dash-table coll-table coll-rar"><thead><tr><th>${t(label)}</th>${cols.map(i => `<th><i class="rar r${i}"></i>${t('rar.' + i)}</th>`).join('')}</tr></thead><tbody>
+    return `<table class="dash-table coll-table coll-rar"><colgroup><col class="rar-name">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>${t(label)}</th>${cols.map(i => `<th><i class="rar r${i}"></i>${t('rar.' + i)}</th>`).join('')}</tr></thead><tbody>
       ${rows.map(({ a, r }) => `<tr><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => `<td>${r[i] ? num(r[i]) : '<span class="muted">0</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
       ${rows.length > 1 ? `<tfoot><tr><td>${t('coll.total')}</td>${sum.map(v => `<td>${num(v)}</td>`).join('')}</tr></tfoot>` : ''}</table>`;
   }).join('');

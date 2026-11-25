@@ -1554,3 +1554,14 @@ span.mh-ch { cursor: default; }
 .rar.r5 { background: #f0c860; } .rar.r6 { background: #ff7b5c; } .rar.r7 { background: linear-gradient(135deg, #7fe0ff, #f0a0ff); }
 
 .mh-accs { display: inline-flex; flex-wrap: wrap; margin: 0 0 10px; }
+
+.coll-rar { table-layout: fixed; }
+.coll-rar col.rar-name { width: 200px; }
+
+/* every card the same up to the tags: fixed heights, so rings and tags line up across a row */
+.sc-head { height: 32px; flex: none; }
+.sc-mid { flex: none; }
+.sc-champ { height: 44px; }
+.sc-champ > span { height: 44px; justify-content: center; }
+.sc-ranks { height: 40px; }
+.sc-rings { height: 42px; flex: none; align-items: center; }

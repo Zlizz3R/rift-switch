@@ -134,7 +134,7 @@ function scCardHtml(c, side, slot, guess, ex = {}) {
       ${slot ? `<img class="sc-pos${guess ? ' guess' : ''}" src="${posIcon(slot)}" alt="" title="${esc(t('pos.' + slot) + (guess ? ' – ' + t('scout.guessed') : ''))}">` : ''}</div>
     <div class="sc-mid">
       <div class="sc-champ" data-scflip="${esc(p.puuid || '')}" title="${esc(t('rad.flip'))}">${p.championId ? `<img src="${champIcon(p.championId)}" alt="">` : '<span></span>'}
-        <span><b>${esc(champName)}</b><small>${ag ? `Ø ${perfAvg(ag)}` : '–'}</small>${c.pts != null ? `<small>${esc(t('scout.mastery', { pts: num(c.pts) }))}</small>` : ''}</span></div>
+        <span><b>${esc(champName)}</b><small>${ag ? `Ø ${perfAvg(ag)}` : '–'}</small><small>${c.pts != null ? esc(t('scout.mastery', { pts: num(c.pts) })) : '&nbsp;'}</small></span></div>
       <div class="sc-ranks">${scRank('Solo/Duo', p.solo)}${scRank('Flex', p.flex)}</div>
     </div>
     ${typeof rdv !== 'undefined' && rdv.flipped.has(p.puuid) ? scRadarHtml(c) : `<div class="sc-rings"><div title="${esc(wrTip)}">${wr}</div><div title="${esc(roleTip)}">${role}</div></div>
