@@ -703,6 +703,38 @@ pub fn penalties_of(list: &[Value]) -> Vec<Value> {
     out
 }
 
+/// The low priority queue as the profile's restriction view tells it (also without queueing):
+/// "QUEUE_DELAY" with the wait per game (ms) and the games still to play. → (seconds per game,
+/// games left); (0, None) = no such restriction. None when the client doesn't answer.
+pub async fn restriction_view() -> Option<(i64, Option<i64>)> {
+    let v = get("/lol-summoner-profiles/v1/get-restriction-view").await?;
+    v.get("restrictions")?;
+    Some(low_prio_of_restrictions(&v))
+}
+pub fn low_prio_of_restrictions(v: &Value) -> (i64, Option<i64>) {
+    let Some(r) = v["restrictions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|r| r["restrictionType"] == "QUEUE_DELAY")
+    else {
+        return (0, None);
+    };
+    let secs = (num_of(r.get("restrictionsMillis")) / 1000.0) as i64;
+    let games: i64 = r["expirationData"]["redemptions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|x| {
+            x["redemptionEventType"]
+                .as_str()
+                .is_some_and(|t| t.contains("GAME"))
+        })
+        .map(|x| num_of(x.get("redemptionCountRemaining")) as i64)
+        .sum();
+    (secs, (games > 0).then_some(games))
+}
+
 /// LeaverBuster messages the client keeps for the signed-in account (e.g. a low priority queue for
 /// the next game, already before you queue). Their exact form isn't documented: only entries whose
 /// type speaks of a penalty are taken.
@@ -1534,6 +1566,18 @@ mod tests {
         assert!(!patch_state_of(&json!({ "state": "OutOfDate", "launchable": false })).ready);
         assert!(
             !patch_state_of(&json!({ "state": "CheckingForUpdate", "launchable": true })).ready
+        );
+    }
+
+    #[test]
+    fn low_priority_from_the_restriction_view() {
+        let v = json!({ "restrictions": [{ "expirationData": { "expirationMillis": 0, "redemptions": [
+            { "redemptionCountRemaining": 1, "redemptionCountRequired": 1, "redemptionEventType": "MATCHMADE_GAME_PLAYED" }] },
+            "restrictionReason": "AWAY_FROM_KEYBOARD", "restrictionType": "QUEUE_DELAY", "restrictionsMillis": 60000 }] });
+        assert_eq!(low_prio_of_restrictions(&v), (60, Some(1)));
+        assert_eq!(
+            low_prio_of_restrictions(&json!({ "restrictions": [] })),
+            (0, None)
         );
     }
 }

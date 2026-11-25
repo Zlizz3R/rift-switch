@@ -923,11 +923,12 @@ async fn tick_inner(my_gen: u64) {
         let every = if incomplete { 30_000 } else { 300_000 };
         if new_puuid || with(|c| now - c.last_profile_at > every) {
             with(|c| c.last_profile_at = now);
-            let (p, hs, elig, notices) = tokio::join!(
+            let (p, hs, elig, notices, rview) = tokio::join!(
                 riot::profile_data(&cur),
                 riot::history_summary(&id),
                 riot::ranked_eligibility(),
-                riot::leaver_notices()
+                riot::leaver_notices(),
+                riot::restriction_view()
             );
             if stale() {
                 return;
@@ -967,8 +968,17 @@ async fn tick_inner(my_gen: u64) {
                     }
                     prof.extend(p);
                     a.insert("profile".into(), Value::Object(prof));
-                    let games = notices.iter().find_map(|n| n["games"].as_i64());
-                    ops::set_low_prio(a, None, Some(games), now);
+                    // the low priority queue: the restriction view tells it best (wait per game and
+                    // games left, also without queueing); else the LeaverBuster notices
+                    match rview {
+                        Some((secs, games)) => {
+                            ops::set_low_prio(a, Some(secs), Some(games), now);
+                        }
+                        None => {
+                            let games = notices.iter().find_map(|n| n["games"].as_i64());
+                            ops::set_low_prio(a, None, Some(games), now);
+                        }
+                    }
                     if let Some((check, mut pens)) = elig {
                         a.insert("rankedCheck".into(), check);
                         // the low priority queue has its own mark (games / wait per game)
