@@ -24,6 +24,8 @@ test('collection: RP per account; "by rarity" shows the kinds, a kind folds out 
     assert.equal(tables.length, 1);
     const kinds = () => app.$$('.coll-rar tr.rar-kind');
     assert.deepEqual(kinds().map(r => r.dataset.rarkind), ['skin', 'ward']);
+    // ward skins exist only as Rare, Epic and Mythic (and plain): the other cells stay empty
+    assert.deepEqual([...kinds()[1].querySelectorAll('td')].slice(1).map(td => td.textContent), ['2', '0', '0', '', '1', '', '', '']);
     assert.equal(app.$$('.coll-rar tr.rar-acc').length, 0, 'accounts folded at first');
     // every rarity, lowest first – also the ones nobody has (Rare, Ultimate, Exalted)
     assert.deepEqual([...tables[0].querySelectorAll('thead th')].slice(1).map(th => th.textContent),

@@ -1579,6 +1579,7 @@ span.mh-ch { cursor: default; }
 .coll-rar .rar-tw { display: inline-block; width: 14px; color: var(--muted); }
 .coll-rar tr.rar-acc td:first-child { padding-left: 30px; }
 .coll-rar tr.rar-acc td { font-size: 12px; color: var(--muted); }
+.coll-rar td.rar-none { background: rgba(127,127,127,.05); }
 
 /* every card the same up to the tags: fixed heights, so rings and tags line up across a row */
 .sc-head { height: 32px; flex: none; }

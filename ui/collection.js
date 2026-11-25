@@ -48,7 +48,11 @@ function collMatch(e, q) {
   return collNorm(e.name).includes(q) || collNorm(collChamp(e.champ)).includes(q);
 }
 // ---------- by rarity: one table, a row per kind (all accounts together); a kind folds out its accounts ----------
-const COLL_RAR_KINDS = [['skin', 'coll.skins'], ['chroma', 'coll.n.chroma'], ['ward', 'coll.n.ward'], ['icon', 'coll.n.icon']];
+// [kind, label, the rarities League has for it]: skins and icons up to Transcendent, chromas up to
+// Ultimate, ward skins Rare / Epic / Mythic (and the plain ones). Finishers (standard or Exalted)
+// and emotes aren't here.
+const COLL_RAR_KINDS = [['skin', 'coll.skins', [0, 1, 2, 3, 4, 5, 6, 7]], ['chroma', 'coll.n.chroma', [0, 1, 2, 3, 4, 5]],
+  ['ward', 'coll.n.ward', [0, 1, 2, 4]], ['icon', 'coll.n.icon', [0, 1, 2, 3, 4, 5, 6, 7]]];
 const collBdOpen = () => { try { return localStorage.getItem('rs.collBd') === '1'; } catch { return false; } };
 // the kinds folded out (all folded at first)
 const collBdKinds = () => { try { return new Set(JSON.parse(localStorage.getItem('rs.collBdKinds') || '[]')); } catch { return new Set(); } };
@@ -62,12 +66,13 @@ function collRarityHtml(known, by) {
   const kinds = COLL_RAR_KINDS.filter(([k]) => rowsOf(k).some(x => x.r.some(v => v > 0)));
   if (!kinds.length) return `<div class="coll-bd">${btn}<p class="coll-foot">${t('coll.bdLater')}</p><p class="coll-foot">${t('coll.bdNote')}</p></div>`;
   const unfolded = collBdKinds();
-  const cell = v => `<td>${v ? num(v) : '<span class="muted">0</span>'}</td>`;
-  const body = kinds.map(([k, label]) => {
+  // a rarity this kind doesn't have: an empty cell, not 0
+  const cell = (v, has) => (!has ? '<td class="rar-none"></td>' : `<td>${v ? num(v) : '<span class="muted">0</span>'}</td>`);
+  const body = kinds.map(([k, label, has]) => {
     const rows = rowsOf(k), on = unfolded.has(k);
     const sum = cols.map(i => rows.reduce((s, x) => s + (x.r[i] || 0), 0));
-    const head = `<tr class="rar-kind${on ? ' on' : ''}" data-rarkind="${k}"><td><span class="rar-tw">${on ? '▾' : '▸'}</span>${t(label)}</td>${sum.map(cell).join('')}</tr>`;
-    return head + (on ? rows.map(({ a, r }) => `<tr class="rar-acc"><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => cell(r[i])).join('')}</tr>`).join('') : '');
+    const head = `<tr class="rar-kind${on ? ' on' : ''}" data-rarkind="${k}"><td><span class="rar-tw">${on ? '▾' : '▸'}</span>${t(label)}</td>${sum.map((v, i) => cell(v, has.includes(cols[i]) || v > 0)).join('')}</tr>`;
+    return head + (on ? rows.map(({ a, r }) => `<tr class="rar-acc"><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => cell(r[i], has.includes(i) || r[i] > 0)).join('')}</tr>`).join('') : '');
   }).join('');
   return `<div class="coll-bd">${btn}<table class="dash-table coll-table coll-rar"><colgroup><col class="rar-name">${cols.map(() => '<col>').join('')}</colgroup>
     <thead><tr><th></th>${cols.map(i => `<th><i class="rar r${i}"></i>${t('rar.' + i)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
