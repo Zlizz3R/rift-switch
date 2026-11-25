@@ -292,7 +292,6 @@
     'tags.p.d30': "آخر 30 يومًا",
     'tags.p.d60': "آخر 60 يومًا",
     'tags.p.all': "كل المباريات المصنفة المحفوظة",
-    
     'tag.otp': "متخصص {champ}",
     'tag.otp.t': "{n} من {total} مباراة بـ {champ}",
     'tag.main': "لاعب {champ} الأساسي",
@@ -322,7 +321,6 @@
     'tag.kda.weak': "KDA ضعيف",
     'tag.kda.t': "KDA {v} في {n} مباراة",
     'tag.deaths.great': "الناجي",
-    'tag.deaths.terrible': "مهزوز",
     'tag.deaths.t': "متوسط {v} موت في {n} مباراة",
     'tag.vision.great': "رؤية جيدة",
     'tag.vision.weak': "رؤية قليلة",
@@ -507,6 +505,20 @@
     'party.flex5': "على الأرجح ضمن المجموعة أيضًا: لا يمكن الدخول بأربعة في Flex",
     'tags.basis': "تُحتسب فقط المباريات المصنفة لهذا الموسم (فردي/ثنائي وFlex)؛ أرقام رئيسية لكل دور. النقر على وسم يعرض الأرقام التي وراءه.",
     'tags.none': "لا توجد مباريات مصنفة هذا الموسم بعد.",
+    'tag.smallPool': "مجموعة أبطال صغيرة",
+    'tag.smallPool.t': "{share} % من {n} مباراة على {k} أبطال",
+    'tag.farm.terrible': "بالكاد يجمع",
+    'tag.damage.terrible': "بالكاد أي ضرر",
+    'tag.kda.terrible': "KDA ضعيف جدًا",
+    'tag.deaths.weak': "يموت كثيرًا",
+    'tag.deaths.terrible': "يموت كثيرًا جدًا",
+    'tag.vision.terrible': "يلعب بلا رؤية",
+    'tag.teamPlayer.weak': "ذئب منفرد",
+    'tag.teamPlayer.terrible': "نادرًا في القتالات",
+    'tag.objectives.great': "صياد الأهداف",
+    'tag.objectives.weak': "يفوّت الأهداف",
+    'tag.objectives.terrible': "لا يحضر الأهداف أبدًا",
+    'tag.objectives.t': "شارك في {v} من تنانين وبارونات الفريق في {n} مباراة",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

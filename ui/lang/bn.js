@@ -292,7 +292,6 @@
     'tags.p.d30': "গত ৩০ দিন",
     'tags.p.d60': "গত ৬০ দিন",
     'tags.p.all': "সব সংরক্ষিত র‍্যাঙ্কড গেম",
-    
     'tag.otp': "{champ} OTP",
     'tag.otp.t': "{total}টির মধ্যে {n}টি গেম {champ} দিয়ে",
     'tag.main': "{champ} মেইন",
@@ -322,7 +321,6 @@
     'tag.kda.weak': "দুর্বল KDA",
     'tag.kda.t': "{n}টি গেমে KDA {v}",
     'tag.deaths.great': "সারভাইভার",
-    'tag.deaths.terrible': "নড়বড়ে",
     'tag.deaths.t': "{n}টি গেমে গড় {v}টি মৃত্যু",
     'tag.vision.great': "ভালো ভিশন",
     'tag.vision.weak': "কম ভিশন",
@@ -507,6 +505,20 @@
     'party.flex5': "সম্ভবত এটিও পার্টিতে: Flex-এ চারজনে কিউ করা যায় না",
     'tags.basis': "শুধু এই সিজনের র‍্যাঙ্কড গেম গোনা হয় (Solo/Duo ও Flex); প্রতিটি রোলের মূল সংখ্যা। কোনো ট্যাগে ক্লিক করলে তার পেছনের সংখ্যা দেখা যায়।",
     'tags.none': "এই সিজনে এখনও কোনো র‍্যাঙ্কড গেম নেই।",
+    'tag.smallPool': "ছোট পুল",
+    'tag.smallPool.t': "{n} গেমের {share} % মাত্র {k} চ্যাম্পিয়নে",
+    'tag.farm.terrible': "প্রায় ফার্ম করে না",
+    'tag.damage.terrible': "প্রায় কোনো ড্যামেজ নেই",
+    'tag.kda.terrible': "খুব দুর্বল KDA",
+    'tag.deaths.weak': "প্রায়ই মারা যায়",
+    'tag.deaths.terrible': "খুব বেশি মারা যায়",
+    'tag.vision.terrible': "অন্ধভাবে খেলে",
+    'tag.teamPlayer.weak': "একা নেকড়ে",
+    'tag.teamPlayer.terrible': "লড়াইয়ে কম থাকে",
+    'tag.objectives.great': "অবজেক্টিভ শিকারি",
+    'tag.objectives.weak': "অবজেক্টিভ মিস করে",
+    'tag.objectives.terrible': "অবজেক্টিভে কখনো থাকে না",
+    'tag.objectives.t': "{n} গেমে দলের {v} ড্রাগন ও ব্যারনে ছিল",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

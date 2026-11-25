@@ -291,7 +291,6 @@
     'tags.p.d30': "近 30 天",
     'tags.p.d60': "近 60 天",
     'tags.p.all': "所有已保存的排位",
-    
     'tag.otp': "{champ} 绝活",
     'tag.otp.t': "{total} 局中 {n} 局用 {champ}",
     'tag.main': "{champ} 本命",
@@ -321,7 +320,6 @@
     'tag.kda.weak': "KDA 偏低",
     'tag.kda.t': "{n} 局 KDA {v}",
     'tag.deaths.great': "生存大师",
-    'tag.deaths.terrible': "容易阵亡",
     'tag.deaths.t': "{n} 局平均阵亡 {v}",
     'tag.vision.great': "视野出色",
     'tag.vision.weak': "视野偏少",
@@ -506,6 +504,20 @@
     'party.flex5': "很可能也在组队中：灵活组排不能四人排队",
     'tags.basis': "只统计本赛季的排位赛（单双排和灵活组排）；按位置的关键数据。点击标签可查看背后的数据。",
     'tags.none': "本赛季还没有排位赛。",
+    'tag.smallPool': "英雄池小",
+    'tag.smallPool.t': "{n} 场中 {share}% 只用 {k} 个英雄",
+    'tag.farm.terrible': "几乎不补刀",
+    'tag.damage.terrible': "几乎没有伤害",
+    'tag.kda.terrible': "KDA 很差",
+    'tag.deaths.weak': "经常阵亡",
+    'tag.deaths.terrible': "阵亡极多",
+    'tag.vision.terrible': "几乎没有视野",
+    'tag.teamPlayer.weak': "独狼",
+    'tag.teamPlayer.terrible': "很少参团",
+    'tag.objectives.great': "资源猎手",
+    'tag.objectives.weak': "常错过资源",
+    'tag.objectives.terrible': "从不参与资源",
+    'tag.objectives.t': "在 {n} 场中参与了队伍 {v} 的小龙和男爵",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

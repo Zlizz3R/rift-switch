@@ -295,7 +295,6 @@
     'tags.p.d30': "últimos 30 días",
     'tags.p.d60': "últimos 60 días",
     'tags.p.all': "todas las clasificatorias guardadas",
-    
     'tag.otp': "OTP de {champ}",
     'tag.otp.t': "{n} de {total} partidas con {champ}",
     'tag.main': "Main de {champ}",
@@ -325,7 +324,6 @@
     'tag.kda.weak': "KDA flojo",
     'tag.kda.t': "KDA {v} en {n} partidas",
     'tag.deaths.great': "Superviviente",
-    'tag.deaths.terrible': "Inestable",
     'tag.deaths.t': "Ø {v} muertes en {n} partidas",
     'tag.vision.great': "Buena visión",
     'tag.vision.weak': "Poca visión",
@@ -510,6 +508,20 @@
     'party.flex5': "Seguramente también en el grupo: en Flexible no se puede entrar de a cuatro",
     'tags.basis': "Solo cuentan las clasificatorias de esta temporada (Solo/Dúo y Flexible); cifras clave por rol. Un clic en una etiqueta muestra los números detrás.",
     'tags.none': "Aún no hay clasificatorias esta temporada.",
+    'tag.smallPool': "Pool pequeño",
+    'tag.smallPool.t': "{share} % de {n} partidas con {k} campeones",
+    'tag.farm.terrible': "Apenas farmea",
+    'tag.damage.terrible': "Casi sin daño",
+    'tag.kda.terrible': "KDA muy baja",
+    'tag.deaths.weak': "Muere a menudo",
+    'tag.deaths.terrible': "Muere muchísimo",
+    'tag.vision.terrible': "Juega a ciegas",
+    'tag.teamPlayer.weak': "Lobo solitario",
+    'tag.teamPlayer.terrible': "Rara vez en peleas",
+    'tag.objectives.great': "Cazador de objetivos",
+    'tag.objectives.weak': "Se pierde objetivos",
+    'tag.objectives.terrible': "Nunca en los objetivos",
+    'tag.objectives.t': "En el {v} de los dragones y barones del equipo en {n} partidas",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

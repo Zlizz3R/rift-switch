@@ -53,6 +53,18 @@
       const r = rows.filter(x => Array.isArray(x.g.w1));
       return { v: avgOf(r.map(x => { const w = x.g.w1[x.g.players.indexOf(x.p)]; return w != null && w < 180 ? 1 : 0; })), n: r.length };
     },
+    // dragons and barons of the own team the player was in on (killer or assist; game format 5)
+    objPart: rows => {
+      const r = rows.filter(x => Array.isArray(x.g.obj));
+      let took = 0, inv = 0, n = 0;
+      for (const x of r) {
+        const i = x.g.players.indexOf(x.p);
+        const mine = x.g.obj.filter(o => 'DEB'.includes(o[1]) && o[2] === x.p.team);
+        if (!mine.length) continue;
+        n++; took += mine.length; inv += mine.filter(o => o[3].includes(i)).length;
+      }
+      return { v: took ? inv / took : null, n, vars: { took, inv } };
+    },
     firstDrake: rows => { const r = rows.filter(x => x.g.drake1 != null); return { v: avgOf(r.map(x => (x.g.drake1 === x.p.team ? 1 : 0))), n: r.length }; },
     gank: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => (St.gankedBefore(x.g, x.p) ? 1 : 0))), n: r.length }; },
     takedowns15: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => St.takedownsBefore(x.g, x.p, 900))), n: r.length }; },
@@ -117,6 +129,14 @@
         const [champ, c] = top(m);
         const share = c / rows.length;
         return [out(m.size >= r.champs && share <= r.maxShare ? 'met' : 'not', { value: m.size, th: r.champs, n: rows.length, champ, vars: { k: m.size, share: Math.round(share * 100) } })];
+      }
+      case 'poolTop': {
+        // the top champions take more than this share of the games
+        if (rows.length < r.min) return [few(rows.length, r.min)];
+        const tops = [...countBy(rows, x => x.p.champ)].sort((a, b) => b[1] - a[1]).slice(0, r.champs);
+        const share = tops.reduce((s, [, c]) => s + c, 0) / rows.length;
+        return [out(share > r.share ? 'met' : 'not', { value: share, th: r.share, n: rows.length, champ: tops[0][0],
+          vars: { k: tops.length, share: Math.round(share * 100), n: rows.length, champs: tops.map(([c]) => c) } })];
       }
       case 'roleSpread': {
         const mr = mainRole(rows);
@@ -217,7 +237,9 @@
     return met.filter(x => !drop.has(x.id)).sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group));
   }
   const isStrength = x => x.state === 'met' && (x.level === 'master' || x.level === 'great');
-  const isWeakness = x => x.state === 'met' && (x.level === 'weak' || x.level === 'terrible');
+  // weak / terrible levels, and the tags that are bad on their own (not the form ones: a losing
+  // streak isn't something to work on)
+  const isWeakness = x => x.state === 'met' && (x.level === 'weak' || x.level === 'terrible' || (!x.level && x.color === 'bad' && x.group !== 'form'));
   // the keys for the next run's hysteresis
   const keys = results => new Set(results.filter(x => x.state === 'met' && x.level).map(x => `${x.id}:${x.level}`));
 

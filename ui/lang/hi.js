@@ -293,7 +293,6 @@
     'tags.p.d30': "पिछले 30 दिन",
     'tags.p.d60': "पिछले 60 दिन",
     'tags.p.all': "सभी सहेजे गए रैंक्ड गेम",
-    
     'tag.otp': "{champ} OTP",
     'tag.otp.t': "{total} में से {n} गेम {champ} के साथ",
     'tag.main': "{champ} मेन",
@@ -323,7 +322,6 @@
     'tag.kda.weak': "कमज़ोर KDA",
     'tag.kda.t': "{n} गेम में KDA {v}",
     'tag.deaths.great': "सर्वाइवर",
-    'tag.deaths.terrible': "डगमगाता",
     'tag.deaths.t': "{n} गेम में औसत {v} मौतें",
     'tag.vision.great': "अच्छा विज़न",
     'tag.vision.weak': "कम विज़न",
@@ -508,6 +506,20 @@
     'party.flex5': "शायद यह भी पार्टी में है: Flex में चार लोग क्यू नहीं कर सकते",
     'tags.basis': "सिर्फ़ इस सीज़न के रैंक्ड गेम गिने जाते हैं (Solo/Duo और Flex); हर रोल के मुख्य आँकड़े। किसी टैग पर क्लिक करने से उसके पीछे के आँकड़े दिखते हैं।",
     'tags.none': "इस सीज़न में अभी कोई रैंक्ड गेम नहीं।",
+    'tag.smallPool': "छोटा पूल",
+    'tag.smallPool.t': "{n} गेम में से {share} % सिर्फ़ {k} चैंपियन पर",
+    'tag.farm.terrible': "बहुत कम फ़ार्म",
+    'tag.damage.terrible': "लगभग कोई डैमेज नहीं",
+    'tag.kda.terrible': "बहुत कमज़ोर KDA",
+    'tag.deaths.weak': "अक्सर मरता है",
+    'tag.deaths.terrible': "बहुत ज़्यादा मरता है",
+    'tag.vision.terrible': "अंधेरे में खेलता है",
+    'tag.teamPlayer.weak': "अकेला भेड़िया",
+    'tag.teamPlayer.terrible': "लड़ाइयों में कम",
+    'tag.objectives.great': "ऑब्जेक्टिव शिकारी",
+    'tag.objectives.weak': "ऑब्जेक्टिव छोड़ देता है",
+    'tag.objectives.terrible': "ऑब्जेक्टिव पर कभी नहीं",
+    'tag.objectives.t': "{n} गेम में टीम के {v} ड्रैगन और बैरन में शामिल",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

@@ -294,7 +294,6 @@
     'tags.p.d30': "последние 30 дней",
     'tags.p.d60': "последние 60 дней",
     'tags.p.all': "все сохранённые рейтинговые игры",
-    
     'tag.otp': "Ван-трик {champ}",
     'tag.otp.t': "{n} из {total} игр на {champ}",
     'tag.main': "Мейн {champ}",
@@ -324,7 +323,6 @@
     'tag.kda.weak': "Слабый KDA",
     'tag.kda.t': "KDA {v} за {n} игр",
     'tag.deaths.great': "Живучий",
-    'tag.deaths.terrible': "Шаткий",
     'tag.deaths.t': "Ø {v} смертей за {n} игр",
     'tag.vision.great': "Хороший обзор",
     'tag.vision.weak': "Мало обзора",
@@ -509,6 +507,20 @@
     'party.flex5': "Скорее всего тоже в группе: во Flex нельзя встать в очередь вчетвером",
     'tags.basis': "Учитываются только рейтинговые игры этого сезона (Solo/Duo и Flex); ключевые показатели по ролям. Клик по тегу показывает цифры за ним.",
     'tags.none': "В этом сезоне пока нет рейтинговых игр.",
+    'tag.smallPool': "Маленький пул",
+    'tag.smallPool.t': "{share} % из {n} игр на {k} чемпионах",
+    'tag.farm.terrible': "Почти не фармит",
+    'tag.damage.terrible': "Почти без урона",
+    'tag.kda.terrible': "Очень слабый KDA",
+    'tag.deaths.weak': "Часто умирает",
+    'tag.deaths.terrible': "Умирает очень часто",
+    'tag.vision.terrible': "Играет вслепую",
+    'tag.teamPlayer.weak': "Одиночка",
+    'tag.teamPlayer.terrible': "Редко в драках",
+    'tag.objectives.great': "Охотник за объектами",
+    'tag.objectives.weak': "Пропускает объекты",
+    'tag.objectives.terrible': "Никогда на объектах",
+    'tag.objectives.t': "Участвовал в {v} драконов и баронов команды за {n} игр",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

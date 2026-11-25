@@ -295,7 +295,6 @@
     'tags.p.d30': "30 derniers jours",
     'tags.p.d60': "60 derniers jours",
     'tags.p.all': "toutes les parties classées enregistrées",
-    
     'tag.otp': "OTP {champ}",
     'tag.otp.t': "{n} parties sur {total} avec {champ}",
     'tag.main': "Main {champ}",
@@ -325,7 +324,6 @@
     'tag.kda.weak': "KDA faible",
     'tag.kda.t': "KDA {v} en {n} parties",
     'tag.deaths.great': "Survivant",
-    'tag.deaths.terrible': "Fragile",
     'tag.deaths.t': "Ø {v} morts en {n} parties",
     'tag.vision.great': "Bonne vision",
     'tag.vision.weak': "Peu de vision",
@@ -510,6 +508,20 @@
     'party.flex5': "Très probablement dans le groupe aussi : en Flex on ne peut pas lancer à quatre",
     'tags.basis': "Seules les parties classées de cette saison comptent (Solo/Duo et Flex) ; chiffres clés par rôle. Un clic sur un tag montre les chiffres derrière.",
     'tags.none': "Aucune partie classée cette saison pour le moment.",
+    'tag.smallPool': "Petit pool",
+    'tag.smallPool.t': "{share} % de {n} parties sur {k} champions",
+    'tag.farm.terrible': "Farme à peine",
+    'tag.damage.terrible': "Presque aucun dégât",
+    'tag.kda.terrible': "KDA très faible",
+    'tag.deaths.weak': "Meurt souvent",
+    'tag.deaths.terrible': "Meurt énormément",
+    'tag.vision.terrible': "Joue à l’aveugle",
+    'tag.teamPlayer.weak': "Loup solitaire",
+    'tag.teamPlayer.terrible': "Rarement dans les combats",
+    'tag.objectives.great': "Chasseur d’objectifs",
+    'tag.objectives.weak': "Rate les objectifs",
+    'tag.objectives.terrible': "Jamais aux objectifs",
+    'tag.objectives.t': "Présent sur {v} des dragons et barons de l’équipe en {n} parties",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

@@ -66,11 +66,12 @@ test('only this season: last year\'s ranked games are left out, in the live tags
 });
 
 test('levels both ways: deaths – fewer is better', () => {
-  const many = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d: 8 } })));
-  assert.equal(get(many, 'deaths')[0].level, 'terrible');
-  assert.ok(T.isWeakness(get(many, 'deaths')[0]));
-  const few = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d: 2 } })));
-  assert.equal(get(few, 'deaths')[0].level, 'great');
+  const deaths = d => get(run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d } }))), 'deaths')[0];
+  assert.equal(deaths(8).level, 'weak');
+  assert.ok(T.isWeakness(deaths(8)));
+  assert.equal(deaths(10).level, 'terrible');
+  assert.equal(deaths(4).level, 'great');
+  assert.equal(deaths(2).level, 'master');
   const mid = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d: 5 } })));
   assert.equal(get(mid, 'deaths')[0].state, 'not');
 });
@@ -132,7 +133,7 @@ test('mastery: never read = too little data; the highest step per champion, at m
 });
 
 test('every threshold sits in tag-rules.js; every rule has a known type', () => {
-  const types = new Set(['champShare', 'champRecent', 'champWinrate', 'pool', 'roleSpread', 'streak', 'break', 'count', 'level', 'metric', 'carry', 'avg', 'mastery', 'live']);
+  const types = new Set(['champShare', 'champRecent', 'champWinrate', 'pool', 'poolTop', 'roleSpread', 'streak', 'break', 'count', 'level', 'metric', 'carry', 'avg', 'mastery', 'live']);
   for (const r of TR.TAG_RULES) {
     assert.ok(types.has(r.type), r.id);
     if (r.type === 'metric') assert.ok(T.METRICS[r.metric], r.id);
@@ -183,4 +184,40 @@ test('timeline tags: jungle – ganks, aggressive and passive exclude each other
   assert.equal(get(r, 'soloFighter').length, 1);
   // a mid laner isn't judged as a jungler
   assert.equal(get(run([tlGame()]), 'ganker').length, 0);
+});
+
+test('pool: flexible = no champion over 40 %; small = three champions over 90 % of the games', () => {
+  const on = champs => run(champs.map((c, i) => game({ ago: i + 1, me: { champ: c } })));
+  // 20 games: 8 / 4 / 4 / 2 / 2 on five champions – 40 %: flexible, not small
+  const flex = on([...Array(8).fill(1), ...Array(4).fill(2), ...Array(4).fill(3), 4, 4, 5, 5]);
+  assert.equal(get(flex, 'flexPool')[0].state, 'met');
+  assert.equal(get(flex, 'smallPool')[0].state, 'not');
+  // 9 of 20 on one (45 %): not flexible any more
+  assert.equal(get(on([...Array(9).fill(1), ...Array(3).fill(2), ...Array(4).fill(3), 4, 4, 5, 5]), 'flexPool')[0].state, 'not');
+  // 19 of 20 on three champions: small pool – something to work on; with OTP only OTP shows
+  const small = on([...Array(10).fill(1), ...Array(5).fill(2), ...Array(4).fill(3), 4]);
+  const sp = get(small, 'smallPool')[0];
+  assert.equal(sp.state, 'met');
+  assert.deepEqual(sp.vars, { k: 3, share: 95, n: 20, champs: [1, 2, 3] });
+  assert.ok(T.isWeakness(sp));
+  const otp = on([...Array(17).fill(1), 2, 3, 4]);
+  assert.deepEqual(T.pick(otp.results).filter(x => /Pool|otp/.test(x.id)).map(x => x.id), ['otp']);
+  // a losing streak is bad, but not something to work on
+  assert.ok(!T.isWeakness({ state: 'met', color: 'bad', group: 'form' }));
+});
+
+test('objectives: the share of the own team\'s dragons and barons the player was in on, per role', () => {
+  // "me" plays mid (index 2); per game the team (100) took 2 dragons and a baron, "me" was in on one;
+  // the enemy's dragon and the team's grubs don't count
+  const g = () => { const x = game({}); x.obj = [[600, 'D', 100, [1, 2]], [900, 'D', 200, [6]], [1000, 'G', 100, [0]], [1200, 'D', 100, [1, 3, 4]], [1500, 'B', 100, [0, 1, 3]]]; return x; };
+  const r = run(Array.from({ length: 10 }, g));
+  const o = get(r, 'objectives')[0];
+  assert.equal(o.n, 10);
+  assert.ok(Math.abs(o.value - 1 / 3) < 1e-9);
+  assert.equal(o.state, 'not');                                // mid: weak below 30 %, great from 60 %
+  // the jungler (index 1) was at all of them: great
+  const jg = run(Array.from({ length: 10 }, () => { const x = g(); x.players[1] = { ...x.players[1], puuid: 'me' }; x.players[2] = { ...x.players[2], puuid: 'mid' }; return x; }));
+  assert.equal(get(jg, 'objectives')[0].level, 'master');
+  // older games without "obj": too little data
+  assert.equal(get(run(Array.from({ length: 10 }, () => game({}))), 'objectives')[0].state, 'few');
 });

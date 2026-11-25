@@ -294,7 +294,6 @@
     'tags.p.d30': "últimos 30 dias",
     'tags.p.d60': "últimos 60 dias",
     'tags.p.all': "todas as ranqueadas salvas",
-    
     'tag.otp': "OTP de {champ}",
     'tag.otp.t': "{n} de {total} partidas com {champ}",
     'tag.main': "Main de {champ}",
@@ -324,7 +323,6 @@
     'tag.kda.weak': "KDA fraco",
     'tag.kda.t': "KDA {v} em {n} partidas",
     'tag.deaths.great': "Sobrevivente",
-    'tag.deaths.terrible': "Instável",
     'tag.deaths.t': "Ø {v} mortes em {n} partidas",
     'tag.vision.great': "Boa visão",
     'tag.vision.weak': "Pouca visão",
@@ -509,6 +507,20 @@
     'party.flex5': "Muito provavelmente também no grupo: na Flex não dá para entrar em quatro",
     'tags.basis': "Só contam as ranqueadas desta temporada (Solo/Duo e Flex); números-chave por rota. Um clique numa tag mostra os números por trás.",
     'tags.none': "Ainda não há ranqueadas nesta temporada.",
+    'tag.smallPool': "Pool pequeno",
+    'tag.smallPool.t': "{share} % de {n} partidas com {k} campeões",
+    'tag.farm.terrible': "Quase não farma",
+    'tag.damage.terrible': "Quase nenhum dano",
+    'tag.kda.terrible': "KDA muito fraco",
+    'tag.deaths.weak': "Morre muito",
+    'tag.deaths.terrible': "Morre demais",
+    'tag.vision.terrible': "Joga às cegas",
+    'tag.teamPlayer.weak': "Lobo solitário",
+    'tag.teamPlayer.terrible': "Raramente nas lutas",
+    'tag.objectives.great': "Caçador de objetivos",
+    'tag.objectives.weak': "Perde objetivos",
+    'tag.objectives.terrible': "Nunca nos objetivos",
+    'tag.objectives.t': "Presente em {v} dos dragões e barões do time em {n} partidas",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

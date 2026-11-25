@@ -110,7 +110,17 @@ function game(n, win, owner = P(1), at = 0) {
   }
   kills.sort((a, b) => a[0] - b[0]);
   const w1 = players.map(() => 60 + Math.floor(rnd() * 150));
-  return { id: String(7000 + n), v: 4, csm, kills, w1, drake1: (rnd() < 0.7) === win ? 100 : 200, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
+  // game format 5: dragons and barons with the players of the taking team who were in on them
+  const IN = [0.55, 0.92, 0.7, 0.8, 0.3];   // mid, jungle, bot, support, top (the order of CH)
+  const obj = [];
+  for (const [team, n0, kind] of [[100, win ? 3 : 1, 'D'], [200, win ? 1 : 3, 'D'], [win ? 100 : 200, 1, 'B']]) {
+    for (let j = 0; j < n0; j++) {
+      const base = team === 100 ? 0 : 5;
+      obj.push([300 + j * 300 + (kind === 'B' ? 900 : 0), kind, team, [0, 1, 2, 3, 4].filter(i => rnd() < (base + i === at ? 0.7 : IN[i])).map(i => base + i)]);
+    }
+  }
+  obj.sort((a, b) => a[0] - b[0]);
+  return { id: String(7000 + n), v: 5, csm, kills, w1, obj, drake1: (rnd() < 0.7) === win ? 100 : 200, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
     players, gold, teams: [{ id: 100, towers: win ? 9 : 3, drakes: win ? 3 : 1, barons: win ? 1 : 0 }, { id: 200, towers: win ? 2 : 8, drakes: win ? 1 : 3 }], owners: [owner] };
 }
 const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true),

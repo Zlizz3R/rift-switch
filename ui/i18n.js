@@ -341,7 +341,6 @@
     'tags.p.d30': "last 30 days",
     'tags.p.d60': "last 60 days",
     'tags.p.all': "all stored ranked games",
-    
     'tag.otp': "{champ} OTP",
     'tag.otp.t': "{n} of {total} games with {champ}",
     'tag.main': "{champ} main",
@@ -371,7 +370,6 @@
     'tag.kda.weak': "Weak KDA",
     'tag.kda.t': "KDA {v} in {n} games",
     'tag.deaths.great': "Survivor",
-    'tag.deaths.terrible': "Shaky",
     'tag.deaths.t': "Ø {v} deaths in {n} games",
     'tag.vision.great': "Good vision",
     'tag.vision.weak': "Little vision",
@@ -556,6 +554,20 @@
     'party.flex5': "Most likely in the party too: Flex can’t be queued as four",
     'tags.basis': "Only this season’s ranked games count (Solo/Duo and Flex); key figures per role. A click on a tag shows the numbers behind it.",
     'tags.none': "No ranked games this season yet.",
+    'tag.smallPool': "Small pool",
+    'tag.smallPool.t': "{share} % of {n} games on {k} champions",
+    'tag.farm.terrible': "Barely farms",
+    'tag.damage.terrible': "Barely any damage",
+    'tag.kda.terrible': "Very weak KDA",
+    'tag.deaths.weak': "Dies often",
+    'tag.deaths.terrible': "Dies a lot",
+    'tag.vision.terrible': "Plays blind",
+    'tag.teamPlayer.weak': "Lone wolf",
+    'tag.teamPlayer.terrible': "Rarely in fights",
+    'tag.objectives.great': "Objective hunter",
+    'tag.objectives.weak': "Misses objectives",
+    'tag.objectives.terrible': "Never at objectives",
+    'tag.objectives.t': "In on {v} of the team’s dragons and barons in {n} games",
   };
 
   const de = {
@@ -880,7 +892,6 @@
     'tags.p.d30': "letzte 30 Tage",
     'tags.p.d60': "letzte 60 Tage",
     'tags.p.all': "alle gespeicherten Ranked-Spiele",
-    
     'tag.otp': "OTP {champ}",
     'tag.otp.t': "{n} von {total} Spielen mit {champ}",
     'tag.main': "{champ}-Main",
@@ -910,7 +921,6 @@
     'tag.kda.weak': "Schwache KDA",
     'tag.kda.t': "KDA {v} in {n} Spielen",
     'tag.deaths.great': "Überlebenskünstler",
-    'tag.deaths.terrible': "Wackelig",
     'tag.deaths.t': "Ø {v} Tode in {n} Spielen",
     'tag.vision.great': "Gute Sicht",
     'tag.vision.weak': "Wenig Sicht",
@@ -1095,6 +1105,20 @@
     'party.flex5': "Höchstwahrscheinlich auch in der Party: Flex kann man nicht zu viert queuen",
     'tags.basis': "Es zählen nur die Ranked-Spiele dieser Season (Solo/Duo und Flex); Kennzahlen pro Rolle. Ein Klick auf einen Tag zeigt die Zahlen dahinter.",
     'tags.none': "Diese Season noch keine Ranked-Spiele.",
+    'tag.smallPool': "Kleiner Pool",
+    'tag.smallPool.t': "{share} % von {n} Spielen auf {k} Champions",
+    'tag.farm.terrible': "Kaum Farm",
+    'tag.damage.terrible': "Kaum Schaden",
+    'tag.kda.terrible': "Sehr schwache KDA",
+    'tag.deaths.weak': "Stirbt oft",
+    'tag.deaths.terrible': "Stirbt sehr oft",
+    'tag.vision.terrible': "Spielt blind",
+    'tag.teamPlayer.weak': "Einzelgänger",
+    'tag.teamPlayer.terrible': "Selten bei Kämpfen",
+    'tag.objectives.great': "Objective-Jäger",
+    'tag.objectives.weak': "Verpasst Objectives",
+    'tag.objectives.terrible': "Nie bei Objectives",
+    'tag.objectives.t': "Bei {v} der Drachen und Barone des Teams dabei, in {n} Spielen",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

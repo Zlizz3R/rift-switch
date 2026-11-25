@@ -41,8 +41,9 @@ pub struct Entry {
 /// Format of games stored now: 2 = players carry their position ("pos"); 3 = every stat for the
 /// details view ("x"), team objectives ("teams") and the gold of each player per minute ("gold");
 /// 4 = from the timeline also CS per minute ("csm"), every champion kill ("kills"), each player's
-/// first ward ("w1") and who took the first dragon ("drake1") – for the timeline tags.
-pub const GAME_VERSION: u8 = 4;
+/// first ward ("w1") and who took the first dragon ("drake1") – for the timeline tags;
+/// 5 = every big objective with the players of the taking team who were in on it ("obj").
+pub const GAME_VERSION: u8 = 5;
 /// Other players' games are kept 30 days (Live); own games stay until deleted.
 pub const OTHERS_MAX_AGE: i64 = 30 * 24 * 3600 * 1000;
 /// Summoner's Rift queues (only there positions mean something)
@@ -760,7 +761,9 @@ fn team(t: &Value) -> Value {
 /// The client's game timeline -> per minute every player's total gold ("gold") and CS ("csm"),
 /// in the order of "players"; every champion kill as [second, killer, victim, [assists]] with
 /// player indexes (-1 = no champion, e.g. a tower); each player's first ward in seconds ("w1",
-/// null = none) and the team of the first dragon ("drake1"). About 3–4 KB per game.
+/// null = none) and the team of the first dragon ("drake1"); every big objective as
+/// [second, kind, team, [player indexes of that team in on it: killer + assists]] ("obj"; kind:
+/// D dragon, E elder, B baron, H herald, A Atakhan, G voidgrub). About 3–4 KB per game.
 pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
     let Some(frames) = tl["frames"].as_array() else {
         return;
@@ -801,10 +804,11 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
         .iter()
         .filter_map(|f| f["events"].as_array())
         .flatten();
-    let (mut kills, mut w1, mut drake1) = (
+    let (mut kills, mut w1, mut drake1, mut obj) = (
         vec![],
         vec![Value::Null; participant_ids.len()],
         Value::Null,
+        vec![],
     );
     for e in events {
         match e["type"].as_str().unwrap_or("") {
@@ -826,15 +830,45 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
                     w1[i as usize] = json!(sec(e));
                 }
             }
-            "ELITE_MONSTER_KILL" if drake1.is_null() && e["monsterType"] == "DRAGON" => {
+            "ELITE_MONSTER_KILL" => {
+                let team_of = |i: i64| {
+                    game["players"]
+                        .get(i.max(0) as usize)
+                        .filter(|_| i >= 0)
+                        .map(|p| p["team"].clone())
+                };
                 let i = idx(&e["killerId"]);
-                let team = game["players"]
-                    .get(i.max(0) as usize)
-                    .filter(|_| i >= 0)
-                    .map(|p| p["team"].clone());
                 // no champion as killer (rare): the event's own team, when it names one
                 let own = Some(e["teamId"].clone()).filter(|t| t == 100 || t == 200);
-                drake1 = team.or(own).unwrap_or(Value::Null);
+                let team = team_of(i).or(own).unwrap_or(Value::Null);
+                if drake1.is_null() && e["monsterType"] == "DRAGON" {
+                    drake1 = team.clone();
+                }
+                let kind = match (e["monsterType"].as_str(), e["monsterSubType"].as_str()) {
+                    (Some("DRAGON"), Some("ELDER_DRAGON")) => "E",
+                    (Some("DRAGON"), _) => "D",
+                    (Some("BARON_NASHOR"), _) => "B",
+                    (Some("RIFTHERALD"), _) => "H",
+                    (Some("ATAKHAN"), _) => "A",
+                    (Some("HORDE"), _) => "G",
+                    _ => "",
+                };
+                if !kind.is_empty() && !team.is_null() {
+                    // the killer and the assists of the taking team (the others only hit it)
+                    let mut ins: Vec<i64> = std::iter::once(i)
+                        .chain(
+                            e["assistingParticipantIds"]
+                                .as_array()
+                                .into_iter()
+                                .flatten()
+                                .map(idx),
+                        )
+                        .filter(|j| *j >= 0 && team_of(*j).as_ref() == Some(&team))
+                        .collect();
+                    ins.sort_unstable();
+                    ins.dedup();
+                    obj.push(json!([sec(e), kind, team, ins]));
+                }
             }
             _ => {}
         }
@@ -842,6 +876,7 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
     if frames.len() > 1 {
         game["kills"] = Value::Array(kills);
         game["drake1"] = drake1;
+        game["obj"] = Value::Array(obj);
         // the League client's timelines carry no ward events (checked 24.11.2026): only when some
         // are there – no list at all is "unknown", a list of nulls would read as "never warded"
         if w1.iter().any(|w| !w.is_null()) {
@@ -1113,7 +1148,9 @@ mod tests {
                 { "type": "CHAMPION_KILL", "killerId": 1, "victimId": 7, "assistingParticipantIds": [2, 3], "timestamp": 130500 },
                 { "type": "CHAMPION_KILL", "killerId": 0, "victimId": 2, "timestamp": 150000 },
                 { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "killerId": 8, "timestamp": 400000 },
-                { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "killerId": 2, "timestamp": 900000 } ] } ] });
+                { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "killerId": 2, "timestamp": 900000 },
+                { "type": "ELITE_MONSTER_KILL", "monsterType": "BARON_NASHOR", "killerId": 4, "assistingParticipantIds": [8, 1, 5], "timestamp": 1500000 },
+                { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "monsterSubType": "ELDER_DRAGON", "killerId": 9, "assistingParticipantIds": [6], "timestamp": 1800000 } ] } ] });
         add_timeline(&mut g, &tl, &participant_ids(&detail(9)));
         assert_eq!(g["csm"][1][0], 6); // 5 minions + 1 monster
         assert_eq!(g["csm"][1][9], 51);
@@ -1123,7 +1160,12 @@ mod tests {
         assert!(g["w1"][3].is_null());
         // the first dragon: the team of its killer (participant 8 = index 7)
         assert_eq!(g["drake1"], g["players"][7]["team"]);
-        assert_eq!(g["v"], 4);
+        // every big objective: its team and who of that team was in on it (8 only hit the baron)
+        let t = |i: usize| g["players"][i]["team"].clone();
+        assert_eq!(g["obj"][0], json!([400, "D", t(7), [7]]));
+        assert_eq!(g["obj"][2], json!([1500, "B", t(3), [0, 3, 4]]));
+        assert_eq!(g["obj"][3], json!([1800, "E", t(8), [5, 8]]));
+        assert_eq!(g["v"], 5);
         // a timeline without ward events (the client's): no "w1" at all, not "never warded"
         let mut g2 = compact(&detail(9)).unwrap();
         let mut tl2 = tl.clone();
