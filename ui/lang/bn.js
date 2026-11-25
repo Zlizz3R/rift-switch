@@ -284,6 +284,8 @@
     'perf.game1': "১টি গেম",
     'dash.tabTags': "ট্যাগ",
     'tags.mainRole': "প্রধান রোল",
+    'tags.allRoles': "সব রোল",
+    'tags.inRole': "{role}: {pct} % ম্যাচ",
     'tags.sub': "এই সিজনে {n}টি র‍্যাঙ্কড গেম",
     'tags.roleMain': "{role} (প্রধান রোল)",
     'tags.roleMost': "{role} (সবচেয়ে বেশি খেলা – প্রধান রোল নেই)",

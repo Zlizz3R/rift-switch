@@ -76,3 +76,25 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('tags: "All roles" – the role tags carry their role and its share of the games', async () => {
+  const app = await boot({ replies });
+  try {
+    await app.click('#navDash');
+    await app.click('[data-dt="tags"]');
+    await app.settle();
+    await app.click('[data-trole="all"]');
+    assert.ok(app.$('[data-trole="all"]').classList.contains('on'));
+    assert.match(app.$('#tagSub').textContent, /12 ranked games this season · Mid 100 %/);
+    const farm = app.$$('.tag-group .tchip').find(c => /Great farmer/.test(c.textContent));
+    assert.ok(farm.querySelector('img.tc-role'));
+    assert.match(farm.title, /Mid: 100 % of the games/);
+    await app.click(farm);
+    assert.match(app.$('.tdetail').textContent, /Mid: 100 % of the games/);
+    // tags without a role: no icon
+    const otp = app.$$('.tag-group .tchip').find(c => /Ahri OTP/.test(c.textContent));
+    assert.ok(!otp.querySelector('img.tc-role'));
+    assert.doesNotMatch(app.$('#dashTags').innerHTML, /\btags?\.[a-zA-Z]+\.?[a-zA-Z]*\b(?![^<]*>)/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

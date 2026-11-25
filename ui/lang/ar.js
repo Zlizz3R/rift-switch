@@ -284,6 +284,8 @@
     'perf.game1': "مباراة واحدة",
     'dash.tabTags': "الوسوم",
     'tags.mainRole': "الدور الرئيسي",
+    'tags.allRoles': "كل الأدوار",
+    'tags.inRole': "{role}: {pct} % من المباريات",
     'tags.sub': "{n} مباراة مصنفة هذا الموسم",
     'tags.roleMain': "{role} (الدور الرئيسي)",
     'tags.roleMost': "{role} (الأكثر لعبًا – بلا دور رئيسي)",

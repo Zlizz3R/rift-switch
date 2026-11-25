@@ -314,7 +314,25 @@
     // OTP beats "main" on the same champion
     const otp = results.find(x => x.id === 'otp' && x.state === 'met');
     const kept = otp ? results.filter(x => !(x.id === 'main' && x.state === 'met' && x.champ === otp.champ)) : results;
-    return { role: d.role, main: mr.main, most: mr.most, roleN: d.roleRows.length, results: kept };
+    return { role: d.role, main: mr.main, most: mr.most, shares: mr.shares, total: mr.total, roleN: d.roleRows.length, results: kept };
+  }
+
+  // "All roles": the tags that depend on the role (metric, carry, avg) for every role played at least
+  // ALL_ROLE_MIN times, each with that role's thresholds; each such result carries its role and the
+  // role's share of the games. The other tags once, as for the main role.
+  const ROLE_TYPES = new Set(['metric', 'carry', 'avg']);
+  const ALL_ROLE_MIN = 5;
+  function evaluateAll(ctx) {
+    const base = evaluate({ ...ctx, role: null });
+    const typeOf = id => (TR.TAG_RULES.find(r => r.id === id) || {}).type;
+    const results = base.results.filter(x => !ROLE_TYPES.has(typeOf(x.id)));
+    const roles = [...base.shares].filter(([, n]) => n >= ALL_ROLE_MIN).sort((a, b) => b[1] - a[1]);
+    for (const [role, n] of roles) {
+      const share = n / base.total;
+      const prev = new Set([...(ctx.prev || [])].filter(k => k.endsWith(':' + role)).map(k => k.slice(0, -role.length - 1)));
+      for (const x of evaluate({ ...ctx, role, prev }).results) if (ROLE_TYPES.has(typeOf(x.id))) results.push({ ...x, role, roleShare: share });
+    }
+    return { ...base, role: null, all: true, roles: roles.map(([role, n]) => ({ role, n, share: n / base.total })), results };
   }
 
   // what is shown: met tags, conflicts resolved (the first of a pair wins), in group order
@@ -330,7 +348,8 @@
   // streak isn't something to work on)
   const isWeakness = x => x.state === 'met' && (x.level === 'weak' || x.level === 'terrible' || (!x.level && x.color === 'bad' && x.group !== 'form'));
   // the keys for the next run's hysteresis
-  const keys = results => new Set(results.filter(x => x.state === 'met' && x.level).map(x => `${x.id}:${x.level}`));
+  // ("All roles": with the role at the end – each role keeps its own)
+  const keys = results => new Set(results.filter(x => x.state === 'met' && x.level).map(x => `${x.id}:${x.level}${x.role ? ':' + x.role : ''}`));
 
   // Live tags: they are about the current game, so they come first on a card (docs/plans 5.4).
   // d: { games, puuid, champ (played now), mastery (points on it, null = unknown), position (from the
@@ -364,7 +383,7 @@
     return out;
   }
 
-  const api = { GROUPS, METRICS, mainRole, levelOf, evaluate, pick, isStrength, isWeakness, keys, liveTags };
+  const api = { GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, pick, isStrength, isWeakness, keys, liveTags };
   if (node) module.exports = api;
   else root.Tags = api;
 })(typeof window !== 'undefined' ? window : this);

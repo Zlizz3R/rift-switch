@@ -283,6 +283,8 @@
     'perf.game1': "1 局",
     'dash.tabTags': "标签",
     'tags.mainRole': "主要位置",
+    'tags.allRoles': "所有位置",
+    'tags.inRole': "{role}：{pct} % 的对局",
     'tags.sub': "本赛季 {n} 场排位",
     'tags.roleMain': "{role}（主要位置）",
     'tags.roleMost': "{role}（最常玩——无主要位置）",

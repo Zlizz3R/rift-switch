@@ -286,6 +286,8 @@
     'perf.game1': "1 игра",
     'dash.tabTags': "Теги",
     'tags.mainRole': "Основная роль",
+    'tags.allRoles': "Все роли",
+    'tags.inRole': "{role}: {pct} % игр",
     'tags.sub': "{n} рейтинговых игр в этом сезоне",
     'tags.roleMain': "{role} (основная роль)",
     'tags.roleMost': "{role} (чаще всего – основной роли нет)",

@@ -287,6 +287,8 @@
     'perf.game1': "1 partida",
     'dash.tabTags': "Etiquetas",
     'tags.mainRole': "Rol principal",
+    'tags.allRoles': "Todos los roles",
+    'tags.inRole': "{role}: {pct} % de las partidas",
     'tags.sub': "{n} partidas clasificatorias esta temporada",
     'tags.roleMain': "{role} (rol principal)",
     'tags.roleMost': "{role} (el más jugado; sin rol principal)",

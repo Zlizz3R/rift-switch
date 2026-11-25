@@ -285,6 +285,8 @@
     'perf.game1': "1 गेम",
     'dash.tabTags': "टैग",
     'tags.mainRole': "मुख्य रोल",
+    'tags.allRoles': "सभी रोल",
+    'tags.inRole': "{role}: {pct} % मैच",
     'tags.sub': "इस सीज़न {n} रैंक्ड गेम",
     'tags.roleMain': "{role} (मुख्य रोल)",
     'tags.roleMost': "{role} (सबसे ज़्यादा खेला – कोई मुख्य रोल नहीं)",

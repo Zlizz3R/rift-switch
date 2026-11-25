@@ -123,7 +123,8 @@ into one category.
 <img src="docs/screens/tags.png" alt="Tags: strengths and things to work on">
 
 - **Tags** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
-  games, per role, each with the numbers behind it. "Too little data" is never shown as "not met".
+  games, per role – or *All roles* at once, each tag with its role and that role's share of your games – each with
+  the numbers behind it. "Too little data" is never shown as "not met".
 - **Seasons** – what the client tells about the last season, your stored games per year, and earlier seasons you
   paste in yourself – three sources, never added up.
 </details>

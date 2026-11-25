@@ -285,6 +285,8 @@
     'perf.game1': "1 گیم",
     'dash.tabTags': "ٹیگز",
     'tags.mainRole': "مرکزی رول",
+    'tags.allRoles': "تمام رولز",
+    'tags.inRole': "{role}: {pct} % میچز",
     'tags.sub': "اس سیزن {n} رینکڈ گیمز",
     'tags.roleMain': "{role} (مرکزی رول)",
     'tags.roleMost': "{role} (سب سے زیادہ کھیلا – کوئی مرکزی رول نہیں)",

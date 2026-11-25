@@ -1381,6 +1381,7 @@ span.mh-ch { cursor: default; }
 .tag-group { margin-bottom: 10px; }
 .tchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .tchip { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+.tchip .tc-role { width: 13px; height: 13px; vertical-align: -2px; margin-right: 4px; opacity: .85; }
 .tchip.tc-good { color: #4cc38a; background: rgba(76,195,138,.12); border-color: rgba(76,195,138,.3); }
 .tchip.tc-master { color: #6fe3a6; background: rgba(76,195,138,.22); border-color: rgba(111,227,166,.55); }
 .tchip.tc-info { color: #7fb4f0; background: rgba(90,150,230,.12); border-color: rgba(90,150,230,.3); }

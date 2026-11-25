@@ -316,3 +316,25 @@ test('gold, wards, first blood, comebacks and throws, early / late game', () => 
   const even = run(Array.from({ length: 20 }, (_, i) => game({ ago: i + 1, dur: i < 10 ? 20 * 60 : 35 * 60, me: { win: i < 10 ? i < 6 : i < 17 } })));
   assert.equal(get(even, 'lateGame')[0].state, 'not');
 });
+
+test('all roles: the role tags for every role played 5+ times, each with its thresholds and share', () => {
+  // 10 games mid at 10 CS/min, 6 support, 2 top (too few: left out)
+  const games = [...Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { cs: 300 } })),
+    ...Array.from({ length: 6 }, (_, i) => game({ ago: 20 + i, at: 4 })),
+    ...Array.from({ length: 2 }, (_, i) => game({ ago: 40 + i, at: 0 }))];
+  const r = T.evaluateAll({ games, own: ['me'], now: NOW });
+  assert.equal(r.all, true);
+  assert.deepEqual(r.roles.map(x => [x.role, x.n]), [['mid', 10], ['support', 6]]);
+  // farm is judged on mid only (not for supports), with the mid thresholds
+  const farm = get(r, 'farm');
+  assert.deepEqual(farm.map(x => x.role), ['mid']);
+  assert.equal(farm[0].level, 'master');
+  assert.equal(farm[0].roleShare, 10 / 18);
+  // damage for both roles, each against its own role
+  assert.deepEqual(get(r, 'damage').map(x => x.role).sort(), ['mid', 'support']);
+  // the tags that don't depend on the role come once, without a role
+  assert.equal(get(r, 'otp').length, 1);
+  assert.equal(get(r, 'otp')[0].role, undefined);
+  // hysteresis keys keep the role
+  assert.ok([...T.keys(r.results)].some(k => k === 'farm:master:mid'));
+});

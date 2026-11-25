@@ -33,6 +33,9 @@ function tagName(x) {
   const key = x.id === 'mastery' ? `tag.mastery.${x.level}` : lv ? `tag.${x.id}.${lv}` : `tag.${x.id}`;
   return t(key, { champ: x.champ ? tagChampName(x.champ) : '' }) + (x.level === 'master' ? ' ★' : '');
 }
+// "All roles": which role a tag is about, and that role's share of the games
+const tagRoleIcon = x => (x.role ? `<img class="tc-role" src="${posIcon(x.role)}" alt="">` : '');
+const tagRoleText = x => (x.role ? t('tags.inRole', { role: t('pos.' + x.role), pct: Math.round(x.roleShare * 100) }) : '');
 // a value as the tag's text shows it
 function tagFmt(x, v) {
   const r = tagRule(x.id);
@@ -61,9 +64,9 @@ function tagBaseName(r) {
 // pre: 'all|' for the chips of "All possible tags" (their own open detail); title: the hover text
 function tagChip(x, i, pre = '', title = null) {
   const key = `${pre}${x.id}:${x.champ || ''}:${i}`;
-  if (x.state === 'met') return `<button class="tchip tc-${tagColor(x)}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(title || tagText(x))}">${esc(tagName(x))}</button>`;
+  if (x.state === 'met') return `<button class="tchip tc-${tagColor(x)}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(title || [tagText(x), tagRoleText(x)].filter(Boolean).join('\n'))}">${tagRoleIcon(x)}${esc(tagName(x))}</button>`;
   const why = x.state === 'few' ? (x.unread ? t('tags.unread') : t('tags.few', { n: x.n, need: x.need })) : t('tags.not');
-  return `<button class="tchip tc-${x.state}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(title || why)}">${esc(tagBaseName(tagRule(x.id)))}${x.state === 'few' && !x.unread ? ` <i>${x.n}/${x.need}</i>` : ''}</button>`;
+  return `<button class="tchip tc-${x.state}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(title || why)}">${tagRoleIcon(x)}${esc(tagBaseName(tagRule(x.id)))}${x.state === 'few' && !x.unread ? ` <i>${x.n}/${x.need}</i>` : ''}</button>`;
 }
 // which way a threshold goes
 const tagSense = r => (r.type === 'poolTop' || r.minShare != null ? '>'
@@ -100,7 +103,7 @@ function tagAllHtml(list, role, openX) {
   const body = Tags.GROUPS.map(g => {
     const chips = rules.filter(r => r.group === g).map(r => {
       const mine = list.filter(({ x }) => x.id === r.id);
-      if (mine.length) return mine.map(({ x, i }) => tagChip(x, i, 'all|', tagWhy(x, role))).join('');
+      if (mine.length) return mine.map(({ x, i }) => tagChip(x, i, 'all|', tagWhy(x, x.role || role))).join('');
       // nothing came out: not judged for this role, or no data at all
       const why = r.roles && role && !r.roles.includes(role) ? t('tags.notRole', { role: t('pos.' + role) }) : t('tags.noData');
       return `<span class="tchip tc-na" title="${esc(`${tagDesc(r.id)}\n\n${why}`)}">${esc(tagBaseName(r))}</span>`;
@@ -114,6 +117,7 @@ function tagAllHtml(list, role, openX) {
 function tagDetail(x) {
   const cells = [];
   if (x.state === 'met') cells.push(`<b>${esc(tagText(x))}</b>`);
+  if (x.role) cells.push(esc(tagRoleText(x)));
   else cells.push(`<b>${esc(x.state === 'few' ? (x.unread ? t('tags.unread') : t('tags.few', { n: x.n, need: x.need })) : t('tags.not'))}</b>`);
   if (x.value != null && x.th != null) cells.push(`${t('tags.value')}: ${esc(tagFmt(x, x.value))}`, `${t('tags.th')}: ${esc(tagFmt(x, x.th))}`);
   if (x.n != null && x.id !== 'mastery') cells.push(`${t('perf.games')}: ${num(x.n)}`);
@@ -127,19 +131,22 @@ function renderTagsView() {
   if (!el || $('dashTags').hidden) return;
   const accs = ovChosen();
   $('tagRole').innerHTML = `<button data-trole=""${!tagv.role ? ' class="on"' : ''}>${t('tags.mainRole')}</button>` +
+    `<button data-trole="all"${tagv.role === 'all' ? ' class="on"' : ''}>${t('tags.allRoles')}</button>` +
     Stats.POSITIONS.map(r => `<button data-trole="${r}" title="${esc(t('pos.' + r))}"${tagv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('');
   if (!tagv.games) { $('tagSub').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
   const own = accs.map(a => a.puuid);
   const read = (tagv.mast || []).filter(m => own.includes(m.puuid));
   const acc = accs.length === 1 ? accs[0] : null;
-  const res = Tags.evaluate({ games: tagv.games, own, role: tagv.role || null, prev: tagPrev(),
-    level: acc && acc.level != null ? acc.level : null, mastery: read.length ? MastMath.masteryTable(read) : null });
+  const ctx = { games: tagv.games, own, role: tagv.role && tagv.role !== 'all' ? tagv.role : null, prev: tagPrev(),
+    level: acc && acc.level != null ? acc.level : null, mastery: read.length ? MastMath.masteryTable(read) : null };
+  const res = tagv.role === 'all' ? Tags.evaluateAll(ctx) : Tags.evaluate(ctx);
   tagKeep(res.results);
   tagv.res = res.results;
   const seasonN = res.results.find(x => x.id === 'otp');
   const n = seasonN ? (seasonN.n || 0) : 0;
   if (!n && !res.results.some(x => x.state === 'met')) { $('tagSub').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('tags.none')}</div>`; return; }
-  const roleTxt = !res.role ? '' : tagv.role ? t('pos.' + res.role) : res.main ? t('tags.roleMain', { role: t('pos.' + res.role) }) : t('tags.roleMost', { role: t('pos.' + res.role) });
+  const roleTxt = res.all ? res.roles.map(r => `${t('pos.' + r.role)} ${Math.round(r.share * 100)} %`).join(' · ')
+    : !res.role ? '' : tagv.role ? t('pos.' + res.role) : res.main ? t('tags.roleMain', { role: t('pos.' + res.role) }) : t('tags.roleMost', { role: t('pos.' + res.role) });
   $('tagSub').textContent = [t('tags.sub', { n: num(n) }), roleTxt].filter(Boolean).join(' · ');
 
   const list = res.results.map((x, i) => ({ x, i }));

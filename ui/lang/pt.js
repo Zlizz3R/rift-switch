@@ -286,6 +286,8 @@
     'perf.game1': "1 partida",
     'dash.tabTags': "Tags",
     'tags.mainRole': "Função principal",
+    'tags.allRoles': "Todas as funções",
+    'tags.inRole': "{role}: {pct} % das partidas",
     'tags.sub': "{n} partidas ranqueadas nesta temporada",
     'tags.roleMain': "{role} (função principal)",
     'tags.roleMost': "{role} (mais jogada – sem função principal)",
