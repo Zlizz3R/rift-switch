@@ -56,6 +56,8 @@ anyway**. The full source is right here.
   left and the wait per game.
 - **Ranked readiness** – what a fresh account still needs (level 30, 20 champions, 10 normal games) plus Riot's own
   restrictions.
+- **A new Riot ID** (renamed outside the app) – the tile takes it over and says so once; the old name stays in
+  the panel and the search still finds it.
 - **Categories**, search, sorting, drag & drop, and **several at once**: Ctrl+click, Shift+click or draw a box – then
   note, category, *Open with* or remove for all of them.
 
@@ -125,6 +127,9 @@ into one category.
 - **Traits** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
   games, per role – or *All roles* at once, each tag with its role and that role's share of your games – each with
   the numbers behind it. "Too little data" is never shown as "not met".
+- **Deaths** – a map of where you die (the same filter: account, queue, season, role), by game phase – before
+  10 minutes, 10–20, after 20 – seen from the blue side, with the spots that stand out ("Before 10 min: 45 % of
+  your deaths in the top river") and every zone's share.
 - **Seasons** – what the client tells about the last season, your stored games per year, and earlier seasons you
   paste in yourself – three sources, never added up.
 </details>
@@ -157,7 +162,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   buttons) go through the pages like a browser. The **search** in the title bar (Ctrl+K) finds anyone: suggestions
   from everyone in your games, any other Riot ID looked up through the client (without a tag: your server's, like EUW).
 - **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each
-  minute), and any two players side by side.
+  minute), any two players side by side – and its **replay**: download it and watch it in League (games of the
+  current patch on the server League runs on).
 
 ### ⚡ Live
 
@@ -274,7 +280,8 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 - `ui/` – the window (`index.html`, `style.css`; `tauri-api.js` is its link to the background part):
   - accounts and frame: `renderer.js`, `views.js` (also Live and the champ select helper), `bulk.js` + `bulkparse.js`,
     `keys.js`, `changelog.js`
-  - Overview: `dashboard.js`, `ovfilter.js`, `perf.js` + `perfmath.js`, `radar.js` + `radar-view.js`, `mastery.js` +
+  - Overview: `dashboard.js`, `ovfilter.js`, `perf.js` + `perfmath.js`, `radar.js` + `radar-view.js`,
+    `deathmath.js` + `deaths-view.js`, `mastery.js` +
     `mastmath.js` + `playtime-rules.js`, `seasons-view.js` + `seasonparse.js`, `insights.js`
   - tags: `tag-rules.js` (every threshold), `tags.js` (the engine), `tags-view.js`
   - collection: `collection.js`; match history: `matches-view.js`, `matchfilter.js`, `postgame.js`
@@ -285,8 +292,10 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 - Tests: `npm test` (the real window in jsdom with a fake background part + `cargo test`); they run on every push
 - Pictures and the demo video: `node tools/screens/demo.js`, then `python tools/screens/capture.py` (headless Edge, ffmpeg)
 - Releases: add the version's notes to `ui/changelog.js` (the app's *What's new* and the release text,
-  `node tools/release-notes.js vX.Y.Z`), then push a tag `vX.Y.Z` matching the version in `src-tauri/tauri.conf.json` –
-  GitHub Actions builds and publishes the installer, installed copies update themselves
+  `node tools/release-notes.js vX.Y.Z`), then `npm run release X.Y.Z` – it runs every check of the release workflow
+  first (on main, nothing uncommitted, changelog entry, `cargo fmt --check`, clippy, all tests), sets the version in
+  `tauri.conf.json`, `Cargo.toml` and `package.json`, commits and tags; `--push` also pushes main and the tag.
+  GitHub Actions then builds and publishes the installer, installed copies update themselves
 - Test copy on its own data folder: `$env:RS_DATA='<folder>'; .\src-tauri\target\debug\rift-switch.exe`
   (never touches autostart, the jump list or the real data)
 - **After every change** (AI helpers working on this project do all of this on their own):

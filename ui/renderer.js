@@ -317,7 +317,8 @@ function moveTo(id, cat, beforeId) {
 function filterList(list) {
   const q = $('search').value.trim().toLowerCase();
   if (!q) return list;
-  return list.filter(a => [a.gameName, a.tagLine, a.note].some(x => (x || '').toLowerCase().includes(q)));
+  // old Riot IDs too: an account renamed outside the app is still found by its old name
+  return list.filter(a => [a.gameName, a.tagLine, a.note, ...(a.oldNames || []).map(o => o.n)].some(x => (x || '').toLowerCase().includes(q)));
 }
 function queueScore(q) { return q ? rankScore(q) : -1; }
 const sortMode = () => (S.settings && S.settings.sort) || 'level';
@@ -512,6 +513,7 @@ function renderProfile() {
         <h2>${esc(dispName(a))}${dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}</h2>
         <div class="p-sub">${esc(a.region || '')}${a.note && !hides('note') ? ' · <span class="gold">' + esc(a.note) + '</span>' : ''}</div>
         <div class="p-sub ${idle ? 'warn' : ''}">${t('p.lastPlayed', { ago: ago(a.lastPlayed) })}${a.lastPlayed ? ' (' + fmtDate(a.lastPlayed) + ')' : ''}${idle ? t('p.decay') : ''}</div>
+        ${(a.oldNames || []).length && !hides('name') ? `<div class="p-sub" title="${esc(a.oldNames.map(o => `${o.n} · ${fmtDate(o.t)}`).join('\n'))}">${esc(t('p.oldNames', { names: a.oldNames.slice(0, 3).map(o => o.n).join(', ') }))}</div>` : ''}
       </div>
     </div>
     ${hides('ranks') ? `<div class="chart-empty">${t('stream.ranksHidden')}</div>` : `<div class="ranks two">${QUEUES.map(([k, n]) => rankRow(n, a[k])).join('')}</div>
@@ -1205,7 +1207,12 @@ $('settingsClose').onclick = () => openSettings(false);
 $('search').addEventListener('input', render);
 $('sort').onchange = () => api.setSetting('sort', $('sort').value);
 api.onTraySwitch(id => stateReady.then(() => switchTo(id)));   // a freshly opened window loads its state first
-api.onToast(k => (typeof k === 'string' ? toast(t(k)) : toast(t(k.key, k.vars), !!k.err)));
+api.onToast(k => {
+  if (typeof k === 'string') return toast(t(k));
+  // a renamed account names both Riot IDs: not in streamer mode
+  if (k.key === 'acc.renamed' && hides('name')) return;
+  toast(t(k.key, k.vars), !!k.err);
+});
 $('addAcc').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
 $('navAdd').onclick = () => openDrawer(!$('drawer').classList.contains('open'));
 $('emptyAdd').onclick = () => openDrawer(true);

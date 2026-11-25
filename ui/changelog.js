@@ -3,6 +3,27 @@
 (function (root) {
   const CHANGELOG = [
     {
+      v: '1.3.2',
+      en: [
+        'Player page for anyone: a click on a name (match history, Live, after a game) shows their rank, key figures, roles, champions, traits, recent games and the games with you – from their 200 newest games.',
+        'Player search in the title bar (Ctrl+K), and back / forward arrows like a browser (also Alt+← / Alt+→ and the mouse\'s side buttons).',
+        'Replays: an opened game can be downloaded and watched right from the match history (through League, current patch).',
+        'Overview → Deaths: a map of where you die, by game phase (before 10 min, 10–20, after 20), and the spots that stand out – e.g. "Before 10 min: 45 % of your deaths in the top river".',
+        'Live loads much faster; traits come in three tiers (Key / More / All). Your own premades no longer get "Last game: team (…)", and your record against the enemy champions shows its numbers on the chip.',
+        'A Riot ID changed outside the app: the tile follows it, says so once, and the old name stays findable.',
+        'Tags are now called Traits.',
+      ],
+      de: [
+        'Spieler-Seite für jeden: Ein Klick auf einen Namen (Match History, Live, nach dem Spiel) zeigt Rang, Kennzahlen, Rollen, Champions, Traits, letzte Spiele und die Spiele mit dir – aus seinen 200 neuesten Spielen.',
+        'Spielersuche in der Titelleiste (Strg+K) und Vor-/Zurück-Pfeile wie im Browser (auch Alt+← / Alt+→ und die Seitentasten der Maus).',
+        'Replays: Ein geöffnetes Spiel lässt sich direkt in der Match History herunterladen und ansehen (über League, aktueller Patch).',
+        'Übersicht → Tode: eine Karte, wo du stirbst, nach Spielphase (vor 10 Min., 10–20, nach 20), und die Stellen, die herausstechen – z. B. „Vor 10 Min.: 45 % deiner Tode im Fluss oben“.',
+        'Live lädt viel schneller; Traits in drei Stufen (Wichtig / Mehr / Alle). Deine eigenen Premades bekommen kein „Letztes Spiel: Team (…)“ mehr, und deine Bilanz gegen die gegnerischen Champions zeigt ihre Zahlen direkt auf dem Chip.',
+        'Eine Riot ID wurde außerhalb der App geändert: Die Kachel übernimmt sie, sagt es einmal, und der alte Name bleibt auffindbar.',
+        'Tags heißen jetzt Traits.',
+      ],
+    },
+    {
       v: '1.3.1',
       en: [
         'Champ select helper: both teams lane by lane – yours as Riot assigned them, the enemies guessed from how often each champion plays each lane in your stored games; your assigned position is the helper\'s lane.',

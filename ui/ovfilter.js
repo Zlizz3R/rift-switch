@@ -39,7 +39,7 @@ function ovRefresh() {
   renderOvAccs();
   const tab = dashTab();
   if (tab === 'lp' && typeof renderDash === 'function') renderDash();
-  else if (['stats', 'champs', 'style'].includes(tab)) renderPerf();
+  else if (['stats', 'champs', 'style', 'deaths'].includes(tab)) renderPerf();
   else if (tab === 'mast') renderMast();
   else if (tab === 'tags') renderTagsView();
   else if (tab === 'seasons') renderSeasonsView();

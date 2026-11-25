@@ -26,14 +26,26 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Live: Traits in drei Stufen (Wichtig / Mehr / Alle), Rest einer Karte hinter „+n“.
 - [x] Live lädt viel schneller: alle Match-Listen auf einmal, dann 12 Spiele gleichzeitig ohne Pause zwischen den Runden, Spiel + Timeline parallel; im Spiel 6 gleichzeitig statt 1 alle 4 s; kurze Pause, wenn der Client ablehnt. Die Spieler-Seite lädt ebenso 12 gleichzeitig.
 - [x] Spielersuche in der Titelleiste (Strg+K): Vorschläge aus allen Spielern deiner Spiele, sonst Riot ID über den Client (ohne Tag: der eigene Server).
-- [ ] Als 1.3.2 veröffentlichen (Tag auf main; die Tags v1.3.0/v1.3.1 haben keinen Release – die Läufe scheiterten an „Tag nicht auf main“ und `cargo fmt`).
+- [ ] Als 1.3.2 veröffentlichen (Tag auf main; die Tags v1.3.0/v1.3.1 haben keinen Release – die Läufe scheiterten an „Tag nicht auf main“ und `cargo fmt`). Jetzt mit `npm run release 1.3.2 --push`.
+
+### C. Ideen-Runde (25.11.2026)
+
+- [x] Live: eigene Premades ohne „Letztes Spiel: Team (…)“, Premades einer Party ohne „schon einmal getroffen“; „Deine Bilanz gegen ihre Champions“ zeigt die Zahlen auf dem Chip.
+- [x] Replays in der Match History (herunterladen mit Fortschritt, ansehen) über `/lol-replays`.
+- [x] Übersicht → Tode: Karte, wo man stirbt, nach Phase, von der blauen Seite aus; Stellen ab 5 Toden und 30 %.
+- [x] Riot ID umbenannt: Kachel übernimmt sie, Toast (nicht im Streamer-Modus), alte Namen im Panel und in der Suche.
+- [x] Panic-Hook schreibt Ort und Meldung in `error.log`, bevor `panic = "abort"` beendet.
+- [x] `tools/release.js` (`npm run release X.Y.Z [--push]`): alle Prüfungen des Release-Workflows vorab.
+- [ ] Code-Signing: SignPath Foundation (kostenlos für Open Source) oder Azure Trusted Signing (~10 $/Monat) – braucht eine Bewerbung/Identitätsprüfung durch den Nutzer.
+- [ ] Weitere Ideen: Account-Vorschlag „als Nächstes spielen“, Decay-Kalender, Taskleiste blinken bei Match gefunden, Runen/Item-Sets aus den eigenen besten Spielen, Session-/Tilt-Anzeige, winget-Manifest.
 
 ### 0. Aus dem Code-Review (25.11.2026) noch offen
 
 - [ ] **P5 – Spiele im Fenster-Speicher:** `mh.cache` (matches-view.js) hält jedes geladene Spiel ganz im WebView; die
   Übersicht lädt dafür die ganze Historie. Besser: kompakte Zeilen für Kennzahlen, Details per LRU-Cache.
 - [ ] **`panic = "abort"`:** Jeder Panic beendet die App samt Tray. Bewusst so gelassen (kleinere Datei); die
-  bekannten Panic-Stellen (z. B. `redact` mit Sonderzeichen) sind behoben.
+  bekannten Panic-Stellen (z. B. `redact` mit Sonderzeichen) sind behoben. Seit 25.11.2026 steht jeder Panic
+  vorher mit Ort und Meldung in `error.log` (und damit in der Diagnose-Datei).
 - **S2 – signierte Updates:** nicht umgesetzt (Code-Signing kostet mehrere hundert Euro im Jahr). Der Installer wird
   gegen die SHA-256 aus dem Release geprüft – beim Download und noch einmal direkt vor dem Start.
 

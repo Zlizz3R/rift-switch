@@ -981,6 +981,36 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .det-body { display: none; flex-direction: column; gap: 10px; padding: 0 0 10px; }
 .det-g.open + .det-body { display: flex; }
 .mh-det { gap: 0; }
+/* Overview → Deaths: the map and the zones */
+.dm-phases { margin-bottom: 12px; }
+.dm-phases small { opacity: .6; margin-left: 3px; }
+.dm-wrap { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.dm-map { width: 340px; height: 340px; flex: none; }
+.dm-bg { fill: var(--panel2); }
+.dm-lane { fill: none; stroke: var(--line); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.dm-river { fill: none; stroke: rgba(90, 160, 210, .18); stroke-width: 11; stroke-linecap: round; }
+.dm-base.own { fill: rgba(10, 200, 185, .12); }
+.dm-base.enemy { fill: rgba(232, 64, 87, .12); }
+.dm-dots circle { fill: #e84057; opacity: .28; }
+.dm-side { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 10px; }
+.dm-hots { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.dm-hots li { padding: 8px 12px; border-radius: 8px; background: rgba(232, 64, 87, .08); border: 1px solid rgba(232, 64, 87, .25); }
+.dm-hots b { color: var(--gold2); margin-right: 6px; }
+.dm-rows { display: flex; flex-direction: column; gap: 6px; }
+.dm-row { display: grid; grid-template-columns: 150px 1fr 46px 32px; align-items: center; gap: 10px; font-size: 12.5px; }
+.dm-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.dm-row small { opacity: .6; text-align: right; }
+.dm-track { height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
+.dm-track i { display: block; height: 100%; background: #e84057; }
+/* the replay of an opened game */
+.rp-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 4px 2px; border-top: 1px solid var(--line); }
+.rp-bar:empty { display: none; }
+.rp-l { font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--gold2); }
+.rp-bar .btn { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; }
+.rp-bar .btn svg { width: 13px; height: 13px; fill: currentColor; }
+.rp-bar .fine { margin: 0; }
+.rp-prog { width: 140px; height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
+.rp-prog i { display: block; height: 100%; background: var(--gold); transition: width .3s; }
 /* two players compared */
 .cmp-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
 .cmp-pick { display: flex; align-items: center; gap: 8px; min-width: 0; }

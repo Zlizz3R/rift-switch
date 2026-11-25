@@ -264,6 +264,11 @@ pub fn allowed_url(u: &str) -> bool {
 
 // ---------- diagnostics ----------
 
+/// The error-log line of a panic: thread, place and message on one line.
+pub fn panic_line(thread: &str, at: &str, msg: &str) -> String {
+    let msg = msg.replace(['\r', '\n'], " ");
+    format!("thread '{thread}' at {at}: {}", msg.trim())
+}
 /// One line of the error log made safe to share: the user folder, account ids (UUIDs),
 /// Riot IDs (Name#TAG) and e-mail addresses are replaced.
 pub fn redact(line: &str, home: &str) -> String {
@@ -430,6 +435,14 @@ pub fn mastery_changes(old: Option<&Value>, new: &Value) -> Option<Value> {
 mod tests {
     use super::*;
     use crate::store::normalize;
+
+    #[test]
+    fn panic_line_is_one_line() {
+        assert_eq!(
+            panic_line("main", "src/x.rs:4", "bad\nthing\r\n"),
+            "thread 'main' at src/x.rs:4: bad thing"
+        );
+    }
 
     #[test]
     fn mastery_history_keeps_only_changes() {

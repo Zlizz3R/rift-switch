@@ -184,3 +184,28 @@ test('live board: two others met once before – when, the other by his champion
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('live board: no "do I know them?" on my own premades; without lanes the record shows its numbers', async () => {
+  // a2 queued with me (the client's lobby) and played with me 3 hours ago – no chip for that
+  const withMate = game({ 2: { puuid: P(1), champ: 103, win: true }, 1: { puuid: 'a2', champ: 64 }, 7: { puuid: 'e3', champ: 238, win: false } }, 3);
+  const aram = { ...inGame, queueId: 450, party: [P(1), 'a2'] };
+  const app = await boot({ replies: {
+    live: { clientUp: true, phase: 'InProgress', me: P(1), inGame: aram },
+    'scout-games': scoutReply({}),
+    matches: { index: [[withMate.id, withMate.t, 420, P(1)]], waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': [withMate],
+    champions: [{ id: 238, name: 'Zed' }, { id: 103, name: 'Ahri' }, { id: 64, name: 'Lee Sin' }],
+  } });
+  try {
+    await app.click('#navLive');
+    for (let i = 0; i < 4; i++) await app.settle();
+    const c = id => app.$(`.sc-card[data-sc="${id}"]`);
+    assert.ok(c('a2').dataset.party, 'a2 is in my party');
+    assert.ok(![...c('a2').querySelectorAll('.tchip')].some(x => /Team|team/.test(x.textContent)), c('a2').querySelector('.sc-tags').textContent);
+    // e3 (not a premade) still gets it
+    assert.ok([...c('e3').querySelectorAll('.tchip')].some(x => /enemy \(Zed\)/.test(x.textContent)));
+    // no lanes: the chip itself says the record against each enemy champion
+    assert.match(c(P(1)).querySelector('.sc-tags').textContent, /Your record vs\. their champions: Zed 1–0/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

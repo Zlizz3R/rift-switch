@@ -710,6 +710,41 @@ test('match history: a click opens the details (not on a name); a name opens the
   assert.equal(app.$('.mh-det'), null, 'closes again');
 }));
 
+test('match history: an opened game has its replay – download with progress, then watch', async () => {
+  let state = { state: 'download', progress: 0 };
+  const asked = [];
+  const replies = { ...mhReplies([game(1)]), replay: (id, action) => { asked.push([id, action]); if (action === 'download') state = { state: 'downloading', progress: 40 }; if (action === 'watch') return { state: 'watch', started: true }; return state; } };
+  await withApp({ replies }, async (app) => {
+    await app.click('#navMatches');
+    await app.click(app.$('.mh-row .mh-meta'));
+    await app.settle();
+    assert.deepEqual(asked[0], ['1', 'state']);
+    assert.match(app.$('.rp-bar').textContent, /Download replay/);
+    await app.click('[data-rpact="download"]');
+    await app.settle();
+    assert.ok(asked.some(([, a]) => a === 'download'));
+    assert.match(app.$('.rp-bar').textContent, /Downloading … 40 %/);
+    assert.ok(app.$('.mh-det'), 'the game stays open');
+    // the download ends: the next check says "watch"
+    state = { state: 'watch', progress: 100 };
+    await new Promise((r) => setTimeout(r, 1600));
+    await app.settle();
+    assert.match(app.$('.rp-bar').textContent, /Watch replay/);
+    await app.click('[data-rpact="watch"]');
+    await app.settle();
+    assert.match(app.$('#toast').textContent, /League is starting the replay/);
+    assert.deepEqual(app.errors.map(String), []);
+  });
+});
+
+test('match history: a replay League can\'t play says why', () => withApp({ replies: { ...mhReplies([game(1)]), replay: { state: 'incompatible', progress: 0 } } }, async (app) => {
+  await app.click('#navMatches');
+  await app.click(app.$('.mh-row .mh-meta'));
+  await app.settle();
+  assert.match(app.$('.rp-bar').textContent, /older patch/);
+  assert.ok(!app.$('[data-rpact]'));
+}));
+
 test('positions: Riot\'s wrong guesses are fixed (Smite = jungle, support item = support); the lane factor compares the right players', () => withApp({}, async (app) => {
   const g = game(1);
   const [top, jgl, mid, bot, sup] = g.players.slice(0, 5);
@@ -941,6 +976,19 @@ test('signed in as another account than picked: a red note with both names', () 
   await app.emit('toast', { key: 'login.wrong', vars: { got: 'Other#EUW', want: 'Player2#EUW' }, err: true });
   assert.match(app.$('#toast').textContent, /Signed in as Other#EUW – not Player2#EUW/);
   assert.ok(app.$('#toast').classList.contains('err'));
+}));
+
+test('a renamed account: a note, its old Riot ID in the panel and in the search', () => withApp({}, async (app) => {
+  await app.emit('toast', { key: 'acc.renamed', vars: { old: 'Player2#EUW', new: 'Neo#1234' } });
+  assert.match(app.$('#toast').textContent, /Player2#EUW is now Neo#1234/);
+  const st = app.S.state;
+  await app.push({ ...st, accounts: st.accounts.map(a => (a.puuid === P(2) ? { ...a, gameName: 'Neo', tagLine: '1234', oldNames: [{ n: 'Player2#EUW', t: Date.now() }] } : a)) });
+  await app.type('#search', 'player2');
+  assert.deepEqual(app.$$('#board .tile[data-id]').map(x => x.dataset.id), [P(2)]);
+  await app.type('#search', '');
+  app.w.openProfile(P(2));
+  await app.settle();
+  assert.match(app.$('#profileCard').textContent, /Formerly: Player2#EUW/);
 }));
 
 // ---------- export, diagnostics, what's new, data sources ----------

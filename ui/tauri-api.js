@@ -62,6 +62,7 @@
     playerGames: (puuid, have) => call('player-games', puuid, have || []),
     findPlayer: q => call('find-player', q),
     champDamage: ids => call('champ-damage', ids),
+    replay: (gameId, action) => call('replay', String(gameId), action || 'state'),
     seasonsSet: (puuid, list) => call('seasons-set', puuid, list),
     matchesClear: () => call('mh-clear'),
     playerRanks: puuids => call('player-ranks', puuids),

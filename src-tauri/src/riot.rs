@@ -232,6 +232,90 @@ pub async fn lcu(path: &str, timeout_ms: u64, method: &str) -> Option<Value> {
 pub async fn get(path: &str) -> Option<Value> {
     lcu(path, 4000, "GET").await
 }
+/// A League Client API request with a JSON body; None on any error or non-2xx.
+pub async fn lcu_json(path: &str, method: &str, body: &Value) -> Option<Value> {
+    let lf = lockfile()?;
+    let url = format!("https://127.0.0.1:{}{}", lf.port, path);
+    let m = reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::POST);
+    let res = local_client()
+        .request(m, url)
+        .basic_auth("riot", Some(&lf.password))
+        .timeout(Duration::from_millis(5000))
+        .header("Content-Type", "application/json")
+        .body(body.to_string())
+        .send()
+        .await
+        .ok()?;
+    if !res.status().is_success() {
+        return None;
+    }
+    let b = res.bytes().await.ok()?;
+    Some(serde_json::from_slice(&b).unwrap_or(Value::Bool(true)))
+}
+
+// ---------- replays ----------
+
+/// A replay through the League client, as its own match history does it: the client must know the
+/// game first (create), then it tells its state – "download", "downloading" (with progress),
+/// "watch", "incompatible" (an older patch), "missingOrExpired", … – and can download or play it.
+/// Only a game of the server League runs on, and only from the current patch.
+/// action: "state" | "download" | "watch" → { state, progress } (state "noClient" without League)
+pub async fn replay(game_id: u64, action: &str) -> Value {
+    if lockfile().is_none() {
+        return json!({ "state": "noClient" });
+    }
+    let btn = json!({ "componentType": "replay-button_match-history" });
+    match action {
+        "download" => {
+            let _ = lcu_json(
+                &format!("/lol-replays/v1/rofls/{game_id}/download/graceful"),
+                "POST",
+                &btn,
+            )
+            .await;
+        }
+        "watch" => {
+            let ok = lcu_json(
+                &format!("/lol-replays/v1/rofls/{game_id}/watch"),
+                "POST",
+                &btn,
+            )
+            .await;
+            return json!({ "state": "watch", "started": ok.is_some() });
+        }
+        _ => {
+            let body = json!({ "gameId": game_id, "gameType": "", "queueId": 0, "gameEnd": 0 });
+            let _ = lcu_json(
+                &format!("/lol-replays/v2/metadata/{game_id}/create"),
+                "POST",
+                &body,
+            )
+            .await;
+        }
+    }
+    let enabled = get("/lol-replays/v1/configuration")
+        .await
+        .is_none_or(|c| c["isReplaysEnabled"].as_bool() != Some(false));
+    if !enabled {
+        return json!({ "state": "disabled" });
+    }
+    match get(&format!("/lol-replays/v1/metadata/{game_id}")).await {
+        Some(m) => replay_state(&m),
+        None => json!({ "state": "missingOrExpired" }),
+    }
+}
+/// The client's replay metadata in short: { state, progress (0–100) }.
+pub fn replay_state(m: &Value) -> Value {
+    let state = m["state"].as_str().unwrap_or("checking");
+    let p = m["downloadProgress"].as_f64().unwrap_or(0.0);
+    // older clients report 0–1, newer 0–100
+    let progress = if p <= 1.0 && state == "downloading" {
+        p * 100.0
+    } else {
+        p
+    };
+    json!({ "state": state, "progress": progress.clamp(0.0, 100.0).round() })
+}
 fn enc(s: &str) -> String {
     let mut o = String::new();
     for b in s.bytes() {
@@ -1578,6 +1662,27 @@ pub async fn dismiss_pbe_dialog() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn replay_state_in_short() {
+        let s = |v: Value| replay_state(&v);
+        assert_eq!(
+            s(json!({ "state": "watch", "downloadProgress": 100 })),
+            json!({ "state": "watch", "progress": 100.0 })
+        );
+        assert_eq!(
+            s(json!({ "state": "downloading", "downloadProgress": 0.42 })),
+            json!({ "state": "downloading", "progress": 42.0 })
+        );
+        assert_eq!(
+            s(json!({ "state": "downloading", "downloadProgress": 57 })),
+            json!({ "state": "downloading", "progress": 57.0 })
+        );
+        assert_eq!(
+            s(json!({})),
+            json!({ "state": "checking", "progress": 0.0 })
+        );
+    }
 
     #[test]
     fn session_restore_only_inside_the_data_folder() {

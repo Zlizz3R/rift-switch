@@ -789,9 +789,19 @@ fn resolve_placeholder(c: &mut Core, old_id: &str, new_id: &str) {
     }
 }
 fn upsert(acc: Obj) {
-    with(|c| {
+    let renamed = with(|c| {
+        let prev = c.st.account(str_of(&acc, "puuid")).cloned();
+        let r = prev.and_then(|p| accounts::rename_of(&p, &acc));
         upsert_into(&mut c.st.accounts, acc, now_ms());
+        r
     });
+    // a Riot ID changed outside the app: the tile follows it, the window says so once
+    if let Some((old, new)) = renamed {
+        emit(
+            "toast",
+            json!({ "key": "acc.renamed", "vars": { "old": old, "new": new } }),
+        );
+    }
 }
 
 // ---------- watcher: keeps tiles fresh while League is open ----------
@@ -3183,6 +3193,12 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 .collect();
             live::damage_types(data(), &ids).await
         }
+        // a game's replay: its state, download it, or watch it (League plays it)
+        "replay" => match s(0).parse::<u64>() {
+            Ok(id) if !game_on() => riot::replay(id, &s(1)).await,
+            Ok(_) => json!({ "state": "inGame" }),
+            Err(_) => json!({ "state": "missingOrExpired" }),
+        },
         "tool" => with_busy(do_tool(s(0))).await,
         "open-multi" => {
             // op.gg multisearch for up to 5 Riot IDs (Clash opponents, picked tiles)
@@ -4032,6 +4048,25 @@ fn main() {
         });
     let _ = std::fs::create_dir_all(&data_dir);
     let _ = DATA.set(data_dir.clone());
+    // panic = "abort" ends the app at once: the hook writes where and why to error.log first, so a
+    // crash shows up in the diagnostics file instead of vanishing
+    std::panic::set_hook(Box::new(|info| {
+        let msg = info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|s| s.to_string())
+            .or_else(|| info.payload().downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        let at = info
+            .location()
+            .map(|l| format!("{}:{}", l.file(), l.line()))
+            .unwrap_or_default();
+        let thread = std::thread::current();
+        log_error(
+            "panic",
+            &ops::panic_line(thread.name().unwrap_or("?"), &at, &msg),
+        );
+    }));
 
     let (st, read_only) = match store::read_state(&data_dir.join("accounts.json")) {
         store::Loaded::Ok(st) => (st, false),

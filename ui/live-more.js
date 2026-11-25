@@ -113,8 +113,11 @@ function lmBoardExtras(g, rows) {
   const ownIds = lmOwnIds();
   for (const h of Insights.onceMet(pairs)) {
     const [a, b] = [byId.get(h.a), byId.get(h.b)];
-    // with an own account "do I know them?" says it (with more detail)
+    // with an own account "do I know them?" says it (with more detail); premades of one party
+    // play together anyway – that they met before says nothing
     if (!a || !b || ownIds.includes(h.a) || ownIds.includes(h.b)) continue;
+    const pa = (out.get(h.a) || {}).party;
+    if (pa && pa === (out.get(h.b) || {}).party) continue;
     const when = new Date(h.g.t).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
     const day = lmDay(h.g.t);
     for (const [me, other] of [[a, b], [b, a]]) {
@@ -126,8 +129,10 @@ function lmBoardExtras(g, rows) {
   }
   // do I know them: every player against all own stored games
   const own = lmOwnIds();
+  const myLobby = g.party || [];
   for (const p of all) {
-    if (!p.puuid || own.includes(p.puuid)) continue;
+    // the own premades: of course you played with them before
+    if (!p.puuid || own.includes(p.puuid) || myLobby.includes(p.puuid)) continue;
     const m = Insights.meetings(scv.own || [], own, p.puuid, g.gameId);
     if (!m) continue;
     const L = m.last;
@@ -149,8 +154,15 @@ function lmBoardExtras(g, rows) {
       const r = Insights.recordVs(scv.own || [], own, mine.championId, opp.c.p.championId);
       if (r) add(mine.puuid, `<span class="tchip tc-info" title="${esc(t('rec.tip'))}">${esc(fmt(r, opp.c.p.championId))}</span>`);
     } else {
-      const lines = oppRow.map(x => { const r = Insights.recordVs(scv.own || [], own, mine.championId, x.c.p.championId); return r ? fmt(r, x.c.p.championId) : ''; }).filter(Boolean);
-      if (lines.length) add(mine.puuid, `<span class="tchip tc-info" title="${esc(lines.join('\n'))}">${esc(t('rec.vsAll'))}</span>`);
+      // the lane opponent is unknown: the record against each enemy champion on the chip itself
+      // (Ahri 3–1 · Zed 0–2, the most played first; * = over all your champions), in full when hovering
+      const recs = oppRow.map(x => ({ champ: x.c.p.championId, r: Insights.recordVs(scv.own || [], own, mine.championId, x.c.p.championId) }))
+        .filter(x => x.r).sort((a, b) => (a.r.all - b.r.all) || (b.r.n - a.r.n));
+      if (recs.length) {
+        const short = recs.slice(0, 3).map(x => `${champName(x.champ)} ${x.r.w}–${x.r.l}${x.r.all ? '*' : ''}`).join(' · ') + (recs.length > 3 ? ` · +${recs.length - 3}` : '');
+        const tip = [t('rec.tip'), ...recs.map(x => fmt(x.r, x.champ))].join('\n');
+        add(mine.puuid, `<span class="tchip tc-info" title="${esc(tip)}">${esc(`${t('rec.vsAll')}: ${short}`)}</span>`);
+      }
     }
   }
   return out;

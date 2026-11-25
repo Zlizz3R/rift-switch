@@ -232,6 +232,26 @@ pub fn record_history(a: &mut Obj, now: i64) {
 }
 
 /// Fresh data for one account merged into the list; returns the index of the merged account.
+/// The account's Riot ID changed: (old "Name#TAG", new "Name#TAG"). Only for a real account whose
+/// old Riot ID was known (not a saved login, not the "…" of a tile still waiting for its data), and
+/// only when the fresh data has a whole Riot ID. A change of case is a rename too.
+pub fn rename_of(prev: &Obj, acc: &Obj) -> Option<(String, String)> {
+    let (og, ot) = (str_of(prev, "gameName"), str_of(prev, "tagLine"));
+    let (ng, nt) = (str_of(acc, "gameName"), str_of(acc, "tagLine"));
+    if truthy(prev.get("placeholder"))
+        || truthy(prev.get("needsInfo"))
+        || og.is_empty()
+        || og == "…"
+        || ot.is_empty()
+    {
+        return None;
+    }
+    if ng.is_empty() || nt.is_empty() || (og == ng && ot == nt) {
+        return None;
+    }
+    Some((format!("{og}#{ot}"), format!("{ng}#{nt}")))
+}
+
 pub fn upsert_into(list: &mut Vec<Obj>, mut acc: Obj, now: i64) -> usize {
     let puuid = str_of(&acc, "puuid").to_string();
     let i = list.iter().position(|a| str_of(a, "puuid") == puuid);
@@ -257,9 +277,22 @@ pub fn upsert_into(list: &mut Vec<Obj>, mut acc: Obj, now: i64) -> usize {
             acc.insert("decay".into(), old.clone());
         }
     }
+    // a new Riot ID for a known account: the old one is kept (search, panel), newest first
+    let renamed = i.and_then(|_| rename_of(&prev, &acc));
     let mut merged = prev;
     for (k, v) in acc {
         merged.insert(k, v);
+    }
+    if let Some((old, new)) = renamed {
+        let mut names: Vec<Value> = merged
+            .get("oldNames")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        names.retain(|x| x["n"].as_str().is_some_and(|n| n != old && n != new));
+        names.insert(0, json!({ "n": old, "t": now }));
+        names.truncate(10);
+        merged.insert("oldNames".into(), Value::Array(names));
     }
     merged.remove("updatedAt");
     record_history(&mut merged, now);
@@ -371,6 +404,34 @@ mod tests {
         upsert_into(&mut list, obj(json!({ "puuid": P1, "level": 40 })), 3);
         assert_eq!(list[0]["solo"]["lp"], 30);
         assert_eq!(list[0]["history"].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn a_new_riot_id_keeps_the_old_one() {
+        let mut list = vec![];
+        let named = |g: &str, t: &str| obj(json!({ "puuid": P1, "gameName": g, "tagLine": t }));
+        upsert_into(&mut list, named("Old", "EUW"), 1);
+        // the same name, or only a part of the data: nothing happens
+        upsert_into(&mut list, named("Old", "EUW"), 2);
+        upsert_into(&mut list, obj(json!({ "puuid": P1, "level": 40 })), 3);
+        assert!(list[0].get("oldNames").is_none());
+        assert_eq!(
+            rename_of(&list[0], &named("New", "1234")),
+            Some(("Old#EUW".into(), "New#1234".into()))
+        );
+        upsert_into(&mut list, named("New", "1234"), 4);
+        assert_eq!(list[0]["gameName"], "New");
+        assert_eq!(list[0]["oldNames"], json!([{ "n": "Old#EUW", "t": 4 }]));
+        // back to the old name: it leaves the list, the newer one comes first
+        upsert_into(&mut list, named("Old", "EUW"), 5);
+        assert_eq!(list[0]["oldNames"], json!([{ "n": "New#1234", "t": 5 }]));
+        // a tile still waiting for its data, or a saved login: no rename
+        let waiting =
+            obj(json!({ "puuid": P1, "gameName": "…", "tagLine": "", "needsInfo": true }));
+        assert_eq!(rename_of(&waiting, &named("A", "B")), None);
+        let saved =
+            obj(json!({ "puuid": P1, "gameName": "x•••", "tagLine": "EUW", "placeholder": true }));
+        assert_eq!(rename_of(&saved, &named("A", "B")), None);
     }
 
     #[test]

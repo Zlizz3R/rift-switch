@@ -153,3 +153,26 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('deaths: the map, the phases, the zones; the empty state without timelines', async () => {
+  // the four Ahri games get a timeline: three deaths each, two of them before 10 minutes in the top river
+  const withKills = games.map(g => (g.players[2].champ === 103 && g.q === 420
+    ? { ...g, kills: [[200, 7, 2, [8], 50, 98], [400, 7, 2, [], 52, 96], [1500, 7, 2, [], 74, 74]] } : g));
+  const app = await boot({ replies: { ...replies, 'matches-get': withKills } });
+  try {
+    await app.click('#navDash');
+    await app.click('[data-dt="deaths"]');
+    await app.settle();
+    assert.ok(app.visible('#dashPerf'), 'the Performance filter is there');
+    assert.equal(app.$$('.dm-map .dm-dots circle').length, 12);
+    assert.match(app.$('.dm-hots').textContent, /Before 10 min\s*100 % of your deaths: Top river \(8 of 8\)/);
+    assert.match(app.$('.dm-side').textContent, /12 deaths in 4 games · 3\.0 per game · 33 % against two or more enemies/);
+    await app.click('[data-dmph="late"]');
+    assert.equal(app.$$('.dm-map .dm-dots circle').length, 4);
+    assert.match(app.$('.dm-rows').textContent, /Mid lane/);
+    // a role without timelines: the empty state
+    await app.click('[data-prole="jungle"]');
+    assert.match(app.$('#perfBody').textContent, /No deaths with a place yet/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

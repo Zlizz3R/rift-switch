@@ -99,8 +99,73 @@ function detailsHtml(g, as, mine) {
     ${sec('h2h', t('det.h2h'), h2h)}
     ${sec('gold', t('det.goldDiff'), g.gold && g.gold.length > 2 ? goldChart(g, left) : '')}
     ${sec('compare', t('det.compare'), compareHtml(g, a, b, roles, mine))}
+    ${rpHtml(String(g.id))}
   </div>`;
 }
+
+// ---------- the replay of an opened game (through the League client) ----------
+// state per game from the background part: download → downloading (progress) → watch; or why not.
+// Final answers stay; the others are asked again after 30 s (League opened, a game ended).
+const rp = { st: new Map(), asking: new Set() };
+const RP_FINAL = ['incompatible', 'missingOrExpired', 'lost', 'unsupported'];
+const RP_ICON = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+function rpHtml(id) {
+  const s = rp.st.get(id);
+  if (!s || (!RP_FINAL.includes(s.state) && Date.now() - s.at > 30000)) rpAsk(id);
+  return `<div class="rp-bar" data-replay="${esc(id)}">${s ? rpInner(id, s) : ''}</div>`;
+}
+function rpInner(id, s) {
+  const btn = (act, label, cls = '') => `<button class="btn ${cls}" data-rpact="${act}" data-rpid="${esc(id)}">${RP_ICON}${esc(label)}</button>`;
+  const p = Math.round(s.progress || 0);
+  const note = key => `<span class="fine">${esc(t(key, { p }))}</span>`;
+  const body = {
+    watch: () => btn('watch', t('rp.watch'), 'gold'),
+    download: () => btn('download', t('rp.download')),
+    retry: () => btn('download', t('rp.download')),
+    error: () => btn('download', t('rp.download')),
+    downloading: () => `<span class="rp-prog"><i style="width:${p}%"></i></span>${note('rp.downloading')}`,
+    checking: () => note('rp.checking'),
+    incompatible: () => note('rp.old'),
+    noClient: () => note('rp.noClient'),
+    inGame: () => note('rp.inGame'),
+    disabled: () => note('rp.disabled'),
+  }[s.state];
+  return `<span class="rp-l">${t('rp.title')}</span>${body ? body() : note('rp.none')}`;
+}
+function rpPaint(id) {
+  const s = rp.st.get(id);
+  document.querySelectorAll(`[data-replay="${CSS.escape(id)}"]`).forEach(el => { el.innerHTML = s ? rpInner(id, s) : ''; });
+}
+// action: 'state' (also while downloading, every 1.5 s) or 'download'
+function rpAsk(id, action = 'state') {
+  if (rp.asking.has(id)) return;
+  rp.asking.add(id);
+  api.replay(id, action).then(r => {
+    rp.asking.delete(id);
+    if (!r || !r.state) return;
+    rp.st.set(id, { ...r, at: Date.now() });
+    rpPaint(id);
+    // still on its way: ask again while the game is open
+    if ((r.state === 'downloading' || r.state === 'checking') && document.querySelector(`[data-replay="${CSS.escape(id)}"]`)) setTimeout(() => rpAsk(id), 1500);
+  }, () => rp.asking.delete(id));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-rpact]');
+  if (!b) return;
+  const id = b.dataset.rpid;
+  if (b.dataset.rpact === 'download') {
+    rp.st.set(id, { state: 'downloading', progress: 0, at: Date.now() });
+    rpPaint(id);
+    rpAsk(id, 'download');
+  } else {
+    b.disabled = true;
+    api.replay(id, 'watch').then(r => {
+      b.disabled = false;
+      if (r && r.state === 'inGame') return toast(t('rp.inGame'), true);
+      toast(t(r && r.started ? 'rp.started' : 'rp.failed'), !(r && r.started));
+    });
+  }
+});
 
 // ---------- two players side by side (freely chosen) ----------
 const CMP_ROWS = [
