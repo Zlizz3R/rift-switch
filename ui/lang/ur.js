@@ -293,8 +293,7 @@
     'tags.p.d30': "پچھلے 30 دن",
     'tags.p.d60': "پچھلے 60 دن",
     'tags.p.all': "تمام محفوظ رینکڈ گیمز",
-    'tags.basis': "صرف رینکڈ گیمز گنی جاتی ہیں (سولو/ڈیو اور فلیکس)؛ اہم اعداد ہر رول کے حساب سے۔ کسی ٹیگ پر کلک کریں تو اس کے پیچھے کے اعداد نظر آتے ہیں۔",
-    'tags.none': "ابھی کوئی رینکڈ گیم محفوظ نہیں۔",
+    
     'tag.otp': "{champ} OTP",
     'tag.otp.t': "{total} میں سے {n} گیمز {champ} کے ساتھ",
     'tag.main': "{champ} مین",
@@ -506,6 +505,9 @@
     'rar.5': "Ultimate",
     'rar.6': "Exalted",
     'rar.7': "Transcendent",
+    'party.flex5': "غالباً یہ بھی پارٹی میں ہے: Flex میں چار لوگ کیو نہیں کر سکتے",
+    'tags.basis': "صرف اس سیزن کی رینکڈ گیمز گنی جاتی ہیں (Solo/Duo اور Flex)؛ ہر رول کے اہم اعداد۔ کسی ٹیگ پر کلک کرنے سے اس کے پیچھے کے اعداد دکھتے ہیں۔",
+    'tags.none': "اس سیزن میں ابھی کوئی رینکڈ گیم نہیں۔",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

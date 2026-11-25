@@ -292,8 +292,7 @@
     'tags.p.d30': "গত ৩০ দিন",
     'tags.p.d60': "গত ৬০ দিন",
     'tags.p.all': "সব সংরক্ষিত র‍্যাঙ্কড গেম",
-    'tags.basis': "শুধু র‍্যাঙ্কড গেম গোনা হয় (সোলো/ডুও ও ফ্লেক্স); মূল পরিসংখ্যান রোল অনুযায়ী। ট্যাগে ক্লিক করলে পেছনের সংখ্যা দেখা যায়।",
-    'tags.none': "এখনো কোনো র‍্যাঙ্কড গেম সংরক্ষিত নেই।",
+    
     'tag.otp': "{champ} OTP",
     'tag.otp.t': "{total}টির মধ্যে {n}টি গেম {champ} দিয়ে",
     'tag.main': "{champ} মেইন",
@@ -505,6 +504,9 @@
     'rar.5': "Ultimate",
     'rar.6': "Exalted",
     'rar.7': "Transcendent",
+    'party.flex5': "সম্ভবত এটিও পার্টিতে: Flex-এ চারজনে কিউ করা যায় না",
+    'tags.basis': "শুধু এই সিজনের র‍্যাঙ্কড গেম গোনা হয় (Solo/Duo ও Flex); প্রতিটি রোলের মূল সংখ্যা। কোনো ট্যাগে ক্লিক করলে তার পেছনের সংখ্যা দেখা যায়।",
+    'tags.none': "এই সিজনে এখনও কোনো র‍্যাঙ্কড গেম নেই।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

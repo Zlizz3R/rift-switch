@@ -295,8 +295,7 @@
     'tags.p.d30': "últimos 30 días",
     'tags.p.d60': "últimos 60 días",
     'tags.p.all': "todas las clasificatorias guardadas",
-    'tags.basis': "Solo cuentan las clasificatorias (Solo/Dúo y Flexible); cifras clave por rol. Un clic en una etiqueta muestra los números detrás.",
-    'tags.none': "Aún no hay clasificatorias guardadas.",
+    
     'tag.otp': "OTP de {champ}",
     'tag.otp.t': "{n} de {total} partidas con {champ}",
     'tag.main': "Main de {champ}",
@@ -508,6 +507,9 @@
     'rar.5': "Definitivo",
     'rar.6': "Exaltado",
     'rar.7': "Trascendente",
+    'party.flex5': "Seguramente también en el grupo: en Flexible no se puede entrar de a cuatro",
+    'tags.basis': "Solo cuentan las clasificatorias de esta temporada (Solo/Dúo y Flexible); cifras clave por rol. Un clic en una etiqueta muestra los números detrás.",
+    'tags.none': "Aún no hay clasificatorias esta temporada.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

@@ -291,8 +291,7 @@
     'tags.p.d30': "近 30 天",
     'tags.p.d60': "近 60 天",
     'tags.p.all': "所有已保存的排位",
-    'tags.basis': "只计算排位（单双与灵活）；关键数据按位置计算。点击标签查看背后的数据。",
-    'tags.none': "尚未保存排位对局。",
+    
     'tag.otp': "{champ} 绝活",
     'tag.otp.t': "{total} 局中 {n} 局用 {champ}",
     'tag.main': "{champ} 本命",
@@ -504,6 +503,9 @@
     'rar.5': "终极",
     'rar.6': "至臻",
     'rar.7': "超凡",
+    'party.flex5': "很可能也在组队中：灵活组排不能四人排队",
+    'tags.basis': "只统计本赛季的排位赛（单双排和灵活组排）；按位置的关键数据。点击标签可查看背后的数据。",
+    'tags.none': "本赛季还没有排位赛。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

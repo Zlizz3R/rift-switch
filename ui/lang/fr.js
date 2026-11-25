@@ -295,8 +295,7 @@
     'tags.p.d30': "30 derniers jours",
     'tags.p.d60': "60 derniers jours",
     'tags.p.all': "toutes les parties classées enregistrées",
-    'tags.basis': "Seules les parties classées comptent (Solo/Duo et Flex) ; chiffres clés par rôle. Un clic sur un tag montre les chiffres derrière.",
-    'tags.none': "Aucune partie classée enregistrée pour le moment.",
+    
     'tag.otp': "OTP {champ}",
     'tag.otp.t': "{n} parties sur {total} avec {champ}",
     'tag.main': "Main {champ}",
@@ -508,6 +507,9 @@
     'rar.5': "Ultime",
     'rar.6': "Exalté",
     'rar.7': "Transcendant",
+    'party.flex5': "Très probablement dans le groupe aussi : en Flex on ne peut pas lancer à quatre",
+    'tags.basis': "Seules les parties classées de cette saison comptent (Solo/Duo et Flex) ; chiffres clés par rôle. Un clic sur un tag montre les chiffres derrière.",
+    'tags.none': "Aucune partie classée cette saison pour le moment.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

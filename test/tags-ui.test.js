@@ -36,6 +36,9 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     assert.match(strong, /Survivor/);
     // mastery over all accounts; OTP of Ahri (12 of 12 – but under 15 games: too little data)
     assert.match(app.$('#tagBody').textContent, /Millionaire: Illaoi/);
+    // tags that don't apply aren't shown at all
+    assert.equal(app.$$('.tchip.tc-not').length, 0);
+    assert.doesNotMatch(app.$('#tagBody').innerHTML, /Not met/);
     const otp = app.$$('.tchip.tc-few').find(c => /OTP/.test(c.textContent));
     assert.match(otp.textContent, /12\/15/);
     // a click: the numbers behind the tag
@@ -50,7 +53,7 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     // another account: nothing played → too little data everywhere, no strengths
     app.$(`[data-ovacc="${P(2)}"]`).dispatchEvent(new app.w.MouseEvent('click', { bubbles: true, ctrlKey: true }));
     await app.settle();
-    assert.match(app.$('#tagBody').textContent, /No ranked games stored yet|Nothing yet/);
+    assert.match(app.$('#tagBody').textContent, /No ranked games this season yet|Nothing yet/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

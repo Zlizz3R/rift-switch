@@ -57,20 +57,30 @@ function lmBoardExtras(g, rows) {
   const games = lmGames();
   const pairs = Insights.together(games, ids, g.gameId);
   const loaded = p => scGames(p).length;
-  // parties: a numbered badge in the party's colour on each member's card
+  // parties: a badge in the party's colour on each member's card – as many heads as the party has,
+  // and its number in the team (1, 2); party = the number on the whole board (colour, hover)
   let party = 0;
   for (const row of rows) {
     const team = row.map(x => x.c.p.puuid).filter(Boolean);
-    for (const grp of Insights.parties(pairs, team).slice(0, 2)) {
-      party++;
+    let num = 0;
+    for (const found of Insights.parties(pairs, team).slice(0, 2)) {
+      party++; num++;
+      // Flex can't be queued as four: four premades means the fifth is one too
+      const extra = g.queueId === 440 && found.length === 4 && team.length === 5 ? team.find(p => !found.includes(p)) : null;
+      const grp = extra ? [...found, extra] : found;
       for (const p of grp) {
+        if (p === extra) {
+          const e = out.get(p) || { chips: [] };
+          out.set(p, Object.assign(e, { party, num, size: grp.length, partyTip: t('party.flex5') }));
+          continue;
+        }
         const others = grp.filter(x => x !== p);
         const sameGames = others.map(o => (pairs.get([p, o].sort().join('|')) || { same: [] }).same).flat();
         const last = sameGames.sort((a, b) => b.t - a.t)[0];
         const tip = t('party.tip', { names: others.map(o => { const q = byId.get(o) || {}; return q.gameName ? `${q.gameName}#${q.tagLine}` : '?'; }).join(', '),
           n: new Set(sameGames.map(x => String(x.id))).size, m: loaded(p), ago: last ? ago(last.t + (last.dur || 0) * 1000) : '–' });
         const e = out.get(p) || { chips: [] };
-        Object.assign(e, { party, partyTip: tip });
+        Object.assign(e, { party, num, size: grp.length, partyTip: tip });
         out.set(p, e);
       }
     }

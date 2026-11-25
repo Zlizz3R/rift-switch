@@ -341,8 +341,7 @@
     'tags.p.d30': "last 30 days",
     'tags.p.d60': "last 60 days",
     'tags.p.all': "all stored ranked games",
-    'tags.basis': "Only ranked games count (Solo/Duo and Flex); key figures per role. A click on a tag shows the numbers behind it.",
-    'tags.none': "No ranked games stored yet.",
+    
     'tag.otp': "{champ} OTP",
     'tag.otp.t': "{n} of {total} games with {champ}",
     'tag.main': "{champ} main",
@@ -554,6 +553,9 @@
     'rar.5': "Ultimate",
     'rar.6': "Exalted",
     'rar.7': "Transcendent",
+    'party.flex5': "Most likely in the party too: Flex can’t be queued as four",
+    'tags.basis': "Only this season’s ranked games count (Solo/Duo and Flex); key figures per role. A click on a tag shows the numbers behind it.",
+    'tags.none': "No ranked games this season yet.",
   };
 
   const de = {
@@ -878,8 +880,7 @@
     'tags.p.d30': "letzte 30 Tage",
     'tags.p.d60': "letzte 60 Tage",
     'tags.p.all': "alle gespeicherten Ranked-Spiele",
-    'tags.basis': "Es zählen nur Ranked-Spiele (Solo/Duo und Flex); Kennzahlen pro Rolle. Ein Klick auf einen Tag zeigt die Zahlen dahinter.",
-    'tags.none': "Noch keine Ranked-Spiele gespeichert.",
+    
     'tag.otp': "OTP {champ}",
     'tag.otp.t': "{n} von {total} Spielen mit {champ}",
     'tag.main': "{champ}-Main",
@@ -1091,6 +1092,9 @@
     'rar.5': "Ultimate",
     'rar.6': "Exalted",
     'rar.7': "Transcendent",
+    'party.flex5': "Höchstwahrscheinlich auch in der Party: Flex kann man nicht zu viert queuen",
+    'tags.basis': "Es zählen nur die Ranked-Spiele dieser Season (Solo/Duo und Flex); Kennzahlen pro Rolle. Ein Klick auf einen Tag zeigt die Zahlen dahinter.",
+    'tags.none': "Diese Season noch keine Ranked-Spiele.",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

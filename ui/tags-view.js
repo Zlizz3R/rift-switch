@@ -1,6 +1,7 @@
 // Overview → Tags: every tag of tag-rules.js for one account or all of them together, on their
-// ranked games. On top "Your strengths" and "To work on", below every tag by group – met (in
-// colour), not met (grey) or not enough data (dashed, with how many games are missing). A click on
+// ranked games of this season. On top "Your strengths" and "To work on", below every tag by group –
+// met (in colour) or not enough data (dashed, with how many games are missing); tags that don't
+// apply are left out. A click on
 // a tag shows the numbers behind it. Engine: tags.js. Uses the globals of renderer.js / views.js.
 
 const tagv = { role: '', games: null, mast: null, loading: false, open: '' };
@@ -98,10 +99,10 @@ function renderTagsView() {
       <div><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
     </div>`;
   const groups = Tags.GROUPS.map(g => {
-    const inG = list.filter(({ x }) => x.group === g);
+    const inG = list.filter(({ x }) => x.group === g && x.state !== 'not');
     if (!inG.length) return '';
-    // met first, then not met, then too little data
-    const order = { met: 0, not: 1, few: 2 };
+    // met first, then too little data
+    const order = { met: 0, few: 1 };
     const sorted = [...inG].sort((a, b) => order[a.x.state] - order[b.x.state]);
     const det = openX && openX.x.group === g ? tagDetail(openX.x) : '';
     return `<div class="tag-group"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${sorted.map(({ x, i }) => tagChip(x, i)).join('')}</div>${det}</div>`;

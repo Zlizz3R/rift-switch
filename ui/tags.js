@@ -181,14 +181,18 @@
     }
   }
 
+  // the season starts with the year
+  const seasonStart = now => new Date(new Date(now).getFullYear(), 0, 1).getTime();
+
   // ctx: { games, own: puuids counted, now, role: forced position or null, level, mastery: masteryTable rows or null,
   //        prev: Set of 'id:level' shown before }
   // → { role, main, most, results }
   function evaluate(ctx) {
     const now = ctx.now || Date.now();
     const own = new Set(ctx.own || []);
-    const all = St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && RANKED.includes(x.g.q));
-    const seasonFrom = new Date(new Date(now).getFullYear(), 0, 1).getTime();
+    // this season's ranked games only
+    const seasonFrom = seasonStart(now);
+    const all = St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && RANKED.includes(x.g.q) && x.g.t >= seasonFrom);
     const d = {
       all, now, level: ctx.level == null ? null : ctx.level, mastery: ctx.mastery || null, prev: ctx.prev || new Set(),
       season: all.filter(x => x.g.t >= seasonFrom), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY),
@@ -225,7 +229,7 @@
     const now = d.now || Date.now();
     const out = [];
     const mine = St.byParticipation(d.games || []).filter(x => x.p.puuid === d.puuid);
-    const ranked = mine.filter(x => RANKED.includes(x.g.q));
+    const ranked = mine.filter(x => RANKED.includes(x.g.q) && x.g.t >= seasonStart(now));
     const tag = (id, o) => out.push({ id, group: 'live', color: rule(id).color || 'warn', state: 'met', live: true, ...o });
     // new to the champion: few ranked games on it lately AND little mastery (both needed; no mastery → no tag)
     const nr = rule('newTo');

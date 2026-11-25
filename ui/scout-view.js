@@ -107,6 +107,21 @@ function scRank(label, r) {
   return `<div class="sc-rk" title="${esc(r.wl !== false && games ? t('tile.wlTitle', { w: r.wins, l: r.losses }) : t('tile.wlUnknown'))}"><span>${label}</span>
     <img src="${crestUrl(r.tier)}" alt=""><b>${tierName(r.tier)}${APEX.includes(r.tier) ? '' : ' ' + r.division} · ${r.lp} LP</b></div>`;
 }
+// n people (2–5) in a row, the middle ones in front and bigger – the premade badge
+function scPeople(n) {
+  n = Math.max(2, Math.min(5, n || 2));
+  const c = (n - 1) / 2, step = 6.4;
+  const ps = Array.from({ length: n }, (_, i) => {
+    // two: the left one behind; else the middle one(s) in front
+    const level = n === 2 ? 1 - i : Math.round(Math.abs(i - c) - (n % 2 ? 0 : 0.5));
+    return { x: i * step, s: 1 - 0.16 * level, yb: 15 - 2.4 * level, level };
+  });
+  const f = v => +v.toFixed(2);
+  const minX = Math.min(...ps.map(p => p.x - 5 * p.s)) - 1, maxX = Math.max(...ps.map(p => p.x + 5 * p.s)) + 1;
+  const shapes = [...ps].sort((a, b) => b.level - a.level).map(({ x, s, yb }) =>
+    `<path d="M${f(x - 5 * s)} ${f(yb)}V${f(yb - 2 * s)}A${f(5 * s)} ${f(4.6 * s)} 0 0 1 ${f(x + 5 * s)} ${f(yb - 2 * s)}V${f(yb)}Z"/><circle cx="${f(x)}" cy="${f(yb - 9 * s)}" r="${f(3.6 * s)}"/>`).join('');
+  return `<svg class="sc-ppl" data-n="${n}" viewBox="${f(minX)} 0 ${f(maxX - minX)} 16">${shapes}</svg>`;
+}
 const scRing = (pct, inner, cls = '') => `<div class="sc-ring ${cls}" style="--p:${pct == null ? 0 : Math.round(pct)}">${inner}</div>`;
 
 function scCardHtml(c, side, slot, guess, ex = {}) {
@@ -134,7 +149,7 @@ function scCardHtml(c, side, slot, guess, ex = {}) {
     ${band}${bar}
     <div class="sc-head">${p.iconId != null ? `<img class="sc-ic" src="${iconUrl(p.iconId)}" alt="">` : '<span class="sc-ic"></span>'}
       <span class="sc-name"><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.level ? ' · ' + esc(t('scout.level', { n: p.level })) : ''}</small></span>
-      ${ex.party ? `<span class="sc-party" title="${esc(ex.partyTip || '')}">⛓ ${ex.party}</span>` : ''}
+      ${ex.party ? `<span class="sc-party" title="${esc(ex.partyTip || '')}">${scPeople(ex.size)}<b>${ex.num || ex.party}</b></span>` : ''}
       ${slot ? `<img class="sc-pos${guess ? ' guess' : ''}" src="${posIcon(slot)}" alt="" title="${esc(t('pos.' + slot) + (guess ? ' – ' + t('scout.guessed') : ''))}">` : ''}</div>
     <div class="sc-mid">
       <div class="sc-champ" data-scflip="${esc(p.puuid || '')}" title="${esc(t('rad.flip'))}">${p.championId ? `<img src="${champIcon(p.championId)}" alt="">` : '<span></span>'}

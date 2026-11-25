@@ -39,7 +39,10 @@ test('live board: a party gets a badge, "do I know them?", my record, the damage
     const c = id => app.$(`.sc-card[data-sc="${id}"]`);
     // the party: the same numbered badge in the same colour on both cards, inside the card head
     assert.ok(c('e1').dataset.party && c('e1').dataset.party === c('e2').dataset.party);
-    assert.equal(c('e1').querySelector('.sc-head .sc-party').textContent, '⛓ ' + c('e1').dataset.party);
+    // the badge: two heads (a party of two) and its number in the team
+    assert.equal(c('e1').querySelector('.sc-head .sc-party').textContent, '1');
+    assert.equal(c('e1').querySelector('.sc-party .sc-ppl').dataset.n, '2');
+    assert.equal(c('e1').querySelectorAll('.sc-ppl circle').length, 2);
     assert.equal(c('e1').className.match(/pa\d/)[0], c('e2').className.match(/pa\d/)[0]);
     assert.ok(!c('e3').dataset.party && !c('e3').querySelector('.sc-party'));
     assert.match(c('e1').querySelector('.sc-party').title, /Party with Ge2#EUW · together in 2 of the last 2 games/);
@@ -103,5 +106,40 @@ test('live board: blue on top even when I am on red; my record still against my 
     assert.ok(app.$(`.sc-card.bot.me[data-sc="${P(1)}"]`));
     assert.match(app.$(`.sc-card[data-sc="${P(1)}"] .sc-tags`).textContent, /Vs Zed: 1–0 · 100 %/);
     assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('live board: in Flex four premades mean all five; the badge shows five heads', async () => {
+  // e1–e4 together twice before, e5 never
+  const four = { 0: { puuid: 'e1' }, 1: { puuid: 'e2' }, 2: { puuid: 'e3' }, 3: { puuid: 'e4' } };
+  const prev = [game(four, 30), game(four, 50)];
+  const flex = { ...inGame, queueId: 440 };
+  const scout = Object.fromEntries(['e1', 'e2', 'e3', 'e4'].map(p => [p, { games: prev }]));
+  const boot1 = q => boot({ replies: {
+    live: { clientUp: true, phase: 'InProgress', me: P(1), inGame: { ...flex, queueId: q } },
+    'scout-games': scout,
+    matches: { index: [], waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': [],
+  } });
+  let app = await boot1(440);
+  try {
+    await app.click('#navLive');
+    for (let i = 0; i < 4; i++) await app.settle();
+    const c = id => app.$(`.sc-card[data-sc="${id}"]`);
+    const party = c('e1').dataset.party;
+    for (const id of ['e1', 'e2', 'e3', 'e4', 'e5']) {
+      assert.equal(c(id).dataset.party, party, id);
+      assert.equal(c(id).querySelector('.sc-ppl').dataset.n, '5', id);
+    }
+    assert.match(c('e5').querySelector('.sc-party').title, /Flex can’t be queued as four/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+  // a normal game: four can queue, the fifth stays alone
+  app = await boot1(400);
+  try {
+    await app.click('#navLive');
+    for (let i = 0; i < 4; i++) await app.settle();
+    assert.equal(app.$('.sc-card[data-sc="e1"] .sc-ppl').dataset.n, '4');
+    assert.ok(!app.$('.sc-card[data-sc="e5"]').dataset.party);
   } finally { app.close(); }
 });

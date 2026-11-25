@@ -294,8 +294,7 @@
     'tags.p.d30': "últimos 30 dias",
     'tags.p.d60': "últimos 60 dias",
     'tags.p.all': "todas as ranqueadas salvas",
-    'tags.basis': "Só contam as ranqueadas (Solo/Duo e Flex); números-chave por função. Um clique numa tag mostra os números por trás.",
-    'tags.none': "Ainda não há ranqueadas salvas.",
+    
     'tag.otp': "OTP de {champ}",
     'tag.otp.t': "{n} de {total} partidas com {champ}",
     'tag.main': "Main de {champ}",
@@ -507,6 +506,9 @@
     'rar.5': "Supremo",
     'rar.6': "Exaltado",
     'rar.7': "Transcendente",
+    'party.flex5': "Muito provavelmente também no grupo: na Flex não dá para entrar em quatro",
+    'tags.basis': "Só contam as ranqueadas desta temporada (Solo/Duo e Flex); números-chave por rota. Um clique numa tag mostra os números por trás.",
+    'tags.none': "Ainda não há ranqueadas nesta temporada.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

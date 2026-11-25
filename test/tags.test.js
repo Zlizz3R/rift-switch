@@ -51,6 +51,20 @@ test('only ranked games count; the main role decides the key figures', () => {
   assert.equal(get(run(Array.from({ length: 12 }, (_, i) => game({ ago: i + 1 }))), 'kda')[0].level, 'master');
 });
 
+test('only this season: last year\'s ranked games are left out, in the live tags too', () => {
+  const thisYear = Array.from({ length: 12 }, (_, i) => game({ ago: i + 1, me: { cs: 300 } }));
+  // last December, a lot of them: they would make the farm "terrible"
+  const lastYear = Array.from({ length: 40 }, (_, i) => game({ ago: (NOW - new Date(new Date(NOW).getFullYear() - 1, 11, 20).getTime()) / 3600000 + i, me: { cs: 60 } }));
+  const farm = get(run([...thisYear, ...lastYear]), 'farm')[0];
+  assert.equal(farm.n, 12);
+  assert.equal(farm.level, 'master');
+  // autofill counts this season's roles only: last year all support, now mid
+  const old = Array.from({ length: 40 }, (_, i) => game({ at: 4, ago: (NOW - new Date(new Date(NOW).getFullYear() - 1, 11, 20).getTime()) / 3600000 + i }));
+  const r = run([...thisYear, ...old]);
+  assert.equal(r.main, 'mid');
+  assert.equal(T.liveTags({ games: [...thisYear, ...old], puuid: 'me', champ: 102, mastery: null, position: 'mid', main: r.main, now: NOW }).length, 0);
+});
+
 test('levels both ways: deaths – fewer is better', () => {
   const many = run(Array.from({ length: 10 }, (_, i) => game({ ago: i + 1, me: { d: 8 } })));
   assert.equal(get(many, 'deaths')[0].level, 'terrible');
