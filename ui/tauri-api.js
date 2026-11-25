@@ -58,7 +58,7 @@
     matchesStorage: () => call('mh-storage'),
     othersStorage: () => call('others-storage'),
     othersClear: () => call('others-clear'),
-    scoutGames: puuids => call('scout-games', puuids),
+    scoutGames: (puuids, have) => call('scout-games', puuids, have || []),
     champDamage: ids => call('champ-damage', ids),
     seasonsSet: (puuid, list) => call('seasons-set', puuid, list),
     matchesClear: () => call('mh-clear'),

@@ -1373,8 +1373,9 @@ async fn fetch_games(ids: Vec<String>) -> usize {
 }
 
 // ---------- scouting: the other players of the current game (Live) ----------
-// Their match lists first (stage A, kept 30 minutes), then their games (details + timeline, newest
-// first) into a store of their own (matches-others). Champion select: the allies the client shows,
+// Their match lists first (stage A, kept 30 minutes: the 200 newest games, each with that player's
+// own numbers – stored as "lite" games), then the details + timeline of their newest 50 ranked
+// games (stages B + C) – all into a store of their own (matches-others). Champion select: the allies the client shows,
 // 2 at a time. Loading screen: all ten, 4 at a time. As soon as the game runs (game time > 0):
 // slower, so the game stays smooth – one request at a time, one round every IN_GAME_GAP. After the
 // game: the rest for the same players at full speed. Only while the window is open, never in a test
@@ -1579,13 +1580,22 @@ async fn scout_round() -> bool {
     });
     if !need.is_empty() {
         let got = futures_util::future::join_all(need.iter().map(|p| async move {
-            let (l, m) = tokio::join!(riot::match_list(p, 0, 20), riot::mastery_points_of(p));
+            let (l, m) = tokio::join!(riot::match_games(p), riot::mastery_points_of(p));
             (p.clone(), l, m)
         }))
         .await;
         for (p, list, mast) in got {
             if let Some(l) = list {
-                others(|o| o.note(&p, &l));
+                let short: Vec<Value> = l
+                    .iter()
+                    .map(|g| json!({ "id": g["gameId"], "t": g["gameCreation"], "q": g["queueId"] }))
+                    .collect();
+                others(|o| {
+                    o.note(&p, &short);
+                    for g in l.iter().filter_map(matches::lite) {
+                        o.insert_lite(&g);
+                    }
+                });
             }
             scout(|s| {
                 s.listed.insert(p.clone(), now);
@@ -3145,6 +3155,8 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             });
             json!({ "ok": true })
         }
+        // the players of this game: each one's game ids and mastery, and the games the window doesn't
+        // hold yet (arg 1: the keys "k" of the games it has) – not up to 10 MB again at every refresh
         "scout-games" => {
             let ids: Vec<String> = a(0)
                 .as_array()
@@ -3155,16 +3167,30 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 .take(10)
                 .map(String::from)
                 .collect();
+            let have: std::collections::HashSet<String> = a(1)
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect();
             let mast = scout(|s| s.mastery.clone());
+            let mut games: Vec<Value> = vec![];
+            let mut seen = std::collections::HashSet::new();
             let out: Obj = others(|o| {
                 ids.iter()
                     .map(|p| {
-                        let games = o.games_of(p);
-                        (p.clone(), json!({ "games": games, "mastery": mast.get(p) }))
+                        let (list, new) = o.games_of(p, &have);
+                        for g in new {
+                            if seen.insert(g["k"].as_str().unwrap_or("").to_string()) {
+                                games.push(g);
+                            }
+                        }
+                        (p.clone(), json!({ "ids": list, "mastery": mast.get(p) }))
                     })
                     .collect()
             });
-            json!({ "players": out, "progress": scout_snapshot() })
+            json!({ "players": out, "games": games, "progress": scout_snapshot() })
         }
         "mh-clear" => {
             with(|c| {

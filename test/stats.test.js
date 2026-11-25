@@ -84,3 +84,15 @@ test('damage share and per-minute figures', () => {
   assert.equal(s.dmgMin, 100);
   assert.equal(s.visMin, 1);
 });
+
+test('a lite game (one player from a match list): no team figures, Riot\'s position, no lane opponent', () => {
+  const p = { puuid: 'a', team: 100, k: 4, d: 2, a: 6, cs: 180, dmg: 15000, pos: 'mid', spells: [4, 14], win: true };
+  const g = { id: '1', dur: 1800, q: 420, mode: 'CLASSIC', lite: true, players: [p] };
+  const Stats = St;
+  const x = Stats.perGame(g, p);
+  assert.equal(x.kp, null);
+  assert.equal(x.dmgShare, null);
+  assert.equal(Stats.role(g, p), 'mid');
+  assert.equal(Stats.role(g, { ...p, spells: [11, 4] }), 'jungle');
+  assert.equal(Stats.laneOpponent(g, p), null);
+});

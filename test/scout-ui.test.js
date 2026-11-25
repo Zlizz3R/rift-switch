@@ -1,7 +1,7 @@
 // Live → the ten players of a game as cards (scout-view.js) in the real window (harness.js).
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { boot, P, sampleState } = require('./harness');
+const { boot, P, sampleState, scoutReply } = require('./harness');
 
 const POS = ['top', 'jungle', 'mid', 'bot', 'support'];
 const now = Date.now();
@@ -29,7 +29,7 @@ test('live board: ten cards on their positions, tags from the player\'s games, s
   let progress = { of: 9, listed: 9, done: 40, total: 120, running: false, players: { e1: [8, 8], e2: [3, 16] } };
   const app = await boot({ state: st, replies: {
     live: { clientUp: true, phase: 'InProgress', me: P(1), inGame },
-    'scout-games': () => ({ players: { e1: { games: e1Games, mastery: { 24: 312000, 103: 1000 } } }, progress }),
+    'scout-games': () => scoutReply({ e1: { games: e1Games, mastery: { 24: 312000, 103: 1000 } } }, { progress }),
     champions: [{ id: 24, name: 'Jax' }, { id: 103, name: 'Ahri' }],
   } });
   try {
@@ -89,6 +89,34 @@ test('live without a game: no board, the page as before', async () => {
     await app.click('#navLive');
     await app.settle();
     assert.equal(app.$$('.sc-card').length, 0);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('live board: lite games from the 200-game list count; games the window holds are not sent again', async () => {
+  // 8 games from e1's match list: only e1 in them (no team: no kill participation, no lane opponent)
+  const lite = e1Games.map(g => ({ ...g, v: 0, lite: true, k: `${g.id}:0.900`, teams: undefined, players: [g.players[0]] }));
+  let n = 0;
+  const app = await boot({ replies: {
+    live: { clientUp: true, phase: 'InProgress', me: P(1), inGame },
+    // the second time the backend sends no game (the window has them all)
+    'scout-games': () => ({ players: { e1: { ids: lite.map(g => g.id), mastery: { 24: 312000 } } }, games: n++ ? [] : lite, progress: null }),
+    champions: [{ id: 24, name: 'Jax' }],
+  } });
+  try {
+    await app.click('#navLive');
+    await app.settle();
+    await app.settle();
+    const e1 = () => app.$('.sc-card[data-sc="e1"]');
+    assert.match(e1().querySelector('.sc-rings').textContent, /75%/);
+    await app.emit('scout-changed', null);
+    await new Promise((r) => setTimeout(r, 2600));
+    await app.settle();
+    const calls = app.called('scout-games');
+    assert.ok(calls.length >= 2);
+    assert.deepEqual([...calls[calls.length - 1].args[1]].sort(), lite.map(g => g.k).sort());
+    // still there after a reply without games
+    assert.match(e1().querySelector('.sc-rings').textContent, /75%/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

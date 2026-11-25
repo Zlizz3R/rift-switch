@@ -8,7 +8,8 @@ const lmx = { types: {}, asked: new Set(), pgTags: { id: '', html: '' } };
 // every known game: the other players' (scouting) and the own stored ones
 function lmGames() {
   const all = [...(scv.own || [])];
-  for (const v of Object.values(scv.data || {})) for (const g of v.games || []) all.push(g);
+  const own = new Set(all.map(g => String(g.id)));
+  for (const g of scv.games.values()) if (!own.has(String(g.id))) all.push(g);
   return all;
 }
 // the own stored games are needed outside a game too (champ select, post-game)

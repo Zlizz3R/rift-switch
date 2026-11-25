@@ -144,7 +144,7 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and the 200 newest
   games of every account – the most the League client hands out. Rift Switch keeps them all, so the history grows
   with every Load. Your own games also keep the client's raw data (gzip, up to 2 × 100 MB); other players'
-  games (from Live) stay 30 days and at most 1 GB (Settings → Data: 500 MB to 5 GB).
+  games (from Live) stay 30 days – a year in their short form from the match list – and at most 1 GB (Settings → Data: 500 MB to 5 GB).
 - **Filters**: account, any combination of queues, time or your own dates, wins/losses, champion, sorting, and more
   (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,
   damage, streaks and records.
@@ -165,7 +165,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 <img src="docs/screens/live-game.png" alt="Live: the ten players of a game as cards">
 
 - **The ten players of your game** from the loading screen on: two rows, lane opponents face to face, rank, win rate
-  on this champion, main role, mastery and tags – loaded from the client while the loading screen runs, with a
+  on this champion, main role, mastery and tags – from each player's 200 newest games (all ten players' details
+  for the newest 50 ranked ones), loaded from the client while the loading screen runs, with a
   progress bar; during the game it goes on slower (one game at a time, a round every 4 seconds, only while the
   window is open), so the game stays smooth. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.

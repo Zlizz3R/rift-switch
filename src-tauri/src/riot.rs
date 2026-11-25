@@ -1175,6 +1175,11 @@ pub async fn history_summary(puuid: &str) -> Option<HistorySummary> {
         now_ms(),
     ))
 }
+/// A player's whole match list as the client sends it (each game with that player's own numbers):
+/// the 200 newest (see HISTORY_MAX).
+pub async fn match_games(puuid: &str) -> Option<Vec<Value>> {
+    match_page(puuid, 0, HISTORY_MAX - 1, 30_000).await
+}
 /// A player's match list -> [{ id, t, q }] (see HISTORY_MAX: the first request per client session
 /// sets how many games every later one gets).
 pub async fn match_list(puuid: &str, beg: usize, end: usize) -> Option<Vec<Value>> {

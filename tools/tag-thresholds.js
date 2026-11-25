@@ -26,7 +26,8 @@ const lines = [...fs.readFileSync(path.join(DIR, 'games.jsonl'), 'utf8').split('
 for (const l of lines) {
   if (!l.trim()) continue;
   let g; try { g = JSON.parse(l); } catch { continue; }
-  if (g.remake || g.mode !== 'CLASSIC') continue;
+  // lite games (one player from a match list, Live) have no team, no timeline: left out
+  if (g.remake || g.mode !== 'CLASSIC' || g.lite) continue;
   const old = games.get(String(g.id));
   if (!old || (g.v || 0) >= (old.v || 0)) games.set(String(g.id), g);
 }

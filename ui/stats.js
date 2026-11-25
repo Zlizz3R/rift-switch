@@ -23,7 +23,9 @@
   const perfect = p => p.d === 0;                       // 0 deaths: shown as "Perfect"
   const team = (g, p) => g.players.filter(o => o.team === p.team);
   // kills of the player's team; null when no player has a kill count
+  // (a "lite" game from a match list holds only some players: nothing about the team)
   function teamKills(g, p) {
+    if (g.lite) return null;
     const t = team(g, p).filter(o => Number.isFinite(o.k));
     return t.length ? t.reduce((s, o) => s + o.k, 0) : null;
   }
@@ -37,6 +39,7 @@
   const visMin = (g, p) => (Number.isFinite(p.vis) ? p.vis / minutes(g) : null);
   // share of the team's damage to champions 0..1; null without team damage
   function dmgShare(g, p) {
+    if (g.lite) return null;
     const sum = team(g, p).reduce((s, o) => s + (o.dmg || 0), 0);
     return sum ? (p.dmg || 0) / sum : null;
   }
@@ -88,10 +91,13 @@
     return out;
   }
   // one player's position, or null (ARAM, Arena, games without all ten players)
-  const role = (g, p) => { const r = roles(g); return (r && r.get(p)) || null; };
+  // a lite game: Riot's own guess (Smite = jungle) – the rest of the team isn't known
+  const liteRole = (g, p) => (g.mode === 'CLASSIC' ? ((p.spells || []).includes(11) ? 'jungle' : p.pos || null) : null);
+  const role = (g, p) => { if (g.lite) return liteRole(g, p); const r = roles(g); return (r && r.get(p)) || null; };
 
   // the lane opponent: the enemy on the same position (null when positions aren't known)
   function laneOpponent(g, p) {
+    if (g.lite) return null;
     const r = roles(g), mine = r && r.get(p);
     return mine ? g.players.find(o => o.team !== p.team && r.get(o) === mine) || null : null;
   }

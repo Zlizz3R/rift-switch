@@ -7,7 +7,8 @@
 // Also: the storage of other players' games in Settings, and the one-time note at 1 GB.
 
 // prog: Live's progress from the backend ("scout-changed" / "scout-games"), not part of the state
-const scv = { data: {}, own: null, key: '', loading: false, again: false, at: 0, timer: 0, prog: null };
+// games: every game the window holds (id → game; also across games, so premades' games aren't sent again)
+const scv = { data: {}, games: new Map(), own: null, key: '', loading: false, again: false, at: 0, timer: 0, prog: null };
 const SC_POS = { TOP: 'top', JUNGLE: 'jungle', MIDDLE: 'mid', MID: 'mid', BOTTOM: 'bot', BOT: 'bot', UTILITY: 'support', SUPPORT: 'support' };
 const SC_NO_LANES = [...Stats.ARAM_QUEUES, 1700, 1710];
 const scIds = () => { const g = liveData && liveData.inGame; return g ? [...g.teamOne, ...g.teamTwo].map(p => p.puuid).filter(Boolean) : []; };
@@ -16,9 +17,16 @@ async function loadScout(ids) {
   if (scv.loading) { scv.again = true; return; }
   scv.loading = true;
   try {
-    // { players: { puuid: { games, mastery } }, progress }
-    const [d, own] = await Promise.all([api.scoutGames(ids), scv.own ? null : allGames()]);
-    if (d && d.players && typeof d.players === 'object') scv.data = d.players;
+    // { players: { puuid: { ids, mastery } }, games (only those the window doesn't hold), progress }
+    const have = [...scv.games.values()].map(g => g.k).filter(Boolean);
+    const [d, own] = await Promise.all([api.scoutGames(ids, have), scv.own ? null : allGames()]);
+    if (d && d.players && typeof d.players === 'object') {
+      scv.data = d.players;
+      for (const g of Array.isArray(d.games) ? d.games : []) if (g && g.id != null) scv.games.set(String(g.id), g);
+      // keep only the games of these players (the next game's premades still find theirs)
+      const used = new Set(Object.values(scv.data).flatMap(v => (v && v.ids) || []).map(String));
+      for (const id of scv.games.keys()) if (!used.has(id)) scv.games.delete(id);
+    }
     if (d && 'progress' in d) scv.prog = d.progress;
     if (own) scv.own = own;
   } catch (e) { console.warn('scout', e); }
@@ -38,12 +46,14 @@ api.onScoutChanged(progress => {
 });
 api.onMatchesChanged(() => { scv.own = null; });
 
+const scIdsOf = puuid => ((scv.data[puuid] || {}).ids || []).map(String);
 // every known game of a player: from their match list (scouting) and the own stored games
 function scGames(puuid) {
-  const theirs = (scv.data[puuid] || {}).games || [];
+  const theirs = scIdsOf(puuid).map(id => scv.games.get(id)).filter(Boolean);
   const own = (scv.own || []).filter(g => g.players && g.players.some(p => p.puuid === puuid));
   const seen = new Set(), out = [];
-  for (const g of [...theirs, ...own]) {
+  // a lite game only when there is nothing better (an own stored game has all ten players)
+  for (const g of [...theirs.filter(g => !g.lite), ...own, ...theirs.filter(g => g.lite)]) {
     const id = String(g.id);
     if (seen.has(id)) continue;
     seen.add(id);
@@ -54,7 +64,7 @@ function scGames(puuid) {
 
 // everything a card shows about one player
 function scCard(p, enemyChamps) {
-  const key = `${p.puuid}|${p.championId}|${(scv.data[p.puuid] || {}).games ? scv.data[p.puuid].games.length : 0}`;
+  const key = `${p.puuid}|${p.championId}|${scIdsOf(p.puuid).length}`;
   if (scv.memo && scv.memo.has(key)) return scv.memo.get(key);
   const games = scGames(p.puuid);
   const parts = Stats.byParticipation(games).filter(x => x.p.puuid === p.puuid);
@@ -227,7 +237,7 @@ $('othersClear').onclick = async () => {
   const oth = (await api.othersStorage()) || { bytes: 0, games: 0 };
   if (!(await confirmBox(t('set.othersClearTitle'), t('set.othersClearText', { n: num(oth.games), size: fmtBytes(oth.bytes) }), t('mh.clearYes')))) return;
   await api.othersClear();
-  scv.data = {}; scv.memo = new Map();
+  scv.data = {}; scv.games = new Map(); scv.memo = new Map();
   toast(t('mh.cleared'));
   loadStoreBox();
 };

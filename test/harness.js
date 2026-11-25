@@ -48,7 +48,7 @@ async function boot({ state = sampleState(), replies = {}, width = 1300, upTo = 
     if (ch === 'matches-get' || ch === 'get-history' || ch === 'ranked-games' || ch === 'champions') return [];
     if (ch === 'dashboard' || ch === 'collections' || ch === 'masteries') return [];
     if (ch === 'mastery-history' || ch === 'own-games') return {};
-    if (ch === 'scout-games') return { players: {}, progress: null };
+    if (ch === 'scout-games') return { players: {}, games: [], progress: null };
     if (ch === 'others-storage') return { bytes: 0, games: 0 };
     if (ch === 'champ-damage') return {};
     if (ch === 'mh-storage') return { bytes: 0, games: 0 };
@@ -93,4 +93,16 @@ function settle(w, ms = 20) {
   return new Promise((r) => w.setTimeout(r, ms)).then(() => new Promise((r) => setTimeout(r, 0)));
 }
 
-module.exports = { boot, sampleState, P };
+// the backend's "scout-games" reply from { puuid: { games, mastery } }: each player's ids, and every
+// game once (with its key "k"), as main.rs sends them
+function scoutReply(players, extra = {}) {
+  const games = new Map();
+  const out = {};
+  for (const [p, v] of Object.entries(players)) {
+    for (const g of v.games || []) games.set(String(g.id), { ...g, k: `${g.id}:${g.v || 6}` });
+    out[p] = { ids: (v.games || []).map(g => String(g.id)), mastery: v.mastery || null };
+  }
+  return { players: out, games: [...games.values()], ...extra };
+}
+
+module.exports = { boot, sampleState, P, scoutReply };

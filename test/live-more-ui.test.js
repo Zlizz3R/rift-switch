@@ -2,7 +2,7 @@
 // against the lane opponent's champion, the damage mix, the helper by phase.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { boot, P } = require('./harness');
+const { boot, P, scoutReply } = require('./harness');
 
 const POS = ['top', 'jungle', 'mid', 'bot', 'support'];
 const now = Date.now();
@@ -27,7 +27,7 @@ const own = game({ 2: { puuid: P(1), champ: 103, win: true }, 7: { puuid: 'e3', 
 test('live board: a party gets a badge, "do I know them?", my record, the damage mix', async () => {
   const app = await boot({ replies: {
     live: { clientUp: true, phase: 'InProgress', me: P(1), inGame },
-    'scout-games': { players: { e1: { games: theirs }, e2: { games: theirs } } },
+    'scout-games': scoutReply({ e1: { games: theirs }, e2: { games: theirs } }),
     matches: { index: [[own.id, own.t, 420, P(1)]], waiting: 0, loadingOlder: false, clientUp: true },
     'matches-get': [own],
     'champ-damage': { 86: 'kPhysical', 64: 'kPhysical', 222: 'kPhysical', 412: 'kMagic', 24: 'kPhysical', 266: 'kPhysical', 51: 'kPhysical', 117: 'kMagic' },
@@ -117,7 +117,7 @@ test('live board: in Flex four premades mean all five; the badge shows five head
   const scout = Object.fromEntries(['e1', 'e2', 'e3', 'e4'].map(p => [p, { games: prev }]));
   const boot1 = q => boot({ replies: {
     live: { clientUp: true, phase: 'InProgress', me: P(1), inGame: { ...flex, queueId: q } },
-    'scout-games': { players: scout },
+    'scout-games': scoutReply(scout),
     matches: { index: [], waiting: 0, loadingOlder: false, clientUp: true },
     'matches-get': [],
   } });

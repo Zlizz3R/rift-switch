@@ -54,6 +54,12 @@ pub const GAME_VERSION: u8 = 6;
 const RAW_MAX: u64 = 100_000_000;
 /// Other players' games are kept 30 days (Live); own games stay until deleted.
 pub const OTHERS_MAX_AGE: i64 = 30 * 24 * 3600 * 1000;
+/// Other players' games from their match list alone ("lite": that player's own numbers, about
+/// 1 KB a game) are kept a year – the season's tags (pool, win rates, KDA …) come from them.
+pub const OTHERS_LITE_AGE: i64 = 365 * 24 * 3600 * 1000;
+/// Full details (all ten players, the timeline) are read for a player's newest ranked games only.
+pub const OTHERS_DETAILS: usize = 50;
+const RANKED: [i64; 2] = [420, 440];
 /// Summoner's Rift queues (only there positions mean something)
 const SR_QUEUES: [i64; 7] = [400, 420, 430, 440, 480, 490, 700];
 
@@ -71,7 +77,7 @@ pub struct Matches {
 fn id_num(s: &str) -> i64 {
     s.parse().unwrap_or(0)
 }
-fn id_str(v: &Value) -> String {
+pub fn id_str(v: &Value) -> String {
     match v {
         Value::String(s) => s.clone(),
         other => other.to_string(),
@@ -237,8 +243,8 @@ impl Matches {
         if puuid.is_empty() {
             return false;
         }
-        // other players: games past the age limit aren't wanted at all
-        let cutoff = self.max_age.map(|a| crate::riot::now_ms() - a);
+        // other players: games past the age limit of their lite form aren't wanted at all
+        let cutoff = self.max_age.map(|_| crate::riot::now_ms() - OTHERS_LITE_AGE);
         let list: Vec<Value> = list
             .iter()
             .filter(|g| cutoff.is_none_or(|c| num_of(g.get("t")) as i64 >= c))
@@ -291,6 +297,28 @@ impl Matches {
         if id.is_empty() || self.index.get(&id).is_some_and(|e| e.v >= v) {
             return false;
         }
+        self.append(id, g, v)
+    }
+    /// A game from a player's match list (see `lite`): stored when there is nothing better; a lite
+    /// game already stored for another player of it gets this player added (a new line).
+    pub fn insert_lite(&mut self, g: &Value) -> bool {
+        let id = id_str(&g["id"]);
+        let Some(p) = g["players"].get(0) else { return false };
+        match self.index.get(&id).copied() {
+            None if !id.is_empty() => self.append(id, g, 0),
+            Some(e) if e.v == 0 => {
+                let Some(mut had) = read_entries(&self.games_file(), &[e]).pop() else { return false };
+                let list = had["players"].as_array_mut();
+                match list {
+                    Some(l) if !l.iter().any(|x| x["puuid"] == p["puuid"]) => l.push(p.clone()),
+                    _ => return false,
+                }
+                self.append(id, &had, 0)
+            }
+            _ => false,
+        }
+    }
+    fn append(&mut self, id: String, g: &Value, v: u8) -> bool {
         let _ = fs::create_dir_all(&self.dir);
         let Ok(mut f) = OpenOptions::new()
             .create(true)
@@ -540,55 +568,73 @@ impl Matches {
         self.index.contains_key(id)
     }
     /// The noted games of these players that aren't stored yet, newest first.
+    /// A player's games that get full details: the newest OTHERS_DETAILS ranked ones of the list
+    /// (the queue is known from the lite game; a game not stored at all counts too, newest first).
+    fn detail_ids(&self, puuid: &str) -> Vec<&String> {
+        let Some((_, ids)) = self.by.iter().find(|(p, _)| p == puuid) else { return vec![] };
+        ids.iter()
+            .filter(|id| self.index.get(*id).is_none_or(|e| RANKED.contains(&e.q)))
+            .take(OTHERS_DETAILS)
+            .collect()
+    }
+    /// Game ids of these players whose details are still to read, newest first.
     pub fn missing_for(&self, puuids: &[String]) -> Vec<String> {
-        let mut out: Vec<String> = self
-            .by
+        let mut out: Vec<String> = puuids
             .iter()
-            .filter(|(p, _)| puuids.contains(p))
-            .flat_map(|(_, ids)| ids.iter())
-            .filter(|id| !self.index.contains_key(*id))
+            .flat_map(|p| self.detail_ids(p))
+            .filter(|id| self.index.get(*id).is_none_or(|e| e.v == 0))
             .cloned()
             .collect();
         out.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
         out.dedup();
         out
     }
-    /// (stored, noted) games of a player.
+    /// (games with details, games that get details) of a player.
     pub fn progress(&self, puuid: &str) -> (usize, usize) {
-        self.by
-            .iter()
-            .find(|(p, _)| p == puuid)
-            .map(|(_, ids)| {
-                (
-                    ids.iter().filter(|id| self.index.contains_key(*id)).count(),
-                    ids.len(),
-                )
-            })
-            .unwrap_or((0, 0))
+        let ids = self.detail_ids(puuid);
+        let done = ids.iter().filter(|id| self.index.get(**id).is_some_and(|e| e.v > 0)).count();
+        (done, ids.len())
     }
-    /// Every stored game of a player's match list.
-    pub fn games_of(&self, puuid: &str) -> Vec<Value> {
+    /// What the window echoes back for a game it holds: id and format, for a lite game also the
+    /// line's length (another player added to it makes a longer line – it has to come again).
+    pub fn game_key(&self, id: &str) -> String {
+        match self.index.get(id) {
+            Some(e) if e.v == 0 => format!("{id}:0.{}", e.len),
+            Some(e) => format!("{id}:{}", e.v),
+            None => String::new(),
+        }
+    }
+    /// A player's stored games: every id, and the games the window doesn't have yet (`have`: the
+    /// `game_key`s it holds – a lite game that got its details or another player comes again).
+    /// Each game sent carries its key as "k".
+    pub fn games_of(&self, puuid: &str, have: &HashSet<String>) -> (Vec<String>, Vec<Value>) {
         let ids: Vec<String> = self
             .by
             .iter()
             .find(|(p, _)| p == puuid)
-            .map(|(_, ids)| {
-                ids.iter()
-                    .filter(|id| self.index.contains_key(*id))
-                    .cloned()
-                    .collect()
-            })
+            .map(|(_, ids)| ids.iter().filter(|id| self.index.contains_key(*id)).cloned().collect())
             .unwrap_or_default();
-        self.read_games(&ids)
+        let new: Vec<String> = ids
+            .iter()
+            .filter(|id| !have.contains(&self.game_key(id)))
+            .cloned()
+            .collect();
+        let mut games = self.read_games(&new);
+        for g in games.iter_mut() {
+            let k = self.game_key(&id_str(&g["id"]));
+            if let Some(o) = g.as_object_mut() {
+                o.insert("k".into(), json!(k));
+            }
+        }
+        (ids, games)
     }
     /// Other players' games older than the age limit go (and leave the lists). Returns how many.
     pub fn prune_old(&mut self, now: i64) -> usize {
         let Some(age) = self.max_age else { return 0 };
-        let cutoff = now - age;
         let drop: HashSet<String> = self
             .index
             .iter()
-            .filter(|(_, e)| e.t < cutoff)
+            .filter(|(_, e)| e.t < now - if e.v == 0 { OTHERS_LITE_AGE } else { age })
             .map(|(id, _)| id.clone())
             .collect();
         if drop.is_empty() {
@@ -994,7 +1040,30 @@ fn num(v: &Value) -> Value {
 }
 
 /// The client's game detail -> what the page needs (about 2 KB per game).
+/// A game from a match list: the list carries only that player (participants[0]) – kept as a
+/// "lite" game (format 0) with that one player, until (if ever) its details replace it.
+pub fn lite(g: &Value) -> Option<Value> {
+    let players = players_of(g)?;
+    if players.is_empty() {
+        return None;
+    }
+    let dur = num_of(g.get("gameDuration")) as i64;
+    Some(json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
+        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": 0, "lite": true }))
+}
 pub fn compact(g: &Value) -> Option<Value> {
+    let players = players_of(g)?;
+    if players.len() < 2 {
+        return None;
+    }
+    let dur = num_of(g.get("gameDuration")) as i64;
+    Some(
+        json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
+        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": GAME_VERSION,
+        "teams": g["teams"].as_array().map(|t| t.iter().map(team).collect::<Vec<_>>()).unwrap_or_default() }),
+    )
+}
+fn players_of(g: &Value) -> Option<Vec<Value>> {
     let parts = g.get("participants")?.as_array()?;
     let ids = g.get("participantIdentities")?.as_array()?;
     let who: HashMap<i64, &Value> = ids
@@ -1020,15 +1089,7 @@ pub fn compact(g: &Value) -> Option<Value> {
             })
         })
         .collect();
-    if players.len() < 2 {
-        return None;
-    }
-    let dur = num_of(g.get("gameDuration")) as i64;
-    Some(
-        json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
-        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": GAME_VERSION,
-        "teams": g["teams"].as_array().map(|t| t.iter().map(team).collect::<Vec<_>>()).unwrap_or_default() }),
-    )
+    Some(players)
 }
 
 /// Each own account's games in short: { puuid: [[time, seconds, queue, champion, win, remake]] }
@@ -1066,6 +1127,84 @@ mod tests {
             "participantIdentities": (0..10).map(|i| json!({ "participantId": i + 1, "player": { "puuid": format!("p{i}"), "gameName": format!("N{i}"), "tagLine": "EUW" } })).collect::<Vec<_>>(),
             "participants": (0..10).map(|i| json!({ "participantId": i + 1, "teamId": if i < 5 { 100 } else { 200 }, "championId": i + 1, "spell1Id": 4, "spell2Id": 14,
                 "stats": { "kills": i, "deaths": 1, "assists": 2, "totalMinionsKilled": 100, "neutralMinionsKilled": 5, "item0": 3031, "win": i < 5, "perk0": 8112, "perkSubStyle": 8300 } })).collect::<Vec<_>>() })
+    }
+
+    /// a game as a match list carries it: only player i
+    fn list_game(id: i64, i: usize) -> Value {
+        let mut g = detail(id);
+        for k in ["participantIdentities", "participants"] {
+            let one = g[k][i].clone();
+            g[k] = json!([one]);
+        }
+        g
+    }
+
+    #[test]
+    fn lite_games_merge_players_and_give_way_to_details() {
+        let dir = std::env::temp_dir().join(format!("rs-lite-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let mut o = Matches::load_others(dir.clone());
+        let now = crate::riot::now_ms();
+        let at = |mut g: Value| {
+            g["t"] = json!(now);
+            g
+        };
+        let a = at(lite(&list_game(9, 0)).unwrap());
+        assert_eq!(a["v"], 0);
+        assert_eq!(a["lite"], true);
+        assert_eq!(a["players"].as_array().unwrap().len(), 1);
+        assert!(o.insert_lite(&a));
+        // the same player again: nothing new
+        assert!(!o.insert_lite(&a));
+        let k1 = o.game_key("9");
+        assert!(k1.starts_with("9:0."));
+        // another player of the same game: one game with both, and a new key for the window
+        assert!(o.insert_lite(&at(lite(&list_game(9, 6)).unwrap())));
+        let k2 = o.game_key("9");
+        assert_ne!(k1, k2);
+        o.note("p0", &[json!({ "id": 9, "t": now, "q": 420 })]);
+        o.note("p6", &[json!({ "id": 9, "t": now, "q": 420 })]);
+        let (ids, games) = o.games_of("p6", &HashSet::new());
+        assert_eq!(ids, vec!["9"]);
+        assert_eq!(games[0]["players"].as_array().unwrap().len(), 2);
+        assert_eq!(games[0]["k"], json!(k2));
+        // the window holds it: not sent again – an old key brings it again
+        assert!(o.games_of("p6", &[k2.clone()].into()).1.is_empty());
+        assert_eq!(o.games_of("p6", &[k1].into()).1.len(), 1);
+        // a lite game still needs its details; once there, they win and a lite one can't replace them
+        assert_eq!(o.missing_for(&["p0".into()]), vec!["9"]);
+        assert_eq!(o.progress("p0"), (0, 1));
+        assert!(o.insert(&at(compact(&detail(9)).unwrap())));
+        assert!(!o.insert_lite(&a));
+        assert!(o.missing_for(&["p0".into()]).is_empty());
+        assert_eq!(o.progress("p0"), (1, 1));
+        assert_eq!(o.game_key("9"), format!("9:{GAME_VERSION}"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn details_only_for_the_newest_ranked_games() {
+        let dir = std::env::temp_dir().join(format!("rs-detail-ids-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let mut o = Matches::load_others(dir.clone());
+        let now = crate::riot::now_ms();
+        // 60 games, newest first: every third one a normal game (queue 400) – known from its lite form
+        let list: Vec<Value> = (0..60).map(|i| json!({ "id": 1000 - i, "t": now - i * 1000, "q": if i % 3 == 0 { 400 } else { 420 } })).collect();
+        o.note("p0", &list);
+        for (i, x) in list.iter().enumerate() {
+            let mut g = lite(&list_game(x["id"].as_i64().unwrap(), 0)).unwrap();
+            g["t"] = x["t"].clone();
+            g["q"] = x["q"].clone();
+            if i < 60 {
+                o.insert_lite(&g);
+            }
+        }
+        let want = o.missing_for(&["p0".into()]);
+        assert_eq!(want.len(), 40);
+        assert_eq!(want[0], "999");
+        assert!(!want.contains(&"1000".to_string()));
+        assert_eq!(o.progress("p0"), (0, 40));
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -1313,7 +1452,7 @@ mod tests {
             assert!(o.insert(&g));
         }
         assert_eq!(o.progress("p1"), (30, 30));
-        assert_eq!(o.games_of("p1").len(), 30);
+        assert_eq!(o.games_of("p1", &HashSet::new()).1.len(), 30);
         assert!(o.has("7"));
         // a limit: the oldest go, down to 90 % of it, and leave the list
         let gone = o.prune_to(500_000);
@@ -1335,20 +1474,29 @@ mod tests {
         let now = crate::riot::now_ms();
         let mut o = Matches::load_others(dir.join("matches-others"));
         let old = now - OTHERS_MAX_AGE - 1000;
-        // an old game in a match list isn't even noted
+        let ancient = now - OTHERS_LITE_AGE - 1000;
+        // a game older than a year in a match list isn't even noted; one older than 30 days is
+        // (its lite form stays a year)
         o.note(
             "p",
-            &[json!({ "id": 1, "t": old }), json!({ "id": 2, "t": now })],
+            &[json!({ "id": 0, "t": ancient }), json!({ "id": 1, "t": old }), json!({ "id": 2, "t": now })],
         );
-        assert_eq!(o.missing_for(&["p".into()]), vec!["2"]);
+        assert_eq!(o.missing_for(&["p".into()]), vec!["2", "1"]);
         let mut g = compact(&detail(3)).unwrap();
         g["t"] = json!(old);
         o.insert(&g);
         let mut g2 = compact(&detail(2)).unwrap();
         g2["t"] = json!(now);
         o.insert(&g2);
-        assert_eq!(o.prune_old(now), 1);
-        assert!(!o.has("3") && o.has("2"));
+        let mut l = lite(&list_game(4, 0)).unwrap();
+        l["t"] = json!(old);
+        o.insert_lite(&l);
+        let mut l2 = lite(&list_game(5, 0)).unwrap();
+        l2["t"] = json!(ancient);
+        o.insert_lite(&l2);
+        // full details go after 30 days, lite games after a year
+        assert_eq!(o.prune_old(now), 2);
+        assert!(!o.has("3") && o.has("2") && o.has("4") && !o.has("5"));
         // own games: the raw answers, gzip, one member per game – readable as one stream
         let own = Matches::load(&dir);
         own.append_raw("7", &json!({ "gameId": 7 }), Some(&json!({ "frames": [] })));
