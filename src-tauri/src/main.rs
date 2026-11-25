@@ -197,7 +197,10 @@ fn trim_log(file: &Path, max: u64) {
     }
     let Ok(b) = std::fs::read(file) else { return };
     let from = b.len() - (max / 2) as usize;
-    let start = b[from..].iter().position(|c| *c == b'\n').map_or(from, |i| from + i + 1);
+    let start = b[from..]
+        .iter()
+        .position(|c| *c == b'\n')
+        .map_or(from, |i| from + i + 1);
     let _ = store::write_atomic(file, &b[start..]);
 }
 
@@ -519,7 +522,12 @@ fn check_crypto() {
     if broken {
         let saved: Vec<PathBuf> = ["sessions", "creds"]
             .iter()
-            .flat_map(|d| std::fs::read_dir(data().join(d)).into_iter().flatten().flatten())
+            .flat_map(|d| {
+                std::fs::read_dir(data().join(d))
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+            })
             .map(|e| e.path())
             .collect();
         if saved.is_empty() || saved.iter().any(|p| read_secret(p).is_some()) {
@@ -827,13 +835,26 @@ fn merge_history(id: &str, hs: &riot::HistorySummary, own: bool) {
 const IN_GAME: [&str; 3] = ["GameStart", "InProgress", "Reconnect"];
 /// From a game (or its end screens) to the end screen or out of it: the game is over.
 fn after_game(was: Option<&str>, now: &str) -> bool {
-    const PLAYED: [&str; 6] = ["GameStart", "InProgress", "Reconnect", "WaitingForStats", "PreEndOfGame", "EndOfGame"];
-    was.is_some_and(|w| PLAYED.contains(&w)) && matches!(now, "EndOfGame" | "Lobby" | "None" | "Matchmaking")
+    const PLAYED: [&str; 6] = [
+        "GameStart",
+        "InProgress",
+        "Reconnect",
+        "WaitingForStats",
+        "PreEndOfGame",
+        "EndOfGame",
+    ];
+    was.is_some_and(|w| PLAYED.contains(&w))
+        && matches!(now, "EndOfGame" | "Lobby" | "None" | "Matchmaking")
 }
 /// A game is on (loading screen or running) – the phase comes from the client's events the moment
 /// it changes (else from the last tick): long request loops stop as soon as a game starts.
 fn game_on() -> bool {
-    with(|c| c.live.phase.as_deref().is_some_and(|p| IN_GAME.contains(&p)))
+    with(|c| {
+        c.live
+            .phase
+            .as_deref()
+            .is_some_and(|p| IN_GAME.contains(&p))
+    })
 }
 /// League must not be closed now (champion select or a game)
 const RISKY_PHASES: [&str; 5] = [
@@ -1156,7 +1177,11 @@ async fn tick_inner(my_gen: u64) {
                 upsert(u);
             }
             let due = with(|c| now_ms() - c.history_at.get(&aid).copied().unwrap_or(0) > 1_800_000);
-            if let Some(hs) = if due { riot::history_summary(&aid).await } else { None } {
+            if let Some(hs) = if due {
+                riot::history_summary(&aid).await
+            } else {
+                None
+            } {
                 with(|c| c.history_at.insert(aid.clone(), now_ms()));
                 merge_history(&aid, &hs, false);
             }
@@ -1595,7 +1620,9 @@ async fn scout_round() -> bool {
             if let Some(l) = list {
                 let short: Vec<Value> = l
                     .iter()
-                    .map(|g| json!({ "id": g["gameId"], "t": g["gameCreation"], "q": g["queueId"] }))
+                    .map(
+                        |g| json!({ "id": g["gameId"], "t": g["gameCreation"], "q": g["queueId"] }),
+                    )
                     .collect();
                 others(|o| {
                     o.note(&p, &short);
@@ -4102,17 +4129,30 @@ mod tests {
         // only the canary damaged, the logins still readable: written again, nothing reported
         std::fs::write(dir.join("keycheck.bin"), b"not dpapi").unwrap();
         check_crypto();
-        assert!(!with(|c| c.crypto_broken), "a damaged canary alone is no broken key");
-        assert_eq!(read_secret(&dir.join("keycheck.bin")).as_deref(), Some("rift-switch"));
+        assert!(
+            !with(|c| c.crypto_broken),
+            "a damaged canary alone is no broken key"
+        );
+        assert_eq!(
+            read_secret(&dir.join("keycheck.bin")).as_deref(),
+            Some("rift-switch")
+        );
         // nothing readable any more: reported – and still at the next start
         for d in ["sessions", "creds"] {
-            for e in std::fs::read_dir(dir.join(d)).into_iter().flatten().flatten() {
+            for e in std::fs::read_dir(dir.join(d))
+                .into_iter()
+                .flatten()
+                .flatten()
+            {
                 std::fs::write(e.path(), b"other key").unwrap();
             }
         }
         std::fs::write(dir.join("keycheck.bin"), b"not dpapi").unwrap();
         check_crypto();
-        assert!(with(|c| c.crypto_broken), "a key this start can't read is reported");
+        assert!(
+            with(|c| c.crypto_broken),
+            "a key this start can't read is reported"
+        );
         check_crypto();
         assert!(with(|c| c.crypto_broken), "and stays reported");
         let _ = std::fs::remove_dir_all(&dir);

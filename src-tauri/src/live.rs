@@ -104,7 +104,12 @@ fn note_party(lb: &Value) {
         .as_array()
         .into_iter()
         .flatten()
-        .filter_map(|m| m["puuid"].as_str().filter(|p| !p.is_empty()).map(String::from))
+        .filter_map(|m| {
+            m["puuid"]
+                .as_str()
+                .filter(|p| !p.is_empty())
+                .map(String::from)
+        })
         .collect();
     *PARTY.lock().unwrap_or_else(|e| e.into_inner()) = (now_ms(), ids);
 }
@@ -158,12 +163,27 @@ async fn lobby() -> Option<Value> {
 
 /// The penalties of the lobby's members by summoner id: the party's eligibility for this queue
 /// (each restriction names its summoners) and a running queue's waits (low priority, lockouts).
-fn member_penalties(elig: Option<&Value>, search: Option<&Value>, queue: i64, now: i64) -> HashMap<String, Vec<Value>> {
+fn member_penalties(
+    elig: Option<&Value>,
+    search: Option<&Value>,
+    queue: i64,
+    now: i64,
+) -> HashMap<String, Vec<Value>> {
     let mut out: HashMap<String, Vec<Value>> = HashMap::new();
     let ids = |v: &Value| -> Vec<String> {
-        let mut l: Vec<String> = v["summonerIds"].as_array().into_iter().flatten().map(id_of).filter(|s| !s.is_empty()).collect();
+        let mut l: Vec<String> = v["summonerIds"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(id_of)
+            .filter(|s| !s.is_empty())
+            .collect();
         if let Some(s) = v["summonerIdsString"].as_str() {
-            l.extend(s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()));
+            l.extend(
+                s.split(',')
+                    .map(|x| x.trim().to_string())
+                    .filter(|x| !x.is_empty()),
+            );
         }
         l.sort();
         l.dedup();
@@ -175,28 +195,49 @@ fn member_penalties(elig: Option<&Value>, search: Option<&Value>, queue: i64, no
             l.push(p);
         }
     };
-    let q = elig.and_then(Value::as_array).and_then(|l| l.iter().find(|x| x["queueId"].as_i64() == Some(queue)));
-    for r in q.map(|q| &q["restrictions"]).and_then(Value::as_array).into_iter().flatten() {
+    let q = elig
+        .and_then(Value::as_array)
+        .and_then(|l| l.iter().find(|x| x["queueId"].as_i64() == Some(queue)));
+    for r in q
+        .map(|q| &q["restrictions"])
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         let code = r["restrictionCode"].as_str().unwrap_or("");
         if !riot::is_penalty(code) {
             continue;
         }
         let until = r["expiredTimestamp"].as_i64().unwrap_or(0);
         for id in ids(r) {
-            add(id, json!({ "code": code, "args": if r["restrictionArgs"].is_null() { json!({}) } else { r["restrictionArgs"].clone() }, "until": until }));
+            add(
+                id,
+                json!({ "code": code, "args": if r["restrictionArgs"].is_null() { json!({}) } else { r["restrictionArgs"].clone() }, "until": until }),
+            );
         }
     }
     if let Some(s) = search {
         let lp = &s["lowPriorityData"];
         let secs = lp["penaltyTimeRemaining"].as_f64().unwrap_or(0.0);
-        for id in lp["penalizedSummonerIds"].as_array().into_iter().flatten().map(id_of) {
-            add(id, json!({ "code": "LowPriorityQueue", "until": if secs > 0.0 { now + (secs * 1000.0) as i64 } else { 0 }, "low": lp["penaltyTime"].as_f64().unwrap_or(0.0) as i64 }));
+        for id in lp["penalizedSummonerIds"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(id_of)
+        {
+            add(
+                id,
+                json!({ "code": "LowPriorityQueue", "until": if secs > 0.0 { now + (secs * 1000.0) as i64 } else { 0 }, "low": lp["penaltyTime"].as_f64().unwrap_or(0.0) as i64 }),
+            );
         }
         for e in s["errors"].as_array().into_iter().flatten() {
             let secs = e["penaltyTimeRemaining"].as_f64().unwrap_or(0.0);
             let id = id_of(&e["penalizedSummonerId"]);
             if secs > 0.0 && !id.is_empty() {
-                add(id, json!({ "code": e["errorType"].as_str().unwrap_or("QueueLockout"), "until": now + (secs * 1000.0) as i64 }));
+                add(
+                    id,
+                    json!({ "code": e["errorType"].as_str().unwrap_or("QueueLockout"), "until": now + (secs * 1000.0) as i64 }),
+                );
             }
         }
     }
@@ -715,8 +756,19 @@ mod tests {
         let search = serde_json::json!({ "lowPriorityData": { "penalizedSummonerIds": [8], "penaltyTime": 60, "penaltyTimeRemaining": 30 },
             "errors": [{ "errorType": "QUEUE_DODGER", "penaltyTimeRemaining": 10, "penalizedSummonerId": 7 }] });
         let p = super::member_penalties(Some(&elig), Some(&search), 420, 1000);
-        let codes = |id: &str| p.get(id).map(|l| l.iter().map(|x| x["code"].as_str().unwrap().to_string()).collect::<Vec<_>>()).unwrap_or_default();
-        assert_eq!(codes("7"), vec!["QueueDodger", "LeaverBusted", "QUEUE_DODGER"]);
+        let codes = |id: &str| {
+            p.get(id)
+                .map(|l| {
+                    l.iter()
+                        .map(|x| x["code"].as_str().unwrap().to_string())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default()
+        };
+        assert_eq!(
+            codes("7"),
+            vec!["QueueDodger", "LeaverBusted", "QUEUE_DODGER"]
+        );
         assert_eq!(codes("8"), vec!["LeaverBusted", "LowPriorityQueue"]);
         // another queue's restriction and a team-size one are no penalty of anyone here
         assert!(codes("9").is_empty());
@@ -735,7 +787,8 @@ mod tests {
         assert!(super::party_of(&(now, vec!["a".to_string()]), now).is_empty());
         // seen too long ago
         assert!(super::party_of(&(now - super::PARTY_AGE - 1, two.1.clone()), now).is_empty());
-        let lb = serde_json::json!({ "members": [{ "puuid": "x" }, { "puuid": "" }, { "puuid": "y" }] });
+        let lb =
+            serde_json::json!({ "members": [{ "puuid": "x" }, { "puuid": "" }, { "puuid": "y" }] });
         super::note_party(&lb);
         assert_eq!(super::party(), vec!["x", "y"]);
     }

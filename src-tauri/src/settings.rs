@@ -25,7 +25,11 @@ pub fn defaults() -> Obj {
 pub fn lang_for(tags: &[String]) -> &'static str {
     tags.iter()
         .filter_map(|t| {
-            let base = t.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
+            let base = t
+                .split(['-', '_'])
+                .next()
+                .unwrap_or("")
+                .to_ascii_lowercase();
             LANGS.iter().find(|l| **l == base).copied()
         })
         .next()
@@ -39,11 +43,26 @@ fn windows_langs() -> Vec<String> {
     let (mut n, mut len) = (0u32, 0u32);
     // SAFETY: first call asks for the size, the second fills a buffer of that size
     unsafe {
-        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut n, windows::core::PWSTR::null(), &mut len).is_err() || len == 0 {
+        if GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &mut n,
+            windows::core::PWSTR::null(),
+            &mut len,
+        )
+        .is_err()
+            || len == 0
+        {
             return vec![];
         }
         let mut buf = vec![0u16; len as usize];
-        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut n, windows::core::PWSTR(buf.as_mut_ptr()), &mut len).is_err() {
+        if GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &mut n,
+            windows::core::PWSTR(buf.as_mut_ptr()),
+            &mut len,
+        )
+        .is_err()
+        {
             return vec![];
         }
         String::from_utf16_lossy(&buf)

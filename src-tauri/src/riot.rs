@@ -1276,7 +1276,9 @@ fn restore_session_into(data: &Path, json: &str) -> bool {
         }
         let full = data.join(rel_path);
         let written = match (full.parent(), b64.as_str().and_then(|s| B64.decode(s).ok())) {
-            (Some(dir), Some(b)) => std::fs::create_dir_all(dir).is_ok() && std::fs::write(&full, b).is_ok(),
+            (Some(dir), Some(b)) => {
+                std::fs::create_dir_all(dir).is_ok() && std::fs::write(&full, b).is_ok()
+            }
             _ => false,
         };
         ok &= written;
@@ -1517,7 +1519,11 @@ async fn run_script(name: &str, stdin: Option<String>, timeout: Duration) -> Str
     // the scripts' test switches (another target window, a picture instead of the screen) only in a
     // test copy (RS_DATA): a leftover variable must never send a typed login elsewhere
     if std::env::var_os("RS_DATA").is_none() {
-        for k in ["RS_AUTOFILL_TARGET", "RS_AUTOFILL_IMAGE", "RS_AUTOFILL_PROBE"] {
+        for k in [
+            "RS_AUTOFILL_TARGET",
+            "RS_AUTOFILL_IMAGE",
+            "RS_AUTOFILL_PROBE",
+        ] {
             cmd.env_remove(k);
         }
     }
@@ -1586,7 +1592,10 @@ mod tests {
         assert!(data.join("Sub").join("x.txt").exists());
         assert!(!base.join("evil.txt").exists() && !base.join("evil2.txt").exists());
         // no key file, or not even a snapshot: false, and nothing half-written stays
-        assert!(!restore_session_into(&data, &json!({ "files": { "Sub/x.txt": enc("x") } }).to_string()));
+        assert!(!restore_session_into(
+            &data,
+            &json!({ "files": { "Sub/x.txt": enc("x") } }).to_string()
+        ));
         assert!(std::fs::read_dir(&data).unwrap().next().is_none());
         assert!(!restore_session_into(&data, "not json"));
         let _ = std::fs::remove_dir_all(&base);

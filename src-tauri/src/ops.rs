@@ -639,8 +639,14 @@ mod tests {
         );
         assert_eq!(redact("level#2 fine", ""), "level#2 fine");
         // characters whose lowercase is longer (İ) or not ASCII (ü): no wrong cut, no panic
-        assert_eq!(redact(r"İİ c:\users\müller\x", r"C:\Users\Müller"), r"İİ %USERPROFILE%\x");
-        assert_eq!(redact(r"C:\USERS\İLKER\a C:\Users\İlker", r"C:\Users\İlker"), r"%USERPROFILE%\a %USERPROFILE%");
+        assert_eq!(
+            redact(r"İİ c:\users\müller\x", r"C:\Users\Müller"),
+            r"İİ %USERPROFILE%\x"
+        );
+        assert_eq!(
+            redact(r"C:\USERS\İLKER\a C:\Users\İlker", r"C:\Users\İlker"),
+            r"%USERPROFILE%\a %USERPROFILE%"
+        );
     }
 
     #[test]

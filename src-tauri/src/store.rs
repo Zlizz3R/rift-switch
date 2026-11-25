@@ -101,7 +101,10 @@ pub fn normalize(raw: Value) -> State {
     }
     // one-time: a lane picked before the helper followed the main role stays picked
     let old_lane = saved.as_ref().is_some_and(|s| {
-        s.get("laneChosen").is_none() && s.get("lane").and_then(Value::as_str).is_some_and(|l| l != "top")
+        s.get("laneChosen").is_none()
+            && s.get("lane")
+                .and_then(Value::as_str)
+                .is_some_and(|l| l != "top")
     });
     if old_lane {
         settings.insert("laneChosen".into(), json!(true));
@@ -276,13 +279,13 @@ pub fn tmp_path(file: &Path) -> std::path::PathBuf {
 pub fn replace(tmp: &Path, file: &Path) -> std::io::Result<()> {
     let mut last = None;
     for i in 0..8 {
-        match fs::rename(&tmp, file) {
+        match fs::rename(tmp, file) {
             Ok(()) => return Ok(()),
             Err(e) => last = Some(e),
         }
         std::thread::sleep(std::time::Duration::from_millis(25 * (i + 1)));
     }
-    let _ = fs::remove_file(&tmp);
+    let _ = fs::remove_file(tmp);
     Err(last.unwrap())
 }
 
@@ -466,10 +469,23 @@ mod tests {
         // the first start: a language for sure (Windows' own, in tests none: English); a lane picked
         // before stays picked, the default one follows the main role
         assert_eq!(normalize(Value::Null).settings["lang"], "en");
-        assert_eq!(normalize(json!({ "settings": { "lang": "de" } })).settings["lang"], "de");
-        assert_eq!(normalize(json!({ "settings": { "lane": "mid" } })).settings["laneChosen"], true);
-        assert_eq!(normalize(json!({ "settings": { "lane": "top" } })).settings["laneChosen"], false);
-        assert_eq!(normalize(json!({ "settings": { "lane": "mid", "laneChosen": false } })).settings["laneChosen"], false);
+        assert_eq!(
+            normalize(json!({ "settings": { "lang": "de" } })).settings["lang"],
+            "de"
+        );
+        assert_eq!(
+            normalize(json!({ "settings": { "lane": "mid" } })).settings["laneChosen"],
+            true
+        );
+        assert_eq!(
+            normalize(json!({ "settings": { "lane": "top" } })).settings["laneChosen"],
+            false
+        );
+        assert_eq!(
+            normalize(json!({ "settings": { "lane": "mid", "laneChosen": false } })).settings
+                ["laneChosen"],
+            false
+        );
         let s = normalize(json!({ "settings": { "sort": "custom", "autoPlay": false } }));
         assert_eq!(s.settings["sort"], "level");
         assert_eq!(s.settings["autoPlay"], true);

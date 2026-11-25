@@ -211,11 +211,12 @@ pub fn install_now() -> bool {
     let ok = match (&s.file, s.status) {
         (Some(f), "ready") => {
             // the file lies in a folder the user can write to: still the one that was checked?
-            let same = std::fs::read(f).is_ok_and(|b| s.sha.as_deref() == Some(sha256_hex(&b).as_str()));
+            let same =
+                std::fs::read(f).is_ok_and(|b| s.sha.as_deref() == Some(sha256_hex(&b).as_str()));
             same && std::process::Command::new(f)
-                    .args(["/P", "/R"])
-                    .spawn()
-                    .is_ok()
+                .args(["/P", "/R"])
+                .spawn()
+                .is_ok()
         }
         _ => false,
     };

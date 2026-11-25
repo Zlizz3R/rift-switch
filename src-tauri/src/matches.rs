@@ -244,7 +244,9 @@ impl Matches {
             return false;
         }
         // other players: games past the age limit of their lite form aren't wanted at all
-        let cutoff = self.max_age.map(|_| crate::riot::now_ms() - OTHERS_LITE_AGE);
+        let cutoff = self
+            .max_age
+            .map(|_| crate::riot::now_ms() - OTHERS_LITE_AGE);
         let list: Vec<Value> = list
             .iter()
             .filter(|g| cutoff.is_none_or(|c| num_of(g.get("t")) as i64 >= c))
@@ -303,11 +305,15 @@ impl Matches {
     /// game already stored for another player of it gets this player added (a new line).
     pub fn insert_lite(&mut self, g: &Value) -> bool {
         let id = id_str(&g["id"]);
-        let Some(p) = g["players"].get(0) else { return false };
+        let Some(p) = g["players"].get(0) else {
+            return false;
+        };
         match self.index.get(&id).copied() {
             None if !id.is_empty() => self.append(id, g, 0),
             Some(e) if e.v == 0 => {
-                let Some(mut had) = read_entries(&self.games_file(), &[e]).pop() else { return false };
+                let Some(mut had) = read_entries(&self.games_file(), &[e]).pop() else {
+                    return false;
+                };
                 let list = had["players"].as_array_mut();
                 match list {
                     Some(l) if !l.iter().any(|x| x["puuid"] == p["puuid"]) => l.push(p.clone()),
@@ -571,7 +577,9 @@ impl Matches {
     /// A player's games that get full details: the newest OTHERS_DETAILS ranked ones of the list
     /// (the queue is known from the lite game; a game not stored at all counts too, newest first).
     fn detail_ids(&self, puuid: &str) -> Vec<&String> {
-        let Some((_, ids)) = self.by.iter().find(|(p, _)| p == puuid) else { return vec![] };
+        let Some((_, ids)) = self.by.iter().find(|(p, _)| p == puuid) else {
+            return vec![];
+        };
         ids.iter()
             .filter(|id| self.index.get(*id).is_none_or(|e| RANKED.contains(&e.q)))
             .take(OTHERS_DETAILS)
@@ -592,7 +600,10 @@ impl Matches {
     /// (games with details, games that get details) of a player.
     pub fn progress(&self, puuid: &str) -> (usize, usize) {
         let ids = self.detail_ids(puuid);
-        let done = ids.iter().filter(|id| self.index.get(**id).is_some_and(|e| e.v > 0)).count();
+        let done = ids
+            .iter()
+            .filter(|id| self.index.get(**id).is_some_and(|e| e.v > 0))
+            .count();
         (done, ids.len())
     }
     /// What the window echoes back for a game it holds: id and format, for a lite game also the
@@ -612,7 +623,12 @@ impl Matches {
             .by
             .iter()
             .find(|(p, _)| p == puuid)
-            .map(|(_, ids)| ids.iter().filter(|id| self.index.contains_key(*id)).cloned().collect())
+            .map(|(_, ids)| {
+                ids.iter()
+                    .filter(|id| self.index.contains_key(*id))
+                    .cloned()
+                    .collect()
+            })
             .unwrap_or_default();
         let new: Vec<String> = ids
             .iter()
@@ -1048,8 +1064,10 @@ pub fn lite(g: &Value) -> Option<Value> {
         return None;
     }
     let dur = num_of(g.get("gameDuration")) as i64;
-    Some(json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
-        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": 0, "lite": true }))
+    Some(
+        json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
+        "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": 0, "lite": true }),
+    )
 }
 pub fn compact(g: &Value) -> Option<Value> {
     let players = players_of(g)?;
@@ -1424,9 +1442,14 @@ mod tests {
         assert_eq!(m2.count(), 80);
         assert_eq!(m2.dead_bytes().0, 0);
         assert!(m2.outdated(100).is_empty());
-        assert!(read_entries(&m2.games_file(), &stale).iter().all(|g| g["id"] == json!(40) || g["id"] == json!("40")));
+        assert!(read_entries(&m2.games_file(), &stale)
+            .iter()
+            .all(|g| g["id"] == json!(40) || g["id"] == json!("40")));
         // the new places (from the byte copy) are right
-        let g = read_entries(&m2.games_file(), &m2.entries(&["40".to_string(), "1".to_string()]));
+        let g = read_entries(
+            &m2.games_file(),
+            &m2.entries(&["40".to_string(), "1".to_string()]),
+        );
         assert_eq!(g.len(), 2);
         assert_eq!(g[0]["v"], json!(GAME_VERSION));
         let _ = fs::remove_dir_all(&dir);
@@ -1479,7 +1502,11 @@ mod tests {
         // (its lite form stays a year)
         o.note(
             "p",
-            &[json!({ "id": 0, "t": ancient }), json!({ "id": 1, "t": old }), json!({ "id": 2, "t": now })],
+            &[
+                json!({ "id": 0, "t": ancient }),
+                json!({ "id": 1, "t": old }),
+                json!({ "id": 2, "t": now }),
+            ],
         );
         assert_eq!(o.missing_for(&["p".into()]), vec!["2", "1"]);
         let mut g = compact(&detail(3)).unwrap();
