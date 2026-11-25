@@ -3,6 +3,21 @@
 (function (root) {
   const CHANGELOG = [
     {
+      v: '1.3.1',
+      en: [
+        'Champ select helper: both teams lane by lane – yours as Riot assigned them, the enemies guessed from how often each champion plays each lane in your stored games; your assigned position is the helper\'s lane.',
+        'Live: everyone in your lobby is a premade in the game that follows, even without earlier games together.',
+        'Lobby: each penalty sits on the row of whoever has it – your own accounts and the other players the client names.',
+        'Live: your last game is stored right after it ends, so the next game already shows "Last game: enemy (…)"; players who met before are named with the day and the champions of then.',
+      ],
+      de: [
+        'Champ-Select-Helfer: beide Teams Lane für Lane – deins wie von Riot vergeben, die Gegner geschätzt danach, wie oft jeder Champion in deinen gespeicherten Spielen welche Lane spielt; deine zugewiesene Position ist die Lane des Helfers.',
+        'Live: Alle aus deiner Lobby sind im folgenden Spiel Premades, auch ohne frühere gemeinsame Spiele.',
+        'Lobby: Jede Strafe steht in der Zeile dessen, der sie hat – deine eigenen Accounts und die anderen Spieler, die der Client nennt.',
+        'Live: Dein letztes Spiel wird direkt nach dem Ende gespeichert, so zeigt schon das nächste Spiel „Letztes Spiel: Gegner (…)“; Spieler, die sich schon begegnet sind, stehen mit Tag und den Champions von damals da.',
+      ],
+    },
+    {
       v: '1.3.0',
       en: [
         'Overview, much more: Performance (key figures, trend, a table by role), Champions (op.gg style), Play style (a radar against your lane opponent), Mastery over all accounts with a play time estimate, and Seasons.',
