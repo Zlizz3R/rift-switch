@@ -492,6 +492,7 @@
     'ov.allT': "Tous les comptes comptent",
     'ov.accT': "Clic : dans l’analyse ou non · Ctrl+clic : seulement celui-ci",
     'ov.none': "Aucun compte choisi – active-en un en haut.",
+    'sw.play_updatePct': "League se met à jour ({pct} %) – Jouer suit juste après",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

@@ -1180,6 +1180,36 @@ pub async fn updating() -> bool {
             .and_then(Value::as_array)
             .is_some_and(|a| !a.is_empty())
 }
+/// League's patchline in the Riot Client: can it start (up to date), or is it updating / waiting
+/// for an update – then with the progress in percent. None when the Riot Client doesn't tell.
+pub struct PatchState {
+    pub ready: bool,
+    pub pct: Option<f64>,
+}
+pub async fn patch_state(pl: &str) -> Option<PatchState> {
+    let r = rc_api(
+        &format!(
+            "/patch-proxy/v2/patch-states/products/league_of_legends/patchlines/{}",
+            if pl == "pbe" { "pbe" } else { "live" }
+        ),
+        "GET",
+    )
+    .await;
+    if !r.up || r.status != 200 {
+        return None;
+    }
+    let b = r.body?;
+    Some(patch_state_of(&b))
+}
+/// The answer of patch-states → ready only when "UpToDate" and launchable.
+pub fn patch_state_of(b: &Value) -> PatchState {
+    let state = b["state"].as_str().unwrap_or("");
+    let ready = b["launchable"] != false && (state.is_empty() || state == "UpToDate");
+    let pct = b["progress"]["overallProgress"]
+        .as_f64()
+        .filter(|p| *p > 0.0 && *p < 100.0);
+    PatchState { ready, pct }
+}
 /// The "Play" button of the Riot Client (live or PBE).
 pub async fn press_play(pl: &str) -> bool {
     let r = rc_api(
@@ -1487,5 +1517,23 @@ mod tests {
         ]);
         assert_eq!(champs_of_inventory(&inv), vec![json!(103), json!(266)]);
         assert!(champs_of_inventory(&Value::Null).is_empty());
+    }
+
+    #[test]
+    fn patch_state_waits_for_updates() {
+        let up = patch_state_of(
+            &json!({ "state": "UpToDate", "launchable": true, "progress": { "overallProgress": 0.0 } }),
+        );
+        assert!(up.ready && up.pct.is_none());
+        let busy = patch_state_of(
+            &json!({ "state": "Updating", "launchable": false, "progress": { "overallProgress": 41.5 } }),
+        );
+        assert!(!busy.ready);
+        assert_eq!(busy.pct, Some(41.5));
+        // waiting for an update the user has to start: not ready either
+        assert!(!patch_state_of(&json!({ "state": "OutOfDate", "launchable": false })).ready);
+        assert!(
+            !patch_state_of(&json!({ "state": "CheckingForUpdate", "launchable": true })).ready
+        );
     }
 }

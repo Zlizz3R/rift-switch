@@ -489,6 +489,7 @@
     'ov.allT': "كل الحسابات تُحسب",
     'ov.accT': "انقر: ضمن التقييم أو خارجه · Ctrl+نقر: هذا فقط",
     'ov.none': "لم يُختر حساب – فعّل واحدًا في الأعلى.",
+    'sw.play_updatePct': "يتم تحديث League ‏({pct} %) – بعدها يُضغط «لعب» مباشرة",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

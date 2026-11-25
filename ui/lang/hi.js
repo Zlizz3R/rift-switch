@@ -490,6 +490,7 @@
     'ov.allT': "सभी अकाउंट गिने जाएँ",
     'ov.accT': "क्लिक: गिनती में शामिल या बाहर · Ctrl+क्लिक: सिर्फ़ यही",
     'ov.none': "कोई अकाउंट नहीं चुना – ऊपर एक चुनें।",
+    'sw.play_updatePct': "League अपडेट हो रहा है ({pct} %) – उसके तुरंत बाद Play",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

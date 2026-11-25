@@ -538,6 +538,7 @@
     'ov.allT': "Every account counts",
     'ov.accT': "Click: in or out of the evaluation · Ctrl+click: only this one",
     'ov.none': "No account chosen – switch one on above.",
+    'sw.play_updatePct': "League is updating ({pct} %) – Play follows right after",
   };
 
   const de = {
@@ -1059,6 +1060,7 @@
     'ov.allT': "Alle Accounts zählen",
     'ov.accT': "Klick: in die Auswertung oder raus · Strg+Klick: nur dieser",
     'ov.none': "Kein Account gewählt – oben einen anwählen.",
+    'sw.play_updatePct': "League wird aktualisiert ({pct} %) – Play kommt direkt danach",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

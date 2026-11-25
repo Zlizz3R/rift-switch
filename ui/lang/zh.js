@@ -488,6 +488,7 @@
     'ov.allT': "统计所有账号",
     'ov.accT': "点击：加入或移出统计 · Ctrl+点击：只看这个",
     'ov.none': "未选择账号——请在上方选择。",
+    'sw.play_updatePct': "英雄联盟正在更新（{pct}%）——完成后立即开始",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

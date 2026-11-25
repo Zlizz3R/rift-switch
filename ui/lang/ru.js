@@ -491,6 +491,7 @@
     'ov.allT': "Учитываются все аккаунты",
     'ov.accT': "Клик: в расчёт или нет · Ctrl+клик: только этот",
     'ov.none': "Аккаунт не выбран – включи один сверху.",
+    'sw.play_updatePct': "League обновляется ({pct} %) – сразу после этого «Играть»",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

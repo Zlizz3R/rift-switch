@@ -490,6 +490,7 @@
     'ov.allT': "تمام اکاؤنٹس شمار ہوں",
     'ov.accT': "کلک: حساب میں شامل یا باہر · Ctrl+کلک: صرف یہی",
     'ov.none': "کوئی اکاؤنٹ منتخب نہیں – اوپر ایک چنیں۔",
+    'sw.play_updatePct': "League اپ ڈیٹ ہو رہا ہے ({pct} %) – اس کے فوراً بعد Play",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

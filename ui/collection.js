@@ -142,7 +142,7 @@ function renderCollTiles(accs, by, q) {
   const tiles = accs.map(a => {
     const c = by.get(a.puuid);
     if (!c) return { a, st: 'unread', sub: t('coll.notRead').split(/ [–-] /)[0], tip: t('coll.notRead') };
-    if (!q) return { a, st: '', sub: `${t('coll.champs')}: ${collEntries(c).filter(x => x.k === 'champ').length}`, tip: '' };
+    if (!q) return { a, st: '', sub: `${t('coll.champs')}: ${c.champs ? collEntries(c).filter(x => x.k === 'champ').length : '–'}`, tip: '' };
     const { st, skins } = collTileState(c, q, ids);
     const tip = t(st === 'both' ? 'coll.tBoth' : st === 'champ' ? 'coll.tChamp' : 'coll.tNone');
     return { a, st, sub: st === 'none' ? tip : `${t('coll.skins')}: ${skins}`, tip };

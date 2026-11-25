@@ -173,6 +173,9 @@ test('logging in shows every step; hide keeps it away, cancel stops it', () => w
   assert.ok(!app.visible('#swBox'), 'hidden for this login');
   await app.push({ ...st, switching: { id: P(2), n: 2, steps: ['play', 'launch'], step: 'play', detail: '' } });
   assert.ok(app.visible('#swBox'), 'the next login shows again');
+  // League updating: no pressing, the step says so – with the progress
+  await app.push({ ...st, switching: { id: P(2), n: 2, steps: ['play', 'launch'], step: 'play', detail: 'update', pct: 41 } });
+  assert.match(app.$$('#swSteps li')[0].textContent, /League is updating \(41 %\) – Play follows right after/);
   await app.click('#swCancel');
   assert.equal(app.called('cancel-switch').length, 1);
 }));

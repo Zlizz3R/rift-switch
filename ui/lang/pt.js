@@ -491,6 +491,7 @@
     'ov.allT': "Todas as contas contam",
     'ov.accT': "Clique: dentro ou fora da análise · Ctrl+clique: só esta",
     'ov.none': "Nenhuma conta escolhida – ative uma acima.",
+    'sw.play_updatePct': "League está atualizando ({pct} %) – logo depois vem Jogar",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

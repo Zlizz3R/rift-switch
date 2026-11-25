@@ -911,8 +911,17 @@ async fn tick_inner(my_gen: u64) {
                 emit("toast", json!("m.credSaveFailed"));
             }
         }
-        // profile details of the signed-in account, every 5 minutes
-        if new_puuid || with(|c| now - c.last_profile_at > 300_000) {
+        // profile details of the signed-in account, every 5 minutes – every 30 seconds while the
+        // collection is incomplete (right after a login the client often hasn't loaded it yet)
+        let incomplete = with(|c| {
+            c.st.account(&id).is_some_and(|a| {
+                let coll = a.get("coll");
+                coll.and_then(|x| x.get("champs")).is_none()
+                    || coll.and_then(|x| x.get("skins")).is_none()
+            })
+        });
+        let every = if incomplete { 30_000 } else { 300_000 };
+        if new_puuid || with(|c| now - c.last_profile_at > every) {
             with(|c| c.last_profile_at = now);
             let (p, hs, elig, notices) = tokio::join!(
                 riot::profile_data(&cur),
@@ -1150,8 +1159,8 @@ async fn load_all() -> Value {
         sleep(100).await;
     }
     tick().await;
-    // right after a login the client may not have its champion list yet: read again (twice at most)
-    for _ in 0..2 {
+    // right after a login the client may not have its champion list yet: read again (a few times)
+    for _ in 0..4 {
         let has = with(|c| {
             c.live
                 .puuid
@@ -1685,7 +1694,10 @@ async fn auto_play(pl: &'static str) {
                         if riot::dismiss_pbe_dialog().await != "closed" {
                             sleep(800).await;
                         }
-                        riot::press_play("pbe").await;
+                        // PBE waiting for an update: the loop below waits and presses Play after it
+                        if riot::patch_state("pbe").await.is_none_or(|p| p.ready) {
+                            riot::press_play("pbe").await;
+                        }
                         tauri::async_runtime::spawn(async {
                             sleep(2500).await;
                             riot::dismiss_pbe_dialog().await;
@@ -1724,9 +1736,20 @@ async fn auto_play(pl: &'static str) {
                     sw_clear();
                     return;
                 }
-            } else if riot::updating().await {
-                // League (or the client) is updating: Play only works afterwards
+            } else if let Some(ps) = match riot::patch_state(with(|c| c.play_line)).await {
+                Some(ps) if !ps.ready => Some(ps),
+                // older Riot Clients: any running download counts as "updating"
+                None if riot::updating().await => Some(riot::PatchState {
+                    ready: false,
+                    pct: None,
+                }),
+                _ => None,
+            } {
+                // League is updating (or waits for an update): Play only works afterwards – no
+                // pressing meanwhile, the steps say so (with the progress)
                 sw_step("play", "update");
+                with(|c| c.sw["pct"] = json!(ps.pct.map(|p| p.round())));
+                push();
                 deadline = deadline.max((now_ms() + 120_000).min(t0 + 1_800_000));
                 signed_in_since = Some(now_ms());
             } else if presses == 0 || now_ms() - signed_in_since.unwrap_or(0) > 12_000 {

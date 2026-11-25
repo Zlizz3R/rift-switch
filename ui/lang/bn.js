@@ -489,6 +489,7 @@
     'ov.allT': "সব অ্যাকাউন্ট গোনা হবে",
     'ov.accT': "ক্লিক: হিসাবে রাখুন বা বাদ দিন · Ctrl+ক্লিক: শুধু এটি",
     'ov.none': "কোনো অ্যাকাউন্ট বাছা হয়নি – উপরে একটি চালু করুন।",
+    'sw.play_updatePct': "League আপডেট হচ্ছে ({pct} %) – তারপরই Play",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;
