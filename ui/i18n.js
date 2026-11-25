@@ -1346,7 +1346,22 @@
     if (typeof module !== 'undefined' && module.exports) { try { STRINGS[code] = require('./lang/' + code + '.js'); } catch {} }
     else if (typeof window !== 'undefined' && window.RS_LANG && window.RS_LANG[code]) STRINGS[code] = window.RS_LANG[code];
   }
+  // in the window a further language's file (about 80 KB each) is loaded only once it's chosen –
+  // English stands in meanwhile, and "rs-lang" tells the window to draw its texts again
+  const asked = new Set();
+  function ensure(lang) {
+    if (STRINGS[lang] || asked.has(lang) || typeof document === 'undefined' || !LANGS.some(([c]) => c === lang)) return;
+    asked.add(lang);
+    const el = document.createElement('script');
+    el.src = 'lang/' + lang + '.js';
+    el.onload = () => {
+      if (window.RS_LANG && window.RS_LANG[lang]) STRINGS[lang] = window.RS_LANG[lang];
+      document.dispatchEvent(new CustomEvent('rs-lang', { detail: lang }));
+    };
+    document.head.appendChild(el);
+  }
   function t(lang, key, vars) {
+    if (!STRINGS[lang]) ensure(lang);
     let s = (STRINGS[lang] && STRINGS[lang][key]) ?? en[key] ?? key;
     // {app}: the app's name in that language (Rift Switch / Kluft Wechsler)
     if (s.includes('{app}')) s = s.split('{app}').join(((STRINGS[lang] || en)['app.name']) || en['app.name']);

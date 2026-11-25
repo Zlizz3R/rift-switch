@@ -142,7 +142,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 
 - **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed.
   One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and every game the
-  client still has. Your own games also keep the client's raw data (gzip), other players' games 30 days.
+  client still has. Your own games also keep the client's raw data (gzip, up to 2 × 100 MB); other players'
+  games (from Live) stay 30 days and at most 1 GB (Settings → Data: 500 MB to 5 GB).
 - **Filters**: account, any combination of queues, time or your own dates, wins/losses, champion, sorting, and more
   (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,
   damage, streaks and records.
@@ -164,8 +165,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 
 - **The ten players of your game** from the loading screen on: two rows, lane opponents face to face, rank, win rate
   on this champion, main role, mastery and tags – loaded from the client while the loading screen runs, with a
-  progress bar; during the game it goes on slower (one request every 4 seconds, only while the window is open), so
-  the game stays smooth. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
+  progress bar; during the game it goes on slower (one game at a time, a round every 4 seconds, only while the
+  window is open), so the game stays smooth. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.
 - **After the game**: the game's full details open right on the Live page – both teams, MVP / ACE, lane against
   lane, the gold lead, two players side by side – and what changed in your tags (▲ / ▼).
@@ -258,9 +259,16 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
   `accounts.rs`, `ops.rs`, `settings.rs`, `store.rs`, `secrets.rs`, `menu.rs` – pure logic with tests;
   `updater.rs` GitHub releases; `winsys.rs` autostart and jump list
 - `src-tauri/scripts/` – typing a login into the Riot Client (UI Automation, picture scan as fallback), closing the PBE dialog
-- `ui/` – the window: `tauri-api.js` (its link to the background part), `renderer.js`, `views.js`,
-  `dashboard.js`, `collection.js`, `matches-view.js`, `bulk.js` + `bulkparse.js`, `keys.js`, `changelog.js`,
-  `matchfilter.js`, `rankmath.js`, `index.html`, `style.css`; texts in `i18n.js` + `lang/*.js`
+- `ui/` – the window (`index.html`, `style.css`; `tauri-api.js` is its link to the background part):
+  - accounts and frame: `renderer.js`, `views.js` (also Live and the champ select helper), `bulk.js` + `bulkparse.js`,
+    `keys.js`, `changelog.js`
+  - Overview: `dashboard.js`, `ovfilter.js`, `perf.js` + `perfmath.js`, `radar.js` + `radar-view.js`, `mastery.js` +
+    `mastmath.js` + `playtime-rules.js`, `seasons-view.js` + `seasonparse.js`, `insights.js`
+  - tags: `tag-rules.js` (every threshold), `tags.js` (the engine), `tags-view.js`
+  - collection: `collection.js`; match history: `matches-view.js`, `matchfilter.js`, `postgame.js`
+  - Live: `scout-view.js` (the ten cards), `live-more.js` (premades, damage mix, helper by phase)
+  - shared figures: `stats.js` (every key figure), `rankmath.js`
+  - texts: `i18n.js` (English, German) + `lang/*.js` (loaded only when chosen)
 - Tray and jump-list texts are copied from the window's texts: `npm run strings` after changing one
 - Tests: `npm test` (the real window in jsdom with a fake background part + `cargo test`); they run on every push
 - Pictures and the demo video: `node tools/screens/demo.js`, then `python tools/screens/capture.py` (headless Edge, ffmpeg)

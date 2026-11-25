@@ -175,14 +175,26 @@ fn obj(v: Value) -> Obj {
 
 fn log_error(place: &str, e: &str) {
     use std::io::Write;
+    let file = data().join("error.log");
+    trim_log(&file, 1_000_000);
     let line = format!("{} {place}: {e}\n", now_ms());
     if let Ok(mut f) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(data().join("error.log"))
+        .open(&file)
     {
         let _ = f.write_all(line.as_bytes());
     }
+}
+/// A log over `max` bytes keeps only its newer half (whole lines).
+fn trim_log(file: &Path, max: u64) {
+    if std::fs::metadata(file).map_or(0, |m| m.len()) <= max {
+        return;
+    }
+    let Ok(b) = std::fs::read(file) else { return };
+    let from = b.len() - (max / 2) as usize;
+    let start = b[from..].iter().position(|c| *c == b'\n').map_or(from, |i| from + i + 1);
+    let _ = store::write_atomic(file, &b[start..]);
 }
 
 // ---------- window + state push ----------
@@ -386,6 +398,8 @@ fn save() {
 /// (for an issue report). They may show a Riot ID: gone after 3 days.
 fn clean_debug_pictures() {
     let dir = std::env::temp_dir().join("rift-switch-debug");
+    // the login script's log is appended at every login, so it never gets 3 days old: kept small
+    trim_log(&dir.join("autofill.log"), 256_000);
     let Ok(list) = std::fs::read_dir(&dir) else {
         return;
     };
@@ -486,20 +500,35 @@ fn read_secret(file: &Path) -> Option<String> {
 }
 
 /// Canary: if it can't be decrypted on a later start, all saved logins/sessions are unreadable.
+/// The canary: a file encrypted at the first start. Unreadable means Windows' key changed (another
+/// user, a reset profile) – unless a saved sign-in or login is still readable, then only the canary
+/// was damaged and is written again. A real break stays reported at every start until a sign-in
+/// or login is saved again with the current key.
 fn check_crypto() {
     let f = data().join("keycheck.bin");
-    let exists = f.exists();
-    let broken = exists && read_secret(&f).as_deref() != Some("rift-switch");
+    if !f.exists() {
+        write_secret(&f, "rift-switch");
+        with(|c| c.crypto_broken = false);
+        return;
+    }
+    let mut broken = read_secret(&f).as_deref() != Some("rift-switch");
     if broken {
-        log_error(
-            "crypto",
-            "saved data was encrypted with a key this start cannot read",
-        );
+        let saved: Vec<PathBuf> = ["sessions", "creds"]
+            .iter()
+            .flat_map(|d| std::fs::read_dir(data().join(d)).into_iter().flatten().flatten())
+            .map(|e| e.path())
+            .collect();
+        if saved.is_empty() || saved.iter().any(|p| read_secret(p).is_some()) {
+            broken = false;
+            write_secret(&f, "rift-switch");
+        } else {
+            log_error(
+                "crypto",
+                "saved data was encrypted with a key this start cannot read",
+            );
+        }
     }
     with(|c| c.crypto_broken = broken);
-    if !exists || broken {
-        write_secret(&f, "rift-switch");
-    }
 }
 
 /// Saves the Riot Client's session for this account – only a usable one: it must hold a
@@ -894,10 +923,8 @@ async fn tick_inner(my_gen: u64) {
         differs.then_some((got, want_name))
     });
     if let Some((got, want)) = wrong {
-        log_error(
-            "login",
-            &format!("signed in as another account than picked ({got} / {want})"),
-        );
+        // no names in the log (it goes into diagnostics files)
+        log_error("login", "signed in as another account than picked");
         emit(
             "toast",
             json!({ "key": "login.wrong", "vars": { "got": got, "want": want }, "err": true }),
@@ -4016,12 +4043,22 @@ mod tests {
         // the canary file
         check_crypto();
         assert!(!with(|c| c.crypto_broken));
+        // only the canary damaged, the logins still readable: written again, nothing reported
         std::fs::write(dir.join("keycheck.bin"), b"not dpapi").unwrap();
         check_crypto();
-        assert!(
-            with(|c| c.crypto_broken),
-            "a key this start can't read is reported"
-        );
+        assert!(!with(|c| c.crypto_broken), "a damaged canary alone is no broken key");
+        assert_eq!(read_secret(&dir.join("keycheck.bin")).as_deref(), Some("rift-switch"));
+        // nothing readable any more: reported – and still at the next start
+        for d in ["sessions", "creds"] {
+            for e in std::fs::read_dir(dir.join(d)).into_iter().flatten().flatten() {
+                std::fs::write(e.path(), b"other key").unwrap();
+            }
+        }
+        std::fs::write(dir.join("keycheck.bin"), b"not dpapi").unwrap();
+        check_crypto();
+        assert!(with(|c| c.crypto_broken), "a key this start can't read is reported");
+        check_crypto();
+        assert!(with(|c| c.crypto_broken), "and stays reported");
         let _ = std::fs::remove_dir_all(&dir);
     }
     #[test]

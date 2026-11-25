@@ -22,6 +22,13 @@ const locale = () => I18N.LOCALES[lang()] || 'en-GB';
 // unknown tiers (new modes) are shown as their own name, e.g. SALT -> Salt
 const tierName = tier => (I18N.STRINGS.en['tier.' + tier] ? t('tier.' + tier) : String(tier || '').charAt(0) + String(tier || '').slice(1).toLowerCase());
 let appliedLang = null;
+// a further language's texts arrived (loaded when chosen): draw the page and the open view again
+document.addEventListener('rs-lang', e => {
+  if (e.detail !== lang()) return;
+  appliedLang = null;
+  render();
+  if (typeof showView === 'function') showView(view);
+});
 // fills every data-i18n / data-i18n-title / data-i18n-ph element of the static page
 function applyStaticTexts() {
   if (appliedLang === lang()) return;

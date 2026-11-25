@@ -4,6 +4,15 @@ Was noch offen ist – das Neueste oben. Erledigtes wird gestrichen oder mit Dat
 
 ## Offen
 
+### 0. Aus dem Code-Review (25.11.2026) noch offen
+
+- [ ] **P5 – Spiele im Fenster-Speicher:** `mh.cache` (matches-view.js) hält jedes geladene Spiel ganz im WebView; die
+  Übersicht lädt dafür die ganze Historie. Besser: kompakte Zeilen für Kennzahlen, Details per LRU-Cache.
+- [ ] **`panic = "abort"`:** Jeder Panic beendet die App samt Tray. Bewusst so gelassen (kleinere Datei); die
+  bekannten Panic-Stellen (z. B. `redact` mit Sonderzeichen) sind behoben.
+- **S2 – signierte Updates:** nicht umgesetzt (Code-Signing kostet mehrere hundert Euro im Jahr). Der Installer wird
+  gegen die SHA-256 aus dem Release geprüft – beim Download und noch einmal direkt vor dem Start.
+
 ### 1. Schwellen auf echte Spieler-Durchschnitte umstellen – *Claude, sobald genug Daten da sind*
 
 Die Schwellen kommen bisher aus einem **Modell**: Fast alle fremden Spieler stecken nur in 1–2 gespeicherten Spielen,

@@ -268,17 +268,32 @@ pub fn allowed_url(u: &str) -> bool {
 /// Riot IDs (Name#TAG) and e-mail addresses are replaced.
 pub fn redact(line: &str, home: &str) -> String {
     let mut s = line.to_string();
-    if home.len() > 3 {
-        let low = s.to_lowercase();
-        let h = home.to_lowercase();
+    if home.chars().count() > 3 {
+        // ignoring case, character by character on the original text: lowercasing can change a
+        // character's length ("İ"), so places in a lowercased copy would cut the original wrongly
+        let same = |a: char, b: char| a == b || a.to_lowercase().eq(b.to_lowercase());
+        let at = |rest: &str| -> Option<usize> {
+            let mut it = rest.char_indices();
+            for h in home.chars() {
+                let (_, c) = it.next()?;
+                if !same(c, h) {
+                    return None;
+                }
+            }
+            Some(it.next().map_or(rest.len(), |(i, _)| i))
+        };
         let mut out = String::new();
         let mut i = 0;
-        while let Some(p) = low[i..].find(&h) {
-            out.push_str(&s[i..i + p]);
-            out.push_str("%USERPROFILE%");
-            i += p + h.len();
+        while i < s.len() {
+            if let Some(n) = at(&s[i..]) {
+                out.push_str("%USERPROFILE%");
+                i += n;
+            } else {
+                let c = s[i..].chars().next().unwrap_or(' ');
+                out.push(c);
+                i += c.len_utf8();
+            }
         }
-        out.push_str(&s[i..]);
         s = out;
     }
     s.split_inclusive(|c: char| c.is_whitespace() || "()[]{}\",'".contains(c))
@@ -623,6 +638,9 @@ mod tests {
             r"1 login: signed in as another account than picked (Foo <riot-id> / <riot-id>) %USERPROFILE%\AppData <e-mail> <id>"
         );
         assert_eq!(redact("level#2 fine", ""), "level#2 fine");
+        // characters whose lowercase is longer (İ) or not ASCII (ü): no wrong cut, no panic
+        assert_eq!(redact(r"İİ c:\users\müller\x", r"C:\Users\Müller"), r"İİ %USERPROFILE%\x");
+        assert_eq!(redact(r"C:\USERS\İLKER\a C:\Users\İlker", r"C:\Users\İlker"), r"%USERPROFILE%\a %USERPROFILE%");
     }
 
     #[test]

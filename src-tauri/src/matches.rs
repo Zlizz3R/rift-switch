@@ -1,7 +1,9 @@
 //! Match history across all saved accounts, like a small op.gg: every game with all ten players
 //! and the rough numbers. Read from the local League client while it runs and kept by the app
 //! itself, without a limit:
-//!   matches/games.jsonl  one game per line, only ever appended (about 2 KB per game)
+//!   matches/games.jsonl  one game per line, appended (about 15 KB per game since format 6); written
+//!                        again – byte for byte – only to drop games (removed account, upgraded
+//!                        lines, other players' 30 days / 1 GB)
 //!   matches/by.json      game ids per account (newest first)
 //!   matches/ranks.json   current Solo/Duo + Flex of players seen in games (12 h cache)
 //! Only a small index (id, time, queue, place in the file) stays in memory; the games themselves
@@ -48,6 +50,8 @@ pub struct Entry {
 /// 6 = per minute also XP ("xp"), jungle CS ("jcs") and where everyone stood ("at"), the place
 /// of every kill, the killer of an objective and how many enemies hit it (steals).
 pub const GAME_VERSION: u8 = 6;
+/// The raw archive of the own games: about 20 KB a game, a new file from this size on (two kept).
+const RAW_MAX: u64 = 100_000_000;
 /// Other players' games are kept 30 days (Live); own games stay until deleted.
 pub const OTHERS_MAX_AGE: i64 = 30 * 24 * 3600 * 1000;
 /// Summoner's Rift queues (only there positions mean something)
@@ -206,6 +210,12 @@ impl Matches {
         }
     }
 
+    /// Other players without a game left go from the lists (the own accounts always stay).
+    fn drop_empty_players(&mut self) {
+        if !self.own {
+            self.by.retain(|(_, ids)| !ids.is_empty());
+        }
+    }
     fn save_by(&self) {
         let o: Obj = self.by.iter().map(|(k, v)| (k.clone(), json!(v))).collect();
         let _ = fs::create_dir_all(&self.dir);
@@ -586,6 +596,7 @@ impl Matches {
         for (_, ids) in self.by.iter_mut() {
             ids.retain(|id| !drop.contains(id));
         }
+        self.drop_empty_players();
         self.save_by();
         let keep: Vec<String> = self
             .index
@@ -601,6 +612,11 @@ impl Matches {
     pub fn append_raw(&self, id: &str, game: &Value, timeline: Option<&Value>) {
         use flate2::{write::GzEncoder, Compression};
         let _ = fs::create_dir_all(&self.dir);
+        // at most RAW_MAX: the full file becomes raw-old.jsonl.gz (the one before goes), a new one starts
+        let raw = self.dir.join("raw.jsonl.gz");
+        if fs::metadata(&raw).map_or(0, |m| m.len()) > RAW_MAX {
+            let _ = fs::rename(&raw, self.dir.join("raw-old.jsonl.gz"));
+        }
         let Ok(f) = OpenOptions::new()
             .create(true)
             .append(true)
@@ -636,6 +652,7 @@ impl Matches {
         for (_, ids) in self.by.iter_mut() {
             ids.retain(|id| !drop.contains(id));
         }
+        self.drop_empty_players();
         self.save_by();
         let keep: Vec<String> = self
             .index
@@ -1259,12 +1276,19 @@ mod tests {
         }
         let before = fs::metadata(m.games_file()).unwrap().len();
         assert!(m.dead_bytes().0 > 1_000_000);
+        // places taken before the rewrite: afterwards they point at other bytes – nothing wrong is read
+        let stale = m.entries(&["40".to_string()]);
         let m2 = Matches::load(&dir);
         let after = fs::metadata(m2.games_file()).unwrap().len();
         assert!(after * 3 < before, "{after} vs {before}");
         assert_eq!(m2.count(), 80);
         assert_eq!(m2.dead_bytes().0, 0);
         assert!(m2.outdated(100).is_empty());
+        assert!(read_entries(&m2.games_file(), &stale).iter().all(|g| g["id"] == json!(40) || g["id"] == json!("40")));
+        // the new places (from the byte copy) are right
+        let g = read_entries(&m2.games_file(), &m2.entries(&["40".to_string(), "1".to_string()]));
+        assert_eq!(g.len(), 2);
+        assert_eq!(g[0]["v"], json!(GAME_VERSION));
         let _ = fs::remove_dir_all(&dir);
     }
 

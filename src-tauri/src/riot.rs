@@ -1236,17 +1236,22 @@ pub fn session_persisted(json: &str) -> bool {
 }
 
 pub fn clear_session() {
-    let d = rc_data();
-    let _ = std::fs::remove_dir_all(&d);
-    let _ = std::fs::create_dir_all(&d);
+    clear_dir(&rc_data());
+}
+fn clear_dir(d: &Path) {
+    let _ = std::fs::remove_dir_all(d);
+    let _ = std::fs::create_dir_all(d);
 }
 /// Puts a saved sign-in back into the Riot Client's Data folder. false: it couldn't (unreadable
 /// snapshot, a file locked or not written) – the folder is emptied then, never left half-mixed.
 pub fn restore_session(json: &str) -> bool {
+    restore_session_into(&rc_data(), json)
+}
+fn restore_session_into(data: &Path, json: &str) -> bool {
     let Ok(v) = serde_json::from_str::<Value>(json) else {
         return false;
     };
-    clear_session();
+    clear_dir(data);
     let mut ok = true;
     for (rel, b64) in v["files"].as_object().into_iter().flatten() {
         // only plain relative paths inside the Data folder (no "..", no drive or root)
@@ -1258,7 +1263,7 @@ pub fn restore_session(json: &str) -> bool {
         {
             continue;
         }
-        let full = rc_data().join(rel_path);
+        let full = data.join(rel_path);
         let written = match (full.parent(), b64.as_str().and_then(|s| B64.decode(s).ok())) {
             (Some(dir), Some(b)) => std::fs::create_dir_all(dir).is_ok() && std::fs::write(&full, b).is_ok(),
             _ => false,
@@ -1266,9 +1271,9 @@ pub fn restore_session(json: &str) -> bool {
         ok &= written;
     }
     // the file that holds the remembered login must be there
-    ok &= rc_data().join("RiotGamesPrivateSettings.yaml").exists();
+    ok &= data.join("RiotGamesPrivateSettings.yaml").exists();
     if !ok {
-        clear_session();
+        clear_dir(data);
     }
     ok
 }
@@ -1556,6 +1561,25 @@ pub async fn dismiss_pbe_dialog() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn session_restore_only_inside_the_data_folder() {
+        let base = std::env::temp_dir().join(format!("rs-restore-{}", std::process::id()));
+        let data = base.join("Data");
+        let enc = |s: &str| B64.encode(s);
+        // ".." and absolute paths never leave the folder; the key file is there: ok
+        let snap = json!({ "files": {
+            "RiotGamesPrivateSettings.yaml": enc("remember: true"), "Sub/x.txt": enc("x"),
+            "../evil.txt": enc("no"), "C:\\evil.txt": enc("no"), "\\evil.txt": enc("no"), "Sub/../../evil2.txt": enc("no") } });
+        assert!(restore_session_into(&data, &snap.to_string()));
+        assert!(data.join("Sub").join("x.txt").exists());
+        assert!(!base.join("evil.txt").exists() && !base.join("evil2.txt").exists());
+        // no key file, or not even a snapshot: false, and nothing half-written stays
+        assert!(!restore_session_into(&data, &json!({ "files": { "Sub/x.txt": enc("x") } }).to_string()));
+        assert!(std::fs::read_dir(&data).unwrap().next().is_none());
+        assert!(!restore_session_into(&data, "not json"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
 
     #[test]
     fn other_accounts_losses_unknown() {
