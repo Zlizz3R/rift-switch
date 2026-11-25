@@ -37,7 +37,22 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Panic-Hook schreibt Ort und Meldung in `error.log`, bevor `panic = "abort"` beendet.
 - [x] `tools/release.js` (`npm run release X.Y.Z [--push]`): alle Prüfungen des Release-Workflows vorab.
 - [ ] Code-Signing: SignPath Foundation (kostenlos für Open Source) oder Azure Trusted Signing (~10 $/Monat) – braucht eine Bewerbung/Identitätsprüfung durch den Nutzer.
-- [ ] Weitere Ideen: Account-Vorschlag „als Nächstes spielen“, Decay-Kalender, Taskleiste blinken bei Match gefunden, Runen/Item-Sets aus den eigenen besten Spielen, Session-/Tilt-Anzeige, winget-Manifest.
+- [ ] Noch offen (Nutzer entscheidet): Session-/Tilt-Anzeige, winget-Manifest, Export als CSV.
+
+## Nicht gewollt – passt nicht zur Vision (25.11.2026)
+
+Nicht wieder vorschlagen. Die Gründe des Nutzers:
+
+- **Runen und Item-Sets aus den eigenen besten Spielen in den Client übernehmen** – dafür gibt es Seiten, die
+  Server-Daten auswerten; Rift Switch bleibt lokal. Alte Runen helfen bei einem neuen Champion auch nicht.
+- **Hilfe beim Dodge** (Niederlagen-Serien, Autofill, Kosten eines Dodges) – Dodgen ist nie gut.
+- **Taskleiste blinken / Ton bei „Match gefunden“** – der League-Client springt ohnehin in den Vordergrund.
+- **Live Client Data API im Spiel** (Items, Level, Gold live, zweiter Bildschirm) – kein Ingame-Overlay und keine
+  Live-Updates im Spiel; dafür gibt es Blitz als bessere Alternative.
+- **Vorschlag „Jetzt spielen: Account X“** – unpassend. Smurfen ist eine Grauzone und soll nirgends erwähnt werden.
+- **Decay-Kalender mit Warnung** – der Decay auf der Kachel reicht.
+- **Beute über alle Accounts** (Truhen, Schlüssel, Splitter zum Zerlegen) – die Kollektion gibt es schon;
+  Splitter sind uninteressant.
 
 ### 0. Aus dem Code-Review (25.11.2026) noch offen
 
