@@ -15,4 +15,3 @@ docs/plans/screenshots/
 
 # exports of the app (accounts, maybe logins) never go into the repository
 *rift-switch-backup*.json
-*.rsbackup
