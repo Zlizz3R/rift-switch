@@ -109,6 +109,30 @@
       jungle: { great: 0.235, master: 0.255, weak: 0.2, terrible: 0.18 },
       mid: { great: 0.245, master: 0.265, weak: 0.2, terrible: 0.18 },
       bot: { great: 0.265, master: 0.285, weak: 0.225, terrible: 0.205 } },
+    // gold per minute, destroyed wards (percentiles per position as above)
+    { id: 'gold', group: 'stats', type: 'metric', metric: 'goldMin', dir: 1, min: 10, stage: 'A', roles: ALL, period: 'season', dec: 0,
+      levels: { great: 440, master: 475, weak: 390, terrible: 360 },
+      top: { great: 420, master: 450, weak: 365, terrible: 340 },
+      jungle: { great: 460, master: 490, weak: 400, terrible: 370 },
+      mid: { great: 440, master: 475, weak: 390, terrible: 360 },
+      bot: { great: 495, master: 525, weak: 440, terrible: 405 },
+      support: { great: 325, master: 340, weak: 290, terrible: 275 } },
+    { id: 'wardHunter', group: 'stats', type: 'metric', metric: 'wardsKilled', dir: 1, min: 10, stage: 'B', roles: ALL, period: 'season', dec: 1,
+      levels: { great: 1.9, master: 2.5, weak: 0.6, terrible: 0.5 },
+      top: { great: 1.1, master: 1.7, weak: 0.4, terrible: 0.2 },
+      jungle: { great: 4.7, master: 6, weak: 2, terrible: 1.3 },
+      mid: { great: 1.9, master: 2.5, weak: 0.6, terrible: 0.5 },
+      bot: { great: 2.1, master: 3.4, weak: 1.3, terrible: 0.7 },
+      support: { great: 7.7, master: 9.6, weak: 5, terrible: 3.6 } },
+    // XP lead over the lane opponent at 15 minutes (game format 6). PROVISIONAL – no stored games
+    // with XP yet: a spread like the gold lead's, a bit smaller; recalculate after the next Load
+    { id: 'xpLead', group: 'stats', type: 'metric', metric: 'xpDiff15', dir: 1, min: 6, stage: 'C', roles: ALL, period: 'season', dec: 0, signed: true,
+      levels: { great: 300, master: 700, weak: -450, terrible: -900 },
+      top: { great: 400, master: 850, weak: -600, terrible: -1150 },
+      jungle: { great: 250, master: 550, weak: -350, terrible: -700 },
+      mid: { great: 300, master: 700, weak: -450, terrible: -900 },
+      bot: { great: 300, master: 700, weak: -450, terrible: -900 },
+      support: { great: 200, master: 500, weak: -350, terrible: -650 } },
 
     // ---------- fight & play ----------
     // kill participation (percentiles per position as above)
@@ -128,8 +152,32 @@
       jungle: { great: 0.85, master: 0.95, weak: 0.55, terrible: 0.4 },
       bot: { great: 0.7, master: 0.8, weak: 0.4, terrible: 0.25 },
       support: { great: 0.75, master: 0.85, weak: 0.45, terrible: 0.3 } },
+    // first blood: in on it in a third of the games / its victim in a fifth (10-game mixes per position)
+    { id: 'firstBlood', group: 'fight', type: 'metric', metric: 'fbPart', dir: 1, min: 10, stage: 'C', roles: ALL, period: 'season', pct: true,
+      levels: { great: 0.3, master: 0.45 } },
+    { id: 'fbVictim', group: 'fight', type: 'metric', metric: 'fbDeath', dir: -1, min: 10, stage: 'C', roles: ALL, period: 'season', pct: true,
+      levels: { weak: 0.2, terrible: 0.3 }, jungle: { weak: 0.15, terrible: 0.25 } },
+    // a team 2,000 gold behind at 15 wins 17.9 % of the games (and one ahead loses as often): 40 % of
+    // at least 8 such games is clearly more than luck (an average player gets there about 1 in 20)
+    { id: 'comeback', group: 'fight', type: 'avg', metric: 'comeback', atLeast: 0.4, min: 8, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
+    { id: 'throws', group: 'fight', type: 'avg', metric: 'throws', atLeast: 0.4, min: 8, stage: 'C', roles: ALL, color: 'bad', period: 'season', pct: true },
+    // win rate in games over 32 minutes against under 25 – only a clear difference (see tags.js 'phase')
+    { id: 'lateGame', group: 'fight', type: 'phase', late: true, short: 25, long: 32, diff: 0.15, min: 8, stage: 'A', color: 'info', period: 'season' },
+    { id: 'earlyGame', group: 'fight', type: 'phase', late: false, short: 25, long: 32, diff: 0.15, min: 8, stage: 'A', color: 'info', period: 'season' },
+    // from the places of game format 6. PROVISIONAL – no stored games with places yet: thresholds
+    // from the roles' jobs; recalculate (node tools/tag-thresholds.js) after the next Load
+    { id: 'roamer', group: 'fight', type: 'metric', metric: 'roam', dir: 1, min: 6, stage: 'C', roles: ['top', 'mid', 'bot', 'support'], period: 'season', dec: 2,
+      levels: { great: 0.8, master: 1.3 }, top: { great: 0.3, master: 0.6 }, bot: { great: 0.3, master: 0.6 }, support: { great: 0.6, master: 1.0 } },
+    { id: 'caught', group: 'fight', type: 'metric', metric: 'caught', dir: -1, min: 6, stage: 'C', roles: ALL, period: 'season', dec: 2,
+      levels: { weak: 1.6, terrible: 2.2 }, support: { weak: 1.8, terrible: 2.5 } },
+    { id: 'stealer', group: 'fight', type: 'metric', metric: 'steals', dir: 1, min: 10, stage: 'C', roles: ALL, period: 'season', dec: 2,
+      levels: { great: 0.05, master: 0.1 }, jungle: { great: 0.1, master: 0.2 } },
+    { id: 'invader', group: 'fight', type: 'metric', metric: 'invade', dir: 1, min: 6, stage: 'C', roles: ['jungle', 'top', 'mid'], period: 'season', dec: 0,
+      levels: { great: 8, master: 16 }, jungle: { great: 30, master: 45 } },
+    { id: 'invaded', group: 'fight', type: 'metric', metric: 'invaded', dir: -1, min: 6, stage: 'C', roles: ['jungle'], period: 'season', dec: 0,
+      levels: { weak: 30, terrible: 45 } },
     { id: 'carry', group: 'fight', type: 'carry', pct: true, share: 0.28, kp: 0.5, min: 10, stage: 'B', roles: NOT_SUP, color: 'good', period: 'season' },
-    { id: 'towerBreaker', group: 'fight', type: 'avg', metric: 'turretDmg', atLeast: 10000, min: 10, stage: 'B', roles: ALL, color: 'warn', period: 'season' },
+    { id: 'towerBreaker', group: 'fight', type: 'avg', metric: 'turretDmg', atLeast: 10000, min: 10, stage: 'B', roles: ALL, color: 'good', period: 'season' },
     { id: 'noPinks', group: 'fight', type: 'avg', metric: 'pinks', below: 1 /* V */, min: 10, stage: 'B', roles: ALL, color: 'bad', period: 'season', dec: 1 }, // TODO Schwelle prüfen
 
     { id: 'soloFighter', group: 'fight', type: 'avg', metric: 'soloKills', atLeast: 2.5, min: 6, stage: 'C', roles: ALL, color: 'good', period: 'season', dec: 1 },

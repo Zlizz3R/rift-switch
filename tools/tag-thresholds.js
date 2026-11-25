@@ -39,7 +39,13 @@ for (const l of raw.split('\n')) {
   }
   withObj++;
 }
-const FIG = ['csMin', 'dmgMin', 'kda', 'deaths', 'visMin', 'kp', 'goldDiff15', 'cs15', 'laneCs15', 'share0to15', 'share15to30', 'objPart'];
+const FIG = ['csMin', 'dmgMin', 'kda', 'deaths', 'visMin', 'kp', 'goldDiff15', 'cs15', 'laneCs15', 'share0to15', 'share15to30', 'objPart',
+  'xpDiff15', 'goldMin', 'wardsKilled', 'fbPart', 'fbDeath', 'roam', 'caught', 'steals', 'invade', 'invaded'];
+// fewer is better
+const DOWN = new Set(['deaths', 'caught', 'fbDeath', 'invaded']);
+const MIRROR = ['goldDiff15', 'laneCs15', 'xpDiff15'];
+// yes / no per game (first blood) or rare counts (steals): one game says nothing, the 10-game mix alone
+const RATE = new Set(['fbPart', 'fbDeath', 'steals']);
 const by = {};
 let pg = 0;
 const rowsBy = {};
@@ -86,6 +92,7 @@ for (const role of St.POSITIONS) {
       if (v != null) vals.push(v);
     }
     vals.sort((a, b) => a - b);
+    if (!vals.length) continue;
     const row = Object.fromEntries([3, 10, 20, 50, 75, 90, 97].map(x => ['p' + x, q(vals, x)]));
     (avg[role] = avg[role] || {})[f] = row;
     console.log('  ' + f.padEnd(12), Object.entries(row).map(([k, v]) => `${k}=${+v.toFixed(2)}`).join(' '));
@@ -110,18 +117,19 @@ for (const role of St.POSITIONS) {
     const vals = [];
     for (let i = 0; i < 4000; i++) { const { v } = T.METRICS[f](Array.from({ length: 10 }, () => pool[Math.floor(rnd() * pool.length)])); if (v != null) vals.push(v); }
     vals.sort((x, y) => x - y);
-    const down = f === 'deaths';
+    if (!vals.length) continue;
+    const down = DOWN.has(f);
     const lv = {};
     for (const [k, p] of Object.entries(PCT)) {
       const pp = down ? 100 - p : p;
-      lv[k] = (q(a, pp) + q(vals, pp)) / 2;
+      lv[k] = RATE.has(f) ? q(vals, pp) : (q(a, pp) + q(vals, pp)) / 2;
     }
     (levels[f] = levels[f] || {})[role] = lv;
   }
 }
 
 // lane differences: one player's lead is the other's deficit – mirrored, so the median is 0
-for (const f of ['goldDiff15', 'laneCs15']) for (const role of St.POSITIONS) {
+for (const f of MIRROR) for (const role of St.POSITIONS) {
   const a0 = (single[role] || {})[f]; if (!a0) continue;
   const a = [...a0, ...a0.map(v => -v)].sort((x, y) => x - y);
   seed = 13;
@@ -130,11 +138,27 @@ for (const f of ['goldDiff15', 'laneCs15']) for (const role of St.POSITIONS) {
   vals.sort((x, y) => x - y);
   const lv = {};
   for (const [k, p] of Object.entries(PCT)) lv[k] = (q(a, p) + q(vals, p)) / 2;
-  levels[f][role] = lv;
+  (levels[f] = levels[f] || {})[role] = lv;
 }
-const STEP = { csMin: 0.1, dmgMin: 10, kda: 0.05, deaths: 0.1, visMin: 0.01, kp: 0.01, goldDiff15: 50, cs15: 1, laneCs15: 1, share0to15: 0.005, share15to30: 0.005 };
+const STEP = { csMin: 0.1, dmgMin: 10, kda: 0.05, deaths: 0.1, visMin: 0.01, kp: 0.01, goldDiff15: 50, cs15: 1, laneCs15: 1, share0to15: 0.005, share15to30: 0.005,
+  objPart: 0.01, xpDiff15: 50, goldMin: 5, wardsKilled: 0.1, fbPart: 0.01, fbDeath: 0.01, roam: 0.05, caught: 0.05, steals: 0.01, invade: 1, invaded: 1 };
 const round = (f, v) => +(Math.round(v / STEP[f]) * STEP[f]).toFixed(3);
 const outLv = {};
 for (const [f, roles] of Object.entries(levels)) for (const [role, lv] of Object.entries(roles))
   ((outLv[f] = outLv[f] || {})[role] = Object.fromEntries(['great', 'master', 'weak', 'terrible'].map(k => [k, round(f, lv[k])])));
 for (const [f, roles] of Object.entries(outLv)) { console.log(f); for (const [r, lv] of Object.entries(roles)) console.log('  ', r.padEnd(8), JSON.stringify(lv)); }
+
+// comeback / throw: how often a team 2,000 gold behind at 15 minutes still wins, and one ahead loses
+{
+  let b = 0, bw = 0, a = 0, al = 0;
+  for (const g of games.values()) {
+    if (![420, 440].includes(g.q) || !g.gold || !g.gold[15]) continue;
+    const p = g.players.find(x => x.team === 100);
+    const d = St.teamGoldDiffAt(g, p, 15);
+    for (const [diff, win] of [[d, p.win], [-d, !p.win]]) {
+      if (diff <= -2000) { b++; if (win) bw++; }
+      if (diff >= 2000) { a++; if (!win) al++; }
+    }
+  }
+  console.log(`2,000 behind at 15: ${b} team games, ${(100 * bw / b).toFixed(1)} % won; 2,000 ahead: ${a}, ${(100 * al / a).toFixed(1)} % lost`);
+}

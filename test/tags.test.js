@@ -135,7 +135,7 @@ test('mastery: never read = too little data; the highest step per champion, at m
 });
 
 test('every threshold sits in tag-rules.js; every rule has a known type', () => {
-  const types = new Set(['champShare', 'champRecent', 'champWinrate', 'pool', 'poolTop', 'roleSpread', 'streak', 'break', 'count', 'level', 'metric', 'carry', 'avg', 'mastery', 'live']);
+  const types = new Set(['champShare', 'champRecent', 'champWinrate', 'pool', 'poolTop', 'roleSpread', 'phase', 'streak', 'break', 'count', 'level', 'metric', 'carry', 'avg', 'mastery', 'live']);
   for (const r of TR.TAG_RULES) {
     assert.ok(types.has(r.type), r.id);
     if (r.type === 'metric') assert.ok(T.METRICS[r.metric], r.id);
@@ -236,4 +236,77 @@ test('objectives: the share of the own team\'s dragons and barons the player was
   assert.equal(get(jg, 'objectives')[0].level, 'master');
   // older games without "obj": too little data
   assert.equal(get(run(Array.from({ length: 10 }, () => game({}))), 'objectives')[0].state, 'few');
+});
+
+// ---------- game format 6: XP, places, steals; gold, wards, first blood, comebacks, game length ----------
+const St = require('../ui/stats');
+test('map zones: lanes, river, both jungles, bases (hundreds of map units)', () => {
+  assert.equal(St.zone(10, 104), 'top');        // blue's outer top tower
+  assert.equal(St.zone(58, 64), 'mid');         // blue's outer mid tower
+  assert.equal(St.zone(105, 10), 'bot');        // blue's outer bot tower
+  assert.equal(St.zone(99, 44), 'river');       // the dragon pit
+  assert.equal(St.zone(50, 105), 'river');      // baron
+  assert.equal(St.zone(77, 40), 'jungle100');   // blue's red buff
+  assert.equal(St.zone(71, 109), 'jungle200');  // red's blue buff
+  assert.equal(St.zone(5, 5), 'base');
+});
+
+test('format 6 figures: XP lead, roams, getting caught, steals, invades', () => {
+  // "me" = blue mid (index 2), lane opponent = red mid (7)
+  const g = () => {
+    const x = game({});
+    x.xp = Array.from({ length: 20 }, (_, m) => Array.from({ length: 10 }, (_, i) => m * 500 + (i === 2 ? 40 : 0)));
+    // everyone in the own base, the blue jungler (1) in red's jungle from minute 3 to 5
+    x.at = Array.from({ length: 31 }, (_, m) => Array.from({ length: 10 }, (_, i) => (i === 1 && m >= 3 && m <= 5 ? [71, 109] : i < 5 ? [20, 20] : [128, 128])));
+    x.jcs = Array.from({ length: 31 }, (_, m) => Array.from({ length: 10 }, (_, i) => (i === 1 ? m * 6 : 0)));
+    x.kills = [
+      [500, 2, 5, [0], 10, 104],       // 8:20 me on the top lane: a roam
+      [600, 2, 7, [], 60, 62],         // my own lane: no roam
+      [1200, 6, 2, [7], 120, 40],      // 20:00 me dead in the bot side lane, two enemies, no team mate near: caught
+      [1300, 7, 2, [], 120, 40],       // one enemy only: a duel, not caught
+    ];
+    x.obj = [[1000, 'B', 100, [2], 2, 3], [600, 'D', 100, [1, 2, 3], 2, 2]];   // baron stolen by me; the dragon contested
+    return x;
+  };
+  const r = run(Array.from({ length: 10 }, g));
+  const one = id => get(r, id)[0];
+  assert.equal(one('xpLead').value, 40);
+  assert.equal(one('roamer').value, 1);
+  assert.equal(one('caught').value, 1);
+  assert.equal(one('stealer').value, 1);
+  assert.equal(one('stealer').level, 'master');
+  // the jungler: minutes 3→4 and 4→5 fully in red's jungle, 2→3 and 5→6 half: 6 + 6 + 3 + 3 CS
+  const jg = run(Array.from({ length: 10 }, () => { const x = g(); x.players[1] = { ...x.players[1], puuid: 'me' }; x.players[2] = { ...x.players[2], puuid: 'mid' }; return x; }));
+  assert.equal(get(jg, 'invader')[0].value, 18);
+  // the red jungler lost those 18 CS in their own jungle
+  const red = run(Array.from({ length: 10 }, () => { const x = g(); x.players[6] = { ...x.players[6], puuid: 'me' }; x.players[2] = { ...x.players[2], puuid: 'mid' }; return x; }));
+  assert.equal(get(red, 'invaded')[0].value, 18);
+  // older games (no places, no XP): too little data
+  const old = run(Array.from({ length: 10 }, () => game({})));
+  for (const id of ['xpLead', 'roamer', 'caught', 'stealer']) assert.equal(get(old, id)[0].state, 'few', id);
+});
+
+test('gold, wards, first blood, comebacks and throws, early / late game', () => {
+  // gold 9,000 → 300/min in 30 min: mid "broke"; 3 wards destroyed a game
+  const r = run(Array.from({ length: 10 }, () => game({ me: { gold: 9000, x: { wardsKilled: 3 } } })));
+  assert.equal(get(r, 'gold')[0].level, 'terrible');
+  assert.equal(get(r, 'wardHunter')[0].level, 'master');
+  // first blood: in on it in 5 of 10 games, its victim in 3
+  const fb = run(Array.from({ length: 10 }, (_, i) => { const x = game({ ago: i + 1 }); x.kills = [i < 5 ? [200, 2, 7, []] : i < 8 ? [200, 7, 2, []] : [200, 6, 1, []]]; return x; }));
+  assert.equal(get(fb, 'firstBlood')[0].level, 'master');
+  assert.equal(get(fb, 'fbVictim')[0].level, 'terrible');
+  // 8 games 3,000 behind at 15, 4 of them won: comeback king; 8 ahead, 4 lost: throws leads
+  const gold15 = d => Array.from({ length: 16 }, () => Array.from({ length: 10 }, (_, i) => (i < 5 ? 5000 + d / 5 : 5000)));
+  const cb = run(Array.from({ length: 16 }, (_, i) => { const x = game({ ago: i + 1, me: { win: i % 2 === 0 } }); x.gold = gold15(i < 8 ? -3000 : 3000); return x; }));
+  assert.equal(get(cb, 'comeback')[0].state, 'met');
+  assert.deepEqual([get(cb, 'comeback')[0].n, get(cb, 'comeback')[0].vars.w], [8, 4]);
+  assert.equal(get(cb, 'throws')[0].state, 'met');
+  // 10 short games 3 won, 10 long ones 9 won: late game; not early game
+  const ph = run(Array.from({ length: 20 }, (_, i) => game({ ago: i + 1, dur: i < 10 ? 20 * 60 : 35 * 60, me: { win: i < 10 ? i < 3 : i < 19 } })));
+  assert.equal(get(ph, 'lateGame')[0].state, 'met');
+  assert.deepEqual(get(ph, 'lateGame')[0].vars, { s: 30, l: 90, ns: 10, nl: 10 });
+  assert.equal(get(ph, 'earlyGame')[0].state, 'not');
+  // the same with a small difference (60 % against 70 %): neither
+  const even = run(Array.from({ length: 20 }, (_, i) => game({ ago: i + 1, dur: i < 10 ? 20 * 60 : 35 * 60, me: { win: i < 10 ? i < 6 : i < 17 } })));
+  assert.equal(get(even, 'lateGame')[0].state, 'not');
 });

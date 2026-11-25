@@ -55,7 +55,8 @@ const tagPeriod = x => (x.period === 'season' ? t('perf.season', { y: new Date()
 function tagChip(x, i) {
   const key = `${x.id}:${x.champ || ''}:${i}`;
   if (x.state === 'met') return `<button class="tchip tc-${tagColor(x)}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(tagText(x))}">${esc(tagName(x))}</button>`;
-  const name = x.id === 'mastery' ? t('dash.tabMast') : t(`tag.${x.id}${tagRule(x.id).type === 'metric' ? '.great' : ''}`, { champ: '…' });
+  const r = tagRule(x.id), lv = r.type === 'metric' ? (r.levels.great != null ? '.great' : '.weak') : '';
+  const name = x.id === 'mastery' ? t('dash.tabMast') : t(`tag.${x.id}${lv}`, { champ: '…' });
   const why = x.state === 'few' ? (x.unread ? t('tags.unread') : t('tags.few', { n: x.n, need: x.need })) : t('tags.not');
   return `<button class="tchip tc-${x.state}${tagv.open === key ? ' on' : ''}" data-tag="${esc(key)}" title="${esc(why)}">${esc(name)}${x.state === 'few' && !x.unread ? ` <i>${x.n}/${x.need}</i>` : ''}</button>`;
 }

@@ -42,8 +42,10 @@ pub struct Entry {
 /// details view ("x"), team objectives ("teams") and the gold of each player per minute ("gold");
 /// 4 = from the timeline also CS per minute ("csm"), every champion kill ("kills"), each player's
 /// first ward ("w1") and who took the first dragon ("drake1") – for the timeline tags;
-/// 5 = every big objective with the players of the taking team who were in on it ("obj").
-pub const GAME_VERSION: u8 = 5;
+/// 5 = every big objective with the players of the taking team who were in on it ("obj");
+/// 6 = per minute also XP ("xp"), jungle CS ("jcs") and where everyone stood ("at"), the place
+/// of every kill, the killer of an objective and how many enemies hit it (steals).
+pub const GAME_VERSION: u8 = 6;
 /// Other players' games are kept 30 days (Live); own games stay until deleted.
 pub const OTHERS_MAX_AGE: i64 = 30 * 24 * 3600 * 1000;
 /// Summoner's Rift queues (only there positions mean something)
@@ -762,8 +764,11 @@ fn team(t: &Value) -> Value {
 /// in the order of "players"; every champion kill as [second, killer, victim, [assists]] with
 /// player indexes (-1 = no champion, e.g. a tower); each player's first ward in seconds ("w1",
 /// null = none) and the team of the first dragon ("drake1"); every big objective as
-/// [second, kind, team, [player indexes of that team in on it: killer + assists]] ("obj"; kind:
-/// D dragon, E elder, B baron, H herald, A Atakhan, G voidgrub). About 3–4 KB per game.
+/// [second, kind, team, [player indexes of that team in on it: killer + assists], killer, enemies
+/// who hit it] ("obj"; kind: D dragon, E elder, B baron, H herald, A Atakhan, G voidgrub).
+/// Per minute also XP ("xp"), jungle CS ("jcs") and each player's place in hundreds of map units
+/// ("at": [x, y]); a kill gets its place too ([second, killer, victim, [assists], x, y]).
+/// About 6–8 KB per game.
 pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
     let Some(frames) = tl["frames"].as_array() else {
         return;
@@ -789,6 +794,11 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
             json!(
                 num_of(p.get("minionsKilled")) as i64 + num_of(p.get("jungleMinionsKilled")) as i64
             )
+        }));
+        game["xp"] = Value::Array(per_minute(&|p| num(&p["xp"])));
+        game["jcs"] = Value::Array(per_minute(&|p| num(&p["jungleMinionsKilled"])));
+        game["at"] = Value::Array(per_minute(&|p| {
+            place(&p["position"]).map_or(Value::Null, |(x, y)| json!([x, y]))
         }));
     }
     // participant id -> index in "players"
@@ -817,12 +827,16 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
                     .as_array()
                     .map(|a| a.iter().map(idx).filter(|i| *i >= 0).collect())
                     .unwrap_or_default();
-                kills.push(json!([
-                    sec(e),
-                    idx(&e["killerId"]),
-                    idx(&e["victimId"]),
-                    assists
-                ]));
+                let mut k = vec![
+                    json!(sec(e)),
+                    json!(idx(&e["killerId"])),
+                    json!(idx(&e["victimId"])),
+                    json!(assists),
+                ];
+                if let Some((x, y)) = place(&e["position"]) {
+                    k.extend([json!(x), json!(y)]);
+                }
+                kills.push(Value::Array(k));
             }
             "WARD_PLACED" if e["wardType"] != "UNDEFINED" => {
                 let i = idx(&e["creatorId"]);
@@ -854,8 +868,9 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
                     _ => "",
                 };
                 if !kind.is_empty() && !team.is_null() {
-                    // the killer and the assists of the taking team (the others only hit it)
-                    let mut ins: Vec<i64> = std::iter::once(i)
+                    // the killer and the assists of the taking team; the enemies only hit it (many
+                    // of them and the killer alone: a steal)
+                    let all: Vec<i64> = std::iter::once(i)
                         .chain(
                             e["assistingParticipantIds"]
                                 .as_array()
@@ -863,11 +878,23 @@ pub fn add_timeline(game: &mut Value, tl: &Value, participant_ids: &[i64]) {
                                 .flatten()
                                 .map(idx),
                         )
-                        .filter(|j| *j >= 0 && team_of(*j).as_ref() == Some(&team))
+                        .filter(|j| *j >= 0)
+                        .collect();
+                    let mut ins: Vec<i64> = all
+                        .iter()
+                        .copied()
+                        .filter(|j| team_of(*j).as_ref() == Some(&team))
                         .collect();
                     ins.sort_unstable();
                     ins.dedup();
-                    obj.push(json!([sec(e), kind, team, ins]));
+                    let mut foes: Vec<i64> = all
+                        .iter()
+                        .copied()
+                        .filter(|j| team_of(*j).as_ref() != Some(&team))
+                        .collect();
+                    foes.sort_unstable();
+                    foes.dedup();
+                    obj.push(json!([sec(e), kind, team, ins, i, foes.len()]));
                 }
             }
             _ => {}
@@ -908,6 +935,12 @@ pub fn position(tl: &Value) -> &'static str {
         ("BOTTOM" | "BOT", _) => "bot",
         _ => "",
     }
+}
+
+/// a place on the map in hundreds of units (enough for "where", a third of the size)
+fn place(p: &Value) -> Option<(i64, i64)> {
+    let (x, y) = (p.get("x")?.as_f64()?, p.get("y")?.as_f64()?);
+    Some(((x / 100.0).round() as i64, (y / 100.0).round() as i64))
 }
 
 fn num(v: &Value) -> Value {
@@ -1137,7 +1170,8 @@ mod tests {
     fn timeline_kills_wards_first_dragon_cs() {
         let mut g = compact(&detail(9)).unwrap();
         let pf = |cs: i64| {
-            (1..=10).map(|i| (i.to_string(), json!({ "totalGold": 500, "minionsKilled": cs * i, "jungleMinionsKilled": 1 }))).collect::<serde_json::Map<_, _>>()
+            (1..=10).map(|i| (i.to_string(), json!({ "totalGold": 500, "minionsKilled": cs * i, "jungleMinionsKilled": 1, "xp": 300 * i,
+                "position": { "x": 1000 * i, "y": 12500 } }))).collect::<serde_json::Map<_, _>>()
         };
         let tl = json!({ "frames": [
             { "participantFrames": pf(0), "events": [
@@ -1150,11 +1184,13 @@ mod tests {
                 { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "killerId": 8, "timestamp": 400000 },
                 { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "killerId": 2, "timestamp": 900000 },
                 { "type": "ELITE_MONSTER_KILL", "monsterType": "BARON_NASHOR", "killerId": 4, "assistingParticipantIds": [8, 1, 5], "timestamp": 1500000 },
+                { "type": "CHAMPION_KILL", "killerId": 6, "victimId": 1, "position": { "x": 7349, "y": 7051 }, "timestamp": 1600000 },
                 { "type": "ELITE_MONSTER_KILL", "monsterType": "DRAGON", "monsterSubType": "ELDER_DRAGON", "killerId": 9, "assistingParticipantIds": [6], "timestamp": 1800000 } ] } ] });
         add_timeline(&mut g, &tl, &participant_ids(&detail(9)));
         assert_eq!(g["csm"][1][0], 6); // 5 minions + 1 monster
         assert_eq!(g["csm"][1][9], 51);
-        assert_eq!(g["kills"], json!([[130, 0, 6, [1, 2]], [150, -1, 1, []]]));
+        assert_eq!(g["kills"][0], json!([130, 0, 6, [1, 2]]));
+        assert_eq!(g["kills"][1], json!([150, -1, 1, []]));
         // first ward per player; "UNDEFINED" (not a real ward) doesn't count
         assert_eq!(g["w1"][2], 95);
         assert!(g["w1"][3].is_null());
@@ -1162,17 +1198,22 @@ mod tests {
         assert_eq!(g["drake1"], g["players"][7]["team"]);
         // every big objective: its team and who of that team was in on it (8 only hit the baron)
         let t = |i: usize| g["players"][i]["team"].clone();
-        assert_eq!(g["obj"][0], json!([400, "D", t(7), [7]]));
-        assert_eq!(g["obj"][2], json!([1500, "B", t(3), [0, 3, 4]]));
-        assert_eq!(g["obj"][3], json!([1800, "E", t(8), [5, 8]]));
-        assert_eq!(g["v"], 5);
+        assert_eq!(g["obj"][0], json!([400, "D", t(7), [7], 7, 0]));
+        assert_eq!(g["obj"][2], json!([1500, "B", t(3), [0, 3, 4], 3, 1]));
+        assert_eq!(g["obj"][3], json!([1800, "E", t(8), [5, 8], 8, 0]));
+        // a kill's place in hundreds of map units; per minute XP, jungle CS and places
+        assert_eq!(g["kills"][2], json!([1600, 5, 0, [], 73, 71]));
+        assert_eq!(g["xp"][1][0], 300);
+        assert_eq!(g["jcs"][1][0], 1);
+        assert_eq!(g["at"][1][2], json!([30, 125]));
+        assert_eq!(g["v"], 6);
         // a timeline without ward events (the client's): no "w1" at all, not "never warded"
         let mut g2 = compact(&detail(9)).unwrap();
         let mut tl2 = tl.clone();
         tl2["frames"][0]["events"] = json!([]);
         add_timeline(&mut g2, &tl2, &participant_ids(&detail(9)));
         assert!(g2.get("w1").is_none());
-        assert_eq!(g2["kills"].as_array().unwrap().len(), 2);
+        assert_eq!(g2["kills"].as_array().unwrap().len(), 3);
     }
 
     #[test]

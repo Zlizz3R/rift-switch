@@ -65,10 +65,82 @@
       }
       return { v: took ? inv / took : null, n, vars: { took, inv } };
     },
+    // XP lead over the lane opponent at 15 minutes (game format 6)
+    xpDiff15: rows => { const d = rows.map(x => St.xpDiffAt(x.g, x.p, 15)).filter(v => v != null); return { v: avgOf(d), n: d.length }; },
+    goldMin: rows => { const r = rows.filter(x => x.g.dur > 0 && x.p.gold); return { v: avgOf(r.map(x => x.p.gold / (x.g.dur / 60))), n: r.length }; },
+    wardsKilled: rows => { const r = withX(rows); return { v: avgOf(r.map(x => x.p.x.wardsKilled || 0)), n: r.length }; },
+    // the game's first champion kill: in on it (kill or assist) / its victim
+    fbPart: rows => {
+      const r = rows.map(x => ({ x, k: St.hasKills(x.g) ? x.g.kills.find(k => k[2] >= 0) : null })).filter(y => y.k);
+      return { v: avgOf(r.map(({ x, k }) => { const i = x.g.players.indexOf(x.p); return k[1] === i || k[3].includes(i) ? 1 : 0; })), n: r.length };
+    },
+    fbDeath: rows => {
+      const r = rows.map(x => ({ x, k: St.hasKills(x.g) ? x.g.kills.find(k => k[2] >= 0) : null })).filter(y => y.k);
+      return { v: avgOf(r.map(({ x, k }) => (k[2] === x.g.players.indexOf(x.p) ? 1 : 0))), n: r.length };
+    },
+    // games 2,000 gold behind at 15 minutes that were won / 2,000 ahead that were lost (the team's gold)
+    comeback: rows => {
+      const r = rows.filter(x => { const d = St.teamGoldDiffAt(x.g, x.p, 15); return d != null && d <= -COMEBACK_GOLD; });
+      return { v: r.length ? r.filter(x => x.p.win).length / r.length : null, n: r.length, vars: { w: r.filter(x => x.p.win).length } };
+    },
+    throws: rows => {
+      const r = rows.filter(x => { const d = St.teamGoldDiffAt(x.g, x.p, 15); return d != null && d >= COMEBACK_GOLD; });
+      return { v: r.length ? r.filter(x => !x.p.win).length / r.length : null, n: r.length, vars: { l: r.filter(x => !x.p.win).length } };
+    },
+    // kills and assists before 14:00 in another lane than the own one (game format 6: kill places)
+    roam: rows => {
+      const own = { top: 'top', mid: 'mid', bot: 'bot', support: 'bot' };
+      const r = rows.filter(x => St.hasKills(x.g) && x.g.at && own[St.role(x.g, x.p)]);
+      return { v: avgOf(r.map(x => {
+        const i = x.g.players.indexOf(x.p), lane = own[St.role(x.g, x.p)];
+        return x.g.kills.filter(k => k[0] < 840 && k.length > 5 && (k[1] === i || k[3].includes(i)) && k[2] >= 0
+          && x.g.players[k[2]].team !== x.p.team && ['top', 'mid', 'bot'].includes(St.zone(k[4], k[5])) && St.zone(k[4], k[5]) !== lane).length;
+      })), n: r.length };
+    },
+    // caught: deaths after 15:00 with no team mate within 2,500 units and at least two enemies in on it
+    caught: rows => {
+      const r = rows.filter(x => St.hasKills(x.g) && x.g.at);
+      return { v: avgOf(r.map(x => {
+        const i = x.g.players.indexOf(x.p);
+        return x.g.kills.filter(k => {
+          if (k[2] !== i || k[0] < 900 || k[1] < 0 || k.length < 6) return false;
+          const enemies = 1 + k[3].length;
+          const near = x.g.players.some((o, j) => j !== i && o.team === x.p.team && (() => { const q = St.placeAt(x.g, j, k[0]); return q && Math.hypot(q[0] - k[4], q[1] - k[5]) < 25; })());
+          return enemies >= 2 && !near;
+        }).length;
+      })), n: r.length };
+    },
+    // steals: a big objective the player took the last hit on while more enemies than team mates hit it
+    steals: rows => {
+      const r = rows.filter(x => Array.isArray(x.g.obj) && x.g.obj.every(o => o.length > 5));
+      return { v: avgOf(r.map(x => { const i = x.g.players.indexOf(x.p); return x.g.obj.filter(o => 'DEBHA'.includes(o[1]) && o[4] === i && o[5] >= 2 && o[5] > o[3].length).length; })), n: r.length };
+    },
+    // jungle CS taken in the enemy jungle per game (per minute: the camps, where the player stood)
+    invade: rows => { const r = rows.filter(x => x.g.jcs && x.g.at); return { v: avgOf(r.map(x => invadeCs(x.g, x.g.players.indexOf(x.p)))), n: r.length }; },
+    // jungle CS the enemies took in the own jungle per game
+    invaded: rows => {
+      const r = rows.filter(x => x.g.jcs && x.g.at);
+      return { v: avgOf(r.map(x => x.g.players.reduce((s, o, j) => (o.team !== x.p.team ? s + invadeCs(x.g, j) : s), 0))), n: r.length };
+    },
     firstDrake: rows => { const r = rows.filter(x => x.g.drake1 != null); return { v: avgOf(r.map(x => (x.g.drake1 === x.p.team ? 1 : 0))), n: r.length }; },
     gank: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => (St.gankedBefore(x.g, x.p) ? 1 : 0))), n: r.length }; },
     takedowns15: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => St.takedownsBefore(x.g, x.p, 900))), n: r.length }; },
   };
+
+  const COMEBACK_GOLD = 2000;
+  // jungle CS player i took in the enemy jungle: each minute's camps count where the player stood
+  // at its start and end (half each)
+  function invadeCs(g, i) {
+    const team = g.players[i].team, theirs = team === 100 ? 'jungle200' : 'jungle100';
+    let s = 0;
+    for (let m = 0; m + 1 < g.jcs.length; m++) {
+      const d = (g.jcs[m + 1][i] || 0) - (g.jcs[m][i] || 0);
+      if (d <= 0) continue;
+      const a = g.at[m] && g.at[m][i], b = g.at[m + 1] && g.at[m + 1][i];
+      s += d * (((a && St.zone(a[0], a[1]) === theirs) ? 0.5 : 0) + ((b && St.zone(b[0], b[1]) === theirs) ? 0.5 : 0));
+    }
+    return s;
+  }
 
   // ---------- helpers ----------
   const byNewest = rows => [...rows].sort((a, b) => b.g.t - a.g.t);
@@ -137,6 +209,18 @@
         const share = tops.reduce((s, [, c]) => s + c, 0) / rows.length;
         return [out(share > r.share ? 'met' : 'not', { value: share, th: r.share, n: rows.length, champ: tops[0][0],
           vars: { k: tops.length, share: Math.round(share * 100), n: rows.length, champs: tops.map(([c]) => c) } })];
+      }
+      case 'phase': {
+        // win rate in short games against long ones; only a clear difference counts (z ≥ 1.65,
+        // about 95 % sure, and at least r.diff), with enough games on both sides
+        const short = rows.filter(x => x.g.dur < r.short * 60), long = rows.filter(x => x.g.dur >= r.long * 60);
+        if (short.length < r.min || long.length < r.min) return [few(Math.min(short.length, long.length), r.min)];
+        const ws = short.filter(x => x.p.win).length / short.length, wl = long.filter(x => x.p.win).length / long.length;
+        const p = (ws * short.length + wl * long.length) / (short.length + long.length);
+        const se = Math.sqrt(p * (1 - p) * (1 / short.length + 1 / long.length)) || 1;
+        const d = r.late ? wl - ws : ws - wl;
+        return [out(d >= r.diff && d / se >= 1.65 ? 'met' : 'not', { value: d, th: r.diff, n: short.length + long.length,
+          vars: { s: Math.round(ws * 100), l: Math.round(wl * 100), ns: short.length, nl: long.length } })];
       }
       case 'roleSpread': {
         const mr = mainRole(rows);

@@ -116,11 +116,30 @@ function game(n, win, owner = P(1), at = 0) {
   for (const [team, n0, kind] of [[100, win ? 3 : 1, 'D'], [200, win ? 1 : 3, 'D'], [win ? 100 : 200, 1, 'B']]) {
     for (let j = 0; j < n0; j++) {
       const base = team === 100 ? 0 : 5;
-      obj.push([300 + j * 300 + (kind === 'B' ? 900 : 0), kind, team, [0, 1, 2, 3, 4].filter(i => rnd() < (base + i === at ? 0.7 : IN[i])).map(i => base + i)]);
+      const ins = [0, 1, 2, 3, 4].filter(i => rnd() < (base + i === at ? 0.7 : IN[i])).map(i => base + i);
+      // the jungler takes the last hit; now and then the own account steals one
+      const steal = base + 0 === at && kind === 'D' && rnd() < 0.12;
+      obj.push([300 + j * 300 + (kind === 'B' ? 900 : 0), kind, team, steal ? [at] : ins, steal ? at : ins.includes(base + 1) ? base + 1 : ins[0] ?? -1, steal ? 3 : rnd() < 0.2 ? 1 : 0]);
     }
   }
   obj.sort((a, b) => a[0] - b[0]);
-  return { id: String(7000 + n), v: 5, csm, kills, w1, obj, drake1: (rnd() < 0.7) === win ? 100 : 200, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
+  // game format 6: XP and places per minute (each one on the own lane, the junglers in their jungle,
+  // now and then in the enemy's), jungle CS, kill places
+  const LANE = { mid: [70, 70], top: [12, 110], bot: [110, 12], support: [112, 14] };
+  const xp = gold.map((row, m) => row.map((v, i) => Math.round(m * 560 + (i === at ? 60 * m : 0) - (i % 5) * 8 * m)));
+  const at6 = Array.from({ length: len }, (_, m) => players.map((p, i) => {
+    if (p.pos === 'jungle') return (m % 7 === 3 || m % 7 === 4) ? (p.team === 100 ? [71, 109] : [77, 40]) : (p.team === 100 ? [77, 40] : [71, 109]);
+    const [x, y] = LANE[p.pos] || [70, 70];
+    return m > 20 && rnd() < 0.15 ? [x + 30, y - 30] : [x + Math.floor(rnd() * 6), y + Math.floor(rnd() * 6)];
+  }));
+  const jcs = Array.from({ length: len }, (_, m) => players.map(p => (p.pos === 'jungle' ? m * 5 : 0)));
+  for (const k of kills) {
+    // the place: on the victim's lane; the own mid player's early kills partly on the top lane (roams)
+    const v = players[k[2]], [x, y] = LANE[v.pos] || [70, 70];
+    const roam = k[1] === at && k[0] < 840 && rnd() < 0.4;
+    k.push(roam ? 12 : x, roam ? 110 : y);
+  }
+  return { id: String(7000 + n), v: 6, csm, kills, w1, obj, xp, at: at6, jcs, drake1: (rnd() < 0.7) === win ? 100 : 200, t: now - n * 0.6 * DAY, dur: len * 60 + 12, q: [420, 420, 440, 420, 450, 420, 400, 420][n % 8], mode: n % 8 === 4 ? 'ARAM' : 'CLASSIC', remake: false,
     players, gold, teams: [{ id: 100, towers: win ? 9 : 3, drakes: win ? 3 : 1, barons: win ? 1 : 0 }, { id: 200, towers: win ? 2 : 8, drakes: win ? 1 : 3 }], owners: [owner] };
 }
 const games = [game(1, true), game(2, true), game(3, false), game(4, true), game(5, false), game(6, true), game(7, true, P(2)), game(8, false, P(2)), game(9, true), game(10, true), game(11, false), game(12, true),

@@ -103,6 +103,42 @@
     return Number.isFinite(row[i]) && Number.isFinite(row[j]) ? row[i] - row[j] : null;
   }
 
+  // XP lead over the lane opponent at minute m (game format 6: "xp" per minute); null if unknown
+  function xpDiffAt(g, p, m = 15) {
+    const o = laneOpponent(g, p), row = g.xp && g.xp[m];
+    if (!o || !row) return null;
+    const i = g.players.indexOf(p), j = g.players.indexOf(o);
+    return Number.isFinite(row[i]) && Number.isFinite(row[j]) ? row[i] - row[j] : null;
+  }
+  // the own team's gold lead at minute m (all five together); null if unknown
+  function teamGoldDiffAt(g, p, m = 15) {
+    const row = g.gold && g.gold[m];
+    if (!row) return null;
+    let d = 0;
+    g.players.forEach((o, j) => { if (Number.isFinite(row[j])) d += o.team === p.team ? row[j] : -row[j]; });
+    return d;
+  }
+  // Summoner's Rift in hundreds of units (0–148; blue base bottom left, red top right): where a
+  // place is – 'top' | 'mid' | 'bot' (lanes), 'river', 'base', or 'jungle100' / 'jungle200' (the
+  // jungle on the blue / red side of the river)
+  function zone(x, y) {
+    if ((x < 45 && y < 45) || (x > 103 && y > 103)) return 'base';
+    if ((x < 22 && y > 45) || (y > 126 && x < 103) || (x < 35 && y > 113)) return 'top';
+    if ((y < 22 && x > 45) || (x > 126 && y < 103) || (x > 113 && y < 35)) return 'bot';
+    if (Math.abs(x - y) < 12) return 'mid';
+    if (Math.abs(x + y - 148) < 10) return 'river';
+    return x + y < 148 ? 'jungle100' : 'jungle200';
+  }
+  // where player i stood at second s (game format 6: "at" per minute, in between interpolated)
+  function placeAt(g, i, s) {
+    if (!g.at) return null;
+    const m = Math.floor(s / 60), a = g.at[m] && g.at[m][i], b = g.at[m + 1] && g.at[m + 1][i];
+    if (!a) return b || null;
+    if (!b) return a;
+    const f = s / 60 - m;
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  }
+
   // ---------- timeline (game format 4: "csm", "kills" [second, killer, victim, [assists]], "w1", "drake1") ----------
   const hasKills = g => Array.isArray(g.kills);
   const pIdx = (g, p) => g.players.indexOf(p);
@@ -192,7 +228,7 @@
   }
 
   const api = { REMAKE_SEC, ARAM_QUEUES, RANKED_QUEUES, winPct, isRemake, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
-    visMin, dmgShare, perGame, POSITIONS, roles, role, laneOpponent, goldDiffAt, hasKills, csAt, soloKills, soloDeaths, deathsBefore, gankDeathsBefore, takedownsBefore, killBefore, farmShare, gankedBefore, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
+    visMin, dmgShare, perGame, POSITIONS, roles, role, laneOpponent, goldDiffAt, xpDiffAt, teamGoldDiffAt, zone, placeAt, hasKills, csAt, soloKills, soloDeaths, deathsBefore, gankDeathsBefore, takedownsBefore, killBefore, farmShare, gankedBefore, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Stats = api;
 })(typeof window !== 'undefined' ? window : this);
