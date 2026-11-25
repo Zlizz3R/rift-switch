@@ -45,7 +45,7 @@ function dmgMixHtml(teams) {
 }
 
 // ---------- the board's extras: parties, hints, meetings, record ----------
-// g: liveData.inGame; rows: [[{c, slot}], [{c, slot}]] as laid out (own team first)
+// g: liveData.inGame; rows: [[{c, slot}], [{c, slot}]] as laid out (blue side first)
 function lmBoardExtras(g, rows) {
   lmNeedOwn();
   const out = new Map();
@@ -57,14 +57,12 @@ function lmBoardExtras(g, rows) {
   const games = lmGames();
   const pairs = Insights.together(games, ids, g.gameId);
   const loaded = p => scGames(p).length;
-  // parties: coloured frames; next to each other one frame, else a chain with a number
+  // parties: a numbered badge in the party's colour on each member's card
   let party = 0;
   for (const row of rows) {
     const team = row.map(x => x.c.p.puuid).filter(Boolean);
     for (const grp of Insights.parties(pairs, team).slice(0, 2)) {
       party++;
-      const idx = grp.map(p => team.indexOf(p)).sort((a, b) => a - b);
-      const adjacent = idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
       for (const p of grp) {
         const others = grp.filter(x => x !== p);
         const sameGames = others.map(o => (pairs.get([p, o].sort().join('|')) || { same: [] }).same).flat();
@@ -72,7 +70,7 @@ function lmBoardExtras(g, rows) {
         const tip = t('party.tip', { names: others.map(o => { const q = byId.get(o) || {}; return q.gameName ? `${q.gameName}#${q.tagLine}` : '?'; }).join(', '),
           n: new Set(sameGames.map(x => String(x.id))).size, m: loaded(p), ago: last ? ago(last.t + (last.dur || 0) * 1000) : '–' });
         const e = out.get(p) || { chips: [] };
-        Object.assign(e, { party, chain: adjacent ? 0 : party, partyTip: tip, joinR: adjacent && idx.includes(team.indexOf(p) + 1) });
+        Object.assign(e, { party, partyTip: tip });
         out.set(p, e);
       }
     }
@@ -105,15 +103,17 @@ function lmBoardExtras(g, rows) {
     add(p.puuid, `<button class="tchip tc-info" data-opengame="${esc(L.g.id)}" title="${esc(tip.join('\n'))}">${esc(t(L.same ? 'know.team' : 'know.enemy', { when, champ: champName(L.them.champ) }))}</button>`);
   }
   // my record against my lane opponent's champion (on my card)
-  const meSide = rows[0].findIndex(x => x.c.p.puuid === liveData.me);
-  if (meSide >= 0 && rows[1]) {
-    const mine = rows[0][meSide].c.p, opp = rows[0][meSide].slot && rows[1].find(x => x.slot === rows[0][meSide].slot);
+  const myRow = rows.find(r => r.some(x => x.c.p.puuid === liveData.me));
+  const oppRow = myRow && rows.find(r => r !== myRow);
+  if (myRow && oppRow) {
+    const meX = myRow.find(x => x.c.p.puuid === liveData.me);
+    const mine = meX.c.p, opp = meX.slot && oppRow.find(x => x.slot === meX.slot);
     const fmt = (r, champ) => t(r.all ? 'rec.lineAll' : 'rec.line', { champ: champName(champ), w: r.w, l: r.l, pct: Math.round((100 * r.w) / r.n) });
     if (opp) {
       const r = Insights.recordVs(scv.own || [], own, mine.championId, opp.c.p.championId);
       if (r) add(mine.puuid, `<span class="tchip tc-info" title="${esc(t('rec.tip'))}">${esc(fmt(r, opp.c.p.championId))}</span>`);
     } else {
-      const lines = rows[1].map(x => { const r = Insights.recordVs(scv.own || [], own, mine.championId, x.c.p.championId); return r ? fmt(r, x.c.p.championId) : ''; }).filter(Boolean);
+      const lines = oppRow.map(x => { const r = Insights.recordVs(scv.own || [], own, mine.championId, x.c.p.championId); return r ? fmt(r, x.c.p.championId) : ''; }).filter(Boolean);
       if (lines.length) add(mine.puuid, `<span class="tchip tc-info" title="${esc(lines.join('\n'))}">${esc(t('rec.vsAll'))}</span>`);
     }
   }

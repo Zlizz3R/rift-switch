@@ -1409,11 +1409,18 @@ span.mh-ch { cursor: default; }
 .sc-row + .sc-row { margin-top: 10px; }
 .sc-card { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 8px; border-radius: 10px; overflow: hidden;
   height: calc((100vh - 340px) / 2); min-height: 215px; background: var(--panel2);
-  box-shadow: inset 0 0 0 1px var(--line), inset 0 0 50px -18px var(--rk, transparent); }
-.sc-card::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: #3b82c4; }
-.sc-card.enemy::before { background: #d0505a; }
-.sc-card.me { box-shadow: inset 0 0 0 1px rgba(200,170,110,.5), inset 0 0 50px -18px var(--rk, transparent); }
-.sc-bar { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--teal); }
+  --rk: #3a4357; border: 1.5px solid color-mix(in srgb, var(--rk) 60%, transparent); }
+/* the rank band: under the top row, over the bottom row – lane opponents' ranks meet in the middle */
+.sc-rkband { position: absolute; left: 0; right: 0; height: 6px; background: var(--rk); pointer-events: auto; }
+.sc-card.top .sc-rkband { bottom: 0; border-radius: 0 0 8px 8px; }
+.sc-card.bot .sc-rkband { top: 0; border-radius: 8px 8px 0 0; }
+.sc-card.top { padding-bottom: 12px; }
+.sc-card.bot { padding-top: 14px; }
+.sc-card:not(.ranked) .sc-rkband { height: 3px; }
+.sc-card.me { background: linear-gradient(rgba(200,170,110,.07), rgba(200,170,110,.07)), var(--panel2); }
+.sc-card.me .sc-name b { color: var(--gold2); }
+.sc-bar { position: absolute; left: 0; height: 2px; background: var(--teal); z-index: 1; }
+.sc-card.top .sc-bar { bottom: 6px; } .sc-card.bot .sc-bar { top: 6px; }
 .sc-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .sc-ic { width: 30px; height: 30px; border-radius: 50%; flex: none; background: #0d1119; }
 .sc-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -1462,14 +1469,12 @@ span.mh-ch { cursor: default; }
 .mix-bar .ad { background: #e0844a; } .mix-bar .ap { background: #5b8def; } .mix-bar .tr { background: #e8e6df; }
 .mix-t { color: var(--muted); font-variant-numeric: tabular-nums; }
 .mix-h { color: var(--gold2); font-weight: 600; }
-.sc-card { overflow: visible; }
-.sc-card::before { border-radius: 10px 10px 0 0; }
-.sc-card.pa1 { --pa: #9b6cf0; } .sc-card.pa2 { --pa: #e45fbf; }
-.sc-card[data-party] { outline: 2px solid var(--pa); outline-offset: 2px; }
-.sc-card.join-r::after { content: ''; position: absolute; right: -12px; top: -4px; bottom: -4px; width: 12px;
-  border-top: 2px solid var(--pa); border-bottom: 2px solid var(--pa); pointer-events: none; }
-.sc-card.hl { outline-width: 3px; }
-.sc-chain { position: absolute; top: 6px; right: 34px; font-size: 10.5px; font-weight: 700; color: var(--pa); }
+/* premades: a badge in the party's colour in the card head; hovering one lights up the partners */
+.sc-card.pa1 { --pa: #a57cf5; } .sc-card.pa2 { --pa: #e865c4; } .sc-card.pa3 { --pa: #3cc9a6; } .sc-card.pa4 { --pa: #e8a83c; }
+.sc-party { flex: none; padding: 2px 7px; border-radius: 9px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: default;
+  color: var(--pa); background: color-mix(in srgb, var(--pa) 16%, transparent); border: 1px solid color-mix(in srgb, var(--pa) 70%, transparent); }
+.sc-card.hl .sc-party { color: #10131b; background: var(--pa); }
+.sc-card.hl { box-shadow: inset 0 0 0 2px var(--pa); }
 .sc-tags button.tchip { cursor: pointer; }
 .pool-fold { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; }
 .pool-fold span { font-weight: 600; }

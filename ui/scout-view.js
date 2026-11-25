@@ -114,8 +114,11 @@ function scCardHtml(c, side, slot, guess, ex = {}) {
   // live tags first, then the hints about this game (premades, met before, record), then the rest
   const chips = [...c.live.map(scChip), ...(ex.chips || []), ...c.tags.map(scChip)];
   const party = ex.party ? ` data-party="${ex.party}"` : '';
-  const pcls = ex.party ? ` pa${((ex.party - 1) % 2) + 1}${ex.joinR ? ' join-r' : ''}` : '';
+  const pcls = ex.party ? ` pa${((ex.party - 1) % 4) + 1}` : '';
   const tier = p.solo && p.solo.tier;
+  // the Solo/Duo rank: a frame and a band in its colour, the band on the edge facing the other team
+  const rk = tier && TIER_COLORS[tier];
+  const band = `<i class="sc-rkband" title="${esc(rk ? 'Solo/Duo: ' + tierName(tier) + (APEX.includes(tier) ? '' : ' ' + p.solo.division) : t('tile.unranked'))}"></i>`;
   const prog = ((S.scout && S.scout.players) || {})[p.puuid];
   const bar = prog && prog[1] && prog[0] < prog[1] ? `<i class="sc-bar" style="width:${Math.round((100 * prog[0]) / prog[1])}%"></i>` : '';
   const champName = (champById(p.championId) || {}).name || '';
@@ -127,10 +130,11 @@ function scCardHtml(c, side, slot, guess, ex = {}) {
   const share = main && c.roles.total ? (100 * (c.roles.shares.get(main) || 0)) / c.roles.total : null;
   const role = main ? `${scRing(share, `<img src="${posIcon(main)}" alt="">`)}<small>${Math.round(share)} %</small>` : `${scRing(null, '<b>–</b>', 'none')}<small>${esc(t('scout.noRole'))}</small>`;
   const roleTip = main ? t(c.roles.main ? 'scout.roleTip' : 'scout.roleMostTip', { role: t('pos.' + main), pct: Math.round(share), n: c.roles.total }) : t('scout.noRole');
-  return `<div class="sc-card ${side}${p.puuid && liveData && p.puuid === liveData.me ? ' me' : ''}${pcls}" data-sc="${esc(p.puuid || '')}"${party}${tier && TIER_COLORS[tier] ? ` style="--rk:${TIER_COLORS[tier]}"` : ''}>
-    ${bar}${ex.party ? `<span class="sc-chain" title="${esc(ex.partyTip || '')}">${ex.chain ? '⛓ ' + ex.chain : '⛓'}</span>` : ''}
+  return `<div class="sc-card ${side}${rk ? ' ranked' : ''}${p.puuid && liveData && p.puuid === liveData.me ? ' me' : ''}${pcls}" data-sc="${esc(p.puuid || '')}"${party}${rk ? ` style="--rk:${rk}"` : ''}>
+    ${band}${bar}
     <div class="sc-head">${p.iconId != null ? `<img class="sc-ic" src="${iconUrl(p.iconId)}" alt="">` : '<span class="sc-ic"></span>'}
       <span class="sc-name"><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.level ? ' · ' + esc(t('scout.level', { n: p.level })) : ''}</small></span>
+      ${ex.party ? `<span class="sc-party" title="${esc(ex.partyTip || '')}">⛓ ${ex.party}</span>` : ''}
       ${slot ? `<img class="sc-pos${guess ? ' guess' : ''}" src="${posIcon(slot)}" alt="" title="${esc(t('pos.' + slot) + (guess ? ' – ' + t('scout.guessed') : ''))}">` : ''}</div>
     <div class="sc-mid">
       <div class="sc-champ" data-scflip="${esc(p.puuid || '')}" title="${esc(t('rad.flip'))}">${p.championId ? `<img src="${champIcon(p.championId)}" alt="">` : '<span></span>'}
@@ -151,7 +155,8 @@ function scoutBoardHtml(d) {
   const mineKey = g.teamTwo.some(p => p.puuid === d.me) ? 'teamTwo' : 'teamOne';
   const theirsKey = mineKey === 'teamOne' ? 'teamTwo' : 'teamOne';
   const champsOf = team => g[team].map(p => p.championId).filter(Boolean);
-  const laid = [[mineKey, theirsKey], [theirsKey, mineKey]].map(([team, enemy]) => scOrder(g[team].map(p => scCard(p, champsOf(enemy))), g.queueId));
+  // blue side always on top, red side below
+  const laid = [['teamOne', 'teamTwo'], ['teamTwo', 'teamOne']].map(([team, enemy]) => scOrder(g[team].map(p => scCard(p, champsOf(enemy))), g.queueId));
   const extras = typeof lmBoardExtras === 'function' ? lmBoardExtras(g, laid) : new Map();
   const row = (i, side) => laid[i].map(({ c, slot, guess }) => scCardHtml(c, side, slot, guess, extras.get(c.p.puuid))).join('');
   const team = k => g[k].map(p => ({ puuid: p.puuid, champ: p.championId }));
@@ -172,8 +177,8 @@ function scoutBoardHtml(d) {
       <div class="seg sc-mode"><span>${t('scout.tags')}</span><button data-sctags="0"${exact ? '' : ' class="on"'}>${t('scout.short')}</button><button data-sctags="1"${exact ? ' class="on"' : ''}>${t('scout.exact')}</button></div>
       ${opgg.length ? `<button class="btn gold ext-btn multi-btn" data-ids="${esc(opgg.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button>` : ''}</div>
     ${prog}
-    <div class="sc-row">${row(0, 'ally')}</div>
-    <div class="sc-row">${row(1, 'enemy')}</div>
+    <div class="sc-row">${row(0, 'top')}</div>
+    <div class="sc-row">${row(1, 'bot')}</div>
   </div>`;
 }
 document.addEventListener('click', e => {

@@ -40,18 +40,21 @@ test('live board: ten cards on their positions, tags from the player\'s games, s
     assert.equal(rows.length, 2);
     const cards = rows.map(r => [...r.querySelectorAll('.sc-card')]);
     assert.deepEqual(cards.map(r => r.length), [5, 5]);
-    // own team first, Top · Jungle · Mid · Bot · Support – lane opponents face each other
+    // blue side on top, Top · Jungle · Mid · Bot · Support – lane opponents face each other
     assert.deepEqual(cards[0].map(c => c.dataset.sc), ['a5', 'a2', P(1), 'a3', 'a4']);
     assert.deepEqual(cards[1].map(c => c.dataset.sc), ['e1', 'e2', 'e3', 'e4', 'e5']);
     // no position from the client: guessed, and shown as such
     assert.ok(cards[1][4].querySelector('.sc-pos.guess'));
     assert.ok(!cards[1][0].querySelector('.sc-pos.guess'));
-    // the enemy top: Jax, 6 of 8 games won on him, mastery, the rank tint
+    // the enemy top: Jax, 6 of 8 games won on him, mastery, the rank band (on the edge facing blue)
     const e1 = cards[1][0];
     assert.match(e1.textContent, /Jax/);
     assert.match(e1.textContent, /312,000 mastery/);
     assert.match(e1.querySelector('.sc-rings').textContent, /75%/);
     assert.match(e1.style.getPropertyValue('--rk'), /#/);
+    assert.ok(e1.classList.contains('bot') && e1.classList.contains('ranked') && e1.querySelector('.sc-rkband'));
+    assert.match(e1.querySelector('.sc-rkband').title, /Solo\/Duo: Diamond I/);
+    assert.ok(cards[0].every(x => x.classList.contains('top')) && cards[1].every(x => x.classList.contains('bot')));
     assert.match(e1.querySelector('.sc-tags').textContent, /Great with Jax/);
     // only one win rate on the card: the one on this champion
     assert.equal(e1.querySelectorAll('.sc-ring b').length, 1);
