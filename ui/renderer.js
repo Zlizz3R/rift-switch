@@ -759,6 +759,7 @@ function renderMismatch() {
   $('mmFix').textContent = t('mm.fix', { name: nm(l.rc) });
   $('mmFix').disabled = risky;
 }
+const LIVE_GAME_PHASES = ['ChampSelect', 'GameStart', 'InProgress', 'Reconnect'];
 function render() {
   try { renderMain(); } finally { if (window.afterRender) window.afterRender(); }
 }
@@ -780,6 +781,11 @@ function renderMain() {
     ? `<span><span class="dot"></span>${esc(cur ? dispName(cur) : t('app.unknownAccount'))} · ${esc(phaseName(live.phase))}`
       + (wait ? ` · <b class="wait" data-until="${wait.until}" data-fmt="wait" title="${esc(reasonText({ code: wait.code }))}">${esc(t('pen.wait', { t: leftText(wait.until) }))}</b>` : '') + '</span>'
     : `<span><span class="dot"></span>${S.busy ? t('app.switching') : t('app.closed')}</span>`;
+
+  // the blue dot on "Live": a game is on (champion select or the game itself) – look here
+  const dot = $('liveDot');
+  dot.hidden = !(live.clientUp && LIVE_GAME_PHASES.includes(live.phase));
+  dot.title = t('live.dotT');
 
   const unknownLive = live.clientUp && !cur;
   $('optCurrent').disabled = !unknownLive;

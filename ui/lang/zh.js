@@ -232,6 +232,8 @@
     'mast.tipAram': "部分对局为极地大乱斗（更短）——已计入",
     'mast.tipSrc': "来源：{src}",
     'last.title': "上一场对局",
+    'pg.wait': "对局已结束——详情马上就到……",
+    'live.dotT': "对局进行中——在这里查看",
     'last.open': "在对局记录中打开",
     'coll.n.chroma': "炫彩",
     'coll.n.ward': "守卫皮肤",

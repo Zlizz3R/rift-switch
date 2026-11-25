@@ -236,6 +236,8 @@
     'mast.tipAram': "Parte de las partidas fueron ARAM (más cortas): incluidas",
     'mast.tipSrc': "Fuentes: {src}",
     'last.title': "Última partida",
+    'pg.wait': "La partida ha terminado: los detalles llegan enseguida …",
+    'live.dotT': "Hay una partida en curso: mírala aquí",
     'last.open': "Abrir en el historial",
     'coll.n.chroma': "Cromas",
     'coll.n.ward': "Aspectos de guardián",

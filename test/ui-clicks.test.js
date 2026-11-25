@@ -381,10 +381,43 @@ test('live page after a game: the last game with both teams, MVP / ACE, bars wit
     // the best damage (the last player) fills its bar
     const widths = app.$$('.pg-bar.red i').map((i) => i.style.width);
     assert.equal(widths[widths.length - 1], '100%');
+    // the game's full details right here, as in the match history: a section folds open in Live
+    assert.ok(app.$('#liveBody .pg-card .mh-det'));
+    assert.ok(!app.$('#liveBody .cmp-row'));
+    await app.click('#liveBody [data-sec="compare"]');
+    assert.ok(app.$('#liveBody .cmp-row'), 'two players side by side');
+    assert.equal(app.w.eval('view'), 'live', 'still on Live');
     await app.click('#pgOpen');
     assert.equal(app.w.eval('view'), 'matches');
   });
 });
+
+test('live after a game: while the game that just ended is on its way, a "coming" card – not the game before', () => {
+  const pl = (i, t0) => ({ puuid: i === 0 ? P(1) : 'x' + i, name: 'N' + i, tag: 'EUW', team: i < 5 ? 100 : 200, win: i < 5, champ: i + 1, lvl: 12, k: i, d: 2, a: 3, cs: 150,
+    gold: 9000, dmg: 10000, vis: 20, spells: [4, 14], items: [0, 0, 0, 0, 0, 0, 0] });
+  const old = { id: '70', t: Date.now() - 26 * 3600000, dur: 1800, q: 440, players: Array.from({ length: 10 }, (_, i) => pl(i)) };
+  const st = sampleState({ live: { clientUp: true, puuid: P(1), phase: 'EndOfGame', waits: [] } });
+  return withApp({ state: st, replies: { live: { clientUp: true, phase: 'EndOfGame' }, matches: { index: [['70', old.t, 440, P(1)]], waiting: 0 }, 'matches-get': [old] } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 60));
+    await app.settle();
+    assert.ok(app.$('.pg-wait'), 'the details are on their way');
+    assert.match(app.$('.pg-wait').textContent, /details are on the way/);
+    assert.doesNotMatch(app.$('#liveBody').textContent, /yesterday/, 'not the game before');
+  });
+});
+
+test('the blue dot on "Live": a game is on (champion select or in game), on every page', () => withApp({}, async (app) => {
+  await app.push(sampleState({ live: { clientUp: true, puuid: P(1), phase: 'Lobby', waits: [] } }));
+  assert.ok(app.$('#liveDot').hidden);
+  await app.push(sampleState({ live: { clientUp: true, puuid: P(1), phase: 'InProgress', waits: [] } }));
+  assert.ok(!app.$('#liveDot').hidden, 'in game');
+  assert.equal(app.w.eval('view'), 'accounts');
+  await app.push(sampleState({ live: { clientUp: true, puuid: P(1), phase: 'ChampSelect', waits: [] } }));
+  assert.ok(!app.$('#liveDot').hidden, 'champion select');
+  await app.push(sampleState({ live: { clientUp: true, puuid: P(1), phase: 'EndOfGame', waits: [] } }));
+  assert.ok(app.$('#liveDot').hidden);
+}));
 
 test('champ select helper: one counters page per enemy ranks the pool; pre-load reads only the pool\'s own pages', () => {
   const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Malphite' }, { id: 5, name: "Cho'Gath" }];

@@ -471,7 +471,9 @@ h1 { white-space: nowrap; }
 .aa-toggle input:checked ~ span:last-child { color: var(--teal); }
 
 .nav { position: relative; }
-.live-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+.live-dot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: #3b9cff; box-shadow: 0 0 7px #3b9cff; animation: liveDot 1.6s ease-in-out infinite alternate; }
+@keyframes liveDot { from { opacity: .55; } to { opacity: 1; } }
+.pg-wait .dots { font-style: normal; color: #3b9cff; animation: pulse 1s infinite alternate; }
 .live-dot[hidden] { display: none; }
 
 /* ---------- right detail panel ---------- */

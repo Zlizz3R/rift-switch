@@ -235,6 +235,8 @@
     'mast.tipAram': "Parte das partidas foi ARAM (mais curtas) – incluídas",
     'mast.tipSrc': "Fontes: {src}",
     'last.title': "Última partida",
+    'pg.wait': "A partida acabou – os detalhes já vêm …",
+    'live.dotT': "Há uma partida em andamento – veja aqui",
     'last.open': "Abrir no histórico",
     'coll.n.chroma': "Cromas",
     'coll.n.ward': "Skins de sentinela",

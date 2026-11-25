@@ -598,6 +598,8 @@ $('mhList').addEventListener('click', e => {
   if (mh.open.has(id)) mh.open.delete(id); else mh.open.add(id);
   renderMatches();
 });
+// a game's details live in the match history and on the Live page (after a game): redraw that one
+const detRedraw = el => (el.closest('#liveBody') ? renderLive(true) : renderMatches());
 // details: fold a section open/closed
 function toggleSec(head) {
   const det = head.closest('[data-det]');
@@ -605,27 +607,31 @@ function toggleSec(head) {
   const open = new Set(mh.secs.get(id) || ['players']);
   if (open.has(head.dataset.sec)) open.delete(head.dataset.sec); else open.add(head.dataset.sec);
   mh.secs.set(id, open);
-  renderMatches();
+  detRedraw(head);
 }
-$('mhList').addEventListener('click', e => { const h = e.target.closest('[data-sec]'); if (h) toggleSec(h); });
-$('mhList').addEventListener('keydown', e => { const h = e.target.closest('[data-sec]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleSec(h); } });
-$('mhList').addEventListener('change', e => {
-  const sel = e.target.closest('[data-cmp]');
-  if (!sel) return;
-  const det = sel.closest('[data-det]');
-  const both = [...det.querySelectorAll('[data-cmp]')].map(s => Number(s.value));
-  mh.cmp.set(det.dataset.det, both);
-  renderMatches();
-});
-// a player's name: "open with" menu (op.gg, Porofessor …), region of the owning account
-$('mhList').addEventListener('click', e => {
+for (const host of [$('mhList'), $('liveBody')]) {
+  host.addEventListener('click', e => { const h = e.target.closest('[data-det] [data-sec]'); if (h) toggleSec(h); });
+  host.addEventListener('keydown', e => { const h = e.target.closest('[data-det] [data-sec]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleSec(h); } });
+  host.addEventListener('change', e => {
+    const sel = e.target.closest('[data-cmp]');
+    if (!sel) return;
+    const det = sel.closest('[data-det]');
+    const both = [...det.querySelectorAll('[data-cmp]')].map(s => Number(s.value));
+    mh.cmp.set(det.dataset.det, both);
+    detRedraw(sel);
+  });
+  host.addEventListener('click', playerMenu);
+}
+// a player's name: "open with" menu (op.gg, Porofessor …), region of the owning account (Live: the
+// signed-in one)
+function playerMenu(e) {
   const b = e.target.closest('[data-player]');
   if (!b) return;
   e.stopPropagation();
   const p = JSON.parse(b.dataset.player);
   if (!p.gameName) return;
   const row = b.closest('.mh-row');
-  const owner = S.accounts.find(a => a.puuid === (row && row.dataset.owner)) || selected();
+  const owner = S.accounts.find(a => a.puuid === (row ? row.dataset.owner : S.live && S.live.puuid)) || selected();
   const m = $('siteMenu');
   m.innerHTML = `<div class="menu-label">${esc(p.gameName + (p.tagLine ? '#' + p.tagLine : ''))}</div>`
     + SITES.map(([k, n]) => `<button data-site="${k}">${n}</button>`).join('');
@@ -635,7 +641,7 @@ $('mhList').addEventListener('click', e => {
   m.hidden = false;
   m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 8) + 'px';
   m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
-});
+}
 let mhChanged = null;
 api.onMatchesChanged(() => {
   clearTimeout(mhChanged);

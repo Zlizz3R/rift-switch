@@ -1,18 +1,30 @@
-// Live page, right after a game: the whole match at a glance (like a post-game screen) – both teams
-// with K/D/A, items, runes, ranks, damage dealt and taken and gold as bars (best player = 100 %),
-// and a placement of every player worked out by Rift Switch (MVP = best winner, ACE = best loser).
-// Shown for two hours after the game, while no champion select or game is on.
+// Live page, right after a game: the game's full details, the same as in the match history (both
+// teams with K/D/A, items, runes, ranks, damage and gold as bars, MVP / ACE; lane against lane, the
+// gold lead, two players side by side) – so there's no need to leave Live. Until the game that just
+// ended is stored (a few seconds after the end-of-game screen) a "coming" card stands there instead
+// of the game before. Shown up to 12 hours after the game, until the next champion select.
 // The same table is the "Players" part of a game's details in the match history (pgTableHtml).
 // Uses the globals of renderer.js / views.js / matches-view.js.
 
-const pg = { game: null, checked: 0, busy: false, key: '' };
+const pg = { game: null, checked: 0, busy: false, key: '', postSince: 0 };
 const PG_FRESH = 12 * 3600 * 1000;
+const PG_POST = ['WaitingForStats', 'PreEndOfGame', 'EndOfGame'];
+// after a game: the newest stored game is older than 90 minutes -> the one that just ended is still
+// on its way (looked for every 4 s, at most 5 minutes)
+function pgWaiting() {
+  const ph = (liveData || {}).phase;
+  if (!PG_POST.includes(ph)) { pg.postSince = 0; return false; }
+  if (!pg.postSince) pg.postSince = Date.now();
+  const g = pg.game;
+  const fresh = g && Date.now() - (g.t + (g.dur || 0) * 1000) < 90 * 60000;
+  return !fresh && Date.now() - pg.postSince < 5 * 60000;
+}
 
 // the newest stored game of the signed-in account (the match history fills in right after a game)
 async function loadPostgame(force) {
   const me = (S.live && S.live.puuid) || S.active;
   if (!me || pg.busy) return;
-  if (!force && Date.now() - pg.checked < 15000) return;
+  if (!force && Date.now() - pg.checked < (pgWaiting() ? 4000 : 15000)) return;
   pg.busy = true;
   pg.checked = Date.now();
   try {
@@ -30,6 +42,8 @@ async function loadPostgame(force) {
   pg.busy = false;
   if (view === 'live') renderLive();
 }
+// the match history stored new games (right after the end-of-game screen): look at once
+api.onMatchesChanged(() => { if (view === 'live') loadPostgame(true); });
 async function pgRanks(g) {
   const owner = S.accounts.find(a => a.puuid === (g.owners || [])[0]);
   const ids = g.players.map(p => p.puuid).filter(Boolean).filter(id => !mh.ranks[id]);
@@ -139,6 +153,8 @@ function pgTableHtml(g, as, mine) {
 }
 
 function postgameHtml() {
+  if (pgWaiting()) return `<div class="live-card pg-card pg-wait"><div class="lc-head"><h3>${t('pg.title')}</h3></div>
+    <p class="fine"><i class="dots">●</i> ${t('pg.wait')}</p></div>`;
   const g = pg.game;
   if (!g || g.remake || !g.players || g.players.length < 10) return '';
   const ended = g.t + (g.dur || 0) * 1000;
@@ -148,7 +164,7 @@ function postgameHtml() {
   return `<div class="live-card pg-card"><div class="lc-head"><h3>${t('pg.title')} · ${esc(queueLabel(g))} · ${dur(g.dur)} · ${esc(ago(ended))}</h3>
       <button class="chip" id="pgOpen">${t('pg.open')}</button></div>
     ${typeof pgTagsHtml === 'function' ? pgTagsHtml(g) : ''}
-    ${pgTableHtml(g, assets, mine)}
+    ${detailsHtml(g, assets, mine)}
     <p class="fine">${t('pg.note')}</p></div>`;
 }
 
@@ -158,6 +174,7 @@ document.addEventListener('click', e => {
 
 // "Last game" (compact) when no game and no post-game overview is on
 function lastGameHtml() {
+  if (pgWaiting()) return '';
   const g = pg.game;
   if (!g || !g.players) return '';
   return `<div class="live-card"><div class="lc-head"><h3>${t('last.title')}</h3></div>${gameRowShort(g)}</div>`;

@@ -473,7 +473,6 @@ function renderLive(force) {
   if (!force && document.activeElement && document.activeElement.closest && document.activeElement.closest('#liveBody input')) return;
   const d = liveData || {};
   $('liveSub').textContent = !d.clientUp ? t('app.closed') : phaseName(d.phase);
-  $('liveDot').hidden = !(d.clash && d.clash.opponents && d.clash.opponents.length) && !d.champSelect && !d.lobby && !d.inGame;
   const parts = [];
   const pens = penaltiesHtml();
   // a game on: the ten players first (all of them on screen), the penalties below

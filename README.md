@@ -167,7 +167,9 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   progress bar; during the game it goes on slower (one request every 4 seconds, only while the window is open), so
   the game stays smooth. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.
-- **After the game**: what changed in your tags (▲ / ▼).
+- **After the game**: the game's full details open right on the Live page – both teams, MVP / ACE, lane against
+  lane, the gold lead, two players side by side – and what changed in your tags (▲ / ▼).
+- A **blue dot** on *Live* while a game is on (champion select or in game), whatever page you are on.
 
 <details>
 <summary><b>Champ select helper</b></summary>

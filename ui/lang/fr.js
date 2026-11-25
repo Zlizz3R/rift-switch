@@ -236,6 +236,8 @@
     'mast.tipAram': "Une partie des parties étaient en ARAM (plus courtes) – prises en compte",
     'mast.tipSrc': "Sources : {src}",
     'last.title': "Dernière partie",
+    'pg.wait': "La partie est terminée – les détails arrivent …",
+    'live.dotT': "Une partie est en cours – à voir ici",
     'last.open': "Ouvrir dans l'historique",
     'coll.n.chroma': "Chromas",
     'coll.n.ward': "Skins de balise",
