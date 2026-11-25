@@ -12,6 +12,8 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] ✔ 25.11.2026 **Sprache beim ersten Start aus Windows übernehmen** (eine der 11 Sprachen, sonst Englisch).
 - [x] ✔ 25.11.2026 **Lane im Champ Select Helper** standardmäßig aus der Hauptrolle der Match History (`Tags.mainRole`; Lane `adc` = Rolle `bot`).
 - [x] ✔ 25.11.2026 **Knopf umbenennen:** "Aus der Match History" → "Aus der Match History hinzufügen" / "Add from match history" (`live.poolFromMh`, 11 Sprachen).
+- [x] ✔ 25.11.2026 **Tags: „Alle Rollen“** – jede Rolle mit 5+ Spielen mit ihren eigenen Schwellen; jeder Rollen-Tag zeigt Rolle und Anteil der Spiele.
+- [x] ✔ 25.11.2026 **Einstellungen als eigene Seite** – wie ein Buch: Kapitel links (Sprung, Markierung beim Scrollen), alles in einer Liste.
 - [ ] Sortierung bleibt "nach Level" (Nutzer-Entscheidung).
 - [x] Match-Benachrichtigung: kam nicht, weil Windows-Benachrichtigungen beim Nutzer ganz aus sind (`PushNotificationsToastEnabled = 0`). Die Einstellungen weisen jetzt darauf hin.
 

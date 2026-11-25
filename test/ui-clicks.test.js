@@ -272,17 +272,28 @@ test('login details: cancelling Windows Hello leaves the field empty', () => wit
 }));
 
 // ---------- settings ----------
-test('settings: groups are closed; one opens at a time; arrows survive a language change', () => withApp({}, async (app) => {
+test('settings: a page like a book – chapters on the left jump to their part of one long list', () => withApp({}, async (app) => {
   await app.click('#navSettings');
-  const heads = app.$$('.set-g');
+  assert.ok(app.$('#settingsDrawer').classList.contains('open'));
+  // the page covers the accounts, it doesn't push them aside
+  assert.ok(!app.$('.body').classList.contains('pushed'));
+  const heads = app.$$('.set-book .set-sec > .set-g');
+  const jumps = app.$$('.set-nav [data-setjump]');
   assert.ok(heads.length >= 5);
-  assert.equal(app.$$('.set-g.open').length, 0);
-  await app.click(heads[0]);
-  await app.click(heads[2]);
-  assert.deepEqual(app.$$('.set-g.open').map((h) => heads.indexOf(h)), [2]);
-  assert.match(heads[2].textContent, /Privacy & Security/);
+  assert.equal(jumps.length, heads.length);
+  // every setting is in the list, nothing folded away
+  assert.equal(app.$$('.set-body').length, heads.length);
+  assert.ok(app.$('#setSec2 [data-setting="streamer"]'));
+  assert.match(jumps[2].textContent, /Privacy & Security/);
+  assert.ok(jumps[0].classList.contains('on'));
+  let jumped = null;
+  app.$('#setSec2').scrollIntoView = function () { jumped = this.id; };
+  await app.click(jumps[2]);
+  assert.equal(jumped, 'setSec2');
+  assert.deepEqual(jumps.filter((b) => b.classList.contains('on')), [jumps[2]]);
+  // a language change: chapters and headings both
   await app.push({ ...app.S.state, settings: { ...app.S.state.settings, lang: 'de' } });
-  assert.ok(app.$$('.set-g .chev').length === heads.length, 'arrows still there');
+  assert.match(app.$$('.set-nav [data-setjump]')[2].textContent, /Privatsphäre & Sicherheit/);
   assert.match(app.$$('.set-g')[2].textContent, /Privatsphäre & Sicherheit/);
 }));
 

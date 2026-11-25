@@ -619,8 +619,7 @@ function openSettings(open) {
 }
 // an open side panel pushes the overview to the right instead of covering it
 function syncPush() {
-  document.querySelector('.body').classList.toggle('pushed',
-    $('drawer').classList.contains('open') || $('settingsDrawer').classList.contains('open'));
+  document.querySelector('.body').classList.toggle('pushed', $('drawer').classList.contains('open'));
 }
 document.querySelectorAll('[data-setting]').forEach(cb => cb.onchange = () => { api.setSetting(cb.dataset.setting, cb.checked); if (cb.dataset.setting === 'matchNotify') checkToasts(); });
 // the match notification is on but Windows shows no notifications at all: say so under it
@@ -1315,31 +1314,60 @@ document.addEventListener('focusout', () => setTimeout(() => { if (renderLater &
 $('board').addEventListener('dragend', () => { if (renderLater) { renderLater = false; render(); } });
 const stateReady = api.getState().then(s => { S = s; render(); });
 
-// ---------- settings: groups fold open on click, one at a time ----------
-(function foldSettings() {
+// ---------- settings: a page of its own, read like a book ----------
+// Every group is a chapter: the chapters on the left (a click jumps there), all settings below each
+// other on the right in one long list; the chapter being read is marked while scrolling.
+(function bookSettings() {
   const drawer = $('settingsDrawer');
-  for (const head of [...drawer.querySelectorAll('.set-g')]) {
+  const top = drawer.querySelector('.drawer-head');
+  const nav = document.createElement('nav');
+  nav.className = 'set-nav';
+  const book = document.createElement('div');
+  book.className = 'set-book';
+  book.id = 'setBook';
+  for (let n = top.nextElementSibling; n;) { const next = n.nextElementSibling; book.appendChild(n); n = next; }
+  const secs = [...book.querySelectorAll('.set-g')].map((head, i) => {
+    const sec = document.createElement('section');
+    sec.className = 'set-sec';
+    sec.id = 'setSec' + i;
     const body = document.createElement('div');
     body.className = 'set-body';
     let n = head.nextElementSibling;
     while (n && !n.classList.contains('set-g') && !n.classList.contains('legal')) { const next = n.nextElementSibling; body.appendChild(n); n = next; }
-    head.after(body);
-    head.setAttribute('role', 'button');
-    head.tabIndex = 0;
-    // the text moves into its own span (the translation only replaces that), the arrow next to it
-    const key = head.dataset.i18n;
-    head.removeAttribute('data-i18n');
-    head.innerHTML = '<span></span><svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
-    head.firstChild.dataset.i18n = key;
-    head.firstChild.textContent = t(key);
-    const toggle = () => {
-      const open = !head.classList.contains('open');
-      drawer.querySelectorAll('.set-g.open').forEach(h => h.classList.remove('open'));
-      if (open) head.classList.add('open');
-    };
-    head.addEventListener('click', toggle);
-    head.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
-  }
+    head.before(sec);
+    sec.append(head, body);
+    const b = document.createElement('button');
+    b.dataset.setjump = String(i);
+    b.dataset.i18n = head.dataset.i18n;
+    b.textContent = t(head.dataset.i18n);
+    nav.appendChild(b);
+    return sec;
+  });
+  const page = document.createElement('div');
+  page.className = 'set-page';
+  page.append(nav, book);
+  drawer.appendChild(page);
+  const mark = i => nav.querySelectorAll('[data-setjump]').forEach(b => b.classList.toggle('on', +b.dataset.setjump === i));
+  let jumping = 0;
+  nav.addEventListener('click', e => {
+    const b = e.target.closest('[data-setjump]');
+    if (!b) return;
+    const i = +b.dataset.setjump;
+    mark(i);
+    // the mark stays on the chapter clicked while the page scrolls there
+    jumping = Date.now();
+    secs[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  // the chapter being read: the last one whose heading is above the upper third (the last one at the end)
+  book.addEventListener('scroll', () => {
+    if (Date.now() - jumping < 700) return;
+    const y = book.scrollTop + book.clientHeight / 3;
+    let at = 0;
+    secs.forEach((s, i) => { if (s.offsetTop - book.offsetTop <= y) at = i; });
+    if (book.scrollTop + book.clientHeight >= book.scrollHeight - 4) at = secs.length - 1;
+    mark(at);
+  });
+  mark(0);
 })();
 
 // ---------- help pages ("?"): "## " heading, "- " list item, other lines paragraphs ----------
