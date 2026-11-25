@@ -406,7 +406,9 @@ async function pollLive() {
     renderLive();
     if (typeof loadPostgame === 'function') loadPostgame(ended);
   } catch (e) { console.warn('live', e); }
-  if (run === liveRun) liveTimer = setTimeout(pollLive, 3000);
+  // in game the page changes little (the cards update on their own): every 15 s, else every 3 s
+  const inGame = liveData && ['InProgress', 'Reconnect'].includes(liveData.phase);
+  if (run === liveRun) liveTimer = setTimeout(pollLive, inGame ? 15000 : 3000);
 }
 // one queue's rank, labelled: "SOLO/DUO  Gold II · 45 LP  · 54% (120)"
 function queueRank(label, r) {

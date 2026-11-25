@@ -6,7 +6,8 @@
 // scouting (main.rs: matches-others) plus the own stored games; the tags from tags.js.
 // Also: the storage of other players' games in Settings, and the one-time note at 1 GB.
 
-const scv = { data: {}, own: null, key: '', loading: false, again: false, at: 0, timer: 0 };
+// prog: Live's progress from the backend ("scout-changed" / "scout-games"), not part of the state
+const scv = { data: {}, own: null, key: '', loading: false, again: false, at: 0, timer: 0, prog: null };
 const SC_POS = { TOP: 'top', JUNGLE: 'jungle', MIDDLE: 'mid', MID: 'mid', BOTTOM: 'bot', BOT: 'bot', UTILITY: 'support', SUPPORT: 'support' };
 const SC_NO_LANES = [...Stats.ARAM_QUEUES, 1700, 1710];
 const scIds = () => { const g = liveData && liveData.inGame; return g ? [...g.teamOne, ...g.teamTwo].map(p => p.puuid).filter(Boolean) : []; };
@@ -15,8 +16,10 @@ async function loadScout(ids) {
   if (scv.loading) { scv.again = true; return; }
   scv.loading = true;
   try {
+    // { players: { puuid: { games, mastery } }, progress }
     const [d, own] = await Promise.all([api.scoutGames(ids), scv.own ? null : allGames()]);
-    if (d && typeof d === 'object') scv.data = d;
+    if (d && d.players && typeof d.players === 'object') scv.data = d.players;
+    if (d && 'progress' in d) scv.prog = d.progress;
     if (own) scv.own = own;
   } catch (e) { console.warn('scout', e); }
   scv.loading = false;
@@ -24,8 +27,10 @@ async function loadScout(ids) {
   if (view === 'live') renderLive(true);
   if (scv.again) { scv.again = false; loadScout(scIds()); }
 }
-// the backend stored more: fetch again, at most every 2.5 s (and once more after the last change)
-api.onScoutChanged(() => {
+// the backend stored more (the event carries the progress): fetch again, at most every 2.5 s (and
+// once more after the last change)
+api.onScoutChanged(progress => {
+  scv.prog = progress;
   if (view !== 'live' || !scIds().length) return;
   clearTimeout(scv.timer);
   const wait = Math.max(0, 2500 - (Date.now() - scv.at));
@@ -134,7 +139,7 @@ function scCardHtml(c, side, slot, guess, ex = {}) {
   // the Solo/Duo rank: a frame and a band in its colour, the band on the edge facing the other team
   const rk = tier && TIER_COLORS[tier];
   const band = `<i class="sc-rkband" title="${esc(rk ? 'Solo/Duo: ' + tierName(tier) + (APEX.includes(tier) ? '' : ' ' + p.solo.division) : t('tile.unranked'))}"></i>`;
-  const prog = ((S.scout && S.scout.players) || {})[p.puuid];
+  const prog = ((scv.prog && scv.prog.players) || {})[p.puuid];
   const bar = prog && prog[1] && prog[0] < prog[1] ? `<i class="sc-bar" style="width:${Math.round((100 * prog[0]) / prog[1])}%"></i>` : '';
   const champName = (champById(p.championId) || {}).name || '';
   const ag = c.ag;
@@ -176,7 +181,7 @@ function scoutBoardHtml(d) {
   const row = (i, side) => laid[i].map(({ c, slot, guess }) => scCardHtml(c, side, slot, guess, extras.get(c.p.puuid))).join('');
   const team = k => g[k].map(p => ({ puuid: p.puuid, champ: p.championId }));
   const mix = typeof dmgMixHtml === 'function' ? dmgMixHtml([{ label: t('live.enemies'), champs: team(theirsKey) }, { label: t('live.allies'), champs: team(mineKey) }]) : '';
-  const sc = S.scout;
+  const sc = scv.prog;
   let prog = '';
   if (sc && sc.of) {
     // first everyone's match list, then their games; while the game runs it goes on, slower
@@ -213,16 +218,9 @@ async function loadStoreBox() {
   if (own) $('storeOwn').textContent = t('set.storeLine', { size: fmtBytes(own.bytes), n: num(own.games) });
   if (oth) $('storeOthers').textContent = t('set.storeLine', { size: fmtBytes(oth.bytes), n: num(oth.games) });
   $('othersClear').disabled = !(oth && (oth.games || oth.bytes));
-  $('othersLimit').value = (S.settings && S.settings.othersLimit) || '0';
-  scBigStore(((own && own.bytes) || 0) + ((oth && oth.bytes) || 0));
-}
-// over 1 GB for the first time: once, a choice
-async function scBigStore(bytes) {
-  if (bytes < 1e9 || (S.settings && S.settings.bigStoreAsked)) return;
-  S.settings = { ...S.settings, bigStoreAsked: true };
-  api.setSetting('bigStoreAsked', true);
-  const limit = await confirmBox(t('store.bigTitle'), t('store.bigText', { size: fmtBytes(bytes) }), t('store.setLimit'));
-  if (limit) { api.setSetting('othersLimit', '2000'); S.settings = { ...S.settings, othersLimit: '2000' }; toast(t('store.limitSet')); }
+  // 1 GB unless chosen (an old "unlimited" is 1 GB now too)
+  const lim = S.settings && S.settings.othersLimit;
+  $('othersLimit').value = ['500', '1000', '2000', '5000'].includes(lim) ? lim : '1000';
 }
 $('othersLimit').onchange = () => { const v = $('othersLimit').value; S.settings = { ...S.settings, othersLimit: v }; api.setSetting('othersLimit', v); };
 $('othersClear').onclick = async () => {

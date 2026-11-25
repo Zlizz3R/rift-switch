@@ -579,8 +579,20 @@ pub fn game_data_of(skins: &Value, wards: &Value, icons: &Value) -> GameData {
     g
 }
 static GAME_DATA: Mutex<Option<std::sync::Arc<GameData>>> = Mutex::new(None);
+/// No window (only the tray): the game data (about 1 MB, and a big skins.json to parse) is let go
+/// and not read – the collection's rarities keep their last count until the window is open again.
+static TRAY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub fn set_tray(on: bool) {
+    let was = TRAY.swap(on, std::sync::atomic::Ordering::Relaxed);
+    if on && !was {
+        *GAME_DATA.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+}
 /// The game data of the running client (once per patchline, again after 12 hours).
 pub async fn game_data() -> Option<std::sync::Arc<GameData>> {
+    if TRAY.load(std::sync::atomic::Ordering::Relaxed) {
+        return None;
+    }
     let pl = patchline().to_string();
     if let Some(g) = GAME_DATA.lock().unwrap().clone() {
         if g.patchline == pl && now_ms() - g.at < 12 * 3600 * 1000 {

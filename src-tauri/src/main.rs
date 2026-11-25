@@ -59,8 +59,9 @@ struct Core {
     locked: bool,
     crypto_broken: bool,
     save_error: Option<String>,
-    last_saved: String,
-    last_pushed: String,
+    /// hashes of the last written accounts.json and the last state sent (no full copies kept)
+    last_saved: u64,
+    last_pushed: u64,
     last_rank_sweep: i64,
     last_profile_at: i64,
     gen: u64, // bumped by switch/add: results of a tick that started before are thrown away
@@ -104,8 +105,8 @@ impl Core {
             locked: st_locked,
             crypto_broken: false,
             save_error: None,
-            last_saved: String::new(),
-            last_pushed: String::new(),
+            last_saved: 0,
+            last_pushed: 0,
             last_rank_sweep: 0,
             last_profile_at: 0,
             gen: 0,
@@ -240,7 +241,6 @@ fn snapshot(c: &Core) -> Value {
     m.insert("login".into(), c.login.clone());
     m.insert("switching".into(), c.sw.clone());
     m.insert("loading".into(), c.loading.clone());
-    m.insert("scout".into(), scout_snapshot());
     m.insert("saveError".into(), json!(c.save_error));
     m.insert("cryptoBroken".into(), json!(c.crypto_broken));
     m.insert("version".into(), json!(version));
@@ -248,6 +248,13 @@ fn snapshot(c: &Core) -> Value {
     o
 }
 
+/// A 64-bit fingerprint of a text: "did it change?" without keeping the text
+fn text_hash(s: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    s.hash(&mut h);
+    h.finish()
+}
 /// Sends the state to the window – only when it's open and something changed.
 fn push() {
     if !win_shown() && !shot_mode() {
@@ -255,7 +262,7 @@ fn push() {
     }
     let s = with(|c| {
         let s = snapshot(c);
-        let key = s.to_string();
+        let key = text_hash(&s.to_string());
         if key == c.last_pushed {
             return None;
         }
@@ -345,13 +352,14 @@ fn save() {
             return false;
         }
         let text = c.st.to_json().to_string();
-        if text == c.last_saved {
+        let key = text_hash(&text);
+        if key == c.last_saved {
             c.save_error = None;
             return false;
         }
         match store::write_atomic(&data().join("accounts.json"), text.as_bytes()) {
             Ok(()) => {
-                c.last_saved = text;
+                c.last_saved = key;
                 c.save_error = None;
                 true
             }
@@ -752,6 +760,8 @@ fn stale_in(c: &Core, my_gen: u64) -> bool {
 }
 
 async fn tick() {
+    // no window: the heavy caches go (game data); back as soon as it opens
+    riot::set_tray(!win_shown());
     let my_gen = {
         let mut c = core();
         if c.busy || c.ticking {
@@ -1338,29 +1348,49 @@ async fn fetch_games(ids: Vec<String>) -> usize {
 // game: the rest for the same players at full speed. Only while the window is open, never in a test
 // copy that mustn't talk to Riot.
 const IN_GAME_GAP: i64 = 4000;
-static OTHERS: OnceLock<Mutex<matches::Matches>> = OnceLock::new();
+/// Other players' games: loaded when Live needs them, let go when the window goes to the tray.
+static OTHERS: Mutex<Option<matches::Matches>> = Mutex::new(None);
 fn others<R>(f: impl FnOnce(&mut matches::Matches) -> R) -> R {
-    let m = OTHERS.get_or_init(|| {
+    let mut m = OTHERS.lock().unwrap_or_else(|e| e.into_inner());
+    f(m.get_or_insert_with(|| {
         let dir = DATA
             .get()
             .cloned()
             .unwrap_or_default()
             .join("matches-others");
-        Mutex::new(matches::Matches::load_others(dir))
+        matches::Matches::load_others(dir)
+    }))
+}
+/// The window went to the tray: Live's memory goes (the index of other players' games, what was
+/// noted about the players of the last game).
+fn live_memory_free() {
+    *OTHERS.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    scout(|s| *s = Scout::default());
+}
+/// The storage limit of other players' games in bytes (Settings → Data; 1 GB unless set lower or
+/// higher – there is no "unlimited")
+fn others_limit() -> u64 {
+    let mb = with(|c| {
+        c.st.settings
+            .get("othersLimit")
+            .and_then(Value::as_str)
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(0)
     });
-    f(&mut m.lock().unwrap_or_else(|e| e.into_inner()))
+    (if mb == 0 { 1000 } else { mb }) * 1_000_000
 }
 #[derive(Default)]
 struct Scout {
     pruned_at: i64,
     targets: Vec<String>,
+    /// per player of this game: when the match list was read, the mastery (cleared with a new game)
     listed: HashMap<String, i64>,
     mastery: HashMap<String, Value>,
+    /// game ids that couldn't be read (twice = given up)
     failed: HashMap<String, u8>,
     running: bool,
     // the last round while the game runs (rounds are spaced IN_GAME_GAP apart then)
     slow_at: i64,
-    busy: bool,
 }
 static SCOUT: Mutex<Option<Scout>> = Mutex::new(None);
 fn scout<R>(f: impl FnOnce(&mut Scout) -> R) -> R {
@@ -1369,7 +1399,9 @@ fn scout<R>(f: impl FnOnce(&mut Scout) -> R) -> R {
         .unwrap_or_else(|e| e.into_inner())
         .get_or_insert_with(Scout::default))
 }
-/// For the state: per player (stored, noted) games, the totals, whether the game runs.
+/// Live's progress: per player (stored, noted) games, the totals, whether the game runs. Sent with
+/// "scout-changed" and the answer of "scout-games" – not with the state, so a round doesn't send
+/// (and the window doesn't redraw) everything.
 fn scout_snapshot() -> Value {
     let (targets, running, listed) = scout(|s| {
         let l = s
@@ -1399,24 +1431,36 @@ fn scout_snapshot() -> Value {
     });
     json!({ "players": per, "done": done, "total": total, "running": running, "listed": listed, "of": targets.len() })
 }
+/// Own games by id, read from disk outside the lock; once more with fresh places when a rewrite
+/// (removed account, shrinking) moved the lines in between.
+async fn read_own_games(ids: Vec<String>) -> Vec<Value> {
+    let mut got = vec![];
+    for _ in 0..2 {
+        let (file, entries) = with(|c| (c.mh.games_file(), c.mh.entries(&ids)));
+        let n = entries.len();
+        got = tokio::task::spawn_blocking(move || matches::read_entries(&file, &entries))
+            .await
+            .unwrap_or_default();
+        if got.len() == n {
+            break;
+        }
+    }
+    got
+}
 async fn scout_loop() {
     loop {
         sleep(1500).await;
-        if riot::offline_test() || !win_shown() || scout(|s| s.busy) {
+        if riot::offline_test() || !win_shown() {
             continue;
         }
-        scout(|s| s.busy = true);
         // other players' games are kept 30 days: the older ones go, once an hour
         let now = now_ms();
         if scout(|s| now - s.pruned_at > 3_600_000) {
             scout(|s| s.pruned_at = now);
             others(|o| o.prune_old(now));
         }
-        let changed = scout_round().await;
-        scout(|s| s.busy = false);
-        if changed {
-            push();
-            emit("scout-changed", Value::Null);
+        if scout_round().await {
+            emit("scout-changed", scout_snapshot());
         }
     }
 }
@@ -1483,6 +1527,10 @@ async fn scout_round() -> bool {
     let new_targets = scout(|s| {
         let ch = s.targets != targets;
         if ch {
+            // another game: what was noted about players no longer in it goes
+            s.listed.retain(|p, _| targets.contains(p));
+            s.mastery.retain(|p, _| targets.contains(p));
+            s.failed.clear();
             s.targets = targets.clone();
         }
         ch
@@ -1546,17 +1594,9 @@ async fn scout_round() -> bool {
             None => scout(|s| *s.failed.entry(id.clone()).or_insert(0) += 1),
         }
     }
-    // the storage limit (Settings → Data): the oldest other players' games go
-    let limit = with(|c| {
-        c.st.settings
-            .get("othersLimit")
-            .and_then(Value::as_str)
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or(0)
-    });
-    if limit > 0 {
-        others(|o| o.prune_to(limit * 1_000_000));
-    }
+    // the storage limit (Settings → Data, 1 GB): the oldest other players' games go
+    let limit = others_limit();
+    others(|o| o.prune_to(limit));
     true
 }
 
@@ -2413,7 +2453,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
     match ch {
         "get-state" => {
             let pending = with(|c| {
-                c.last_pushed.clear();
+                c.last_pushed = 0;
                 c.after_load_switch.take()
             });
             if let Some(id) = pending {
@@ -2445,7 +2485,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 if ok {
                     c.unlock_fails = 0;
                     c.locked = false;
-                    c.last_pushed.clear();
+                    c.last_pushed = 0;
                     if key.is_some() {
                         c.login_key = key;
                     }
@@ -3002,16 +3042,11 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 .take(500)
                 .map(String::from)
                 .collect();
-            let (file, entries) = with(|c| (c.mh.games_file(), c.mh.entries(&ids)));
-            json!(
-                tokio::task::spawn_blocking(move || matches::read_entries(&file, &entries))
-                    .await
-                    .unwrap_or_default()
-            )
+            json!(read_own_games(ids).await)
         }
         // every own account's games in short (time, length, queue, champion, win, remake)
         "own-games" => {
-            let (file, entries, owners) = with(|c| {
+            let (ids, owners) = with(|c| {
                 let accs: Vec<String> =
                     c.st.accounts
                         .iter()
@@ -3023,19 +3058,12 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         .filter_map(|r| r[0].as_str().map(String::from))
                         .collect();
                 (
-                    c.mh.games_file(),
-                    c.mh.entries(&ids),
+                    ids,
                     accs.into_iter()
                         .collect::<std::collections::HashSet<String>>(),
                 )
             });
-            Value::Object(
-                tokio::task::spawn_blocking(move || {
-                    matches::own_rows(&matches::read_entries(&file, &entries), &owners)
-                })
-                .await
-                .unwrap_or_default(),
-            )
+            Value::Object(matches::own_rows(&read_own_games(ids).await, &owners))
         }
         "mh-assets" => live::game_assets(data()).await,
         "mh-storage" => with(|c| json!({ "bytes": c.mh.size(), "games": c.mh.count() })),
@@ -3045,6 +3073,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             others(|o| o.clear());
             scout(|s| {
                 s.listed.clear();
+                s.mastery.clear();
                 s.failed.clear();
             });
             json!({ "ok": true })
@@ -3068,7 +3097,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     })
                     .collect()
             });
-            Value::Object(out)
+            json!({ "players": out, "progress": scout_snapshot() })
         }
         "mh-clear" => {
             with(|c| {
@@ -3225,7 +3254,7 @@ fn lock_now() {
             return false;
         }
         c.locked = true;
-        c.last_pushed.clear();
+        c.last_pushed = 0;
         true
     });
     if locked {
@@ -3271,8 +3300,9 @@ fn show_window() {
         if c.st.lock.is_some() {
             c.locked = true;
         }
-        c.last_pushed.clear();
+        c.last_pushed = 0;
     });
+    riot::set_tray(false);
     create_window();
 }
 /// WebView2 switches: flat tiles need no GPU process, no extensions, no Edge background traffic
@@ -3329,6 +3359,10 @@ fn to_tray() {
         if let Some(w) = window() {
             let _ = w.destroy();
         }
+        // what only the window needs goes with it
+        live_memory_free();
+        riot::set_tray(true);
+        with(|c| c.last_pushed = 0);
     });
 }
 fn quit() {

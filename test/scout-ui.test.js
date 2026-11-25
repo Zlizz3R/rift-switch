@@ -26,10 +26,10 @@ const inGame = {
 
 test('live board: ten cards on their positions, tags from the player\'s games, short / exact, progress', async () => {
   const st = sampleState();
-  st.scout = { of: 9, listed: 9, done: 40, total: 120, running: false, players: { e1: [8, 8], e2: [3, 16] } };
+  let progress = { of: 9, listed: 9, done: 40, total: 120, running: false, players: { e1: [8, 8], e2: [3, 16] } };
   const app = await boot({ state: st, replies: {
     live: { clientUp: true, phase: 'InProgress', me: P(1), inGame },
-    'scout-games': { e1: { games: e1Games, mastery: { 24: 312000, 103: 1000 } } },
+    'scout-games': () => ({ players: { e1: { games: e1Games, mastery: { 24: 312000, 103: 1000 } } }, progress }),
     champions: [{ id: 24, name: 'Jax' }, { id: 103, name: 'Ahri' }],
   } });
   try {
@@ -65,8 +65,12 @@ test('live board: ten cards on their positions, tags from the player\'s games, s
     assert.ok(app.$('.sc-card[data-sc="e2"] .sc-bar'));
     assert.ok(!e1.querySelector('.sc-bar'));
     // the game runs: it goes on, slower – and says so
-    await app.push({ ...st, scout: { ...st.scout, running: true, done: 60 } });
-    app.w.eval('renderLive(true)');   // the app re-renders on "scout-changed" (throttled to 2.5 s)
+    // the progress comes with "scout-changed" (not with the state: a state push keeps it)
+    progress = { ...progress, running: true, done: 60 };
+    await app.emit('scout-changed', progress);
+    await app.push(st);
+    await new Promise((r) => setTimeout(r, 50));
+    app.w.eval('renderLive(true)');
     await app.settle();
     assert.ok(app.$('.sc-prog.slow'));
     assert.match(app.$('.sc-prog').textContent, /loading slower so it stays smooth · Game details · 60 \/ 120 games/);

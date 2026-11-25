@@ -238,19 +238,30 @@ pub fn read_state(file: &Path) -> Loaded {
     }
 }
 
-/// Write to file.tmp, flush it to the disk, then rename over the old file: a crash or power cut
-/// mid-write never leaves half a file. A rename blocked for a moment (virus scanner) is retried.
+/// Write to a temporary file, flush it to the disk, then rename over the old file: a crash or power
+/// cut mid-write never leaves half a file. A rename blocked for a moment (virus scanner) is retried.
 pub fn write_atomic(file: &Path, text: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
     if let Some(d) = file.parent() {
         fs::create_dir_all(d)?;
     }
-    let tmp = file.with_extension("tmp");
+    let tmp = tmp_path(file);
     {
         let mut f = fs::File::create(&tmp)?;
         f.write_all(text)?;
         f.sync_all()?;
     }
+    replace(&tmp, file)
+}
+/// A temporary file next to `file` that no other writer uses (two writes of the same file at once
+/// – e.g. the counters cache while pre-loading – must not share one).
+pub fn tmp_path(file: &Path) -> std::path::PathBuf {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    file.with_extension(format!("tmp{}", N.fetch_add(1, Ordering::Relaxed)))
+}
+/// Renames `tmp` over `file`, retried a few times; on failure `tmp` is removed.
+pub fn replace(tmp: &Path, file: &Path) -> std::io::Result<()> {
     let mut last = None;
     for i in 0..8 {
         match fs::rename(&tmp, file) {

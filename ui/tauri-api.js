@@ -67,7 +67,7 @@
     lock: (what, pass, oldPass) => call('lock', what, pass, oldPass),
     onState: on('state'),
     onMatchesChanged: fn => T.event.listen('matches-changed', () => fn()),
-    onScoutChanged: fn => T.event.listen('scout-changed', () => fn()),
+    onScoutChanged: fn => T.event.listen('scout-changed', e => fn(e && e.payload)),
     onTraySwitch: on('tray-switch'),
     onToast: on('toast'),
   };

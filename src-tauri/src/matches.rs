@@ -30,6 +30,8 @@ const RANK_KEEP: i64 = 14 * 24 * 3600 * 1000;
 
 #[derive(Clone, Copy)]
 pub struct Entry {
+    /// the game id as a number: a read checks it (a rewrite may have moved the lines meanwhile)
+    id: i64,
     t: i64,
     q: i64,
     off: u64,
@@ -191,6 +193,7 @@ impl Matches {
                 self.index.insert(
                     id_str(&h.id),
                     Entry {
+                        id: id_num(&id_str(&h.id)),
                         t: h.t as i64,
                         q: h.q as i64,
                         off,
@@ -292,8 +295,9 @@ impl Matches {
             return false;
         }
         self.index.insert(
-            id,
+            id.clone(),
             Entry {
+                id: id_num(&id),
                 t: num_of(g.get("t")) as i64,
                 q: num_of(g.get("q")) as i64,
                 off,
@@ -341,19 +345,40 @@ impl Matches {
             self.rewrite(&keep);
         }
     }
+    /// games.jsonl again with only these games: line by line, byte for byte – nothing is parsed and
+    /// only one game is in memory at a time (the store of other players can be a gigabyte). The new
+    /// places come straight from the copy. Any read error: the old file stays (better a few unused
+    /// games than lost ones).
     fn rewrite(&mut self, keep: &[String]) {
-        let games = self.read_games(keep);
-        if games.len() < keep.len() {
-            return; // couldn't read them all: better keep a few unused games than lose some
-        }
-        let mut out = String::new();
-        for g in &games {
-            out.push_str(&g.to_string());
-            out.push('\n');
-        }
-        if crate::store::write_atomic(&self.dir.join("games.jsonl"), out.as_bytes()).is_ok() {
-            self.index.clear();
-            self.read_index();
+        let src = self.games_file();
+        let mut list: Vec<(String, Entry)> = keep
+            .iter()
+            .filter_map(|id| self.index.get(id).map(|e| (id.clone(), *e)))
+            .collect();
+        list.sort_by_key(|(_, e)| e.off);
+        let tmp = crate::store::tmp_path(&src);
+        let copied = (|| -> std::io::Result<HashMap<String, Entry>> {
+            let mut f = BufReader::new(File::open(&src)?);
+            let mut w = std::io::BufWriter::new(File::create(&tmp)?);
+            let (mut buf, mut off) = (vec![], 0u64);
+            let mut index = HashMap::with_capacity(list.len());
+            for (id, e) in list {
+                buf.resize(e.len as usize, 0);
+                f.seek(SeekFrom::Start(e.off))?;
+                f.read_exact(&mut buf)?;
+                w.write_all(&buf)?;
+                w.write_all(b"\n")?;
+                index.insert(id, Entry { off, ..e });
+                off += e.len as u64 + 1;
+            }
+            w.into_inner().map_err(|e| e.into_error())?.sync_all()?;
+            Ok(index)
+        })();
+        match copied {
+            Ok(index) if crate::store::replace(&tmp, &src).is_ok() => self.index = index,
+            _ => {
+                let _ = fs::remove_file(&tmp);
+            }
         }
     }
 
@@ -691,8 +716,9 @@ impl Matches {
     }
 }
 
-/// Reads games from games.jsonl by their place in the file (no lock needed: lines never move
-/// while the app runs, a rewrite only happens when an account is removed).
+/// Reads games from games.jsonl by their place in the file, outside any lock. A rewrite (removed
+/// account, pruning, shrinking) may move the lines meanwhile: a line that isn't the game asked for
+/// is left out, and the caller asks again with fresh places.
 pub fn read_entries(file: &Path, entries: &[Entry]) -> Vec<Value> {
     let Ok(mut f) = File::open(file) else {
         return vec![];
@@ -703,7 +729,9 @@ pub fn read_entries(file: &Path, entries: &[Entry]) -> Vec<Value> {
         buf.resize(e.len as usize, 0);
         if f.seek(SeekFrom::Start(e.off)).is_ok() && f.read_exact(&mut buf).is_ok() {
             if let Ok(v) = serde_json::from_slice::<Value>(&buf) {
-                out.push(v);
+                if id_num(&id_str(&v["id"])) == e.id {
+                    out.push(v);
+                }
             }
         }
     }
