@@ -385,7 +385,7 @@
     'scout.exact': "تفصیلی",
     'scout.lists': "میچ فہرستیں {n} / {of}",
     'scout.games': "گیم کی تفصیل · {done} / {total} گیمز",
-    'scout.paused': "گیم چل رہی ہے – باقی بعد میں لوڈ ہوگا ({done} / {total} گیمز)",
+    'scout.slow': "گیم چل رہی ہے – آہستہ لوڈ ہو رہا ہے تاکہ گیم ہموار رہے",
     'scout.wrGames': "{n} گیمز",
     'scout.noGamesOn': "اس پر کوئی گیم نہیں",
     'scout.wrTip': "{champ} کے ساتھ جیت: {all} لوڈ شدہ میں سے {n} گیمز ({w} جیت)",

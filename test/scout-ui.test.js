@@ -60,8 +60,17 @@ test('live board: ten cards on their positions, tags from the player\'s games, s
     assert.equal(e1.querySelectorAll('.sc-ring b').length, 1);
     // progress: game details of all of them, and per card
     assert.match(app.$('.sc-prog').textContent, /Game details · 40 \/ 120 games/);
+    assert.match(app.$('.sc-prog b').textContent, /33 %/);
+    assert.equal(app.$('.sc-prog .bar i').style.width, '33%');
     assert.ok(app.$('.sc-card[data-sc="e2"] .sc-bar'));
     assert.ok(!e1.querySelector('.sc-bar'));
+    // the game runs: it goes on, slower – and says so
+    await app.push({ ...st, scout: { ...st.scout, running: true, done: 60 } });
+    app.w.eval('renderLive(true)');   // the app re-renders on "scout-changed" (throttled to 2.5 s)
+    await app.settle();
+    assert.ok(app.$('.sc-prog.slow'));
+    assert.match(app.$('.sc-prog').textContent, /loading slower so it stays smooth · Game details · 60 \/ 120 games/);
+    assert.equal(app.$('.sc-prog .bar i').style.width, '50%');
     // tags: exact – the numbers in the chip, kept as a setting
     await app.click('[data-sctags="1"]');
     assert.deepEqual(app.called('set-setting').map(c => c.args).pop(), ['tagsLong', true]);

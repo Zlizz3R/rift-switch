@@ -1334,8 +1334,10 @@ async fn fetch_games(ids: Vec<String>) -> usize {
 // Their match lists first (stage A, kept 30 minutes), then their games (details + timeline, newest
 // first) into a store of their own (matches-others). Champion select: the allies the client shows,
 // 2 at a time. Loading screen: all ten, 4 at a time. As soon as the game runs (game time > 0):
-// not one request more. After the game: the rest for the same players. Only while the window is
-// open, never in a test copy that mustn't talk to Riot.
+// slower, so the game stays smooth – one request at a time, one round every IN_GAME_GAP. After the
+// game: the rest for the same players at full speed. Only while the window is open, never in a test
+// copy that mustn't talk to Riot.
+const IN_GAME_GAP: i64 = 4000;
 static OTHERS: OnceLock<Mutex<matches::Matches>> = OnceLock::new();
 fn others<R>(f: impl FnOnce(&mut matches::Matches) -> R) -> R {
     let m = OTHERS.get_or_init(|| {
@@ -1356,6 +1358,8 @@ struct Scout {
     mastery: HashMap<String, Value>,
     failed: HashMap<String, u8>,
     running: bool,
+    // the last round while the game runs (rounds are spaced IN_GAME_GAP apart then)
+    slow_at: i64,
     busy: bool,
 }
 static SCOUT: Mutex<Option<Scout>> = Mutex::new(None);
@@ -1442,18 +1446,25 @@ async fn scout_round() -> bool {
             (puuids_of(&[&cs["myTeam"]]), 2)
         }
         "GameStart" | "InProgress" | "Reconnect" => {
-            if scout(|s| s.running) {
-                return false;
-            }
-            if riot::live_game_time().await.is_some_and(|t| t > 0.0) {
+            let running = scout(|s| s.running);
+            if !running && riot::live_game_time().await.is_some_and(|t| t > 0.0) {
                 scout(|s| s.running = true);
                 return true;
+            }
+            if running && now_ms() - scout(|s| s.slow_at) < IN_GAME_GAP {
+                return false;
             }
             let Some(gs) = riot::lcu("/lol-gameflow/v1/session", 3000, "GET").await else {
                 return false;
             };
+            if running {
+                scout(|s| s.slow_at = now_ms());
+            }
             let gd = &gs["gameData"];
-            (puuids_of(&[&gd["teamOne"], &gd["teamTwo"]]), 4)
+            (
+                puuids_of(&[&gd["teamOne"], &gd["teamTwo"]]),
+                if running { 1 } else { 4 },
+            )
         }
         "WaitingForStats" | "PreEndOfGame" | "EndOfGame" => {
             scout(|s| s.running = false);

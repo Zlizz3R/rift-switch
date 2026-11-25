@@ -384,7 +384,7 @@
     'scout.exact': "مفصل",
     'scout.lists': "قوائم المباريات {n} / {of}",
     'scout.games': "تفاصيل المباريات · {done} / {total}",
-    'scout.paused': "المباراة جارية – يُحمَّل الباقي بعدها ({done} / {total})",
+    'scout.slow': "المباراة جارية – التحميل أبطأ لتبقى سلسة",
     'scout.wrGames': "{n} مباراة",
     'scout.noGamesOn': "لا مباريات به",
     'scout.wrTip': "نسبة الفوز مع {champ}: {n} مباراة ({w} فوز) من {all} محمّلة",

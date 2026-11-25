@@ -179,11 +179,12 @@ function scoutBoardHtml(d) {
   const sc = S.scout;
   let prog = '';
   if (sc && sc.of) {
-    const text = sc.running && sc.done < sc.total ? t('scout.paused', { done: sc.done, total: sc.total })
-      : sc.listed < sc.of ? t('scout.lists', { n: sc.listed, of: sc.of })
+    // first everyone's match list, then their games; while the game runs it goes on, slower
+    const base = sc.listed < sc.of ? t('scout.lists', { n: sc.listed, of: sc.of })
       : sc.done < sc.total ? t('scout.games', { done: sc.done, total: sc.total }) : '';
-    const pct = sc.listed < sc.of ? (100 * sc.listed) / sc.of : sc.total ? (100 * sc.done) / sc.total : 100;
-    if (text) prog = `<div class="sc-prog"><span>${esc(text)}</span><i style="width:${Math.round(pct)}%"></i></div>`;
+    const pct = Math.round(sc.listed < sc.of ? (100 * sc.listed) / sc.of : sc.total ? (100 * sc.done) / sc.total : 100);
+    if (base) prog = `<div class="sc-prog${sc.running ? ' slow' : ''}"><span>${esc(sc.running ? `${t('scout.slow')} · ${base}` : base)}</span><b>${pct} %</b>
+      <span class="bar"><i style="width:${pct}%"></i></span></div>`;
   }
   const exact = !!(S.settings && S.settings.tagsLong);
   const opgg = g[theirsKey].filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);

@@ -384,7 +384,7 @@
     'scout.exact': "বিস্তারিত",
     'scout.lists': "ম্যাচ তালিকা {n} / {of}",
     'scout.games': "গেমের বিবরণ · {done} / {total}টি গেম",
-    'scout.paused': "গেম চলছে – বাকিটা পরে লোড হবে ({done} / {total}টি গেম)",
+    'scout.slow': "গেম চলছে – ধীরে লোড হচ্ছে যাতে গেম মসৃণ থাকে",
     'scout.wrGames': "{n}টি গেম",
     'scout.noGamesOn': "এতে কোনো গেম নেই",
     'scout.wrTip': "{champ} দিয়ে জয়ের হার: লোড করা {all}টির মধ্যে {n}টি গেম ({w}টি জয়)",

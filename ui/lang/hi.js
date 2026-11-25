@@ -385,7 +385,7 @@
     'scout.exact': "विस्तार",
     'scout.lists': "मैच सूचियाँ {n} / {of}",
     'scout.games': "गेम विवरण · {done} / {total} गेम",
-    'scout.paused': "गेम चल रहा है – बाकी बाद में लोड होगा ({done} / {total} गेम)",
+    'scout.slow': "गेम चल रहा है – धीमे लोड हो रहा है ताकि गेम स्मूद रहे",
     'scout.wrGames': "{n} गेम",
     'scout.noGamesOn': "इस पर कोई गेम नहीं",
     'scout.wrTip': "{champ} के साथ जीत दर: {all} लोड किए गए गेम में से {n} गेम ({w} जीत)",

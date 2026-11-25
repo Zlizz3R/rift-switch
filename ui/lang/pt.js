@@ -386,7 +386,7 @@
     'scout.exact': "Exato",
     'scout.lists': "Listas de partidas {n} / {of}",
     'scout.games': "Detalhes · {done} / {total} partidas",
-    'scout.paused': "A partida está em andamento – o resto carrega depois ({done} / {total} partidas)",
+    'scout.slow': "A partida está em andamento – carregando mais devagar para não travar",
     'scout.wrGames': "{n} partidas",
     'scout.noGamesOn': "sem partidas com ele",
     'scout.wrTip': "Vitórias com {champ}: {n} partidas ({w} vitórias) das {all} carregadas",

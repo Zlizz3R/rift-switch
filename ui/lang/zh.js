@@ -383,7 +383,7 @@
     'scout.exact': "详细",
     'scout.lists': "对局列表 {n} / {of}",
     'scout.games': "对局详情 · {done} / {total} 局",
-    'scout.paused': "对局进行中——其余数据将在结束后加载（{done} / {total} 局）",
+    'scout.slow': "对局进行中——降速加载，保证游戏流畅",
     'scout.wrGames': "{n} 局",
     'scout.noGamesOn': "无此英雄对局",
     'scout.wrTip': "{champ} 胜率：已加载 {all} 局中的 {n} 局（{w} 胜）",

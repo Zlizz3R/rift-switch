@@ -163,8 +163,9 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 <img src="docs/screens/live-game.png" alt="Live: the ten players of a game as cards">
 
 - **The ten players of your game** from the loading screen on: two rows, lane opponents face to face, rank, win rate
-  on this champion, main role, mastery and tags – loaded from the client while the loading screen runs, never during
-  the game. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
+  on this champion, main role, mastery and tags – loaded from the client while the loading screen runs, with a
+  progress bar; during the game it goes on slower (one request every 4 seconds, only while the window is open), so
+  the game stays smooth. **Premades** get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.
 - **After the game**: what changed in your tags (▲ / ▼).
 

@@ -387,7 +387,7 @@
     'scout.exact': "Précis",
     'scout.lists': "Listes de parties {n} / {of}",
     'scout.games': "Détails · {done} / {total} parties",
-    'scout.paused': "La partie est en cours – le reste se charge après ({done} / {total} parties)",
+    'scout.slow': "La partie est en cours – chargement ralenti pour qu’elle reste fluide",
     'scout.wrGames': "{n} parties",
     'scout.noGamesOn': "aucune partie avec",
     'scout.wrTip': "Victoires avec {champ} : {n} parties ({w} victoires) sur les {all} chargées",

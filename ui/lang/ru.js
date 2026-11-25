@@ -386,7 +386,7 @@
     'scout.exact': "Подробно",
     'scout.lists': "Списки матчей {n} / {of}",
     'scout.games': "Детали игр · {done} / {total}",
-    'scout.paused': "Игра идёт – остальное загрузится после ({done} / {total})",
+    'scout.slow': "Игра идёт – загрузка замедлена, чтобы игра не тормозила",
     'scout.wrGames': "{n} игр",
     'scout.noGamesOn': "нет игр на нём",
     'scout.wrTip': "Победы на {champ}: {n} игр ({w} побед) из {all} загруженных",

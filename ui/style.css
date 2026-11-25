@@ -1404,8 +1404,12 @@ span.mh-ch { cursor: default; }
 .sc-board .lc-head { gap: 10px; }
 .sc-mode { margin-left: auto; align-items: center; }
 .sc-mode span { color: var(--muted); font-size: 12px; padding: 0 6px; }
-.sc-prog { position: relative; margin: 2px 0 10px; padding-bottom: 6px; color: var(--muted); font-size: 12px; }
-.sc-prog i { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--teal); transition: width .3s; }
+.sc-prog { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 2px 0 12px; color: var(--muted); font-size: 12px; }
+.sc-prog > span:first-child { flex: 1; min-width: 0; }
+.sc-prog b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sc-prog .bar { flex-basis: 100%; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.sc-prog .bar i { display: block; height: 100%; border-radius: 3px; background: var(--teal); transition: width .4s; }
+.sc-prog.slow .bar i { background: repeating-linear-gradient(45deg, var(--teal) 0 8px, rgba(10,200,185,.6) 8px 16px); }
 .sc-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .sc-row + .sc-row { margin-top: 10px; }
 .sc-card { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 8px; border-radius: 10px; overflow: hidden;
