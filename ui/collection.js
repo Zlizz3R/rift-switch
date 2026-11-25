@@ -48,11 +48,11 @@ function collMatch(e, q) {
   return collNorm(e.name).includes(q) || collNorm(collChamp(e.champ)).includes(q);
 }
 // ---------- by rarity: one table, a row per kind (all accounts together); a kind folds out its accounts ----------
-// [kind, label, the rarities League has for it]: skins and icons up to Transcendent, chromas up to
-// Ultimate, ward skins Rare / Epic / Mythic (and the plain ones). Finishers (standard or Exalted)
-// and emotes aren't here.
-const COLL_RAR_KINDS = [['skin', 'coll.skins', [0, 1, 2, 3, 4, 5, 6, 7]], ['chroma', 'coll.n.chroma', [0, 1, 2, 3, 4, 5]],
-  ['ward', 'coll.n.ward', [0, 1, 2, 4]], ['icon', 'coll.n.icon', [0, 1, 2, 3, 4, 5, 6, 7]]];
+// [kind, label, the rarities League has for it], in the client's order: skins Epic to Transcendent
+// (no Rare), icons Rare to Transcendent, ward skins Rare / Epic / Mythic, chromas up to Ultimate – each
+// also plain. Finishers (standard or Exalted) and emotes aren't here.
+const COLL_RAR_KINDS = [['skin', 'coll.skins', [0, 2, 3, 4, 5, 6, 7]], ['icon', 'coll.n.icon', [0, 1, 2, 3, 4, 5, 6, 7]],
+  ['ward', 'coll.n.ward', [0, 1, 2, 4]], ['chroma', 'coll.n.chroma', [0, 1, 2, 3, 4, 5]]];
 const collBdOpen = () => { try { return localStorage.getItem('rs.collBd') === '1'; } catch { return false; } };
 // the kinds folded out (all folded at first)
 const collBdKinds = () => { try { return new Set(JSON.parse(localStorage.getItem('rs.collBdKinds') || '[]')); } catch { return new Set(); } };
