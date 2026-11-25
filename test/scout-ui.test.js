@@ -120,3 +120,36 @@ test('live board: lite games from the 200-game list count; games the window hold
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('live board: traits in tiers – key / more / all, the rest of a card behind "+n"', async () => {
+  const st = sampleState();
+  const app = await boot({ state: st, replies: {
+    live: { clientUp: true, phase: 'InProgress', me: P(1), inGame },
+    'scout-games': () => scoutReply({ e1: { games: e1Games, mastery: { 24: 312000, 103: 1000 } } }),
+    champions: [{ id: 24, name: 'Jax' }, { id: 103, name: 'Ahri' }],
+  } });
+  try {
+    await app.click('#navLive');
+    await app.settle();
+    await app.settle();
+    const e1 = () => app.$('.sc-card[data-sc="e1"]');
+    const chips = () => [...e1().querySelectorAll('.sc-tags .tchip:not(.tc-more)')].length;
+    // default: key + more
+    assert.ok(app.$('[data-sctier="2"]').classList.contains('on'));
+    const two = chips();
+    await app.click('[data-sctier="3"]');
+    assert.deepEqual(app.called('set-setting').map(c => c.args).pop(), ['tagTier', '3']);
+    const three = chips();
+    assert.ok(three >= two);
+    assert.equal(e1().querySelector('.tc-more'), null, 'all shown: no "+n"');
+    await app.click('[data-sctier="1"]');
+    const one = chips();
+    assert.ok(one < three, 'fewer on "key"');
+    const more = e1().querySelector('.tc-more');
+    assert.equal(more.textContent, '+' + (three - one));
+    await app.click(more);
+    assert.equal(chips(), three, '"+n" shows the rest of this card');
+    assert.equal(e1().querySelector('.tc-more').textContent, '−');
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

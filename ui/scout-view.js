@@ -8,7 +8,7 @@
 
 // prog: Live's progress from the backend ("scout-changed" / "scout-games"), not part of the state
 // games: every game the window holds (id → game; also across games, so premades' games aren't sent again)
-const scv = { data: {}, games: new Map(), own: null, key: '', loading: false, again: false, at: 0, timer: 0, prog: null };
+const scv = { data: {}, games: new Map(), more: new Set(), own: null, key: '', loading: false, again: false, at: 0, timer: 0, prog: null };
 const SC_POS = { TOP: 'top', JUNGLE: 'jungle', MIDDLE: 'mid', MID: 'mid', BOTTOM: 'bot', BOT: 'bot', UTILITY: 'support', SUPPORT: 'support' };
 const SC_NO_LANES = [...Stats.ARAM_QUEUES, 1700, 1710];
 const scIds = () => { const g = liveData && liveData.inGame; return g ? [...g.teamOne, ...g.teamTwo].map(p => p.puuid).filter(Boolean) : []; };
@@ -110,6 +110,8 @@ function scTagTexts(x) {
   if (x.id === 'autofill') return [t('tag.autofill'), t('tag.autofill.t', { role: t('pos.' + v.role), now: t('pos.' + v.now), pct: v.pct })];
   return [tagName(x), tagText(x)];
 }
+// up to which tier the traits show on the cards (1 key, 2 more, 3 all; setting "tagTier")
+const scTier = () => Number((S.settings && S.settings.tagTier) || 2);
 function scChip(x) {
   const [short, long] = scTagTexts(x);
   const exact = !!(S.settings && S.settings.tagsLong);
@@ -141,8 +143,14 @@ const scRing = (pct, inner, cls = '') => `<div class="sc-ring ${cls}" style="--p
 
 function scCardHtml(c, side, slot, guess, ex = {}) {
   const p = c.p;
-  // live tags first, then the hints about this game (premades, met before, record), then the rest
-  const chips = [...c.live.map(scChip), ...(ex.chips || []), ...c.tags.map(scChip)];
+  // live tags first, then the hints about this game (premades, met before, record), then the traits
+  // by how much they matter (Tags.tierOf) – up to the chosen tier, the rest behind "+n"
+  const upTo = scTier();
+  const ranked = c.tags.map(x => ({ x, tier: Tags.tierOf(x, { champ: p.championId, position: c.pos, main: c.roles.main }) })).sort((a, b) => a.tier - b.tier);
+  const shown = ranked.filter(y => y.tier <= upTo), rest = ranked.filter(y => y.tier > upTo);
+  const more = scv.more.has(p.puuid);
+  const chips = [...c.live.map(scChip), ...(ex.chips || []), ...shown.map(y => scChip(y.x)), ...(more ? rest.map(y => scChip(y.x)) : []),
+    ...(rest.length ? [`<button class="tchip tc-more" data-scmore="${esc(p.puuid || '')}" title="${esc(t(more ? 'scout.less' : 'scout.moreT'))}">${more ? '−' : '+' + rest.length}</button>`] : [])];
   const party = ex.party ? ` data-party="${ex.party}"` : '';
   const pcls = ex.party ? ` pa${((ex.party - 1) % 4) + 1}` : '';
   const tier = p.solo && p.solo.tier;
@@ -163,7 +171,7 @@ function scCardHtml(c, side, slot, guess, ex = {}) {
   return `<div class="sc-card ${side}${rk ? ' ranked' : ''}${p.puuid && liveData && p.puuid === liveData.me ? ' me' : ''}${pcls}" data-sc="${esc(p.puuid || '')}"${party}${rk ? ` style="--rk:${rk}"` : ''}>
     ${band}${bar}
     <div class="sc-head">${p.iconId != null ? `<img class="sc-ic" src="${iconUrl(p.iconId)}" alt="">` : '<span class="sc-ic"></span>'}
-      <span class="sc-name"><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.level ? ' · ' + esc(t('scout.level', { n: p.level })) : ''}</small></span>
+      <span class="sc-name"${p.puuid ? ` data-player="${esc(JSON.stringify({ puuid: p.puuid, gameName: p.gameName, tagLine: p.tagLine }))}" title="${esc(t('pl.open'))}"` : ''}><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.level ? ' · ' + esc(t('scout.level', { n: p.level })) : ''}</small></span>
       ${ex.party ? `<span class="sc-party" title="${esc(ex.partyTip || '')}">${scPeople(ex.size)}<b>${ex.num || ex.party}</b></span>` : ''}
       ${slot ? `<img class="sc-pos${guess ? ' guess' : ''}" src="${posIcon(slot)}" alt="" title="${esc(t('pos.' + slot) + (guess ? ' – ' + t('scout.guessed') : ''))}">` : ''}</div>
     <div class="sc-mid">
@@ -205,7 +213,8 @@ function scoutBoardHtml(d) {
   const opgg = g[theirsKey].filter(o => o.gameName).map(o => o.gameName + '#' + o.tagLine);
   return `<div class="live-card sc-board">
     <div class="lc-head"><h3>${t('scout.title')}</h3>${mix}
-      <div class="seg sc-mode"><span>${t('scout.tags')}</span><button data-sctags="0"${exact ? '' : ' class="on"'}>${t('scout.short')}</button><button data-sctags="1"${exact ? ' class="on"' : ''}>${t('scout.exact')}</button></div>
+      <div class="seg sc-mode"><span>${t('scout.tags')}</span>${[1, 2, 3].map(n => `<button data-sctier="${n}"${scTier() === n ? ' class="on"' : ''} title="${esc(t('scout.tierT' + n))}">${t('scout.tier' + n)}</button>`).join('')}</div>
+      <div class="seg sc-mode"><button data-sctags="0"${exact ? '' : ' class="on"'}>${t('scout.short')}</button><button data-sctags="1"${exact ? ' class="on"' : ''}>${t('scout.exact')}</button></div>
       ${opgg.length ? `<button class="btn gold ext-btn multi-btn" data-ids="${esc(opgg.join('|'))}"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${t('live.multiOpgg')}</button>` : ''}</div>
     ${prog}
     <div class="sc-row">${row(0, 'top')}</div>
@@ -213,6 +222,19 @@ function scoutBoardHtml(d) {
   </div>`;
 }
 document.addEventListener('click', e => {
+  const tr = e.target.closest('[data-sctier]');
+  if (tr) {
+    S.settings = { ...S.settings, tagTier: tr.dataset.sctier };
+    api.setSetting('tagTier', tr.dataset.sctier);
+    scv.more.clear();
+    return renderLive(true);
+  }
+  const mo = e.target.closest('[data-scmore]');
+  if (mo) {
+    const id = mo.dataset.scmore;
+    if (scv.more.has(id)) scv.more.delete(id); else scv.more.add(id);
+    return renderLive(true);
+  }
   const b = e.target.closest('[data-sctags]');
   if (!b) return;
   const on = b.dataset.sctags === '1';

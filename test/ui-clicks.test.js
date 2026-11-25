@@ -672,11 +672,26 @@ test('match history: games load once (index, then only missing ones); blue left'
   assert.match(app.$('#mhStoreText').textContent, /4 KB · 2 games/);
 }));
 
-test('match history: a click opens the details (not on a name); names open "open with"', () => withApp({ replies: mhReplies([game(1)]) }, async (app) => {
+test('match history: a click opens the details (not on a name); a name opens the player page, back returns', () => withApp({ replies: mhReplies([game(1)]) }, async (app) => {
   await app.click('#navMatches');
-  await app.click(app.$('.mh-row .mh-c.nm'));
+  const name = app.$('.mh-row .mh-c.nm');
+  const who = JSON.parse(name.dataset.player);
+  assert.ok(who.puuid, 'the name knows its player');
+  await app.click(name);
+  await app.settle();
+  assert.ok(app.visible('#viewPlayer'), 'the player page');
+  assert.ok(!app.visible('#viewMatches'));
+  assert.equal(lastCall(app, 'player-games').args[0], who.puuid);
+  assert.match(app.$('#plHead h1').textContent, new RegExp(who.gameName));
+  assert.ok(app.$('#plHead [data-plsite="opgg"]'), 'open with is on the page');
+  assert.ok(!app.$('#navBack').disabled);
+  await app.click('#navBack');
+  assert.ok(app.visible('#viewMatches'), 'back: the match history again');
+  assert.ok(!app.$('#navFwd').disabled);
+  await app.click('#navFwd');
+  assert.ok(app.visible('#viewPlayer'), 'forward: the player again');
+  await app.click('#navBack');
   assert.equal(app.$('.mh-det'), null, 'name click does not open details');
-  assert.ok(app.visible('#siteMenu'));
   await app.click(app.$('.mh-row .mh-kda') || app.$('.mh-row .mh-meta'));
   assert.ok(app.$('.mh-det'), 'details open');
   assert.equal(app.$$('.mh-det .pg-row').length, 10, 'players open at first, as the post-game table');

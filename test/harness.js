@@ -49,6 +49,7 @@ async function boot({ state = sampleState(), replies = {}, width = 1300, upTo = 
     if (ch === 'dashboard' || ch === 'collections' || ch === 'masteries') return [];
     if (ch === 'mastery-history' || ch === 'own-games') return {};
     if (ch === 'scout-games') return { players: {}, games: [], progress: null };
+    if (ch === 'player-games') return { ids: [], games: [], info: null, mastery: null, progress: { listed: true, done: 0, total: 0 } };
     if (ch === 'others-storage') return { bytes: 0, games: 0 };
     if (ch === 'champ-damage') return {};
     if (ch === 'mh-storage') return { bytes: 0, games: 0 };

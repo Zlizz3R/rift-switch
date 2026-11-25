@@ -383,7 +383,23 @@
     return out;
   }
 
-  const api = { GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, pick, isStrength, isWeakness, keys, liveTags };
+  // How much a trait matters while playing against (or with) someone – Live shows the first ones:
+  // 1 = act on it (dies to ganks, first blood victim, a streak, autofilled …), 2 = good to know
+  // (great farmer, early lead …), 3 = background (pool size, mastery, one role only).
+  // ctx: { champ: played now, position: from the client, main: main role } – a trait about another
+  // champion than the one played now, or "one role only" on that very role, is background.
+  const TIER1 = new Set(['fbVictim', 'gankVictim', 'invaded', 'throws', 'lossStreak', 'hotStreak', 'smurf', 'firstBlood', 'aggroJungler',
+    'ganker', 'roamer', 'invader', 'duelist', 'soloFighter', 'unkillable', 'carry', 'newTo', 'mainTaken', 'mainBanned', 'autofill', 'otp', 'noPinks']);
+  const TIER3 = new Set(['flexPool', 'smallPool', 'generalist', 'oneRole', 'mastery', 'grinder', 'backAgain']);
+  function tierOf(x, ctx = {}) {
+    if (x.live) return 1;
+    if (x.champ && ctx.champ && x.champ !== ctx.champ) return 3;
+    if (x.id === 'oneRole' && ctx.position && (!ctx.main || ctx.position === ctx.main)) return 3;
+    if (x.id === 'deaths' && (x.level === 'weak' || x.level === 'terrible')) return 1;
+    return TIER1.has(x.id) ? 1 : TIER3.has(x.id) ? 3 : 2;
+  }
+
+  const api = { GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, tierOf, pick, isStrength, isWeakness, keys, liveTags };
   if (node) module.exports = api;
   else root.Tags = api;
 })(typeof window !== 'undefined' ? window : this);

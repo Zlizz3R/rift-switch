@@ -59,6 +59,7 @@
     othersStorage: () => call('others-storage'),
     othersClear: () => call('others-clear'),
     scoutGames: (puuids, have) => call('scout-games', puuids, have || []),
+    playerGames: (puuid, have) => call('player-games', puuid, have || []),
     champDamage: ids => call('champ-damage', ids),
     seasonsSet: (puuid, list) => call('seasons-set', puuid, list),
     matchesClear: () => call('mh-clear'),
@@ -69,6 +70,7 @@
     onState: on('state'),
     onMatchesChanged: fn => T.event.listen('matches-changed', () => fn()),
     onScoutChanged: fn => T.event.listen('scout-changed', e => fn(e && e.payload)),
+    onPlayerChanged: fn => T.event.listen('player-changed', e => fn(e && e.payload)),
     onTraySwitch: on('tray-switch'),
     onToast: on('toast'),
   };

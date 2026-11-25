@@ -178,7 +178,7 @@ function teamsTable(g, mine) {
     if (!p) return (r ? ['im', 'nm', 'n', 'w', 'w'] : ['w', 'w', 'n', 'nm', 'im']).map(c => `<span class="mh-c ${c} ${side}"></span>`).join('');
     const rk = mh.ranks[p.puuid];
     const tip = p.name + (p.tag ? '#' + p.tag : '') + (rk ? `\nSolo/Duo: ${rankTip(rk.s)}\nFlex: ${rankTip(rk.f)}\n(${t('mh.rankNow')})` : '');
-    const at = `data-player="${esc(JSON.stringify({ gameName: p.name, tagLine: p.tag }))}" title="${esc(tip)}"`;
+    const at = `data-player="${esc(JSON.stringify({ puuid: p.puuid, gameName: p.name, tagLine: p.tag }))}" title="${esc(tip)}"`;
     const cells = [
       `<span class="mh-c w rk ${side}" ${at}>${rankCell(rk && rk.s)}</span>`,
       `<span class="mh-c w rk ${side}" ${at}>${rankCell(rk && rk.f)}</span>`,
@@ -629,9 +629,11 @@ function playerMenu(e) {
   if (!b) return;
   e.stopPropagation();
   const p = JSON.parse(b.dataset.player);
-  if (!p.gameName) return;
   const row = b.closest('.mh-row');
   const owner = S.accounts.find(a => a.puuid === (row ? row.dataset.owner : S.live && S.live.puuid)) || selected();
+  const region = (owner && owner.region) || (S.live && S.live.region) || 'EUW';
+  if (p.puuid) return openPlayer({ ...p, region });
+  if (!p.gameName) return;
   const m = $('siteMenu');
   m.innerHTML = `<div class="menu-label">${esc(p.gameName + (p.tagLine ? '#' + p.tagLine : ''))}</div>`
     + SITES.map(([k, n]) => `<button data-site="${k}">${n}</button>`).join('');

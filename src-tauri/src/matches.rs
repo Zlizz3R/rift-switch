@@ -597,6 +597,31 @@ impl Matches {
         out.dedup();
         out
     }
+    /// The player page: every game of the player's list gets its details (all queues, up to 200),
+    /// newest first.
+    pub fn missing_all(&self, puuid: &str) -> Vec<String> {
+        let Some((_, ids)) = self.by.iter().find(|(p, _)| p == puuid) else {
+            return vec![];
+        };
+        let mut out: Vec<String> = ids
+            .iter()
+            .filter(|id| self.index.get(*id).is_none_or(|e| e.v == 0))
+            .cloned()
+            .collect();
+        out.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
+        out
+    }
+    /// (games with details, games in the list) of a player – the player page's progress.
+    pub fn progress_all(&self, puuid: &str) -> (usize, usize) {
+        let Some((_, ids)) = self.by.iter().find(|(p, _)| p == puuid) else {
+            return (0, 0);
+        };
+        let done = ids
+            .iter()
+            .filter(|id| self.index.get(*id).is_some_and(|e| e.v > 0))
+            .count();
+        (done, ids.len())
+    }
     /// (games with details, games that get details) of a player.
     pub fn progress(&self, puuid: &str) -> (usize, usize) {
         let ids = self.detail_ids(puuid);
@@ -1197,6 +1222,29 @@ mod tests {
         assert!(o.missing_for(&["p0".into()]).is_empty());
         assert_eq!(o.progress("p0"), (1, 1));
         assert_eq!(o.game_key("9"), format!("9:{GAME_VERSION}"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_player_page_reads_every_game() {
+        let dir = std::env::temp_dir().join(format!("rs-all-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let mut o = Matches::load_others(dir.clone());
+        let now = crate::riot::now_ms();
+        let list: Vec<Value> = (0..6).map(|i| json!({ "id": 100 - i, "t": now - i * 1000, "q": if i % 2 == 0 { 400 } else { 420 } })).collect();
+        o.note("p0", &list);
+        // every game, normal ones too, newest first
+        assert_eq!(
+            o.missing_all("p0"),
+            vec!["100", "99", "98", "97", "96", "95"]
+        );
+        assert_eq!(o.progress_all("p0"), (0, 6));
+        let mut g = compact(&detail(100)).unwrap();
+        g["t"] = json!(now);
+        o.insert(&g);
+        assert_eq!(o.progress_all("p0"), (1, 6));
+        assert!(!o.missing_all("p0").contains(&"100".to_string()));
+        assert!(o.missing_all("nobody").is_empty());
         let _ = fs::remove_dir_all(&dir);
     }
 

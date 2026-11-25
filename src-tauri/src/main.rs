@@ -1526,6 +1526,12 @@ async fn scout_loop() {
         }
         if scout_round().await {
             emit("scout-changed", scout_snapshot());
+        } else if look_round().await {
+            let p = look(|l| l.puuid.clone());
+            emit(
+                "player-changed",
+                json!({ "puuid": p, "progress": look_snapshot(&p) }),
+            );
         }
     }
 }
@@ -1618,18 +1624,7 @@ async fn scout_round() -> bool {
         .await;
         for (p, list, mast) in got {
             if let Some(l) = list {
-                let short: Vec<Value> = l
-                    .iter()
-                    .map(
-                        |g| json!({ "id": g["gameId"], "t": g["gameCreation"], "q": g["queueId"] }),
-                    )
-                    .collect();
-                others(|o| {
-                    o.note(&p, &short);
-                    for g in l.iter().filter_map(matches::lite) {
-                        o.insert_lite(&g);
-                    }
-                });
+                store_list(&p, &l);
             }
             scout(|s| {
                 s.listed.insert(p.clone(), now);
@@ -1650,7 +1645,29 @@ async fn scout_round() -> bool {
     if ids.is_empty() {
         return new_targets;
     }
-    // games the own store has (played together): copied over, no request
+    for id in fetch_into_others(ids).await {
+        scout(|s| *s.failed.entry(id).or_insert(0) += 1);
+    }
+    true
+}
+
+/// A player's match list (the 200 newest, each with that player's own numbers) into the others'
+/// store: noted for the player, each game as a lite game until its details come.
+fn store_list(p: &str, l: &[Value]) {
+    let short: Vec<Value> = l
+        .iter()
+        .map(|g| json!({ "id": g["gameId"], "t": g["gameCreation"], "q": g["queueId"] }))
+        .collect();
+    others(|o| {
+        o.note(p, &short);
+        for g in l.iter().filter_map(matches::lite) {
+            o.insert_lite(&g);
+        }
+    });
+}
+/// These games' details into the others' store – copied from the own store where it has them
+/// (played together), else read from the client. Returns the ids that couldn't be read.
+async fn fetch_into_others(ids: Vec<String>) -> Vec<String> {
     let (have, fetch): (Vec<String>, Vec<String>) =
         with(|c| ids.into_iter().partition(|id| c.mh.has(id)));
     if !have.is_empty() {
@@ -1662,17 +1679,91 @@ async fn scout_round() -> bool {
         });
     }
     let got = futures_util::future::join_all(fetch.iter().map(|id| fetch_game(id.clone()))).await;
+    let mut failed = vec![];
     for (id, g) in fetch.iter().zip(got) {
         match g {
             Some((g, _, _)) => {
                 others(|o| o.insert(&g));
             }
-            None => scout(|s| *s.failed.entry(id.clone()).or_insert(0) += 1),
+            None => failed.push(id.clone()),
         }
     }
     // the storage limit (Settings → Data, 1 GB): the oldest other players' games go
     let limit = others_limit();
     others(|o| o.prune_to(limit));
+    failed
+}
+
+// ---------- the player page: any player, looked at on their own ----------
+// Like Live's scouting, for one player: the match list (200 newest, lite) with mastery and ranks
+// first, then the details of every one of them (all queues), 4 at a time. Only when Live has nothing to
+// do and no game is on; the same store (matches-others) and the same limits.
+#[derive(Default)]
+struct Look {
+    puuid: String,
+    listed_at: i64,
+    listed: bool,
+    info: Option<Value>,
+    mastery: Option<Value>,
+    failed: HashMap<String, u8>,
+}
+static LOOK: Mutex<Option<Look>> = Mutex::new(None);
+fn look<R>(f: impl FnOnce(&mut Look) -> R) -> R {
+    f(LOOK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get_or_insert_with(Look::default))
+}
+/// The player page's progress: whether the list is read, (games with details, games that get them).
+fn look_snapshot(p: &str) -> Value {
+    let listed = look(|l| l.puuid == p && l.listed);
+    let (done, total) = others(|o| o.progress_all(p));
+    json!({ "listed": listed, "done": done, "total": total })
+}
+/// One step for the player page; true when something changed.
+async fn look_round() -> bool {
+    let (p, listed_at) = look(|l| (l.puuid.clone(), l.listed_at));
+    if p.is_empty() || game_on() || with(|c| c.st.has(&p)) {
+        return false;
+    }
+    let now = now_ms();
+    if now - listed_at > 1_800_000 {
+        let (l, m, info) = tokio::join!(
+            riot::match_games(&p),
+            riot::mastery_points_of(&p),
+            live::player_info(&p)
+        );
+        let ok = l.is_some();
+        if let Some(l) = &l {
+            store_list(&p, l);
+        }
+        look(|x| {
+            if x.puuid == p {
+                // not read (League closed …): again in 15 s
+                x.listed_at = if ok { now } else { now - 1_800_000 + 15_000 };
+                x.listed |= ok;
+                if m.is_some() {
+                    x.mastery = m;
+                }
+                if info.is_some() {
+                    x.info = info;
+                }
+            }
+        });
+        return ok;
+    }
+    let failed = look(|l| l.failed.clone());
+    let ids: Vec<String> = others(|o| o.missing_all(&p))
+        .into_iter()
+        .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
+        .take(4)
+        .collect();
+    if ids.is_empty() {
+        return false;
+    }
+    for id in fetch_into_others(ids).await {
+        look(|l| *l.failed.entry(id).or_insert(0) += 1);
+    }
     true
 }
 
@@ -3191,6 +3282,40 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         // the players of this game: each one's game ids and mastery, and the games the window doesn't
         // hold yet (arg 1: the keys "k" of the games it has) – not up to 10 MB again at every refresh
+        // the player page: this player from now on (what is known comes at once, the rest follows
+        // with "player-changed"); arg 1: the keys "k" of the games the window holds
+        "player-games" => {
+            let p = s(0);
+            if p.is_empty() || p.len() > 80 {
+                return Value::Null;
+            }
+            look(|l| {
+                if l.puuid != p {
+                    *l = Look {
+                        puuid: p.clone(),
+                        ..Default::default()
+                    };
+                }
+            });
+            let have: std::collections::HashSet<String> = a(1)
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect();
+            let (ids, games) = others(|o| o.games_of(&p, &have));
+            let mut info = look(|l| l.info.clone());
+            if info.is_none() && !riot::offline_test() {
+                info = live::player_info(&p).await;
+                look(|l| {
+                    if l.puuid == p && info.is_some() {
+                        l.info = info.clone();
+                    }
+                });
+            }
+            json!({ "ids": ids, "games": games, "info": info, "mastery": look(|l| l.mastery.clone()), "progress": look_snapshot(&p) })
+        }
         "scout-games" => {
             let ids: Vec<String> = a(0)
                 .as_array()

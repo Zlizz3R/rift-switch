@@ -24,9 +24,43 @@ $('aaToggle').onchange = () => {
 
 // ---------- pages: Accounts / Live / Tools ----------
 let view = 'accounts';
-function showView(v) {
+// back / forward like a browser: every page shown (a player page with its player) is a step
+const navh = { list: [{ v: 'accounts' }], at: 0 };
+const navSame = (a, b) => a && b && a.v === b.v && (a.v !== 'player' || (a.p && b.p && a.p.puuid === b.p.puuid));
+function navButtons() {
+  $('navBack').disabled = navh.at <= 0;
+  $('navFwd').disabled = navh.at >= navh.list.length - 1;
+}
+function navGo(d) {
+  const i = navh.at + d;
+  if (i < 0 || i >= navh.list.length) return;
+  navh.at = i;
+  const e = navh.list[i];
+  if (e.v === 'player') openPlayer(e.p, true); else showView(e.v, { back: true });
+  navButtons();
+}
+$('navBack').onclick = () => navGo(-1);
+$('navFwd').onclick = () => navGo(1);
+// the mouse's side buttons and Alt+← / Alt+→
+window.addEventListener('mouseup', e => { if (e.button === 3 || e.button === 4) { e.preventDefault(); navGo(e.button === 3 ? -1 : 1); } });
+document.addEventListener('keydown', e => {
+  if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+  e.preventDefault();
+  navGo(e.key === 'ArrowLeft' ? -1 : 1);
+});
+// o: { back: shown by the arrows (no new step), p: the player of the player page }
+function showView(v, o = {}) {
+  if (!o.back) {
+    const step = v === 'player' ? { v, p: o.p } : { v };
+    if (!navSame(navh.list[navh.at], step)) {
+      navh.list = navh.list.slice(0, navh.at + 1).concat(step).slice(-50);
+      navh.at = navh.list.length - 1;
+    }
+    navButtons();
+  }
   view = v;
   openDrawer(false); openSettings(false);
+  $('viewPlayer').hidden = v !== 'player';
   $('viewAccounts').hidden = v !== 'accounts';
   $('viewLive').hidden = v !== 'live';
   $('viewDash').hidden = v !== 'dash';
@@ -422,7 +456,7 @@ function queueRank(label, r) {
 function playerRow(p) {
   return `<div class="p-row${p.puuid && liveData && p.puuid === liveData.me ? ' me' : ''}">
     ${p.championId ? `<img class="ch" src="${champIcon(p.championId)}" alt="">` : p.iconId != null ? `<img class="ch round" src="${iconUrl(p.iconId)}" alt="">` : '<span class="ch"></span>'}
-    <div class="p-name"><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.position ? ' · ' + esc(p.position) : ''}</small></div>
+    <div class="p-name"${p.puuid ? ` data-player="${esc(JSON.stringify({ puuid: p.puuid, gameName: p.gameName, tagLine: p.tagLine }))}" title="${esc(t('pl.open'))}"` : ''}><b>${esc(p.gameName || '?')}</b><small>${p.tagLine ? '#' + esc(p.tagLine) : ''}${p.position ? ' · ' + esc(p.position) : ''}</small></div>
     <div class="p-ranks">${queueRank('Solo/Duo', p.solo)}${queueRank('Flex', p.flex)}</div>
     ${p.gameName ? `<button class="chip" data-opgg="${esc(p.gameName + '#' + p.tagLine)}">op.gg</button>` : ''}
   </div>`;

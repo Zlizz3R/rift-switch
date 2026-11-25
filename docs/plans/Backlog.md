@@ -18,6 +18,14 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Match-Benachrichtigung: kam nicht, weil Windows-Benachrichtigungen beim Nutzer ganz aus sind (`PushNotificationsToastEnabled = 0`). Die Einstellungen weisen jetzt darauf hin.
 
 
+### B. Nach 1.3.1 (25.11.2026)
+
+- [x] Spieler-Seite für jeden Spieler (Klick auf einen Namen in Match History, Live, nach dem Spiel): Rang, Kennzahlen, Rollen, Champions, Traits, letzte Spiele, mit dir; alle 200 Spiele mit Details; Open with.
+- [x] Vor/Zurück-Pfeile in der Titelleiste (auch Alt+←/→, Maus-Seitentasten).
+- [x] „Tags“ heißen jetzt „Traits“ (DE auch „Traits“).
+- [x] Live: Traits in drei Stufen (Wichtig / Mehr / Alle), Rest einer Karte hinter „+n“.
+- [ ] Als 1.3.2 veröffentlichen (Tag auf main; die Tags v1.3.0/v1.3.1 haben keinen Release – die Läufe scheiterten an „Tag nicht auf main“ und `cargo fmt`).
+
 ### 0. Aus dem Code-Review (25.11.2026) noch offen
 
 - [ ] **P5 – Spiele im Fenster-Speicher:** `mh.cache` (matches-view.js) hält jedes geladene Spiel ganz im WebView; die

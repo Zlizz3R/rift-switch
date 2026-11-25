@@ -67,6 +67,14 @@ async fn player(r: Ref) -> Option<Value> {
     };
     Some(p)
 }
+/// One player by puuid (the player page): Riot ID, icon, level, Solo/Duo and Flex (cached 5 minutes).
+pub async fn player_info(puuid: &str) -> Option<Value> {
+    player(Ref {
+        puuid: puuid.to_string(),
+        ..Default::default()
+    })
+    .await
+}
 async fn players(refs: Vec<Ref>) -> Vec<Value> {
     futures_util::future::join_all(refs.into_iter().map(player))
         .await

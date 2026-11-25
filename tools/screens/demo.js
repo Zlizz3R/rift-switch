@@ -202,7 +202,22 @@ const shim = `<script>
       case 'own-games': return D.ownGames;
       case 'champions': return D.champs;
       case 'live': return D.live;
-      case 'scout-games': return Object.fromEntries((args[0] || []).map(p => [p, D.scoutData[p] || { games: [] }]));
+      case 'scout-games': {
+        const players = {}, games = new Map();
+        for (const p of args[0] || []) {
+          const v = D.scoutData[p] || { games: [] };
+          for (const g of v.games || []) games.set(String(g.id), { ...g, k: g.id + ':6' });
+          players[p] = { ids: (v.games || []).map(g => String(g.id)), mastery: v.mastery || null };
+        }
+        return { players, games: [...games.values()], progress: null };
+      }
+      // the player page: every demo game the player was in, a made-up rank
+      case 'player-games': {
+        const mine = D.games.filter(g => g.players.some(x => x.puuid === args[0]));
+        const me = mine.length ? mine[0].players.find(x => x.puuid === args[0]) : null;
+        return { ids: mine.map(g => String(g.id)), games: mine.map(g => ({ ...g, k: g.id + ':6' })), mastery: null, progress: { listed: true, done: mine.length, total: mine.length },
+          info: me && { puuid: args[0], gameName: me.name, tagLine: me.tag, iconId: 4568, level: 214, solo: { tier: 'EMERALD', division: 'II', lp: 41, wins: 88, losses: 79 }, flex: null } };
+      }
       case 'others-storage': return { bytes: 31400000, games: 2870 };
       case 'counters': { const c = D.counters[args[0]]; return c ? { ok: true, share: c.share, list: c.list } : { ok: true, share: 0, list: [] }; }
       case 'matches': return { index: D.games.map(g => [g.id, g.t, g.q, ...g.owners]), waiting: 0, loadingOlder: false, clientUp: true };

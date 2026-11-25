@@ -1,0 +1,90 @@
+// The player page (player-view.js) in the real window: any player's games, key figures, roles,
+// champions, traits, recent games, the games with you, "open with" – and Live's trait tiers.
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { boot, P } = require('./harness');
+const Tags = require('../ui/tags');
+
+const POS = ['top', 'jungle', 'mid', 'bot', 'support'];
+const now = Date.now();
+// 12 lite games of player "x1" from his match list: mid, Ahri (103), 9 wins
+const lite = Array.from({ length: 12 }, (_, i) => ({ id: String(800 + i), t: now - (i + 1) * 3600000, dur: 1800, q: 420, mode: 'CLASSIC', remake: false, v: 0, lite: true,
+  k: `${800 + i}:0.900`, players: [{ puuid: 'x1', name: 'Faker', tag: 'KR1', team: 100, champ: 103, pos: 'mid', win: i < 9, k: 8, d: 2, a: 6, cs: 270, dmg: 25000, vis: 20, spells: [4, 14] }] }));
+const info = { puuid: 'x1', gameName: 'Faker', tagLine: 'KR1', iconId: 7, level: 412, solo: { tier: 'CHALLENGER', division: 'I', lp: 1400, wins: 300, losses: 200 }, flex: null };
+
+test('player page: rank, key figures, roles, champions, traits and the recent games of any player', async () => {
+  const app = await boot({ replies: {
+    'player-games': () => ({ ids: lite.map(g => g.id), games: lite, info, mastery: { 103: 1500000 }, progress: { listed: true, done: 3, total: 12 } }),
+    champions: [{ id: 103, name: 'Ahri' }],
+    'open-external': true,
+  } });
+  try {
+    app.w.eval(`openPlayer({ puuid: 'x1', gameName: 'Faker', tagLine: 'KR1', region: 'EUW' })`);
+    await app.settle();
+    await new Promise((r) => setTimeout(r, 30));
+    await app.settle();
+    assert.ok(app.visible('#viewPlayer'));
+    const head = app.$('#plHead').textContent;
+    assert.match(head, /Faker/);
+    assert.match(head, /#KR1/);
+    assert.match(head, /Level 412/);
+    assert.match(head, /Challenger/);
+    // the details still loading
+    assert.match(app.$('#plHead .pl-prog').textContent, /3 \/ 12/);
+    const body = app.$('#plBody').textContent;
+    assert.match(body, /12 games known/);
+    assert.match(app.$('.pl-figs').textContent, /75 %/);           // 9 of 12
+    assert.match(app.$('.pl-figs').textContent, /7\.00/);           // (8 + 6) / 2
+    assert.match(app.$$('.pl-role')[0].textContent, /Mid[\s\S]*100 %/);
+    assert.match(app.$('.pl-champ').textContent, /Ahri[\s\S]*12 games[\s\S]*75 %[\s\S]*1,500,000 pts/);
+    assert.match(body, /Ahri OTP/, 'traits from his games');
+    assert.equal(app.$$('.pl-game').length, 12);
+    assert.ok(app.$('.pl-game.win') && app.$('.pl-game.loss'));
+    assert.match(body, /Never in one of your stored games/);
+    await app.click('[data-plsite="opgg"]');
+    const ext = app.called('open-external').pop();
+    assert.match(String(ext.args[0]), /op\.gg\/lol\/summoners\/euw\/Faker-KR1/);
+    // all games / ranked
+    await app.click('[data-plq="all"]');
+    assert.ok(app.$('[data-plq="all"]').classList.contains('on'));
+    assert.doesNotMatch(app.$('#dashTags') ? '' : app.$('#plBody').innerHTML, /\b(pl|tags?)\.[a-zA-Z]+\b(?![^<]*>)/, 'no text key without a translation');
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('player page: the window sends the keys of the games it holds; "player-changed" loads again', async () => {
+  let n = 0;
+  const app = await boot({ replies: {
+    'player-games': () => ({ ids: lite.map(g => g.id), games: n++ ? [] : lite, info, mastery: null, progress: { listed: true, done: 12, total: 12 } }),
+  } });
+  try {
+    app.w.eval(`openPlayer({ puuid: 'x1', gameName: 'Faker', tagLine: 'KR1' })`);
+    await app.settle();
+    await app.emit('player-changed', { puuid: 'x1', progress: { listed: true, done: 12, total: 12 } });
+    await new Promise((r) => setTimeout(r, 2200));
+    await app.settle();
+    const calls = app.called('player-games');
+    assert.ok(calls.length >= 2);
+    assert.deepEqual([...calls[calls.length - 1].args[1]].sort(), lite.map(g => g.k).sort());
+    assert.equal(app.$$('.pl-game').length, 12, 'still there after a reply without games');
+    // loaded: no progress bar
+    assert.equal(app.$('#plHead .pl-prog'), null);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('trait tiers: what to act on first, background last; another champion\'s trait is background', () => {
+  assert.equal(Tags.tierOf({ id: 'gankVictim' }), 1);
+  assert.equal(Tags.tierOf({ id: 'fbVictim' }), 1);
+  assert.equal(Tags.tierOf({ id: 'autofill', live: true }), 1);
+  assert.equal(Tags.tierOf({ id: 'earlyFarm', level: 'great' }), 2);
+  assert.equal(Tags.tierOf({ id: 'deaths', level: 'weak' }), 1);
+  assert.equal(Tags.tierOf({ id: 'deaths', level: 'great' }), 2);
+  assert.equal(Tags.tierOf({ id: 'mastery', champ: 420 }, { champ: 420 }), 3);
+  // a millionaire on Illaoi while playing Yorick: background
+  assert.equal(Tags.tierOf({ id: 'otp', champ: 420 }, { champ: 83 }), 3);
+  assert.equal(Tags.tierOf({ id: 'otp', champ: 83 }, { champ: 83 }), 1);
+  // one role only, and he got that role: background
+  assert.equal(Tags.tierOf({ id: 'oneRole' }, { position: 'top', main: 'top' }), 3);
+  assert.equal(Tags.tierOf({ id: 'smallPool' }), 3);
+});

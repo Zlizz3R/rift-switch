@@ -13,7 +13,7 @@ pub fn defaults() -> Obj {
         "autostart": false, "startMinimized": false, "askedStart": false, "updateCheck": true, "autoAccept": false, "matchNotify": false, "autoPlay": true, "confirmSwitch": true,
         "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "laneChosen": false, "tile": null,
         "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": "", "uiTabs": null,
-        "othersLimit": "1000", "tagsLong": false
+        "othersLimit": "1000", "tagsLong": false, "tagTier": "2"
     })
     .as_object()
     .unwrap()
@@ -157,6 +157,8 @@ pub fn clean_setting(key: &str, value: &Value) -> Option<Value> {
         // MB for other players' games (1 GB unless chosen; there is no "unlimited" any more – an
         // old "0" becomes 1 GB)
         "othersLimit" => pick(&["500", "1000", "2000", "5000"], "1000"),
+        // Live: the traits up to this tier on the cards (1 key, 2 more, 3 all)
+        "tagTier" => pick(&["1", "2", "3"], "2"),
         "seenVersion" => json!(s
             .chars()
             .filter(|c| c.is_ascii_digit() || *c == '.')

@@ -40,7 +40,7 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     // the groups show only met tags; the rest is in "All possible tags", folded at first
     assert.equal(app.$$('.tag-group:not(.tag-all) .tchip.tc-not, .tag-group:not(.tag-all) .tchip.tc-few').length, 0);
     assert.ok(!app.$('.tag-all .tchip'));
-    assert.match(app.$('.tag-all-h').textContent, /All possible tags/);
+    assert.match(app.$('.tag-all-h').textContent, /All possible traits/);
     await app.click('[data-tagall]');
     const all = () => app.$('.tag-all');
     // too little data: the games so far and the games needed (late game: no long games, 5 needed)

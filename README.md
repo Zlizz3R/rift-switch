@@ -105,7 +105,7 @@ into one category.
   account's **season peak** and last season's rank, straight from the client.
 
 <details>
-<summary><b>Performance, champions, play style, mastery, tags, seasons</b></summary>
+<summary><b>Performance, champions, play style, mastery, traits, seasons</b></summary>
 
 <img src="docs/screens/performance.png" alt="Performance: key figures and a table by role">
 
@@ -122,7 +122,7 @@ into one category.
 
 <img src="docs/screens/tags.png" alt="Tags: strengths and things to work on">
 
-- **Tags** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
+- **Traits** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
   games, per role – or *All roles* at once, each tag with its role and that role's share of your games – each with
   the numbers behind it. "Too little data" is never shown as "not met".
 - **Seasons** – what the client tells about the last season, your stored games per year, and earlier seasons you
@@ -151,6 +151,10 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   damage, streaks and records.
 - **Most played**: your top five champions, games and **play time per account**, and the teammates you played with
   most – each with its win rate. **Clash** games have their own filter.
+- **Click a name** (here, on Live or after a game): the **player page** – any player's rank, key figures, roles,
+  champions, traits, recent games and the games with you, from their 200 newest games (all of them read in detail),
+  with *Open with* (op.gg …). **Back / forward** arrows in the title bar (also Alt+← / Alt+→ and the mouse's side
+  buttons) go through the pages like a browser.
 - **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each
   minute), and any two players side by side.
 
@@ -167,7 +171,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 <img src="docs/screens/live-game.png" alt="Live: the ten players of a game as cards">
 
 - **The ten players of your game** from the loading screen on: two rows, lane opponents face to face, rank, win rate
-  on this champion, main role, mastery and tags – from each player's 200 newest games (all ten players' details
+  on this champion, main role, mastery and traits in three tiers (*Key*: what you can act on, *More*, *All* – the rest of a card behind
+  "+n") – from each player's 200 newest games (all ten players' details
   for the newest 50 ranked ones), loaded from the client while the loading screen runs, with a
   progress bar; during the game it goes on slower (one game at a time, a round every 4 seconds, only while the
   window is open), so the game stays smooth. **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
