@@ -568,6 +568,8 @@
     'tag.objectives.weak': "Misses objectives",
     'tag.objectives.terrible': "Never at objectives",
     'tag.objectives.t': "In on {v} of the team’s dragons and barons in {n} games",
+    'tag.oneRole': "One role only",
+    'tag.oneRole.t': "{pct} % of {n} games as {role}",
   };
 
   const de = {
@@ -1119,6 +1121,8 @@
     'tag.objectives.weak': "Verpasst Objectives",
     'tag.objectives.terrible': "Nie bei Objectives",
     'tag.objectives.t': "Bei {v} der Drachen und Barone des Teams dabei, in {n} Spielen",
+    'tag.oneRole': "Nur eine Rolle",
+    'tag.oneRole.t': "{pct} % von {n} Spielen als {role}",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

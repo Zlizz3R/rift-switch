@@ -519,6 +519,8 @@
     'tag.objectives.weak': "يفوّت الأهداف",
     'tag.objectives.terrible': "لا يحضر الأهداف أبدًا",
     'tag.objectives.t': "شارك في {v} من تنانين وبارونات الفريق في {n} مباراة",
+    'tag.oneRole': "دور واحد فقط",
+    'tag.oneRole.t': "{pct} % من {n} مباراة بدور {role}",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

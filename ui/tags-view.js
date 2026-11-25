@@ -44,6 +44,7 @@ function tagFmt(x, v) {
 function tagText(x) {
   const v = x.vars || {};
   if (x.id === 'mastery') return t(v.k > 1 ? 'tag.mastery.tk' : 'tag.mastery.t', { pts: num(v.pts), champ: tagChampName(x.champ), k: v.k });
+  if (x.id === 'oneRole') return t('tag.oneRole.t', { pct: v.pct, n: v.n, role: t('pos.' + v.role) });
   if (x.id === 'generalist') return (v.list || []).map(([r, p]) => `${t('pos.' + r)} ${p} %`).join(', ');
   return t(`tag.${x.id}.t`, { ...v, v: tagFmt(x, v.v), n: v.n, champ: x.champ ? tagChampName(x.champ) : '' });
 }

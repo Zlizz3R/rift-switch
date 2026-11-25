@@ -522,6 +522,8 @@
     'tag.objectives.weak': "Se pierde objetivos",
     'tag.objectives.terrible': "Nunca en los objetivos",
     'tag.objectives.t': "En el {v} de los dragones y barones del equipo en {n} partidas",
+    'tag.oneRole': "Solo un rol",
+    'tag.oneRole.t': "{pct} % de {n} partidas como {role}",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

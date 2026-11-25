@@ -518,6 +518,8 @@
     'tag.objectives.weak': "常错过资源",
     'tag.objectives.terrible': "从不参与资源",
     'tag.objectives.t': "在 {n} 场中参与了队伍 {v} 的小龙和男爵",
+    'tag.oneRole': "只玩一个位置",
+    'tag.oneRole.t': "{n} 场中 {pct}% 打{role}",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

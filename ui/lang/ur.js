@@ -520,6 +520,8 @@
     'tag.objectives.weak': "آبجیکٹو چھوڑ دیتا ہے",
     'tag.objectives.terrible': "آبجیکٹو پر کبھی نہیں",
     'tag.objectives.t': "{n} گیمز میں ٹیم کے {v} ڈریگن اور بیرن میں شامل",
+    'tag.oneRole': "صرف ایک رول",
+    'tag.oneRole.t': "{n} گیمز میں سے {pct} % بطور {role}",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

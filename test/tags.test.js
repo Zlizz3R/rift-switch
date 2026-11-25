@@ -208,6 +208,20 @@ test('pool: flexible = no champion over 40 %; small = three champions over 90 % 
   assert.ok(!T.isWeakness({ state: 'met', color: 'bad', group: 'form' }));
 });
 
+test('roles: generalist = no role over 66 %; one role only = one role over 90 % of the games', () => {
+  // "me" at index 2 (mid) or 0 (top)
+  const on = list => run(list.map((at, i) => game({ ago: i + 1, at })));
+  const spread = on([...Array(9).fill(2), ...Array(6).fill(0), 1, 1, 3, 3, 4]);   // mid 45 %
+  assert.equal(get(spread, 'generalist')[0].state, 'met');
+  assert.equal(get(spread, 'oneRole')[0].state, 'not');
+  const one = get(on([...Array(19).fill(2), 0]), 'oneRole')[0];                  // mid 95 %
+  assert.equal(one.state, 'met');
+  assert.deepEqual([one.vars.role, one.vars.pct, one.vars.n], ['mid', 95, 20]);
+  assert.ok(T.isWeakness(one));
+  assert.equal(get(on([...Array(18).fill(2), 0, 0]), 'oneRole')[0].state, 'not'); // exactly 90 %: not above
+  assert.equal(get(on(Array(10).fill(2)), 'oneRole')[0].state, 'few');            // under 15 games
+});
+
 test('objectives: the share of the own team\'s dragons and barons the player was in on, per role', () => {
   // "me" plays mid (index 2); per game the team (100) took 2 dragons and a baron, "me" was in on one;
   // the enemy's dragon and the team's grubs don't count

@@ -21,6 +21,8 @@
     // the other way round: three champions take more than 90 % of the games
     { id: 'smallPool', group: 'pool', type: 'poolTop', champs: 3, share: 0.9, pct: true, min: 15, stage: 'A', color: 'bad', period: 'season' },
     { id: 'generalist', group: 'pool', type: 'roleSpread', pct: true, maxShare: 0.66, min: 15, stage: 'A', color: 'info', period: 'season' },
+    // the other way round: more than 90 % of the games on one role
+    { id: 'oneRole', group: 'pool', type: 'roleSpread', pct: true, minShare: 0.9, min: 15, stage: 'A', color: 'bad', period: 'season' },
     { id: 'mainTaken', group: 'pool', type: 'live', live: true, stage: 'A+L', color: 'warn' },
     { id: 'mainBanned', group: 'pool', type: 'live', live: true, stage: 'A+L', color: 'warn' },
     { id: 'autofill', group: 'pool', type: 'live', live: true, min: 10, stage: 'A+L', color: 'warn' },

@@ -522,6 +522,8 @@
     'tag.objectives.weak': "Rate les objectifs",
     'tag.objectives.terrible': "Jamais aux objectifs",
     'tag.objectives.t': "Présent sur {v} des dragons et barons de l’équipe en {n} parties",
+    'tag.oneRole': "Un seul rôle",
+    'tag.oneRole.t': "{pct} % de {n} parties en {role}",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

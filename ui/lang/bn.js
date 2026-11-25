@@ -519,6 +519,8 @@
     'tag.objectives.weak': "অবজেক্টিভ মিস করে",
     'tag.objectives.terrible': "অবজেক্টিভে কখনো থাকে না",
     'tag.objectives.t': "{n} গেমে দলের {v} ড্রাগন ও ব্যারনে ছিল",
+    'tag.oneRole': "শুধু একটি রোল",
+    'tag.oneRole.t': "{n} গেমের {pct} % {role} হিসেবে",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

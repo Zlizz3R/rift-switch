@@ -141,8 +141,13 @@
       case 'roleSpread': {
         const mr = mainRole(rows);
         if (mr.total < r.min) return [few(mr.total, r.min)];
-        const list = [...mr.shares].sort((a, b) => b[1] - a[1]).map(([ro, n]) => [ro, Math.round((100 * n) / mr.total)]);
-        return [out(list[0][1] / 100 <= r.maxShare ? 'met' : 'not', { value: list[0][1] / 100, th: r.maxShare, n: mr.total, vars: { list } })];
+        const sorted = [...mr.shares].sort((a, b) => b[1] - a[1]);
+        const list = sorted.map(([ro, n]) => [ro, Math.round((100 * n) / mr.total)]);
+        const share = sorted[0][1] / mr.total;
+        // maxShare: no role above it (generalist); minShare: one role above it (one role only)
+        const ok = r.minShare != null ? share > r.minShare : share <= r.maxShare;
+        return [out(ok ? 'met' : 'not', { value: share, th: r.minShare != null ? r.minShare : r.maxShare, n: mr.total,
+          vars: { list, role: sorted[0][0], pct: list[0][1], n: mr.total } })];
       }
       case 'streak': {
         const list = byNewest(rows);

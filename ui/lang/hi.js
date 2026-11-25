@@ -520,6 +520,8 @@
     'tag.objectives.weak': "ऑब्जेक्टिव छोड़ देता है",
     'tag.objectives.terrible': "ऑब्जेक्टिव पर कभी नहीं",
     'tag.objectives.t': "{n} गेम में टीम के {v} ड्रैगन और बैरन में शामिल",
+    'tag.oneRole': "सिर्फ़ एक रोल",
+    'tag.oneRole.t': "{n} गेम में से {pct} % {role} के रूप में",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

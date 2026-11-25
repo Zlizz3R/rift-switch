@@ -521,6 +521,8 @@
     'tag.objectives.weak': "Пропускает объекты",
     'tag.objectives.terrible': "Никогда на объектах",
     'tag.objectives.t': "Участвовал в {v} драконов и баронов команды за {n} игр",
+    'tag.oneRole': "Только одна роль",
+    'tag.oneRole.t': "{pct} % из {n} игр на роли «{role}»",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;
