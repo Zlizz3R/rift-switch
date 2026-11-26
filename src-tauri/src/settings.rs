@@ -13,7 +13,7 @@ pub fn defaults() -> Obj {
         "autostart": false, "startMinimized": false, "askedStart": false, "updateCheck": true, "autoAccept": false, "matchNotify": false, "autoPlay": true, "confirmSwitch": true,
         "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "laneChosen": false, "tile": null,
         "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": "", "uiTabs": null,
-        "othersLimit": "1000", "tagsLong": false, "tagTier": "2", "appearOffline": false
+        "othersLimit": "1000", "tagsLong": false, "tagTier": "2", "autoLoad": true, "ovLayout": null
     })
     .as_object()
     .unwrap()
@@ -105,6 +105,38 @@ fn as_num(v: &Value) -> Option<f64> {
     }
 }
 
+/// The cards of "At a glance" (ui/summary.js SUM_CARDS) – anything else is dropped.
+const OV_CARDS: [&str; 10] = [
+    "figs", "form", "traits", "champs", "roles", "style", "rec", "mast", "games", "map",
+];
+fn ov_layout(v: &Value) -> Value {
+    let Some(o) = v.as_object() else {
+        return Value::Null;
+    };
+    let cards = |k: &str| -> Vec<Value> {
+        let mut out: Vec<Value> = vec![];
+        for x in o.get(k).and_then(Value::as_array).into_iter().flatten() {
+            if let Some(s) = x.as_str().filter(|s| OV_CARDS.contains(s)) {
+                if !out.iter().any(|y| y == s) {
+                    out.push(json!(s));
+                }
+            }
+        }
+        out
+    };
+    let size: serde_json::Map<String, Value> = o
+        .get("size")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flatten()
+        .filter(|(k, x)| {
+            OV_CARDS.contains(&k.as_str()) && x.as_u64().is_some_and(|n| (1..=4).contains(&n))
+        })
+        .map(|(k, x)| (k.clone(), x.clone()))
+        .collect();
+    json!({ "order": cards("order"), "hidden": cards("hidden"), "size": size })
+}
+
 /// Some(value) for an allowed key (value cleaned), None for a key that isn't a setting.
 pub fn clean_setting(key: &str, value: &Value) -> Option<Value> {
     let defs = defaults();
@@ -140,6 +172,8 @@ pub fn clean_setting(key: &str, value: &Value) -> Option<Value> {
             ),
             None => Value::Null,
         },
+        // Overview → At a glance: { order: [card …], hidden: [card …], size: { card: 1–4 } }
+        "ovLayout" => ov_layout(value),
         "champPool" => match value.as_array() {
             Some(a) => Value::Array(
                 a.iter()
@@ -197,6 +231,22 @@ pub fn merge_settings(target: &mut Obj, incoming: &Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn at_a_glance_layout_keeps_known_cards_only() {
+        let v = clean_setting(
+            "ovLayout",
+            &json!({ "order": ["form", "x", "figs", "form", 3], "hidden": ["map", "<b>"], "size": { "form": 2, "figs": 9, "evil": 1 }, "more": 1 }),
+        )
+        .unwrap();
+        assert_eq!(
+            v,
+            json!({ "order": ["form", "figs"], "hidden": ["map"], "size": { "form": 2 } })
+        );
+        assert_eq!(clean_setting("ovLayout", &json!(null)), Some(Value::Null));
+        assert_eq!(clean_setting("autoLoad", &json!(0)), Some(json!(false)));
+        // gone: appear offline (Riot's policies)
+        assert_eq!(clean_setting("appearOffline", &json!(true)), None);
+    }
     #[test]
     fn validated() {
         assert_eq!(clean_setting("autoPlay", &json!("yes")), Some(json!(true)));

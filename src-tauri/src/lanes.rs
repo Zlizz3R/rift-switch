@@ -3,6 +3,9 @@
 //! games and the short ones from match lists). Each player of a game counts once, however often the
 //! game is stored. The champ select helper guesses the enemies' positions from it (Riot hides them in
 //! ranked). Built in the background, kept as `lanes.json` (a few KB); nothing leaves the PC.
+//! The same run counts the lane matchups of every game with all ten players (who met whom on which
+//! position, and who won) – the champ select helper's win rates, from the own PC instead of a
+//! website (Riot's policies: no data from sources outside Riot's services).
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
@@ -36,6 +39,10 @@ struct Player {
     spells: Vec<i64>,
     #[serde(default)]
     items: Vec<i64>,
+    #[serde(default)]
+    team: i64,
+    #[serde(default)]
+    win: bool,
 }
 #[derive(Deserialize)]
 struct Game {
@@ -82,6 +89,10 @@ pub fn build(dirs: &[PathBuf], now: i64) -> Value {
     let mut seen: HashSet<u64> = HashSet::new();
     let mut months: BTreeMap<String, HashMap<i64, [u32; 5]>> = BTreeMap::new();
     let mut n = 0u64;
+    // matchups: position → "a-b" (a < b) → [games, wins of a]; each game once
+    let mut mu: [BTreeMap<String, [u32; 2]>; 5] = Default::default();
+    let mut mu_seen: HashSet<String> = HashSet::new();
+    let mut mu_n = 0u64;
     for dir in dirs {
         let Ok(f) = std::fs::File::open(dir.join("games.jsonl")) else {
             continue;
@@ -101,6 +112,45 @@ pub fn build(dirs: &[PathBuf], now: i64) -> Value {
                 other => other.to_string(),
             };
             let key = month(g.t);
+            if g.players.len() == 10 && !mu_seen.contains(&id) {
+                // the lane opponents: per position one player of each team, both known
+                let mut at: [[Option<&Player>; 2]; 5] = Default::default();
+                let mut clash = [false; 5];
+                for p in &g.players {
+                    let (Some(r), side) = (role(p), usize::from(p.team == 200)) else {
+                        continue;
+                    };
+                    if at[r][side].is_some() {
+                        clash[r] = true;
+                    }
+                    at[r][side] = Some(p);
+                }
+                let mut any = false;
+                for r in 0..5 {
+                    let (Some(a), Some(b)) = (at[r][0], at[r][1]) else {
+                        continue;
+                    };
+                    if clash[r]
+                        || a.champ <= 0
+                        || b.champ <= 0
+                        || a.champ == b.champ
+                        || a.win == b.win
+                    {
+                        continue;
+                    }
+                    let (lo, hi) = if a.champ < b.champ { (a, b) } else { (b, a) };
+                    let e = mu[r]
+                        .entry(format!("{}-{}", lo.champ, hi.champ))
+                        .or_insert([0; 2]);
+                    e[0] += 1;
+                    e[1] += u32::from(lo.win);
+                    mu_n += 1;
+                    any = true;
+                }
+                if any {
+                    mu_seen.insert(id.clone());
+                }
+            }
             for p in &g.players {
                 if p.champ <= 0 || p.puuid.is_empty() {
                     continue;
@@ -131,7 +181,17 @@ pub fn build(dirs: &[PathBuf], now: i64) -> Value {
             (m, Value::Object(o))
         })
         .collect();
-    json!({ "v": 1, "at": now, "n": n, "months": months })
+    let mu: Map<String, Value> = POSITIONS
+        .iter()
+        .zip(mu)
+        .map(|(r, m)| {
+            (
+                r.to_string(),
+                Value::Object(m.into_iter().map(|(k, v)| (k, json!(v))).collect()),
+            )
+        })
+        .collect();
+    json!({ "v": 1, "at": now, "n": n, "months": months, "muN": mu_n, "mu": mu })
 }
 
 /// The stored table, or null.
@@ -176,6 +236,14 @@ mod tests {
             p("d", 222, "bot", vec![4, 7], vec![]),
             p("e", 86, "", vec![4, 12], vec![]),            // no position known: not counted
         ] });
+        // a game with all ten: Ahri (103, blue, won) against Zed (238) on mid; two tops on red: no top matchup
+        let mut ten: Vec<Value> = ["top", "jungle", "mid", "bot", "support"].iter().enumerate()
+            .map(|(i, r)| json!({ "puuid": format!("t{i}"), "champ": 300 + i, "pos": r, "team": 100, "win": true })).collect();
+        ten.extend(["top", "jungle", "mid", "bot", "top"].iter().enumerate()
+            .map(|(i, r)| json!({ "puuid": format!("u{i}"), "champ": 400 + i, "pos": r, "team": 200, "win": false })));
+        ten[2]["champ"] = json!(103);
+        ten[7]["champ"] = json!(238);
+        let ten = json!({ "id": "9", "t": now - DAY_MS, "mode": "CLASSIC", "players": ten });
         // the same game in the others' store (Live) and a lite one of player a: counted once
         let lite = json!({ "id": "1", "t": now - DAY_MS, "mode": "CLASSIC", "lite": true, "players": [p("a", 103, "mid", vec![4, 14], vec![])] });
         // an ARAM game, a remake and a game too old: left out
@@ -188,16 +256,23 @@ mod tests {
                 .collect::<Vec<_>>()
                 .join("\n")
         };
-        std::fs::write(own.join("games.jsonl"), lines(&[&full, &remake])).unwrap();
+        std::fs::write(own.join("games.jsonl"), lines(&[&full, &remake, &ten])).unwrap();
         std::fs::write(
             others.join("games.jsonl"),
-            lines(&[&lite, &full, &aram, &old]) + "\nnot json\n",
+            lines(&[&lite, &full, &aram, &old, &ten]) + "\nnot json\n",
         )
         .unwrap();
         let t = build(&[own, others], now);
-        assert_eq!(t["n"], 4);
+        assert_eq!(t["n"], 4 + 10);
+        // matchups: mid, jungle, bot once each (the game is stored twice); the double top and the
+        // support without an opponent left out
+        assert_eq!(t["muN"], 3);
+        assert_eq!(t["mu"]["mid"]["103-238"], json!([1, 1]));
+        assert_eq!(t["mu"]["jungle"]["301-401"], json!([1, 1]));
+        assert!(t["mu"]["top"].as_object().unwrap().is_empty());
+        assert!(t["mu"]["support"].as_object().unwrap().is_empty());
         let m = &t["months"]["2026-11"];
-        assert_eq!(m["103"], json!([0, 0, 1, 0, 0]));
+        assert_eq!(m["103"], json!([0, 0, 2, 0, 0]));
         assert_eq!(m["64"], json!([0, 1, 0, 0, 0]));
         assert_eq!(m["412"], json!([0, 0, 0, 0, 1]));
         assert_eq!(m["222"], json!([0, 0, 0, 1, 0]));

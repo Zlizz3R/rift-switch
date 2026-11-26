@@ -369,6 +369,14 @@
   // weak / terrible levels, and the tags that are bad on their own (not the form ones: a losing
   // streak isn't something to work on)
   const isWeakness = x => x.state === 'met' && (x.level === 'weak' || x.level === 'terrible' || (!x.level && x.color === 'bad' && x.group !== 'form'));
+  // Other players (Live, the player page): Riot's policies forbid shaming players by any metric,
+  // also by recent results, and assumptions that make them look bad. So they get only what speaks
+  // for them or is neutral: no weak / terrible levels, no "bad" or "warn" tags (losing streak,
+  // "Smurf?", dies to ganks, new to a champion, autofilled …) – except two neutral play styles.
+  // The own accounts see everything. Tags that aren't met stay (nothing is said about them).
+  const OTHERS_NEUTRAL = new Set(['readyToRumble', 'aggroJungler']);
+  const forOthers = results => results.filter(x => x.state !== 'met'
+    || (x.level ? x.level === 'great' || x.level === 'master' : x.color === 'good' || x.color === 'info' || OTHERS_NEUTRAL.has(x.id)));
   // the keys for the next run's hysteresis
   // ("All roles": with the role at the end – each role keeps its own)
   const keys = results => new Set(results.filter(x => x.state === 'met' && x.level).map(x => `${x.id}:${x.level}${x.role ? ':' + x.role : ''}`));
@@ -422,7 +430,7 @@
     return TIER1.has(x.id) ? 1 : TIER3.has(x.id) ? 3 : 2;
   }
 
-  const api = { GROUPS, ARAM_GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, evaluateAram, tierOf, pick, isStrength, isWeakness, keys, liveTags };
+  const api = { GROUPS, ARAM_GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, evaluateAram, tierOf, pick, isStrength, isWeakness, forOthers, keys, liveTags };
   if (node) module.exports = api;
   else root.Tags = api;
 })(typeof window !== 'undefined' ? window : this);

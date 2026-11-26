@@ -10,7 +10,6 @@
     getHistory: puuid => call('get-history', puuid),
     live: () => call('live'),
     champions: () => call('champions'),
-    counters: (enemy, lane) => call('counters', enemy, lane),
     rankedGames: puuid => call('ranked-games', puuid),
     dashboard: () => call('dashboard'),
     collections: () => call('collections'),

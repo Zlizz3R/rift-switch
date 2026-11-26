@@ -173,7 +173,7 @@ function sumForm(parts, ctx) {
   const curve = ctx.lp || (list.length < 5 ? '' : `<div class="sf-curve"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="0" x2="${W}" y1="${zero}" y2="${zero}" class="z"/>
     <path class="a" d="${line}L${W},${zero}L0,${zero}Z"/><path class="l" d="${line}"/></svg><small>${esc(t('ov.curve', { n: list.length }))}</small></div>`);
   const head = `<div class="sf-line"><b>${esc(t('ov.wl', { w, l: list.length - w }))}</b><span class="${w / list.length >= 0.53 ? 'good' : w / list.length <= 0.47 ? 'bad' : ''}">${Stats.winPct(w, list.length)} %</span>
-    ${streak >= 2 ? `<span class="sf-streak ${all[0].p.win ? 'w' : 'l'}">${esc(t(all[0].p.win ? 'mh.streakW' : 'mh.streakL', { n: streak }))}</span>` : ''}</div>`;
+    ${streak >= 2 && (all[0].p.win || !ctx.others) ? `<span class="sf-streak ${all[0].p.win ? 'w' : 'l'}">${esc(t(all[0].p.win ? 'mh.streakW' : 'mh.streakL', { n: streak }))}</span>` : ''}</div>`;
   return sumCard('form', t('ov.form'), `${head}<div class="sf-games">${games}</div>${curve}`, sumGo(ctx, 'lp', t('dash.tabLp')), `<span class="ovc-sub">${esc(t('ov.lastN', { n: list.length }))}</span>`);
 }
 // the own accounts' LP of the last 30 days: the account and queue with the most games in them
@@ -223,7 +223,7 @@ function sumTraits(res, ctx) {
   const picked = res ? Tags.pick(res.results) : [];
   const strong = picked.filter(Tags.isStrength), weak = picked.filter(Tags.isWeakness), rest = picked.filter(x => !Tags.isStrength(x) && !Tags.isWeakness(x));
   const body = picked.length ? `<div class="st-sec"><span class="d-sec-t">${t('tags.strengths')}</span><div class="tchips">${strong.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
-    <div class="st-sec"><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
+    ${ctx.others ? '' : `<div class="st-sec"><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>`}
     ${rest.length ? `<div class="st-sec"><span class="d-sec-t">${t('ov.more')}</span><div class="tchips">${rest.map(chip).join('')}</div></div>` : ''}`
     : `<p class="muted">${esc(t(ctx.scope === 'aram' ? 'ov.noAramTraits' : 'tags.none'))}</p>`;
   const mode = ctx.scope === 'aram' ? `<span class="ovc-sub">ARAM</span>` : `<span class="ovc-sub">${esc(t('pl.ranked'))}</span>`;

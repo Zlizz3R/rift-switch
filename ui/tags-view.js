@@ -178,9 +178,9 @@ function tagsBodyHtml(res, role) {
   const openKey = tagv.open.replace(/^all\|/, '');
   const found = list.find(({ x, i }) => `${x.id}:${x.champ || ''}:${i}` === openKey);
   const openX = found && { ...found, all: tagv.open.startsWith('all|') };
-  const top = `<div class="tag-top">
+  const top = `<div class="tag-top${res.others ? ' one' : ''}">
       <div><span class="d-sec-t">${t('tags.strengths')}</span><div class="tchips">${strong || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
-      <div><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
+      ${res.others ? '' : `<div><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>`}
     </div>`;
   const groups = tagGroupsOf(res).map(g => {
     // only the met ones here; everything else is in "All possible tags"
@@ -189,7 +189,7 @@ function tagsBodyHtml(res, role) {
     const det = openX && !openX.all && openX.x.group === g ? tagDetail(openX.x) : '';
     return `<div class="tag-group"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${inG.map(({ x, i }) => tagChip(x, i)).join('')}</div>${det}</div>`;
   }).join('');
-  return `${top}${groups}${tagAllHtml(list, role, openX, res.aram)}<p class="coll-foot">${t(res.aram ? 'tags.basisAram' : 'tags.basis')}</p>`;
+  return `${top}${groups}${res.others ? '' : tagAllHtml(list, role, openX, res.aram)}<p class="coll-foot">${t(res.others ? 'tags.basisOthers' : res.aram ? 'tags.basisAram' : 'tags.basis')}</p>`;
 }
 // the groups of a catalogue, in their order
 const tagGroupsOf = res => (res.aram && Tags.ARAM_GROUPS ? Tags.ARAM_GROUPS : Tags.GROUPS);

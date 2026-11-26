@@ -89,8 +89,15 @@ fn sv(v: &Value, k: &str) -> String {
         _ => String::new(),
     }
 }
+/// A champion select cell of a player who can be looked up. Riot's policies: no product may
+/// identify or analyse players the game deliberately hides – a hidden cell (nameVisibilityType
+/// HIDDEN, or no id: its obfuscated ids are never used) shows only its champion and position.
 fn has_id(v: &Value) -> bool {
-    !sv(v, "puuid").is_empty() || !sv(v, "summonerId").is_empty()
+    if sv(v, "nameVisibilityType").eq_ignore_ascii_case("hidden") {
+        return false;
+    }
+    let sid = sv(v, "summonerId");
+    !sv(v, "puuid").is_empty() || (!sid.is_empty() && sid != "0")
 }
 fn or_zero(a: &Value, b: &Value) -> Value {
     if a.as_f64().is_some_and(|x| x != 0.0) {
@@ -610,146 +617,6 @@ pub async fn game_assets(data_dir: &Path) -> Value {
     out
 }
 
-// ---------- counters (counterstats.net champion page; empty if its layout changes) ----------
-//
-// One page per enemy: in each lane it lists every champion with enough games against him,
-// with that champion's win rate and counterstats' counter rating (how easy the lane is).
-// So one request answers "which of my champions is best against X" for the whole pool.
-
-/// counterstats' address of a champion: "Dr. Mundo" -> "dr-mundo", "Kai'Sa" -> "kaisa",
-/// "Nunu & Willump" -> "nunu-willump"
-pub fn slug(n: &str) -> String {
-    let mut out = String::new();
-    for c in n.to_lowercase().chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c);
-        } else if (c == ' ' || c == '&' || c == '-') && !out.ends_with('-') && !out.is_empty() {
-            out.push('-');
-        }
-    }
-    out.trim_end_matches('-').to_string()
-}
-fn unescape(s: &str) -> String {
-    s.replace("&#039;", "'")
-        .replace("&#39;", "'")
-        .replace("&amp;", "&")
-        .trim()
-        .to_string()
-}
-/// The "Best picks against …" box of one lane: [{name, wr, rating}], best first.
-pub fn parse_counters(page: &str, lane: &str) -> Vec<Value> {
-    let Some(start) = page.find(&format!("class=\"collapse\" id=\"{lane}\"")) else {
-        return vec![];
-    };
-    let rest = &page[start..];
-    // the lane ends where its "Worst picks" box starts (same champions, reversed)
-    let end = rest.find("Worst Picks").unwrap_or(rest.len());
-    let sec = &rest[..end];
-    let mut out = vec![];
-    for row in sec.split("champ-box__row").skip(1) {
-        let take = |from: &str, to: &str| -> Option<String> {
-            let i = row.find(from)? + from.len();
-            let j = row[i..].find(to)? + i;
-            Some(row[i..j].to_string())
-        };
-        let rating = take("<label>", " ")
-            .or_else(|| take("<label>", "<"))
-            .and_then(|v| v.trim().parse::<f64>().ok());
-        let name = take("<span class=\"champion\">", "</span>").map(|v| unescape(&v));
-        let wr = take("<span class=\"b\">", "%").and_then(|v| v.trim().parse::<f64>().ok());
-        if let (Some(name), Some(wr)) = (name, wr) {
-            if (20.0..=80.0).contains(&wr) {
-                out.push(json!({ "name": name, "wr": wr, "rating": rating }));
-            }
-        }
-    }
-    out
-}
-
-/// How many of the champion's games are on this lane (counterstats: "92% Pick Rate" in the lane head).
-pub fn lane_share(page: &str, lane: &str) -> Option<f64> {
-    let start = page.find(&format!("class=\"collapse\" id=\"{lane}\""))?;
-    let head = &page[start..(start + 1500).min(page.len())];
-    let end = head.find("% Pick Rate")?;
-    let num: String = head[..end]
-        .chars()
-        .rev()
-        .take_while(|c| c.is_ascii_digit() || *c == '.')
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    num.parse().ok()
-}
-
-/// Counters found are kept a day (counters.json in the data folder): a pre-load while queueing
-/// lasts all day. Failures are asked again next time.
-const COUNTERS_TTL: i64 = 86_400_000;
-static COUNTERS: Mutex<Option<HashMap<String, Value>>> = Mutex::new(None);
-fn counters_cache(
-    data_dir: &Path,
-) -> std::sync::MutexGuard<'static, Option<HashMap<String, Value>>> {
-    let mut m = COUNTERS.lock().unwrap();
-    if m.is_none() {
-        // the old per-matchup cache of earlier builds
-        let _ = std::fs::remove_file(data_dir.join("matchups.json"));
-        let now = now_ms();
-        let saved: HashMap<String, Value> = std::fs::read_to_string(data_dir.join("counters.json"))
-            .ok()
-            .and_then(|t| serde_json::from_str(&t).ok())
-            .unwrap_or_default();
-        *m = Some(
-            saved
-                .into_iter()
-                .filter(|(_, v)| now - v["at"].as_i64().unwrap_or(0) < COUNTERS_TTL)
-                .collect(),
-        );
-    }
-    m
-}
-/// Who does well against `enemy` on `lane`: {list: [{name, wr, rating}], ok}
-pub async fn counters(data_dir: &Path, enemy: &str, lane: &str) -> Value {
-    let lane = if ["top", "jungle", "mid", "adc", "support"].contains(&lane) {
-        lane
-    } else {
-        "top"
-    };
-    let key = format!("{}|{lane}", slug(enemy));
-    if let Some(v) = counters_cache(data_dir)
-        .as_ref()
-        .and_then(|c| c.get(&key).cloned())
-    {
-        return json!({ "list": v["list"], "share": v["share"], "ok": true });
-    }
-    if crate::riot::offline_test() {
-        return json!({ "list": [], "ok": false });
-    }
-    let url = format!(
-        "https://www.counterstats.net/league-of-legends/{}",
-        slug(enemy)
-    );
-    let page = match web_text(&url, 8).await {
-        Some((200, t)) => t,
-        _ => return json!({ "list": [], "ok": false }),
-    };
-    // a page without this champion (unknown address) has no lane boxes at all
-    let known = page.contains("class=\"collapse\" id=");
-    let list = parse_counters(&page, lane);
-    let share = lane_share(&page, lane).unwrap_or(0.0);
-    if known {
-        let text = {
-            let mut m = counters_cache(data_dir);
-            let c = m.get_or_insert_with(HashMap::new);
-            let now = now_ms();
-            c.retain(|_, v| now - v["at"].as_i64().unwrap_or(0) < COUNTERS_TTL);
-            c.insert(key, json!({ "list": list, "share": share, "at": now }));
-            serde_json::to_string(&c).unwrap_or_default()
-        };
-        let _ = crate::store::write_atomic(&data_dir.join("counters.json"), text.as_bytes());
-    }
-    json!({ "list": list, "share": share, "ok": known })
-}
-
 #[cfg(test)]
 mod tests {
     #[test]
@@ -799,35 +666,5 @@ mod tests {
             serde_json::json!({ "members": [{ "puuid": "x" }, { "puuid": "" }, { "puuid": "y" }] });
         super::note_party(&lb);
         assert_eq!(super::party(), vec!["x", "y"]);
-    }
-
-    use super::*;
-    #[test]
-    fn counterstats_pages() {
-        assert_eq!(slug("Nunu & Willump"), "nunu-willump");
-        assert_eq!(slug("Kai'Sa"), "kaisa");
-        assert_eq!(slug("Dr. Mundo"), "dr-mundo");
-        assert_eq!(slug("Jarvan IV"), "jarvan-iv");
-        assert_eq!(slug("Cho'Gath"), "chogath");
-        let row = |name: &str, r: &str, wr: u32| {
-            format!("<a class=\"champ-box__row\" href=\"x\"><span class=\"rating-bar\" style=\"width: 114px\"><label>{r} <i class=\"icon\"></i></label></span> <div class=\"win-wrap\"> <span class=\"champion\">{name}</span> <span class=\"win\">Win <span class=\"b\">{wr}%</span></span></div></a>")
-        };
-        let page = format!(
-            "<span class=\"collapse\" id=\"mid\"></span>{}<span class=\"collapse\" id=\"top\"></span><h3>Best Picks</h3>{}{}<h3>Worst Picks</h3>{}",
-            row("Ahri", "5.0", 51),
-            row("Kayle", "6.2", 56),
-            row("Cho&#039;Gath", "5.6", 53),
-            row("Riven", "3.4", 42)
-        );
-        let top = parse_counters(&page, "top");
-        assert_eq!(top.len(), 2);
-        assert_eq!(top[0]["name"], "Kayle");
-        assert_eq!(top[0]["wr"], 56.0);
-        assert_eq!(top[0]["rating"], 6.2);
-        assert_eq!(top[1]["name"], "Cho'Gath");
-        assert!(parse_counters(&page, "support").is_empty());
-        let head = "<span class=\"collapse\" id=\"top\"><label>Top Lane</label></span><span class=\"tag\">51.32% Win Rate</span><span class=\"tag\">92% Pick Rate</span>";
-        assert_eq!(lane_share(head, "top"), Some(92.0));
-        assert_eq!(lane_share(head, "mid"), None);
     }
 }

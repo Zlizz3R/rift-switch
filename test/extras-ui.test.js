@@ -56,13 +56,14 @@ test('tools: League\'s language – the list by name, the current one chosen; Le
   });
 });
 
-test('settings: appear offline is a switch that is saved', () => withApp({}, async (app) => {
-  const box = app.$('[data-setting="appearOffline"]');
+test('settings: Load by itself after a login is a switch that is saved; appear offline is gone (Riot\'s policies)', () => withApp({}, async (app) => {
+  assert.equal(app.$('[data-setting="appearOffline"]'), null);
+  const box = app.$('[data-setting="autoLoad"]');
   assert.ok(box);
-  box.checked = true;
+  box.checked = false;
   box.dispatchEvent(new app.w.Event('change', { bubbles: true }));
   await app.settle();
-  assert.deepEqual(last(app, 'set-setting').args, ['appearOffline', true]);
+  assert.deepEqual(last(app, 'set-setting').args, ['autoLoad', false]);
 }));
 
 test('panel: copy the login name, the password after Windows Hello – or the app password without it', () => {

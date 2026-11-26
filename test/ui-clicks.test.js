@@ -452,20 +452,23 @@ test('the blue dot on "Live": a game is on (champion select or in game), on ever
   assert.ok(app.$('#liveDot').hidden);
 }));
 
-test('champ select helper: one counters page per enemy ranks the pool; pre-load reads only the pool\'s own pages', () => {
+test('champ select helper: the pool ranked against the enemy from the stored games – nothing fetched from websites (Riot\'s policies)', () => {
+  const POS = ['top', 'jungle', 'mid', 'bot', 'support'];
   const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 3, name: 'Illaoi' }, { id: 4, name: 'Malphite' }, { id: 5, name: "Cho'Gath" }];
-  // counterstats: who does well against <enemy>
-  const pages = {
-    Darius: [{ name: 'Garen', wr: 48, rating: 4.1 }, { name: 'Illaoi', wr: 53, rating: 5.2 }],
-    Malphite: [{ name: 'Garen', wr: 51, rating: 5.0 }],
-    Garen: [{ name: 'Darius', wr: 52 }, { name: 'Malphite', wr: 49 }],
-    Illaoi: [{ name: 'Darius', wr: 47 }, { name: "Cho'Gath", wr: 46 }],
+  // the lane table's matchups on top: Garen vs Darius 4–6 (10 games), Illaoi vs Darius 7–3; Darius vs Malphite
+  const table = { v: 1, at: Date.now(), n: 0, months: {}, muN: 23, mu: { top: { '1-2': [10, 4], '2-3': [10, 3], '2-4': [3, 1] }, jungle: {}, mid: {}, bot: {}, support: {} } };
+  // own games: P(1) on top with Garen against Darius twice (won both), Garen against someone else once (lost)
+  const g = (i, champ, vs, win) => {
+    const players = [...POS.map((r, j) => ({ puuid: j === 0 ? P(1) : `a${i}${j}`, team: 100, champ: j === 0 ? champ : 50 + j, pos: r, win, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] })),
+      ...POS.map((r, j) => ({ puuid: `b${i}${j}`, team: 200, champ: j === 0 ? vs : 60 + j, pos: r, win: !win, cs: j === 4 ? 30 : 200, spells: j === 1 ? [11, 4] : [4, 14], items: j === 4 ? [3877] : [] }))];
+    return { id: String(900 + i), t: Date.now() - (i + 1) * 86400000, dur: 1800, q: 420, mode: 'CLASSIC', players };
   };
+  const games = [g(0, 1, 2, true), g(1, 1, 2, true), g(2, 1, 9, false)];
   const st = sampleState();
   st.settings.champPool = [1, 3];
-  // Cho'Gath's own page can't be read: the pool's pages answer for him
-  const counters = (enemy) => (enemy === "Cho'Gath" ? { ok: false, list: [] } : { ok: true, list: pages[enemy] || [] });
-  return withApp({ state: st, replies: { champions: champs, counters } }, async (app) => {
+  st.settings.lane = 'top'; st.settings.laneChosen = true;
+  return withApp({ state: st, replies: { champions: champs, 'lane-stats': table, matches: { index: games.map(x => [x.id, x.t, x.q, P(1)]), waiting: 0 }, 'matches-get': games,
+    'open-external': true } }, async (app) => {
     await app.click('#navLive');
     // outside champ select the helper is folded (kept as a setting); unfolded it is all there
     assert.ok(!app.$('.helper'));
@@ -474,22 +477,26 @@ test('champ select helper: one counters page per enemy ranks the pool; pre-load 
     assert.match(app.$('.helper').textContent, /My champion pool/);
     assert.equal(app.$$('.h-chip').length, 2);
     await app.type('#hEnemy', 'Darius');
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 150));
     await app.settle();
-    assert.deepEqual(app.called('counters').map((c) => c.args[0]), ['Darius'], 'one request for the whole pool');
-    assert.deepEqual(app.$$('.h-res b').map((x) => x.textContent), ['Illaoi', 'Garen'], 'best first');
+    app.w.eval('renderLive(true)');
+    await app.settle();
+    assert.equal(app.called('counters').length, 0, 'no website is asked');
+    assert.deepEqual(app.$$('.h-res b').map((x) => x.textContent), ['Illaoi', 'Garen'], 'best matchup first');
+    assert.deepEqual(app.$$('.h-res .wr').map((x) => x.textContent), ['70%10 games', '40%10 games']);
+    // the own record against him and on the champion
+    assert.match(app.$$('.h-res')[1].textContent, /you 2–0 against him · you on it: 67 % \(3\)/);
     assert.match(app.$('.helper').textContent, /Best picks against Darius/);
-    await app.click('#hPre');
-    await new Promise((r) => setTimeout(r, 200));
-    await app.settle();
-    // one page per champion of the pool – not one per enemy they might meet
-    assert.deepEqual(app.called('counters').map((c) => c.args[0]), ['Darius', 'Garen', 'Illaoi']);
-    // an enemy whose page isn't there: turned round from Illaoi's page (Cho'Gath 46 % → Illaoi 54 %)
+    // counterstats.net only as a link
+    await app.click('[data-cslink]');
+    assert.equal(lastCall(app, 'open-external').args[0], 'https://www.counterstats.net/league-of-legends/darius');
+    // an enemy the table doesn't know: "–", sorted by the own games on the champion
     await app.type('#hEnemy', "Cho'Gath");
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 50));
     await app.settle();
-    assert.deepEqual(app.$$('.h-res b').map((x) => x.textContent), ['Illaoi', 'Garen']);
-    assert.deepEqual(app.$$('.h-res .wr').map((x) => x.textContent), ['54%', '–'], 'Garen\'s page has no Cho\'Gath: no data');
+    assert.deepEqual(app.$$('.h-res .wr').map((x) => x.textContent), ['–', '–']);
+    assert.deepEqual(app.$$('.h-res b').map((x) => x.textContent), ['Garen', 'Illaoi'], 'Garen: own games on it');
+    assert.equal(app.$('[data-cslink]').dataset.cslink, 'chogath');
   });
 });
 
@@ -613,29 +620,7 @@ test('champ select helper: "who are you playing against?" shows the enemy picks,
   });
 });
 
-test('champ select helper: Riot hides the enemy positions – the enemy who plays my lane most is guessed and chosen', () => {
-  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 4, name: 'Malphite' }, { id: 5, name: 'Ahri' }];
-  const st = sampleState();
-  st.settings.champPool = [1];
-  st.settings.lane = 'top';
-  const share = { Darius: 88, Malphite: 40, Ahri: 2 };
-  const live = { clientUp: true, phase: 'ChampSelect', region: 'EUW', me: 'x',
-    champSelect: { myPosition: 'top', hiddenNames: true, allies: [], enemies: [{ championId: 4, position: '' }, { championId: 2, position: '' }, { championId: 5, position: '' }] } };
-  return withApp({ state: st, replies: { champions: champs, live, counters: (n) => ({ ok: true, share: share[n], list: [{ name: 'Garen', wr: 50 }] }) } }, async (app) => {
-    await app.click('#navLive');
-    await new Promise((r) => setTimeout(r, 200));
-    await app.settle();
-    assert.ok(app.$('[data-hpick="2"] .h-guess'), 'Darius marked as the likely laner');
-    assert.equal(app.$$('.h-guess').length, 1);
-    assert.equal(app.$('#hEnemy').value, 'Darius', 'and chosen');
-    await app.click('[data-hpick="4"]');
-    await new Promise((r) => setTimeout(r, 50));
-    await app.settle();
-    assert.equal(app.$('#hEnemy').value, 'Malphite', 'a click wins over the guess');
-  });
-});
-
-test('champ select helper: the lane table of every stored game places the enemies – and beats counterstats when it knows the champion well', () => {
+test('champ select helper: the lane table of every stored game places the enemies (Riot hides their positions)', () => {
   const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 4, name: 'Malphite' }, { id: 5, name: 'Ahri' }];
   const st = sampleState();
   st.settings.champPool = [1];

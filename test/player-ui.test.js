@@ -79,8 +79,10 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     await app.click('[data-pltab="tags"]');
     assert.match(app.$('#plBody .tag-top').textContent, /Your strengths/);
     assert.match(app.$('#plBody').textContent, /Ahri OTP/);
-    await app.click('#plBody [data-tagall]');
-    assert.ok(app.$('#plBody .tag-all .tag-sub'), 'all possible traits unfold');
+    // another player: nothing that shames (Riot's policies) – no "to work on", no list of every trait
+    assert.doesNotMatch(app.$('#plBody .tag-top').textContent, /To work on/);
+    assert.equal(app.$('#plBody [data-tagall]'), null);
+    assert.match(app.$('#plBody .coll-foot').textContent, /only what speaks for them/);
     // "→" on a card opens that tab
     await app.click('[data-pltab="sum"]');
     assert.ok(app.$('.ovc-figs'));
@@ -148,6 +150,16 @@ test('player page: League closed – a note instead of a progress bar stuck at 5
     assert.match(app.$('#plHead .pl-note').textContent, /Live goes first/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
+});
+
+test('other players: no weak levels, no bad or warn tags – the own accounts see everything (Riot\'s policies: no shaming)', () => {
+  const r = [
+    { id: 'farm', state: 'met', level: 'master' }, { id: 'kda', state: 'met', level: 'weak' }, { id: 'deaths', state: 'met', level: 'terrible' },
+    { id: 'lossStreak', state: 'met', color: 'bad' }, { id: 'smurf', state: 'met', color: 'warn' }, { id: 'newTo', state: 'met', color: 'warn', live: true },
+    { id: 'otp', state: 'met', color: 'good' }, { id: 'generalist', state: 'met', color: 'info' }, { id: 'readyToRumble', state: 'met', color: 'warn' },
+    { id: 'gankVictim', state: 'not', color: 'bad' },
+  ];
+  assert.deepEqual(Tags.forOthers(r).map(x => x.id), ['farm', 'otp', 'generalist', 'readyToRumble', 'gankVictim']);
 });
 
 test('trait tiers: what to act on first, background last; another champion\'s trait is background', () => {

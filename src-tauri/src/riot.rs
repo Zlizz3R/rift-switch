@@ -304,24 +304,14 @@ pub async fn replay(game_id: u64, action: &str) -> Value {
         None => json!({ "state": "missingOrExpired" }),
     }
 }
-// ---------- appear offline ----------
+// ---------- the removed "appear offline" ----------
 
-/// The own chat status ("chat", "away", "dnd", "offline", "mobile" …), None without League.
-pub async fn chat_status() -> Option<String> {
-    get("/lol-chat/v1/me")
+/// Online again in League's chat – only to undo "appear offline" (removed in 1.3.2: Riot's
+/// policies allow no way into the chat) for whoever had it switched on.
+pub async fn chat_online() -> bool {
+    lcu_json("/lol-chat/v1/me", "PUT", &json!({ "availability": "chat" }))
         .await
-        .and_then(|m| m["availability"].as_str().map(String::from))
-}
-/// Sets the own chat status the way the client's status menu does ("offline": friends see you
-/// offline; "chat": online again).
-pub async fn set_chat_status(availability: &str) -> bool {
-    lcu_json(
-        "/lol-chat/v1/me",
-        "PUT",
-        &json!({ "availability": availability }),
-    )
-    .await
-    .is_some()
+        .is_some()
 }
 
 // ---------- a random skin in champion select ----------

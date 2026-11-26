@@ -92,7 +92,10 @@ api.onState(() => {
   if (up && !wasUp) loadPlayer();
 });
 
-const plSiteOf = () =>({ gameName: (plv.info && plv.info.gameName) || plv.p.gameName, tagLine: (plv.info && plv.info.tagLine) || plv.p.tagLine, region: plv.p.region || (S.live && S.live.region) || 'EUW' });
+// another player's traits: only what speaks for them or is neutral (Riot's policies: no shaming)
+const plOthers = res => ({ ...res, results: Tags.forOthers(res.results), others: true });
+
+const plSiteOf = () => ({ gameName: (plv.info && plv.info.gameName) || plv.p.gameName, tagLine: (plv.info && plv.info.tagLine) || plv.p.tagLine, region: plv.p.region || (S.live && S.live.region) || 'EUW' });
 
 function renderPlayer() {
   const el = $('plBody');
@@ -141,7 +144,7 @@ function renderPlayer() {
       const ctx = { games: all, own: [p.puuid], level: info.level != null ? info.level : null, mastery: mastRows, now: Date.now() };
       const res = scope === 'aram' ? sumRes(all, [p.puuid], ctx.level, mastRows, 'aram')
         : plv.role ? Tags.evaluate({ ...ctx, role: plv.role }) : Tags.evaluateAll(ctx);
-      body = res ? tagsBodyHtml(res, scope === 'aram' ? null : res.role) : `<div class="chart-empty">${t('ov.noAramTraits')}</div>`;
+      body = res ? tagsBodyHtml(own ? res : plOthers(res), scope === 'aram' ? null : res.role) : `<div class="chart-empty">${t('ov.noAramTraits')}</div>`;
     } else {
       body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
         : plv.tab === 'stats' ? perfStatsHtml(parts, agR, { player: true })
@@ -159,8 +162,8 @@ function renderPlayer() {
       <p class="fine">${esc(t(m.last.same ? 'know.team' : 'know.enemy', { when: ago(m.last.g.t), champ: (champById(m.last.them.champ) || {}).name || '' }))}</p></div>`
     : `<p class="muted">${t(own ? 'pl.own' : 'pl.never')}</p>`;
   const res = sumRes(all, [p.puuid], info.level != null ? info.level : null, mastRows, scope);
-  el.innerHTML = `<div class="pl-bar ov-bar">${bar}${basis}</div>` + sumHtml({ parts: rows, scope, own: false, tabs: PL_TABS.map(x => x[0]), withYou, res,
-    mastery: mastRows });
+  el.innerHTML = `<div class="pl-bar ov-bar">${bar}${basis}</div>` + sumHtml({ parts: rows, scope, own: false, others: !own, tabs: PL_TABS.map(x => x[0]), withYou,
+    res: res && !own ? plOthers(res) : res, mastery: mastRows });
 }
 
 $('viewPlayer').addEventListener('change', e => {

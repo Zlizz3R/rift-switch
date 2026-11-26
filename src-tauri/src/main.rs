@@ -946,7 +946,7 @@ async fn tick_inner(my_gen: u64) {
         return;
     };
     let id = cur_id.unwrap();
-    keep_offline(false).await;
+    undo_offline().await;
     let now = now_ms();
     // first login of an account that was only saved so far; and: is it the one that was picked?
     let wrong = with(|c| {
@@ -979,6 +979,7 @@ async fn tick_inner(my_gen: u64) {
         with(|c| c.st.active = Some(id.clone()));
         if new_puuid {
             with(|c| c.no_persist = None);
+            auto_load_ask(&id);
         }
         let skip = with(|c| c.no_persist.as_deref() == Some(id.as_str()));
         if pending_add || new_puuid || (!skip && !session_file(&id).exists()) {
@@ -2703,26 +2704,99 @@ fn clear_copied(only: Option<u32>) {
     }
 }
 
-/// Appear offline: while it is on, the own chat status is set back to "offline" whenever it is
-/// something else (the client sets "chat" after every start); switched off, "chat" once.
-/// switched: the setting was just changed – switched off, an "offline" status (also one from
-/// before a restart of Rift Switch) goes back to "chat"; offline set in League by hand stays.
-static OFFLINE_SET: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-async fn keep_offline(switched: bool) {
-    use std::sync::atomic::Ordering;
-    if with(|c| c.st.set_bool("appearOffline")) {
-        match riot::chat_status().await.as_deref() {
-            Some("offline") => OFFLINE_SET.store(true, Ordering::Relaxed),
-            Some(_) if riot::set_chat_status("offline").await => {
-                OFFLINE_SET.store(true, Ordering::Relaxed)
-            }
-            _ => {}
-        }
-    } else if OFFLINE_SET.swap(false, Ordering::Relaxed)
-        || (switched && riot::chat_status().await.as_deref() == Some("offline"))
-    {
-        let _ = riot::set_chat_status("chat").await;
+/// "Appear offline" is gone (Riot's policies allow no way into League's chat). Whoever had it on
+/// is set online once – the first time League is up after the update – and the setting goes.
+async fn undo_offline() {
+    if !with(|c| c.st.set_bool("appearOffline")) {
+        return;
     }
+    if riot::chat_online().await {
+        with(|c| c.st.settings.remove("appearOffline"));
+        save();
+    }
+}
+
+/// Load by itself (setting "autoLoad", on): an account just signed in – once the client has
+/// settled, the same as pressing Load, once per account in 30 minutes. It waits for a quiet moment
+/// (not in a game, nothing else loading) up to 10 minutes and gives up when another account signs in.
+static AUTO_LOADED: Mutex<Option<HashMap<String, i64>>> = Mutex::new(None);
+// the sign-in is noticed inside tick(), and a Load runs tick() itself: a loop of its own takes the
+// account (no task spawned from tick that waits on tick)
+static AUTO_PENDING: Mutex<Option<String>> = Mutex::new(None);
+static AUTO_KICK: tokio::sync::Notify = tokio::sync::Notify::const_new();
+fn auto_load_ask(id: &str) {
+    *AUTO_PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some(id.to_string());
+    AUTO_KICK.notify_one();
+}
+async fn auto_load_loop() {
+    loop {
+        AUTO_KICK.notified().await;
+        let id = AUTO_PENDING
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
+        if let Some(id) = id {
+            auto_load(id).await;
+        }
+    }
+}
+async fn auto_load(id: String) {
+    if riot::offline_test() || !with(|c| c.st.set_bool("autoLoad")) {
+        return;
+    }
+    {
+        let mut m = AUTO_LOADED.lock().unwrap_or_else(|e| e.into_inner());
+        let m = m.get_or_insert_with(HashMap::new);
+        if m.get(&id).is_some_and(|t| now_ms() - t < 1_800_000) {
+            return;
+        }
+        m.insert(id.clone(), now_ms());
+    }
+    sleep(45_000).await;
+    for _ in 0..40 {
+        if with(|c| c.live.puuid.as_deref() != Some(id.as_str())) {
+            return;
+        }
+        // not while queueing or in champion select either: Live goes first
+        let quiet = with(|c| {
+            !c.live
+                .phase
+                .as_deref()
+                .is_some_and(|p| ["Matchmaking", "ReadyCheck", "ChampSelect"].contains(&p))
+        });
+        match if quiet { load_start() } else { Some("inGame") } {
+            None => {
+                push();
+                load_all().await;
+                return;
+            }
+            Some("closed") => return,
+            Some(_) => sleep(15_000).await,
+        }
+    }
+}
+/// Starts a Load (the progress every Load button shows) – or why not: closed, inGame, busy, running.
+fn load_start() -> Option<&'static str> {
+    with(|c| {
+        if !c.live.client_up || c.live.puuid.is_none() {
+            return Some("closed");
+        }
+        if c.live
+            .phase
+            .as_deref()
+            .is_some_and(|p| IN_GAME.contains(&p))
+        {
+            return Some("inGame");
+        }
+        if c.busy {
+            return Some("busy");
+        }
+        if c.loading.is_object() {
+            return Some("running");
+        }
+        c.loading = json!({ "step": "coll", "n": 1, "of": LOAD_STEPS.len(), "done": 0, "total": 0, "since": now_ms() });
+        None
+    })
 }
 
 /// pass: the export password (logins go along, encrypted with it) or null (no logins).
@@ -3329,7 +3403,6 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         "live" => live::snapshot().await,
         "champions" => live::champions(data()).await,
-        "counters" => live::counters(data(), &s(0), &s(1)).await,
         "champ-damage" => {
             let ids: Vec<i64> = a(0)
                 .as_array()
@@ -3368,27 +3441,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         // "Load" (collection, mastery, panel, overview): everything for the signed-in account at
         // once; a second press while it runs just shows the same progress
         "load-all" => {
-            let why = with(|c| {
-                if !c.live.client_up || c.live.puuid.is_none() {
-                    return Some("closed");
-                }
-                if c.live
-                    .phase
-                    .as_deref()
-                    .is_some_and(|p| IN_GAME.contains(&p))
-                {
-                    return Some("inGame");
-                }
-                if c.busy {
-                    return Some("busy");
-                }
-                if c.loading.is_object() {
-                    return Some("running");
-                }
-                c.loading = json!({ "step": "coll", "n": 1, "of": LOAD_STEPS.len(), "done": 0, "total": 0, "since": now_ms() });
-                None
-            });
-            if let Some(why) = why {
+            if let Some(why) = load_start() {
                 return json!({ "ok": false, "why": why });
             }
             push();
@@ -3703,9 +3756,6 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 }
                 if k == "autostart" {
                     apply_autostart();
-                }
-                if k == "appearOffline" {
-                    tauri::async_runtime::spawn(keep_offline(true));
                 }
                 save();
             }
@@ -4334,6 +4384,9 @@ fn main() {
             }
             tauri::async_runtime::spawn(tick_loop());
             tauri::async_runtime::spawn(scout_loop());
+            tauri::async_runtime::spawn(auto_load_loop());
+            // counterstats.net is no longer read (Riot's policies): its old cache goes
+            let _ = std::fs::remove_file(data().join("counters.json"));
             tauri::async_runtime::spawn(async {
                 sleep(90_000).await;
                 if now_ms() - lanes::built_at(data()) > lanes::STALE_MS {

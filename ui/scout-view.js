@@ -83,7 +83,10 @@ function scCard(p, enemyChamps, queue) {
   const roles = Tags.mainRole(parts);
   const pos = SC_POS[String(p.position || '').toUpperCase()] || '';
   const live = Tags.liveTags({ games, puuid: p.puuid, champ, mastery: pts, position: pos, main: res.main, enemyChamps, bans: [], results: res.results });
-  const out = { p, n: parts.length, ag: Stats.aggregate(onChamp), pts, roles, pos, live, tags: Tags.pick(res.results) };
+  // another player: only what speaks for them or is neutral (Riot's policies: no shaming)
+  const mine = (S.accounts || []).some(a => a.puuid === p.puuid);
+  const out = { p, n: parts.length, ag: Stats.aggregate(onChamp), pts, roles, pos, live: mine ? live : Tags.forOthers(live),
+    tags: Tags.pick(mine ? res.results : Tags.forOthers(res.results)) };
   if (scv.memo) scv.memo.set(key, out);
   return out;
 }

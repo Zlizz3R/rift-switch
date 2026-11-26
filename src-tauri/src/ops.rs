@@ -257,6 +257,8 @@ pub fn allowed_url(u: &str) -> bool {
         "porofessor.gg/",
         "mobalytics.gg/",
         "buymeacoffee.com/",
+        // the champ select helper's link to a matchup (opened by a click, never read by the app)
+        "counterstats.net/",
     ]
     .iter()
     .any(|d| u.starts_with(&format!("https://{d}")) || u.starts_with(&format!("https://www.{d}")))
