@@ -808,6 +808,12 @@
     'ov.traitsMainT': "Muestra todas las posiciones: haz clic para ver solo la principal",
     'ov.traitsAllT': "Los rasgos de tu posición principal (la más jugada): haz clic para ver todas",
     'mp.rift': "El mapa es la Grieta del Invocador: las partidas de ARAM y Arena no tienen lugar en él. Elige Clasificatorias o Todas.",
+    'rad.gold': "Oro",
+    'mh.showAll': "Mostrar todo ({n})",
+    'mh.place': "Puesto {n}",
+    'ov.scopeArena': "Arena esta temporada",
+    'ov.noArenaTraits': "Sin rasgos para Arena: los catálogos están hechos para la Grieta y ARAM.",
+    'ov.resetT': "Volver al diseño original de De un vistazo",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

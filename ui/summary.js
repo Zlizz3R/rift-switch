@@ -8,6 +8,9 @@
 // edit: the cards are being arranged (Customize)
 const sumv = { scope: '', mast: null, loading: false, edit: false };
 const SUM_ARAM = [450, 2400];
+const SUM_ARENA = [1700, 1710];
+// ARAM and Arena: no lanes – the team share and the activity instead of roles and the radar
+const sumNoLanes = scope => scope === 'aram' || scope === 'arena';
 const sumSeason = () => new Date(new Date().getFullYear(), 0, 1).getTime();
 
 // ---------- which games ----------
@@ -16,12 +19,15 @@ function sumScopeRows(rows, scope) {
   const from = sumSeason();
   if (scope === 'ranked') return rows.filter(x => Stats.RANKED_QUEUES.includes(x.g.q) && x.g.t >= from);
   if (scope === 'aram') return rows.filter(x => SUM_ARAM.includes(x.g.q) && x.g.t >= from);
+  if (scope === 'arena') return rows.filter(x => SUM_ARENA.includes(x.g.q) && x.g.t >= from);
   return rows;
 }
-// the scope shown first: ranked – unless ARAM has more games this season (an ARAM player sees ARAM)
+// the scope shown first: the one with the most games this season – ranked when it's a tie
+// (an ARAM player sees ARAM, an Arena player Arena)
 function sumAutoScope(rows) {
-  const r = sumScopeRows(rows, 'ranked').length, a = sumScopeRows(rows, 'aram').length;
-  return a > r ? 'aram' : r ? 'ranked' : 'all';
+  const n = ['ranked', 'aram', 'arena'].map(k => [k, sumScopeRows(rows, k).length]);
+  const best = n.reduce((a, b) => (b[1] > a[1] ? b : a));
+  return best[1] ? best[0] : 'all';
 }
 // the bar under the head: Ranked / ARAM / All, how many of the newest games, where they come from
 // attr: the data attribute of the scope buttons (own page: data-sumq, player page: data-plq)
@@ -31,7 +37,7 @@ function sumBarHtml(rows, scope, attr, basis = '') {
   const lastOwn = perfLastIsOwn(perf.f.last, perf.lastOwn);
   const last = `<select class="pl-last" data-pllast title="${esc(t('perf.lastT'))}">${perfLastOpts(perf.f.last, perf.lastOwn)}</select>`
     + (lastOwn ? `<input class="mh-input num" data-pllastn type="number" min="1" max="9999" placeholder="${esc(t('perf.lastPh'))}" value="${perf.f.last || ''}">` : '');
-  return `<div class="seg pl-q">${b('ranked', t('pl.ranked'))}${b('aram', t('ov.scopeAram'))}${b('all', t('pl.all'))}</div>${last}${basis}`;
+  return `<div class="seg pl-q">${b('ranked', t('pl.ranked'))}${b('aram', t('ov.scopeAram'))}${b('arena', t('ov.scopeArena'))}${b('all', t('pl.all'))}</div>${last}${basis}`;
 }
 
 // ---------- the head ----------
@@ -118,7 +124,7 @@ function renderOvHero() {
 const sumPct = v => (v == null ? '–' : Math.round(v * 100) + ' %');
 const sumCard = (cls, title, body, go = '', extra = '') => `<section class="ovc ovc-${cls}"><div class="ovc-h"><h3>${esc(title)}</h3>${extra}</div>${body}${go}</section>`;
 // "Champions →": a way into a tab (only tabs the page has)
-const sumGo = (ctx, tab, label) => (ctx.tabs.includes(tab) ? `<button class="ovc-go" data-ovgo="${tab}">${esc(label)} <span>→</span></button>` : '');
+const sumGo = (ctx, tab, label) => (ctx.tabs.includes(PERF_SECS.includes(tab) ? 'stats' : tab) ? `<button class="ovc-go" data-ovgo="${tab}">${esc(label)} <span>→</span></button>` : '');
 const sumWhen = x => `${(champById(x.p.champ) || {}).name || ''} · ${ago(x.g.t)}`;
 
 // a win rate as a ring
@@ -140,7 +146,7 @@ function sumFigs(parts, scope) {
   const trArrow = (k, fmt) => { const x = tr(k); return x.ok ? arrow(x.cur, x.prev, x.better, fmt) : ''; };
   const wrT = tr('kda');
   const tile = (cls, label, value, sub = '', trend = '') => `<div class="ovf ${cls}"><span>${esc(label)}</span><b>${value}</b><small>${sub}${trend}</small></div>`;
-  const aram = scope === 'aram';
+  const aram = sumNoLanes(scope);
   const tiles = [
     tile('games', t('perf.games'), num(ag.n), esc(t('ov.wl', { w: ag.wins, l: ag.losses }))),
     `<div class="ovf wr">${sumRing(ag.winrate)}<div><span>${esc(t('dash.wr'))}</span><b class="${ag.winrate >= 0.53 ? 'good' : ag.winrate <= 0.47 ? 'bad' : ''}">${sumPct(ag.winrate)}</b><small>${wrT.ok ? arrow(wrT.wr[0], wrT.wr[1], 1, v => Math.round(v * 100) + ' %') : ''}</small></div></div>`,
@@ -233,11 +239,11 @@ function sumTraits(res, ctx) {
   const body = picked.length ? `<div class="st-sec"><span class="d-sec-t">${t('tags.strengths')}</span><div class="tchips">${strong.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
     ${ctx.others ? '' : `<div class="st-sec"><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>`}
     ${rest.length ? `<div class="st-sec"><span class="d-sec-t">${t('ov.more')}</span><div class="tchips">${rest.map(chip).join('')}</div></div>` : ''}`
-    : `<p class="muted">${esc(t(ctx.scope === 'aram' ? 'ov.noAramTraits' : 'tags.none'))}</p>`;
+    : `<p class="muted">${esc(t(ctx.scope === 'aram' ? 'ov.noAramTraits' : ctx.scope === 'arena' ? 'ov.noArenaTraits' : 'tags.none'))}</p>`;
   const sw = main && roles > 1
     ? `<button class="ovc-sub st-pos" data-straits title="${esc(t(all ? 'ov.traitsMainT' : 'ov.traitsAllT'))}">${all ? esc(t('ov.allPos')) : `<img src="${posIcon(main)}" alt="">${esc(t('pos.' + main))}`}</button>`
     : main && !ctx.others ? `<span class="ovc-sub st-pos"><img src="${posIcon(main)}" alt="">${esc(t('pos.' + main))}</span>` : '';
-  const mode = ctx.scope === 'aram' ? `<span class="ovc-sub">ARAM</span>` : `${sw}<span class="ovc-sub">${esc(t('pl.ranked'))}</span>`;
+  const mode = ctx.scope === 'aram' ? `<span class="ovc-sub">ARAM</span>` : ctx.scope === 'arena' ? `<span class="ovc-sub">Arena</span>` : `${sw}<span class="ovc-sub">${esc(t('pl.ranked'))}</span>`;
   return sumCard('traits', t('dash.tabTags'), body, sumGo(ctx, 'tags', t('dash.tabTags')), mode);
 }
 
@@ -320,7 +326,7 @@ function sumRecords(parts, ctx) {
     <span><small>${esc(label)}</small><b>${esc(value)}</b></span><em>${esc(sumWhen(x))}</em></${ctx.own ? 'button' : 'div'}>`;
   const ms = [[5, 'mh.pentas'], [4, 'ov.quadras'], [3, 'ov.triples']].map(([m, key]) => [multi(m), key]).filter(([n]) => n).slice(0, 2);
   const body = row(t('mh.recKills'), k, t('ov.kills', { n: k.p.k })) + row(t('mh.recKda'), kda, `${kda.p.k} / ${kda.p.d} / ${kda.p.a}`)
-    + row(t('mh.recDmg'), dmg, num(dmg.p.dmg || 0)) + (ctx.scope === 'aram' ? '' : row(t('mh.sCs'), csm, `${perfDec(Stats.csMin(csm.g, csm.p))} CS/min`))
+    + row(t('mh.recDmg'), dmg, num(dmg.p.dmg || 0)) + (sumNoLanes(ctx.scope) ? '' : row(t('mh.sCs'), csm, `${perfDec(Stats.csMin(csm.g, csm.p))} CS/min`))
     + `<div class="srec plain"><span class="srec-ic">★</span><span><small>${esc(t('ov.streak'))}</small><b>${esc(longest >= 2 ? t('mh.streakW', { n: longest }) : '–')}</b></span>
       <em>${ms.length ? esc(ms.map(([n, key]) => t(key, { n })).join(' · ')) : ''}</em></div>`;
   return sumCard('rec', t('ov.records'), body);
@@ -372,7 +378,7 @@ const SUM_SIZE = { figs: 4, form: 2, traits: 1, champs: 1, roles: 1, style: 1, r
 const SUM_NAME = { figs: 'pl.figures', form: 'ov.form', traits: 'dash.tabTags', champs: 'pl.champs', roles: 'ov.roles', style: 'dash.tabStyle',
   rec: 'ov.records', mast: 'dash.tabMast', games: 'pl.recent', map: 'dash.tabMap' };
 function sumCardOf(id, p, ctx) {
-  const aram = ctx.scope === 'aram';
+  const aram = sumNoLanes(ctx.scope);
   const html = {
     figs: () => `<section class="ovc ovc-figsw">${sumFigs(p, ctx.scope)}</section>`,
     form: () => sumForm(p, ctx), traits: () => sumTraits(ctx.res, ctx), champs: () => sumChamps(p, ctx),
@@ -413,7 +419,7 @@ function sumHtml(ctx) {
   return `${tray}<div class="ov-sum custom${sumv.edit ? ' editing' : ''}">${cards}</div>`;
 }
 // the "Customize" button in the bar above the cards
-const sumCustBtn = () => (sumv.edit ? '' : `<button class="btn small ov-cust" data-ocust title="${esc(t('ov.customizeT'))}"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>${esc(t('ov.customize'))}</button>`);
+const sumCustBtn = () => (sumv.edit ? '' : (sumLayout() ? `<button class="btn small ov-reset" data-oreset title="${esc(t('ov.resetT'))}">${esc(t('ov.reset'))}</button>` : '') + `<button class="btn small ov-cust" data-ocust title="${esc(t('ov.customizeT'))}"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>${esc(t('ov.customize'))}</button>`);
 // a change of the arrangement: kept (the setting) and drawn again where it is shown
 function sumSaveLayout(lay) {
   const l = { order: lay.order, hidden: [...lay.hidden], size: lay.size };
@@ -508,6 +514,8 @@ api.onMatchesChanged(() => { if (sumOn()) loadSum(); });
 // the traits of a scope: ranked (all roles) or ARAM
 function sumRes(games, puuids, level, mastery, scope) {
   if (scope === 'aram') return typeof Tags.evaluateAram === 'function' ? Tags.evaluateAram({ games, own: puuids, now: Date.now() }) : null;
+  // Arena: no traits catalogue (yet)
+  if (scope === 'arena') return null;
   return Tags.evaluateAll({ games, own: puuids, level, mastery, now: Date.now() });
 }
 function renderSum() {

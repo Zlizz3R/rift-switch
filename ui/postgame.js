@@ -138,7 +138,7 @@ function pgTableHtml(g, as, mine) {
         <span class="pg-sp">${icon(as.spells, p.spells && p.spells[0], 'pg-s')}${icon(as.perks, p.keystone, 'pg-s')}${icon(as.spells, p.spells && p.spells[1], 'pg-s')}${icon(as.styles, p.sub, 'pg-s')}</span>
         <span class="pg-who"><span class="pg-name" data-player="${esc(JSON.stringify({ puuid: p.puuid, gameName: p.name, tagLine: p.tag }))}" title="${esc(p.name + (p.tag ? '#' + p.tag : ''))}">${esc(p.name || '?')}</span>${r.s ? rankChip(r.s, 'solo') : ''}</span>
         <span class="pg-place" title="${esc(t('pg.placeT'))}">${badge}${laneChip(lane(i))}</span>
-        <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}</span>
+        <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}${augIcons(p, as, 'pg-augs')}</span>
         <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${st.kp == null ? '–' : Math.round(100 * st.kp) + '%'} KP</small></span>
         <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${st.csMin.toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
         <span class="pg-b"><b>${k1(p.dmg)}</b>${bar(p.dmg, maxDmg, team === 100 ? 'blue' : 'red')}</span>

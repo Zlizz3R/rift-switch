@@ -11,6 +11,7 @@
   const AXES = [
     { id: 'farm', of: (g, p) => St.csMin(g, p), unit: 'CS/min', dec: 1 },
     { id: 'dmg', of: (g, p) => St.dmgMin(g, p), unit: 'dmg/min', dec: 0 },
+    { id: 'gold', of: (g, p) => (p.gold ? p.gold / St.minutes(g) : null), unit: 'gold/min', dec: 0 },
     { id: 'kp', of: (g, p) => St.kp(g, p), pct: true },
     { id: 'vis', of: (g, p) => St.visMin(g, p), unit: 'vis/min', dec: 2 },
     { id: 'surv', of: (g, p) => p.d, invert: true, unit: 'deaths', dec: 1 },

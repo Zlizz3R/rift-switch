@@ -26,48 +26,29 @@ const replies = {
   champions: [{ id: 103, name: 'Ahri' }, { id: 64, name: 'Lee Sin' }],
 };
 
-test('performance: key figures and roles add up, a role unfolds, a champion opens the match history', async () => {
+test('performance: one page – key figures, then champions, play style and map; a champion opens the match history', async () => {
   const app = await boot({ replies });
   try {
     await app.click('#navDash');
+    assert.deepEqual(app.$$('#dashTabs [data-dt]').map(b => b.dataset.dt), ['sum', 'lp', 'stats', 'mast', 'tags', 'seasons']);
     await app.click('[data-dt="stats"]');
     await app.settle();
     assert.ok(app.visible('#dashPerf'));
     // ranked of this season by default: 14 games (the ARAM game isn't ranked)
     assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex · Season \d{4}/);
     assert.match(app.$('.perf-bar .pk').textContent, /Games\s*14/);
-    const roles = app.$$('.perf-table tr.pr-role');
-    assert.deepEqual(roles.map(r => r.querySelector('[data-prow]').dataset.prow), ['jungle', 'mid']);
-    assert.equal(roles.reduce((s, r) => s + Number(r.children[1].textContent), 0), 14);
-    // unfold mid: its champions, Ahri first
-    await app.click('[data-prow="mid"]');
-    const champRows = app.$$('tr.pr-champ');
-    assert.equal(champRows.length, 10);
-    assert.match(champRows[0].textContent, /Ahri\s*4/);
-    // under 5 games the win rate is grey
-    assert.ok(champRows[0].children[2].classList.contains('muted'));
+    // no role table any more; the three cards
+    assert.equal(app.$('.perf-table'), null);
+    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-style', 'perfSec-map']);
     // the role filter
     await app.click('[data-prole="jungle"]');
     assert.match(app.$('#perfLine').textContent, /^1 game · .*Jungle/);
     await app.click('[data-prole=""]');
-    // all queues: ARAM shows up as "no lane"
-    await app.click('[data-pq=""]');
-    assert.ok(app.$('[data-prow="none"]'));
-    // a champion row: its games on top of the match history (every filter off, like "pentakills first")
-    await app.click('[data-pq="solo"]');
-    await app.click('[data-pq="flex"]');
-    assert.ok(app.$('[data-prow="mid"]').closest('tr').classList.contains('open'), 'an unfolded role stays open');
-    await app.click('tr.pr-champ[data-ppin="mid|103"]');
+    // a champion: the match history with this champion
+    await app.click('.oc-row[data-pchamp="103"]');
     await app.settle();
     assert.ok(app.visible('#viewMatches'));
-    assert.equal(app.$('#mhChamp').value, '');
-    assert.match(app.$('.mh-sec.pin').textContent, /Mid · Ahri · 4/);
-    // the role row's figures: all its games
-    await app.click('#navDash');
-    await app.settle();
-    app.$('tr.pr-role[data-ppin="jungle|"] td:nth-child(2)').click();
-    await app.settle();
-    assert.match(app.$('.mh-sec.pin').textContent, /Jungle · 1/);
+    assert.equal(Number(app.w.eval('mh.f.champ')), 103);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
@@ -76,7 +57,7 @@ test('champions: "All" first, the top 8, then all of them, sortable; the tab is 
   const app = await boot({ replies });
   try {
     await app.click('#navDash');
-    await app.click('[data-dt="champs"]');
+    await app.click('[data-dt="stats"]');
     await app.settle();
     const rows = app.$$('.oc-row');
     assert.equal(rows.length, 9);                       // "All" + top 8
@@ -89,7 +70,7 @@ test('champions: "All" first, the top 8, then all of them, sortable; the tab is 
     assert.match(app.$$('.oc-row')[1].textContent, /Ahri/);
     await app.click('#navAccounts');
     await app.click('#navDash');
-    assert.ok(app.$('[data-dt="champs"]').classList.contains('on'), 'back on Champions');
+    assert.ok(app.$('[data-dt="stats"]').classList.contains('on'), 'back on Performance');
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
@@ -98,16 +79,17 @@ test('play style: a radar against the lane opponent on the main role, the same v
   const app = await boot({ replies });
   try {
     await app.click('#navDash');
-    await app.click('[data-dt="style"]');
+    await app.click('[data-dt="stats"]');
     await app.settle();
-    assert.ok(app.$('#perfBody svg.radar'));
+    assert.ok(app.$('#perfBody .pc-style svg.radar'));
     const bars = app.$$('.rd-bar');
-    assert.equal(bars.length, 7);
+    assert.equal(bars.length, 8);
+    assert.match(bars[2].textContent, /Gold/);
     // 13 mid games with a lane opponent: farm has a value; 100 % = as good as him
     assert.match(bars[0].textContent, /Farm\s*±0 %/);
     assert.match(bars[0].title, /13 games/);
     // the lane phase needs the gold per minute: none stored – dashed, no value (not 0)
-    assert.ok(bars[5].classList.contains('few'));
+    assert.ok(bars[6].classList.contains('few'));
     assert.match(app.$('.rd-head').textContent, /Mid \(main role\)/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
@@ -127,7 +109,7 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
   const app = await boot({ replies });
   try {
     await app.click('#navDash');
-    await app.click('[data-dt="champs"]');
+    await app.click('[data-dt="stats"]');
     await app.settle();
     assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex/);
     // Flex off: only the Solo/Duo games
@@ -144,12 +126,13 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
     assert.ok(!app.$(`[data-ovacc="${P(1)}"]`).classList.contains('on'));
     assert.ok(!app.$('[data-ovacc=""]').classList.contains('on'));
     // the same choice on another tab – the chips sit in the head of every tab
+    await app.click('[data-dt="sum"]');
     await app.click('[data-dt="stats"]');
     assert.match(app.$('#perfBody').textContent, /No games match/);
     await app.click('[data-dt="lp"]');
     assert.ok(app.visible('#ovAccs'));
     // "All" brings every account back
-    await app.click('[data-dt="champs"]');
+    await app.click('[data-dt="stats"]');
     await app.click('[data-ovacc=""]');
     assert.match(app.$('#perfLine').textContent, /^6 games/);
     assert.deepEqual(app.errors.map(String), []);
@@ -164,8 +147,8 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
   const app = await boot({ replies: { ...replies, 'matches-get': withKills } });
   try {
     await app.click('#navDash');
-    assert.match(app.$('[data-dt="map"]').textContent, /^Map$/);
-    await app.click('[data-dt="map"]');
+    await app.click('[data-dt="stats"]');
+    assert.match(app.$('.pc-map .perf-card-h').textContent, /^Map$/);
     await app.settle();
     assert.ok(app.visible('#dashPerf'), 'the Performance filter is there');
     const dots = cls => app.$$(`.dm-map .dm-dots.${cls} circle`).length;

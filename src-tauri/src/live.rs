@@ -561,6 +561,30 @@ fn asset_url(p: &str) -> String {
             .unwrap_or(&lower)
     )
 }
+/// cherry-augments.json (Arena and ARAM: Mayhem) → { id: [icon, name, rarity] } – rarity as the
+/// game names it without the "k" (Silver, Gold, Prismatic)
+pub fn augments_of(list: Option<&Value>) -> Value {
+    Value::Object(
+        list.and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|x| {
+                let icon = x["augmentSmallIconPath"]
+                    .as_str()
+                    .filter(|s| !s.is_empty())?;
+                let rarity = x["rarity"]
+                    .as_str()
+                    .unwrap_or("")
+                    .trim_start_matches('k')
+                    .to_lowercase();
+                Some((
+                    x["id"].as_i64()?.to_string(),
+                    json!([asset_url(icon), x["nameTRA"], rarity]),
+                ))
+            })
+            .collect(),
+    )
+}
 static ASSETS: Mutex<Option<Value>> = Mutex::new(None);
 static ASSETS_FAILED: Mutex<i64> = Mutex::new(0);
 pub async fn game_assets(data_dir: &Path) -> Value {
@@ -568,29 +592,32 @@ pub async fn game_assets(data_dir: &Path) -> Value {
         return a;
     }
     let file = data_dir.join("assets.json");
+    // (a cache without the augments is from before they were shown: read again)
     if let Some(c) = cached(&file, |c| {
-        c["items"].as_object().is_some_and(|o| !o.is_empty())
+        c["items"].as_object().is_some_and(|o| !o.is_empty()) && c.get("augments").is_some()
     }) {
         *ASSETS.lock().unwrap() = Some(c.clone());
         return c;
     }
     // offline: don't ask the internet again on every page refresh, only every 5 minutes
-    let empty = json!({ "items": {}, "spells": {}, "perks": {}, "styles": {} });
+    let empty = json!({ "items": {}, "spells": {}, "perks": {}, "styles": {}, "augments": {} });
     if now_ms() - *ASSETS_FAILED.lock().unwrap() < 300_000 {
         return empty;
     }
     let f = |n: &str| format!("{GAME_DATA}v1/{n}");
-    let (u1, u2, u3, u4) = (
+    let (u1, u2, u3, u4, u5) = (
         f("items.json"),
         f("summoner-spells.json"),
         f("perks.json"),
         f("perkstyles.json"),
+        f("cherry-augments.json"),
     );
-    let (items, spells, perks, styles) = tokio::join!(
+    let (items, spells, perks, styles, augs) = tokio::join!(
         web_json(&u1, 10),
         web_json(&u2, 10),
         web_json(&u3, 10),
-        web_json(&u4, 10)
+        web_json(&u4, 10),
+        web_json(&u5, 10)
     );
     let map = |list: Option<&Value>| -> Value {
         Value::Object(
@@ -607,7 +634,7 @@ pub async fn game_assets(data_dir: &Path) -> Value {
         )
     };
     let out = json!({ "at": now_ms(), "items": map(items.as_ref()), "spells": map(spells.as_ref()), "perks": map(perks.as_ref()),
-        "styles": map(styles.as_ref().map(|s| &s["styles"])) });
+        "styles": map(styles.as_ref().map(|s| &s["styles"])), "augments": augments_of(augs.as_ref()) });
     if out["items"].as_object().is_none_or(|o| o.is_empty()) {
         *ASSETS_FAILED.lock().unwrap() = now_ms();
         return empty; // offline: try again later
@@ -619,6 +646,20 @@ pub async fn game_assets(data_dir: &Path) -> Value {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn augments_with_icon_name_and_rarity() {
+        let a = super::augments_of(Some(&serde_json::json!([
+            { "id": 1390, "nameTRA": "Phenomenal Evil", "rarity": "kGold", "augmentSmallIconPath": "/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/ARAM_PhenomenalEvil_small.png" },
+            { "id": 5, "nameTRA": "No icon", "augmentSmallIconPath": "" }
+        ])));
+        assert_eq!(a["1390"][1], "Phenomenal Evil");
+        assert_eq!(a["1390"][2], "gold");
+        assert!(a["1390"][0]
+            .as_str()
+            .unwrap()
+            .ends_with("assets/ux/kiwi/augments/icons/aram_phenomenalevil_small.png"));
+        assert!(a.get("5").is_none());
+    }
     #[test]
     fn lobby_penalties_name_their_player() {
         let elig = serde_json::json!([

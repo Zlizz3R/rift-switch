@@ -807,6 +807,12 @@
     'ov.traitsMainT': "Mostra todas as posições – clique para só a principal",
     'ov.traitsAllT': "Os traços da sua posição principal (a mais jogada) – clique para todas",
     'mp.rift': "O mapa é o do Summoner's Rift – partidas de ARAM e Arena não têm lugar nele. Escolha Ranqueadas ou Todas.",
+    'rad.gold': "Ouro",
+    'mh.showAll': "Mostrar tudo ({n})",
+    'mh.place': "{n}º lugar",
+    'ov.scopeArena': "Arena nesta temporada",
+    'ov.noArenaTraits': "Sem traços para Arena – os catálogos são feitos para o Summoner's Rift e ARAM.",
+    'ov.resetT': "Voltar ao layout original de Visão rápida",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

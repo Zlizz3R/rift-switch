@@ -57,8 +57,16 @@ pub struct Entry {
 /// first ward ("w1") and who took the first dragon ("drake1") – for the timeline tags;
 /// 5 = every big objective with the players of the taking team who were in on it ("obj");
 /// 6 = per minute also XP ("xp"), jungle CS ("jcs") and where everyone stood ("at"), the place
-/// of every kill, the killer of an objective and how many enemies hit it (steals).
-pub const GAME_VERSION: u8 = 6;
+/// of every kill, the killer of an objective and how many enemies hit it (steals);
+/// 7 = the augments of Arena and ARAM: Mayhem ("aug") and Arena's placing ("place") – only games
+/// of those queues are fetched again for it (AUG_QUEUES).
+pub const GAME_VERSION: u8 = 7;
+/// Queues with augments: Arena (1700, 1710), ARAM: Mayhem (2400; 3270 as a custom game)
+pub const AUG_QUEUES: [i64; 4] = [1700, 1710, 2400, 3270];
+/// A stored game that needs its details again: an older format – format 6 only in a queue with augments
+fn needs_update(e: &Entry) -> bool {
+    e.v < 6 || (e.v < GAME_VERSION && AUG_QUEUES.contains(&e.q))
+}
 /// The raw archive of the own games: about 20 KB a game, a new file from this size on (two kept).
 const RAW_MAX: u64 = 100_000_000;
 /// Other players' games are kept 30 days (Live); own games stay until deleted.
@@ -537,11 +545,8 @@ impl Matches {
     /// Games stored in an older format (no positions / details yet), newest first –
     /// Summoner's Rift first, where positions matter most.
     pub fn outdated(&self, max: usize) -> Vec<String> {
-        let mut out: Vec<(&String, &Entry)> = self
-            .index
-            .iter()
-            .filter(|(_, e)| e.v < GAME_VERSION)
-            .collect();
+        let mut out: Vec<(&String, &Entry)> =
+            self.index.iter().filter(|(_, e)| needs_update(e)).collect();
         out.sort_by_key(|(_, e)| (!SR_QUEUES.contains(&e.q), std::cmp::Reverse(e.t)));
         out.into_iter()
             .take(max)
@@ -1141,7 +1146,7 @@ fn players_of(g: &Value) -> Option<Vec<Value>> {
             let s = &p["stats"];
             let id = who.get(&p["participantId"].as_i64().unwrap_or(-2)).copied().unwrap_or(&Value::Null);
             let sv = |k: &str| id.get(k).and_then(Value::as_str).filter(|x| !x.is_empty());
-            json!({
+            let mut o = json!({
                 "puuid": sv("puuid").unwrap_or(""), "name": sv("gameName").or(sv("summonerName")).unwrap_or(""), "tag": sv("tagLine").unwrap_or(""),
                 "team": p["teamId"], "champ": p["championId"], "lvl": num(&s["champLevel"]),
                 "k": num(&s["kills"]), "d": num(&s["deaths"]), "a": num(&s["assists"]),
@@ -1151,7 +1156,20 @@ fn players_of(g: &Value) -> Option<Vec<Value>> {
                 "spells": [num(&p["spell1Id"]), num(&p["spell2Id"])], "keystone": num(&s["perk0"]), "sub": num(&s["perkSubStyle"]),
                 "win": s["win"] == true, "multi": num(&s["largestMultiKill"]), "pos": position(&p["timeline"]),
                 "x": extra(s),
-            })
+            });
+            // Arena / ARAM: Mayhem: the augments taken, Arena's placing
+            let aug: Vec<i64> = (1..=6)
+                .map(|i| num_of(s.get(format!("playerAugment{i}").as_str())) as i64)
+                .filter(|n| *n > 0)
+                .collect();
+            if !aug.is_empty() {
+                o["aug"] = json!(aug);
+            }
+            let place = num_of(s.get("subteamPlacement")) as i64;
+            if place > 0 {
+                o["place"] = json!(place);
+            }
+            o
         })
         .collect();
     Some(players)
@@ -1215,6 +1233,31 @@ mod tests {
             "participantIdentities": (0..10).map(|i| json!({ "participantId": i + 1, "player": { "puuid": format!("p{i}"), "gameName": format!("N{i}"), "tagLine": "EUW" } })).collect::<Vec<_>>(),
             "participants": (0..10).map(|i| json!({ "participantId": i + 1, "teamId": if i < 5 { 100 } else { 200 }, "championId": i + 1, "spell1Id": 4, "spell2Id": 14,
                 "stats": { "kills": i, "deaths": 1, "assists": 2, "totalMinionsKilled": 100, "neutralMinionsKilled": 5, "item0": 3031, "win": i < 5, "perk0": 8112, "perkSubStyle": 8300 } })).collect::<Vec<_>>() })
+    }
+
+    #[test]
+    fn augments_and_arena_placing() {
+        let mut d = detail(3);
+        d["queueId"] = json!(2400);
+        d["participants"][0]["stats"]["playerAugment1"] = json!(1390);
+        d["participants"][0]["stats"]["playerAugment3"] = json!(2132);
+        d["participants"][0]["stats"]["playerAugment2"] = json!(0);
+        d["participants"][1]["stats"]["subteamPlacement"] = json!(2);
+        let g = compact(&d).unwrap();
+        assert_eq!(g["players"][0]["aug"], json!([1390, 2132]));
+        assert_eq!(g["players"][1]["place"], 2);
+        assert!(g["players"][2].get("aug").is_none() && g["players"][2].get("place").is_none());
+        // format 6: only games with augments are fetched again
+        let e = |v: u8, q: i64| Entry {
+            id: 1,
+            t: 1,
+            q,
+            off: 0,
+            len: 0,
+            v,
+        };
+        assert!(needs_update(&e(6, 2400)) && needs_update(&e(6, 1700)) && needs_update(&e(5, 420)));
+        assert!(!needs_update(&e(6, 420)) && !needs_update(&e(7, 2400)));
     }
 
     /// a game as a match list carries it: only player i
@@ -1502,7 +1545,7 @@ mod tests {
         assert_eq!(g["xp"][1][0], 300);
         assert_eq!(g["jcs"][1][0], 1);
         assert_eq!(g["at"][1][2], json!([30, 125]));
-        assert_eq!(g["v"], 6);
+        assert_eq!(g["v"], GAME_VERSION);
         // a timeline without ward events (the client's): no "w1" at all, not "never warded"
         let mut g2 = compact(&detail(9)).unwrap();
         let mut tl2 = tl.clone();

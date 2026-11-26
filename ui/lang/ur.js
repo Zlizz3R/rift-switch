@@ -806,6 +806,12 @@
     'ov.traitsMainT': "تمام پوزیشنز دکھ رہی ہیں – صرف مرکزی پوزیشن کے لیے کلک کریں",
     'ov.traitsAllT': "آپ کی مرکزی پوزیشن (سب سے زیادہ کھیلی) کی خصوصیات – تمام پوزیشنز کے لیے کلک کریں",
     'mp.rift': "نقشہ سمنرز رفٹ کا ہے – ARAM اور ایرینا گیمز کی اس پر کوئی جگہ نہیں۔ رینکڈ یا تمام گیمز چنیں۔",
+    'rad.gold': "گولڈ",
+    'mh.showAll': "سب دکھائیں ({n})",
+    'mh.place': "پوزیشن {n}",
+    'ov.scopeArena': "اس سیزن کا ایرینا",
+    'ov.noArenaTraits': "ایرینا کے لیے کوئی خصوصیات نہیں – فہرستیں سمنرز رفٹ اور ARAM کے لیے بنی ہیں۔",
+    'ov.resetT': "ایک نظر میں کے اصل لے آؤٹ پر واپس",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

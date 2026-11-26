@@ -58,21 +58,15 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     assert.doesNotMatch(app.$('#dashTags') ? '' : app.$('#plBody').innerHTML, /\b(pl|tags?)\.[a-zA-Z]+\b(?![^<]*>)/, 'no text key without a translation');
     // the Overview's own views for this player: Performance (no accounts column, no jumps into the own
     // match history), Champions, Play style, Map – a role filter on them
-    assert.deepEqual(app.$$('[data-pltab]').map(b => b.textContent), ['At a glance', 'Performance', 'Champions', 'Play style', 'Map', 'Traits']);
+    // Performance: the key figures, then champions, play style and map on one page
+    assert.deepEqual(app.$$('[data-pltab]').map(b => b.textContent), ['At a glance', 'Performance', 'Traits']);
     await app.click('[data-pltab="stats"]');
     assert.ok(app.$('#plBody .perf-bar'), 'the key figures');
-    const heads = app.$$('#plBody .perf-table th').map(th => th.textContent);
-    assert.ok(!heads.some(h => /Accounts/.test(h)), heads.join('|'));
     assert.equal(app.$('#plBody [data-ppin]'), null);
-    await app.click('#plBody [data-prow="mid"]');
-    assert.ok(app.$('#plBody .pr-champ'), 'a role unfolds into its champions');
-    await app.click('[data-pltab="champs"]');
-    assert.match(app.$('#plBody .oc-list').textContent, /Ahri[\s\S]*75 %/);
+    assert.match(app.$('#plBody .pc-champs .oc-list').textContent, /Ahri[\s\S]*75 %/);
     assert.equal(app.$('#plBody [data-pchamp]'), null);
-    await app.click('[data-pltab="style"]');
-    assert.ok(app.$('#plBody .rd-head'));
-    await app.click('[data-pltab="map"]');
-    assert.match(app.$('#plBody').textContent, /No deaths or kills with a place yet/, 'lite games have no timeline');
+    assert.ok(app.$('#plBody .pc-style .rd-head'));
+    assert.match(app.$('#plBody .pc-map').textContent, /No deaths or kills with a place yet/, 'lite games have no timeline');
     await app.click('[data-plrole="top"]');
     assert.match(app.$('#plBody').textContent, /No games match/);
     // Traits: the Overview's traits page for him
@@ -88,7 +82,8 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     await app.click('[data-pltab="sum"]');
     assert.ok(app.$('.ovc-figs'));
     await app.click('.ovc-champs [data-ovgo="champs"]');
-    assert.ok(app.$('[data-pltab="champs"]').classList.contains('on'));
+    assert.ok(app.$('[data-pltab="stats"]').classList.contains('on'), 'Champions → is a section of Performance');
+    assert.ok(app.$('#perfSec-champs'));
     // back to the own accounts
     await app.click('#plMine');
     assert.ok(app.visible('#viewDash'));

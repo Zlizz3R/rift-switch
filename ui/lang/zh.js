@@ -804,6 +804,12 @@
     'ov.traitsMainT': "显示所有位置——点击只看主位置",
     'ov.traitsAllT': "你主位置（玩得最多）的特质——点击查看所有位置",
     'mp.rift': "这是召唤师峡谷的地图——极地大乱斗和斗魂竞技场的对局无法标在上面。请选择排位或全部对局。",
+    'rad.gold': "金币",
+    'mh.showAll': "全部显示（{n}）",
+    'mh.place': "第 {n} 名",
+    'ov.scopeArena': "本赛季斗魂竞技场",
+    'ov.noArenaTraits': "斗魂竞技场没有特质——特质目录是为召唤师峡谷和极地大乱斗设计的。",
+    'ov.resetT': "恢复“概览”的默认布局",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

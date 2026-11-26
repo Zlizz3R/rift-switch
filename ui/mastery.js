@@ -8,10 +8,15 @@ const mast = { data: null, games: null, q: '', sort: 'total', dir: -1, all: fals
 // ---------- Overview sub-tabs ----------
 // The app starts on "At a glance" (the Overview's start page); the tab chosen then stays while the
 // app runs.
-const DASH_TABS = ['sum', 'lp', 'stats', 'champs', 'style', 'map', 'mast', 'tags', 'seasons'];
+// Performance ("stats") holds the champions, the play style and the map as its sections: a way into
+// one of them ("champs" / "style" / "map") opens Performance there.
+const DASH_TABS = ['sum', 'lp', 'stats', 'mast', 'tags', 'seasons'];
+const PERF_SECS = ['champs', 'style', 'map'];
 let dashTabNow = 'sum';
 const dashTab = () => dashTabNow;
 function showDashTab(tab) {
+  const sec = PERF_SECS.includes(tab) ? tab : '';
+  if (sec) tab = 'stats';
   tab = DASH_TABS.includes(tab) ? tab : 'sum';
   dashTabNow = tab;
   document.querySelectorAll('#dashTabs [data-dt]').forEach(b => b.classList.toggle('on', b.dataset.dt === tab));
@@ -19,13 +24,13 @@ function showDashTab(tab) {
   $('dashLp').hidden = tab !== 'lp';
   if (tab === 'sum' && typeof renderSum === 'function') { renderSum(); loadSum(); }
   if (tab === 'lp') { renderDash(); }
-  $('dashPerf').hidden = !['stats', 'champs', 'style', 'map'].includes(tab);
+  $('dashPerf').hidden = tab !== 'stats';
   $('dashMast').hidden = tab !== 'mast';
   $('dashTags').hidden = tab !== 'tags';
   if (typeof renderOvAccs === 'function') renderOvAccs();
   $('dashSeasons').hidden = tab !== 'seasons';
   if (tab === 'mast') { renderMast(); loadMast(); }
-  if (['stats', 'champs', 'style', 'map'].includes(tab)) { renderPerf(); loadPerf(); }
+  if (tab === 'stats') { renderPerf(); loadPerf(); perfScrollTo(sec); }
   if (tab === 'tags') { renderTagsView(); loadTagsView(); }
   if (tab === 'seasons') { renderSeasonsView(); loadSeasonsView(); }
   refreshLoadBtns();

@@ -808,6 +808,12 @@
     'ov.traitsMainT': "Affiche tous les postes – clique pour le poste principal seulement",
     'ov.traitsAllT': "Les traits de ton poste principal (le plus joué) – clique pour tous les postes",
     'mp.rift': "La carte est celle de la Faille de l'invocateur – les parties ARAM et Arena n'y ont pas de place. Choisis Classée ou Toutes.",
+    'rad.gold': "Or",
+    'mh.showAll': "Tout afficher ({n})",
+    'mh.place': "{n}e place",
+    'ov.scopeArena': "Arena cette saison",
+    'ov.noArenaTraits': "Pas de traits pour Arena – les catalogues sont faits pour la Faille et l'ARAM.",
+    'ov.resetT': "Revenir à la disposition d'origine d'En un coup d'œil",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

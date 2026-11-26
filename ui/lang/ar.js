@@ -805,6 +805,12 @@
     'ov.traitsMainT': "تُعرض كل المراكز – انقر لعرض المركز الرئيسي فقط",
     'ov.traitsAllT': "سمات مركزك الرئيسي (الأكثر لعبًا) – انقر لكل المراكز",
     'mp.rift': "الخريطة هي خريطة صدع المستدعين – مباريات ARAM والساحة لا مكان لها عليها. اختر المصنّفة أو كل المباريات.",
+    'rad.gold': "الذهب",
+    'mh.showAll': "عرض الكل ({n})",
+    'mh.place': "المركز {n}",
+    'ov.scopeArena': "الساحة هذا الموسم",
+    'ov.noArenaTraits': "لا سمات للساحة – قوائم السمات مصممة لصدع المستدعين وARAM.",
+    'ov.resetT': "العودة إلى التخطيط الأصلي لنظرة سريعة",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

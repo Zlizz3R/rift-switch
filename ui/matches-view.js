@@ -384,7 +384,8 @@ function renderMatches() {
         + rows(pinned) + (rest.length ? `<div class="mh-sec">${esc(t('mh.otherGames'))}</div>` : '')
       : '')
     + rows(shown)
-    + (rest.length > shown.length ? `<div class="mh-more"><button class="btn" id="mhShowMore">${t('mh.showMore', { n: rest.length - shown.length })}</button></div>` : '');
+    + (rest.length > shown.length ? `<div class="mh-more"><button class="btn" id="mhShowMore">${t('mh.showMore', { n: Math.min(40, rest.length - shown.length) })}</button>`
+      + `<button class="btn" id="mhShowAll">${t('mh.showAll', { n: num(rest.length) })}</button></div>` : '');
 }
 
 // ---------- ranks of the players ----------
@@ -523,6 +524,14 @@ function summaryHtml(list) {
   </div>`;
 }
 
+// the augments a player took (Arena, ARAM: Mayhem), with their rarity's colour
+function augIcons(p, as, cls) {
+  if (!p.aug || !p.aug.length) return '';
+  return `<span class="${cls}">${p.aug.map(id => {
+    const a = as && as.augments && as.augments[id];
+    return a && a[0] ? `<img class="aug r-${esc(a[2] || '')}" src="${esc(a[0])}" title="${esc(a[1] || '')}" alt="">` : `<span class="aug none" title="#${id}"></span>`;
+  }).join('')}</span>`;
+}
 function icon(map, id, cls) {
   const x = map && map[id];
   return x && x[0] ? `<img class="${cls}" src="${esc(x[0])}" title="${esc(x[1] || '')}" alt="">` : `<span class="${cls} none"></span>`;
@@ -569,7 +578,8 @@ function gameRow(g, as) {
         </div>
       </div>
       <div class="mh-items">${me.items.map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}
-        ${MULTI[me.multi] ? `<span class="mh-badge">${t(MULTI[me.multi])}</span>` : ''}</div>
+        ${MULTI[me.multi] ? `<span class="mh-badge">${t(MULTI[me.multi])}</span>` : ''}${me.place ? `<span class="mh-badge place p${me.place}">${t('mh.place', { n: me.place })}</span>` : ''}</div>
+      ${augIcons(me, as, 'mh-augs')}
     </div>
     <div class="mh-teams">${teamsTable(g, mine)}</div>
     ${mh.open.has(String(g.id)) ? detailsHtml(g, as, mine) : ''}
@@ -642,6 +652,7 @@ document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => {
 // "show more" and jumping to a record's game
 $('viewMatches').addEventListener('click', e => {
   if (e.target.closest('#mhShowMore')) { mh.show += 40; renderMatches(); return; }
+  if (e.target.closest('#mhShowAll')) { mh.show = Infinity; renderMatches(); return; }
   const mo = e.target.closest('[data-mhmore], [data-mhless]');
   if (mo) {
     const k = mo.dataset.mhmore || mo.dataset.mhless;

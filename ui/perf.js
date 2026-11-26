@@ -16,7 +16,7 @@ const perf = {
   // queues: groups switched on (none = all); kept like the account choice; last: the newest n games only
   f: { queues: perfQueuesKept(), range: 'y' + new Date().getFullYear(), from: '', to: '', role: '', last: perfLastKept() },
   lastOwn: false,
-  sort: 'n', dir: -1, open: new Set(), all: false, cSort: 'n', games: null, loading: false, trendN: 20, trendKey: 'kda',
+  all: false, cSort: 'n', games: null, loading: false, trendN: 20, trendKey: 'kda',
 };
 perf.lastOwn = perf.f.last > 0 && !PERF_LAST.includes(perf.f.last);
 
@@ -30,7 +30,7 @@ async function loadPerf() {
   perf.loading = false;
   renderPerf();
 }
-const perfOn = () => view === 'dash' && ['stats', 'champs', 'style', 'map'].includes(dashTab());
+const perfOn = () => view === 'dash' && dashTab() === 'stats';
 api.onMatchesChanged(() => { if (perfOn()) loadPerf(); });
 
 // ---------- formatting ----------
@@ -104,8 +104,22 @@ function renderPerf() {
   const ag = Stats.aggregate(parts);
   $('perfLine').textContent = perfLine(ag);
   if (!ag) { el.innerHTML = `<div class="chart-empty">${t('mh.noMatch')}</div>`; return; }
-  const tab = dashTab();
-  el.innerHTML = tab === 'champs' ? perfChampsHtml(parts, ag) : tab === 'style' ? perfStyleHtml(parts) : tab === 'map' ? perfMapHtml(parts) : perfStatsHtml(parts, ag);
+  el.innerHTML = perfAllHtml(parts, ag);
+}
+// one page: the key figures and the trend on top, then the champions, the play style and the map
+// as cards – side by side on a wide window, the champions left of the other two on a medium one,
+// one under the other on a narrow one (container queries in style.css)
+function perfAllHtml(parts, ag, opts = {}) {
+  const card = (id, title, body) => `<section class="perf-card pc-${id}" id="perfSec-${id}"><h3 class="perf-card-h">${esc(title)}</h3>${body}</section>`;
+  return `${perfBarHtml(ag)}${perfTrendHtml(parts)}<div class="perf-grid">
+    ${card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts))}
+    ${card('style', t('dash.tabStyle'), perfStyleHtml(parts, opts.role))}
+    ${card('map', t('dash.tabMap'), perfMapHtml(parts, opts.player ? { foot: false } : {}))}</div>`;
+}
+// a way into a section ("Champions →" on At a glance): Performance, scrolled to it
+function perfScrollTo(sec) {
+  if (!sec) return;
+  requestAnimationFrame(() => { const el = $('perfSec-' + sec); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
 }
 
 // the key figures in one row
@@ -148,38 +162,6 @@ document.addEventListener('change', e => {
   if (e.target.id === 'trendKey') { perf.trendKey = e.target.value; perfRerender(); }
 });
 
-// the role table: a role per row, unfolded its champions
-const PERF_COLS = [
-  ['n', 'perf.games'], ['winrate', 'dash.wr'], ['avg', 'perf.avg'], ['kda', 'mh.kda'], ['csMin', 'det.csMin'],
-  ['dmgMin', 'perf.dmgMin'], ['kp', 'perf.kpShort'], ['visMin', 'perf.visMin'], ['accounts', 'perf.accs'],
-];
-function perfCells(r, oneAccount = false) {
-  const few = r.n < PerfMath.MARK.minGames;
-  return `<td>${num(r.n)}</td>
-    <td class="${few ? 'muted' : PerfMath.markWinrate(r)}"${few ? ` title="${esc(t('perf.fewWr'))}"` : ''}>${perfPct(r.winrate)}</td>
-    <td>${perfAvg(r)}</td><td class="${PerfMath.markKda(r)}">${perfKda(r)}</td><td>${perfDec(r.csMin)}</td>
-    <td>${num(Math.round(r.dmgMin))}</td><td>${perfPct(r.kp)}</td><td>${perfDec(r.visMin, 2)}</td>${oneAccount ? '' : `<td>${r.accounts}</td>`}`;
-}
-// opts.player: one player's games (the player page) – no accounts column, no jumps into the own match history
-function perfStatsHtml(parts, ag, opts = {}) {
-  const roles = PerfMath.roleTable(parts);
-  const cols = opts.player ? PERF_COLS.filter(([k]) => k !== 'accounts') : PERF_COLS;
-  const pin = v => (opts.player ? '' : ` data-ppin="${v}" title="${esc(t('perf.pin'))}"`);
-  // one role (filtered, or only one played): open
-  const isOpen = r => roles.length === 1 || perf.open.has(r);
-  const arrow = k => (perf.sort === k ? (perf.dir < 0 ? ' ↓' : ' ↑') : '');
-  const head = `<tr><th>${t('perf.role')}</th>${cols.map(([k, l]) => `<th data-psort="${k}"${k === 'kp' ? ` title="${esc(t('perf.kp'))}"` : ''}>${t(l)}${arrow(k)}</th>`).join('')}</tr>`;
-  const body = roles.map(r => {
-    const open = isOpen(r.role);
-    const icon = r.role === 'none' ? '' : `<img class="pr-ic" src="${posIcon(r.role)}" alt="">`;
-    const champsHtml = open ? PerfMath.sortRows(r.champs, perf.sort, perf.dir).map(c => `<tr class="pr-champ${opts.player ? ' plain' : ''}"${pin(`${r.role}|${c.champ}`)}>
-        <td><span class="mast-ch"><img src="${CHAMP_ICON(c.champ)}" alt="" loading="lazy">${esc(perfChamp(c.champ))}</span></td>${perfCells(c, opts.player)}</tr>`).join('') : '';
-    // the name unfolds the role; the figures pin its games in the match history
-    return `<tr class="pr-role${open ? ' open' : ''}"${pin(`${r.role}|`)}><td data-prow="${r.role}" title="${esc(t('perf.unfold'))}"><span class="pr-name"><i class="pr-chev"></i>${icon}${esc(t('pos.' + r.role))}</span></td>${perfCells(r, opts.player)}</tr>${champsHtml}`;
-  }).join('');
-  return `${perfBarHtml(ag)}${perfTrendHtml(parts)}<div class="mast-wrap"><table class="dash-table perf-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
-}
-
 // the champion list in the style of op.gg: "All" first, then the champions by games
 function perfChampsHtml(parts, ag, opts = {}) {
   let rows = PerfMath.champRows(parts);
@@ -200,13 +182,6 @@ function perfChampsHtml(parts, ag, opts = {}) {
 }
 
 // ---------- clicks ----------
-// a row of the role table: its games on top of the match history (like "pentakills first")
-function perfPin(role, champ) {
-  const rows = PerfMath.select(perf.games, perfF()).filter(x => PerfMath.roleOf(x) === role && (!champ || x.p.champ === +champ));
-  const ids = [...new Set(rows.map(x => String(x.g.id)))];
-  const label = [t('pos.' + role), champ ? perfChamp(+champ) : ''].filter(Boolean).join(' · ');
-  openMatchesPinned(ids, label);
-}
 // a champion: the match history with the same account, queue, time and this champion
 function perfOpen(champ) {
   const f = perf.f;
@@ -242,16 +217,10 @@ $('dashPerf').addEventListener('click', e => {
   }
   const ro = e.target.closest('[data-prole]');
   if (ro) { perf.f.role = ro.dataset.prole; return renderPerf(); }
-  const so = e.target.closest('[data-psort]');
-  if (so) { const k = so.dataset.psort; perf.dir = perf.sort === k ? -perf.dir : -1; perf.sort = k; return renderPerf(); }
   const cs = e.target.closest('[data-csort]');
   if (cs) { perf.cSort = cs.dataset.csort; return renderPerf(); }
   if (e.target.closest('[data-pall]')) { perf.all = !perf.all; return renderPerf(); }
   const ch = e.target.closest('[data-pchamp]');
   if (ch) return perfOpen(+ch.dataset.pchamp);
-  const fold = e.target.closest('[data-prow]');
-  if (fold) { const k = fold.dataset.prow; if (perf.open.has(k)) perf.open.delete(k); else perf.open.add(k); return renderPerf(); }
-  const pp = e.target.closest('[data-ppin]');
-  if (pp) return perfPin(...pp.dataset.ppin.split('|'));
   if (e.target.closest('.oc-row.all')) return perfOpen(0);
 });

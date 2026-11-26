@@ -1354,7 +1354,19 @@ span.mh-ch { cursor: default; }
 .pg-pl { display: inline-block; min-width: 44px; text-align: center; padding: 3px 6px; border-radius: 6px; font-size: 11.5px; background: var(--panel2); color: var(--muted); }
 .pg-pl.mvp { background: rgba(200,170,110,.2); color: var(--gold2); }
 .pg-pl.ace { background: rgba(143,124,247,.2); color: #c4b8ff; }
-.pg-items { display: flex; gap: 2px; }
+.pg-items { display: flex; gap: 2px; flex-wrap: wrap; }
+/* augments (Arena, ARAM: Mayhem): their rarity's colour around them */
+.mh-augs, .pg-augs { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+.mh-augs { margin-top: 4px; }
+.pg-augs { flex-basis: 100%; margin-top: 2px; }
+.aug { width: 22px; height: 22px; border-radius: 6px; background: #0b0e14; border: 1px solid #59647a; box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
+.pg-augs .aug { width: 17px; height: 17px; border-radius: 5px; }
+.aug.r-silver { border-color: #b8c4d0; } .aug.r-gold { border-color: #e0b85c; box-shadow: 0 0 6px rgba(224,184,92,.35); }
+.aug.r-prismatic { border-color: #c48bff; box-shadow: 0 0 8px rgba(196,139,255,.45); }
+span.aug.none { display: inline-block; opacity: .4; }
+.mh-badge.place { background: rgba(255,255,255,.06); }
+.mh-badge.place.p1 { color: #f4c874; border-color: rgba(244,200,116,.5); }
+div.mh-more { gap: 10px; }
 .pg-it { width: 24px; height: 24px; border-radius: 4px; display: block; }
 .pg-it.none { background: var(--panel2); }
 .pg-it.trinket { margin-left: 4px; border-radius: 50%; }
@@ -1771,7 +1783,12 @@ span.mh-ch { cursor: default; }
 /* edge to edge under the title bar: the picture of the champion played most behind who it is */
 .ov-hero { position: relative; margin: -26px -30px 18px; padding: 24px 30px 0; isolation: isolate;
   background: linear-gradient(180deg, #131a29 0%, #0e131e 100%); border-bottom: 1px solid var(--line); }
-.ov-art { position: absolute; inset: 0; z-index: -2; overflow: hidden; background: 72% 18% / cover no-repeat; opacity: 0; transition: opacity .7s ease; pointer-events: none; }
+/* the picture as wide as its height allows (the whole splash, faces included), at least 58 % of the
+   head; anchored right and faded into the page on its left – a wide, low head no longer zooms into
+   the champion's chest */
+.ov-art { position: absolute; top: 0; right: 0; left: auto; height: 100%; width: auto; aspect-ratio: 1215 / 717; min-width: 58%; max-width: 100%; z-index: -2; overflow: hidden;
+  background: 50% 12% / cover no-repeat; opacity: 0; transition: opacity .7s ease; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28%); mask-image: linear-gradient(90deg, transparent 0, #000 28%); }
 .ov-art.on { opacity: 1; }
 html[data-theme="light"] .ov-art { filter: invert(1) hue-rotate(180deg); }
 /* the picture fades into the page: dark where the text is, lighter on the right, the page colour at the bottom */
@@ -2109,3 +2126,27 @@ button.sgm:hover { filter: brightness(1.15); }
 .st-pos img { width: 13px; height: 13px; opacity: .85; }
 button.st-pos { cursor: pointer; border: 1px solid transparent; background: none; font: inherit; }
 button.st-pos:hover { border-color: var(--gold); color: var(--gold2); }
+.ov-bar .ov-reset { margin-left: auto; }
+.ov-bar .ov-reset + .ov-cust { margin-left: 8px; }
+
+/* ---------- Overview → Performance: figures on top, then champions, play style and map as cards ---------- */
+.perf-grid { container-type: inline-size; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); margin-top: 14px; }
+@container (min-width: 0) { .perf-grid > .perf-card { min-width: 0; } }
+.perf-card { container-type: inline-size; position: relative; padding: 14px 16px 16px; border-radius: 14px; background: linear-gradient(180deg, #121826, #0e131e);
+  border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 8px 22px rgba(0,0,0,.22); min-width: 0; }
+.perf-card-h { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--gold2); }
+.perf-card-h::before { content: "◆"; font-size: 8px; margin-right: 7px; vertical-align: 2px; color: var(--gold); }
+.perf-card .mp-left { width: min(340px, 100%); }
+.perf-card .dm-side { min-width: 0; max-width: none; }
+.perf-card .rd-wrap { justify-content: center; gap: 20px; }
+.perf-card .rd-bars { min-width: 0; flex: 1 1 240px; }
+.perf-card .radar { max-width: 100%; height: auto; }
+/* medium: champions left, play style and map stacked on the right */
+@media (min-width: 1100px) {
+  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "champs style" "champs map"; align-items: start; }
+  .pc-champs { grid-area: champs; } .pc-style { grid-area: style; } .pc-map { grid-area: map; }
+}
+/* wide: three side by side */
+@media (min-width: 1700px) {
+  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr); grid-template-areas: "champs style map"; }
+}

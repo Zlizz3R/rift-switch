@@ -854,6 +854,12 @@
     'ov.traitsMainT': "Showing every position – click for the main position only",
     'ov.traitsAllT': "The traits of your main position (played most) – click for every position",
     'mp.rift': "The map is Summoner's Rift's – ARAM and Arena games have no place on it. Pick Ranked or All games.",
+    'rad.gold': "Gold",
+    'mh.showAll': "Show all ({n})",
+    'mh.place': "#{n}",
+    'ov.scopeArena': "Arena this season",
+    'ov.noArenaTraits': "No traits for Arena – the trait catalogues are made for Summoner's Rift and ARAM.",
+    'ov.resetT': "Back to the designed layout of At a glance",
   };
 
   const de = {
@@ -1691,6 +1697,12 @@
     'ov.traitsMainT': "Zeigt alle Positionen – klicken für nur die Hauptposition",
     'ov.traitsAllT': "Die Traits deiner Hauptposition (am meisten gespielt) – klicken für alle Positionen",
     'mp.rift': "Die Karte ist die von Summoner's Rift – ARAM- und Arena-Spiele haben darauf keinen Ort. Wähle Ranked oder Alle Spiele.",
+    'rad.gold': "Gold",
+    'mh.showAll': "Alle anzeigen ({n})",
+    'mh.place': "Platz {n}",
+    'ov.scopeArena': "Arena dieser Season",
+    'ov.noArenaTraits': "Keine Traits für Arena – die Trait-Kataloge sind für Summoner's Rift und ARAM gemacht.",
+    'ov.resetT': "Zurück zum vorgegebenen Layout von Auf einen Blick",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

@@ -9,7 +9,7 @@
 // Play style, Map, Traits), drawn with the same code from this player's games; role: '' or a
 // position (those tabs); queue: 'ranked' | 'aram' | 'all', '' = the one with the most games
 const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: '', tab: 'sum', role: '', timer: 0, loading: false };
-const PL_TABS = [['sum', 'ov.tabSum'], ['stats', 'dash.tabStats'], ['champs', 'dash.tabChamps'], ['style', 'dash.tabStyle'], ['map', 'dash.tabMap'], ['tags', 'dash.tabTags']];
+const PL_TABS = [['sum', 'ov.tabSum'], ['stats', 'dash.tabStats'], ['tags', 'dash.tabTags']];
 
 // open a player: { puuid, gameName, tagLine, region }; back: from the arrows (no new history step)
 function openPlayer(p, back = false) {
@@ -142,17 +142,14 @@ function renderPlayer() {
     let body;
     if (plv.tab === 'tags') {
       const ctx = { games: all, own: [p.puuid], level: info.level != null ? info.level : null, mastery: mastRows, now: Date.now() };
-      const res = scope === 'aram' ? sumRes(all, [p.puuid], ctx.level, mastRows, 'aram')
+      const res = scope === 'aram' || scope === 'arena' ? sumRes(all, [p.puuid], ctx.level, mastRows, scope)
         : plv.role ? Tags.evaluate({ ...ctx, role: plv.role }) : Tags.evaluateAll(ctx);
-      body = res ? tagsBodyHtml(own ? res : plOthers(res), scope === 'aram' ? null : res.role) : `<div class="chart-empty">${t('ov.noAramTraits')}</div>`;
+      body = res ? tagsBodyHtml(own ? res : plOthers(res), scope === 'aram' ? null : res.role) : `<div class="chart-empty">${t(scope === 'arena' ? 'ov.noArenaTraits' : 'ov.noAramTraits')}</div>`;
     } else {
       body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
-        : plv.tab === 'stats' ? perfStatsHtml(parts, agR, { player: true })
-          : plv.tab === 'champs' ? perfChampsHtml(parts, agR, { player: true })
-            : plv.tab === 'style' ? perfStyleHtml(parts, plv.role)
-              : perfMapHtml(parts, { foot: false });
+        : perfAllHtml(parts, agR, { player: true, role: plv.role });
     }
-    el.innerHTML = `<div class="pl-bar">${bar}${scope === 'aram' && plv.tab === 'tags' ? '' : roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
+    el.innerHTML = `<div class="pl-bar">${bar}${(scope === 'aram' || scope === 'arena') && plv.tab === 'tags' ? '' : roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
     return;
   }
   // At a glance: the same page as the own Overview's
@@ -182,7 +179,15 @@ $('viewPlayer').addEventListener('click', e => {
   const tb = e.target.closest('[data-pltab]');
   if (tb) { plv.tab = tb.dataset.pltab; return renderPlayer(); }
   const go = e.target.closest('[data-ovgo]');
-  if (go) { plv.tab = go.dataset.ovgo; renderPlayer(); const top = document.querySelector('main'); if (top) top.scrollTop = 0; return; }
+  if (go) {
+    const sec = PERF_SECS.includes(go.dataset.ovgo) ? go.dataset.ovgo : '';
+    plv.tab = sec ? 'stats' : go.dataset.ovgo;
+    renderPlayer();
+    const top = document.querySelector('main');
+    if (top) top.scrollTop = 0;
+    perfScrollTo(sec);
+    return;
+  }
   if (e.target.closest('#plMine')) return showView('dash');
   // the traits tab: "All possible traits" and the numbers behind one
   if (e.target.closest('[data-tagall]')) {
@@ -194,13 +199,9 @@ $('viewPlayer').addEventListener('click', e => {
   const ro = e.target.closest('[data-plrole]');
   if (ro) { plv.role = ro.dataset.plrole; return renderPlayer(); }
   // the Overview's own controls inside the tabs (sorting, unfolding, more champions)
-  const so = e.target.closest('[data-psort]');
-  if (so) { const k = so.dataset.psort; perf.dir = perf.sort === k ? -perf.dir : -1; perf.sort = k; return renderPlayer(); }
   const cs = e.target.closest('[data-csort]');
   if (cs) { perf.cSort = cs.dataset.csort; return renderPlayer(); }
   if (e.target.closest('[data-pall]')) { perf.all = !perf.all; return renderPlayer(); }
-  const fold = e.target.closest('[data-prow]');
-  if (fold) { const k = fold.dataset.prow; if (perf.open.has(k)) perf.open.delete(k); else perf.open.add(k); return renderPlayer(); }
 });
 
 // ---------- the search in the title bar: any player by Riot ID ----------
