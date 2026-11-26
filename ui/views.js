@@ -748,9 +748,9 @@ function laneRowsHtml(rows) {
     const e = x.enemy;
     const tip = e ? `${name(e.champ)} – ${e.share == null ? t('live.laneGuessNone') : t('live.laneGuess', { pct: Math.round(e.share * 100), n: e.n })}` : '';
     return `<div class="h-lane${x.role === myRole ? ' mine' : ''}">
-      <span class="h-ally">${icon(x.ally && x.ally.championId)}${x.ally && x.ally.championId ? `<b>${name(x.ally.championId)}</b>` : ''}</span>
+      <span class="h-ally">${x.ally && x.ally.championId ? `<b>${name(x.ally.championId)}</b>` : ''}${icon(x.ally && x.ally.championId)}</span>
       <img class="h-pos" src="${posIcon(x.role)}" alt="${esc(t('pos.' + x.role))}" title="${esc(t('pos.' + x.role))}">
-      <span class="h-foe"${tip ? ` title="${esc(tip)}"` : ''}>${e ? `<b>${name(e.champ)}</b>${icon(e.champ)}<i class="h-pct">${e.share == null ? '?' : Math.round(e.share * 100) + ' %'}</i>` : ''}</span>
+      <span class="h-foe"${tip ? ` title="${esc(tip)}"` : ''}>${e ? `${icon(e.champ)}<b>${name(e.champ)}</b><i class="h-pct">${e.share == null ? '?' : Math.round(e.share * 100) + ' %'}</i>` : ''}</span>
     </div>`;
   }).join('')}</div>`;
 }

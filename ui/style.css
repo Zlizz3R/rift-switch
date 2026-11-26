@@ -527,10 +527,10 @@ h1 { white-space: nowrap; }
 .live-card { padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 6px; }
 .lc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
 .lc-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gold2); }
-.p-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 9px; background: rgba(0,0,0,.2); }
+.p-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 9px; background: rgba(0,0,0,.2); max-width: 900px; }
 .ch { width: 32px; height: 32px; border-radius: 7px; flex: none; background: #1b2130; }
 .ch.round { border-radius: 50%; }
-.p-name { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.p-name { min-width: 0; flex: 0 1 240px; display: flex; flex-direction: column; }
 .p-name b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .p-name small { font-size: 11px; color: var(--muted); }
 .p-rank { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
@@ -543,7 +543,7 @@ h1 { white-space: nowrap; }
 .h-chip button { width: 18px; height: 18px; border-radius: 5px; color: var(--muted); }
 .h-chip button:hover { color: #ef6b70; background: rgba(229,72,77,.12); }
 .h-enemy { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12.5px; color: var(--muted); }
-.h-results { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.h-results { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; max-width: 620px; }
 .h-res { display: grid; grid-template-columns: 28px 120px 42px 30px 1fr; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; background: rgba(0,0,0,.2); font-size: 12.5px; }
 .h-res.best { box-shadow: inset 0 0 0 1px rgba(200,170,110,.5); }
 .h-res img { width: 28px; height: 28px; border-radius: 6px; }
@@ -618,7 +618,8 @@ body.locked #passBox { background: var(--bg); }
   border: 1px solid var(--line); outline: none; appearance: none; cursor: pointer; min-width: 160px; }
 .mh-filter select option { background: #141925; }
 .seg button.on { background: var(--panel2); color: var(--gold2); }
-#mhList { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
+#mhList { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; max-width: 1280px; }
+#mhSummary { max-width: 1280px; }
 .mh-empty { color: var(--muted); padding: 30px 0; text-align: center; }
 .mh-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 380px); gap: 14px; align-items: center;
   padding: 10px 12px 10px 14px; border-radius: 10px; border-left: 4px solid #5383e8; background: rgba(83,131,232,.10); }
@@ -656,7 +657,7 @@ body.locked #passBox { background: var(--bg); }
 .srv.pbe { color: #b98cff; opacity: 1; }
 
 /* live: Solo/Duo and Flex side by side, always labelled */
-.p-ranks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-left: auto; min-width: 0; flex: 1 1 340px; max-width: 460px; }
+.p-ranks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 0; flex: 0 1 460px; }
 .q-rank { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); min-width: 0; white-space: nowrap; }
 .q-rank img { width: 22px; height: 22px; flex: none; }
 .q-rank b { color: var(--text); font-weight: 600; }
@@ -916,6 +917,7 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .det-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 2px; }
 /* both teams' tables (and lane vs lane) share the same column widths */
 .det-table, .det-h2h { table-layout: fixed; }
+.det-h2h { max-width: 960px; }
 .det-table th:nth-child(1) { width: 24%; } .det-table th:nth-child(2) { width: 12%; } .det-table th:nth-child(3),
 .det-table th:nth-child(4) { width: 14%; } .det-table th:nth-child(5) { width: 7%; } .det-table th:nth-child(6) { width: 10%; }
 .det-table th:nth-child(7) { width: 9%; } .det-table th:nth-child(8) { width: 190px; }
@@ -944,13 +946,14 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 
 .h-picks { display: flex; gap: 8px; flex-wrap: wrap; }
 /* both teams lane by lane: own team left, the guessed enemy right, my lane marked */
-.h-lanes { display: flex; flex-direction: column; gap: 4px; }
+.h-lanes { display: flex; flex-direction: column; gap: 4px; max-width: 620px; }
 .h-lane { display: grid; grid-template-columns: 1fr 22px 1fr; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; border: 1px solid transparent; }
 .h-lane.mine { border-color: rgba(200,170,110,.45); background: rgba(200,170,110,.07); }
 .h-lane img:not(.h-pos) { width: 30px; height: 30px; border-radius: 6px; display: block; }
 .h-lane .h-pos { width: 20px; height: 20px; opacity: .8; }
 .h-ally, .h-foe { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; }
-.h-foe { justify-content: flex-end; }
+.h-ally { justify-content: flex-end; }
+.h-foe { justify-content: flex-start; }
 .h-ally b, .h-foe b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .h-foe img { opacity: .9; }
 .h-pct { font-style: normal; font-size: 11px; color: var(--muted); min-width: 34px; text-align: right; }
@@ -1134,7 +1137,8 @@ li.now .sw-dot { border-color: var(--gold); border-top-color: transparent; anima
 .dash-chip { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; color: var(--text); background: var(--panel2); }
 .dash-chip.off { opacity: .4; }
 .dash-chip.off i { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--muted); }
-.dash-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12.5px; }
+.dash-table { width: auto; min-width: min(100%, 560px); max-width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12.5px; }
+.dash-table th, .dash-table td { padding-right: 18px; }
 .dash-table th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; padding: 0 8px 6px; border-bottom: 1px solid var(--line); }
 .dash-table td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .dash-table tr[data-dacc] { cursor: pointer; }
@@ -1323,8 +1327,8 @@ span.mh-ch { cursor: default; }
 /* ---------- Live: the last game ---------- */
 .pg-wrap { overflow-x: auto; }
 .pg-table { min-width: 900px; display: grid; gap: 2px; }
-.pg-cols, .pg-row { display: grid; grid-template-columns: 40px 48px minmax(96px, 1.3fr) 50px 186px 112px 104px minmax(70px, 1fr) minmax(76px, 1fr) minmax(76px, 1fr);
-  gap: 8px; align-items: center; }
+.pg-cols, .pg-row { display: grid; grid-template-columns: 40px 48px minmax(96px, 190px) 50px 186px 112px 104px minmax(70px, 110px) minmax(76px, 110px) minmax(76px, 110px);
+  gap: 8px; align-items: center; justify-content: start; }
 .pg-cols { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 0 10px 4px; }
 .pg-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 8px 10px; margin-top: 8px; border-radius: 8px; font-size: 12.5px; background: var(--panel2); }
 .pg-head .pg-side { min-width: 140px; }
@@ -1453,8 +1457,8 @@ span.mh-ch { cursor: default; }
 .pr-champ td:first-child { padding-left: 34px; }
 .oc-sort { display: inline-flex; align-items: center; gap: 2px; margin-bottom: 10px; }
 .oc-sort span { color: var(--muted); font-size: 12px; padding: 0 6px; }
-.oc-list { display: flex; flex-direction: column; max-width: 760px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
-.oc-row { display: grid; grid-template-columns: 42px 1fr 1fr 120px; align-items: center; gap: 14px; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--line); }
+.oc-list { display: flex; flex-direction: column; max-width: 640px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+.oc-row { display: grid; grid-template-columns: 42px minmax(140px, 230px) 150px 110px; justify-content: start; align-items: center; gap: 14px; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--line); }
 .oc-row:last-child { border-bottom: 0; }
 .oc-row:hover { background: rgba(255,255,255,.03); }
 .oc-row.all { background: var(--panel2); }
@@ -1635,7 +1639,7 @@ span.mh-ch { cursor: default; }
 
 /* ---------- Overview → Seasons ---------- */
 .ss-acc { padding: 12px 14px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); margin-bottom: 10px; }
-.ss-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ss-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
 .ss-row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: start; padding: 5px 0; }
 .ss-l { color: var(--muted); font-size: 12px; padding-top: 3px; }
 .ss-chips, .ss-prev { display: flex; flex-wrap: wrap; gap: 6px; }
