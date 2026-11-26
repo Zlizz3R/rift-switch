@@ -33,11 +33,18 @@
       : QUEUES[f.queue] === undefined ? QUEUES.ranked : QUEUES[f.queue];
     const accs = f.accs && f.accs.length ? new Set(f.accs) : f.acc ? new Set([f.acc]) : null;
     const [from, to] = MF.rangeBounds(f, now);
-    return St.byParticipation(games).filter(x =>
+    return lastGames(St.byParticipation(games).filter(x =>
       (!accs || accs.has(x.p.puuid)) &&
       (!qs || qs.includes(x.g.q)) &&
       x.g.t >= from && x.g.t < to &&
-      (!f.role || roleOf(x) === f.role));
+      (!f.role || roleOf(x) === f.role)), f.last);
+  }
+  // only the n newest games of these participations (every other filter first: "the last 50 as mid");
+  // a game two own accounts played is one game. n missing or 0: all of them
+  function lastGames(parts, n) {
+    if (!(n > 0)) return parts;
+    const keep = new Set([...new Set(parts.slice().sort((a, b) => b.g.t - a.g.t).map(x => String(x.g.id)))].slice(0, n));
+    return parts.filter(x => keep.has(String(x.g.id)));
   }
 
   // champion rows of some participations, most games first: [{ champ, ...aggregate }]
@@ -79,7 +86,7 @@
     return { ok: true, cur: val(a), prev: val(b), better: TREND_KEYS[key] || 1, wr: [a.winrate, b.winrate] };
   }
 
-  const api = { QUEUES, GROUPS, ROLES, MARK, years, roleOf, select, champRows, roleTable, sortRows, markWinrate, markKda, TREND_KEYS, trend };
+  const api = { QUEUES, GROUPS, ROLES, MARK, years, roleOf, select, lastGames, champRows, roleTable, sortRows, markWinrate, markKda, TREND_KEYS, trend };
   if (node) module.exports = api;
   else root.PerfMath = api;
 })(typeof window !== 'undefined' ? window : this);

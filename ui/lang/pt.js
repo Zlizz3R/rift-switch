@@ -668,6 +668,11 @@
     'pl.noClient': "O League não está aberto – as partidas de outros jogadores vêm do cliente do League. Abra o League e esta página se preenche sozinha.",
     'pl.waitGame': "Pausado enquanto você está na seleção de campeões ou em partida – o Live vem primeiro. Depois continua.",
     'pl.searchNoClient': "O League não está aberto – procurar um Riot ID precisa do cliente do League.",
+    'perf.lastAll': "Todas as partidas",
+    'perf.last': "Últimas {n} partidas",
+    'perf.lastCustom': "Número próprio …",
+    'perf.lastPh': "Partidas",
+    'perf.lastT': "Só as partidas mais recentes – depois dos outros filtros (ex.: as últimas 50 no meio). Menos partidas deixam o mapa legível.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

@@ -667,6 +667,11 @@
     'pl.noClient': "League کھلا نہیں ہے – دوسرے کھلاڑیوں کے گیمز League کلائنٹ سے آتے ہیں۔ League شروع کریں، یہ صفحہ خود بخود بھر جائے گا۔",
     'pl.waitGame': "چیمپئن سلیکٹ یا گیم کے دوران رکا ہوا ہے – Live پہلے۔ اس کے بعد جاری رہے گا۔",
     'pl.searchNoClient': "League کھلا نہیں ہے – Riot ID تلاش کرنے کے لیے League کلائنٹ چاہیے۔",
+    'perf.lastAll': "تمام گیمز",
+    'perf.last': "آخری {n} گیمز",
+    'perf.lastCustom': "اپنی تعداد …",
+    'perf.lastPh': "گیمز",
+    'perf.lastT': "صرف تازہ ترین گیمز – باقی فلٹرز کے بعد (مثلاً مڈ پر آخری 50)۔ کم گیمز سے نقشہ پڑھنے میں آسان رہتا ہے۔",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

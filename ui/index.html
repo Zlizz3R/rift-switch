@@ -112,6 +112,8 @@
         <div id="dashPerf" hidden>
           <div class="mh-filter perf-filter">
             <div class="seg" id="perfQueues"></div><select id="perfRange"></select>
+            <span class="mh-dates" id="perfDates" hidden><input class="mh-input date" id="perfFrom" type="date"><span>–</span><input class="mh-input date" id="perfTo" type="date"></span>
+            <select id="perfLast" data-i18n-title="perf.lastT"></select><input class="mh-input num" id="perfLastN" type="number" min="1" max="9999" data-i18n-ph="perf.lastPh" hidden>
             <div class="seg perf-roles" id="perfRole"></div>
           </div>
           <p class="perf-line" id="perfLine"></p>

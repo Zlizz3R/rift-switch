@@ -669,6 +669,11 @@
     'pl.noClient': "League n'est pas ouvert – les parties des autres joueurs viennent du client League. Lance League et cette page se remplira toute seule.",
     'pl.waitGame': "En pause pendant la sélection des champions ou une partie – Live passe d'abord. Ça reprend ensuite.",
     'pl.searchNoClient': "League n'est pas ouvert – chercher un Riot ID passe par le client League.",
+    'perf.lastAll': "Toutes les parties",
+    'perf.last': "{n} dernières parties",
+    'perf.lastCustom': "Nombre personnalisé …",
+    'perf.lastPh': "Parties",
+    'perf.lastT': "Seulement les parties les plus récentes – après les autres filtres (p. ex. les 50 dernières en mid). Moins de parties gardent la carte lisible.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

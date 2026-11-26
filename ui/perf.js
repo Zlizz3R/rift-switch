@@ -7,11 +7,18 @@ function perfQueuesKept() {
   try { const q = JSON.parse(localStorage.getItem('rs.perfQ')); if (Array.isArray(q)) return q; } catch { /* default */ }
   return ['solo', 'flex'];
 }
+// how many of the newest games count (0 = all); kept like the queues
+function perfLastKept() {
+  try { const n = Number(localStorage.getItem('rs.perfLast')); return n > 0 ? Math.min(9999, Math.round(n)) : 0; } catch { return 0; }
+}
+const PERF_LAST = [10, 20, 50, 100, 200];
 const perf = {
-  // queues: groups switched on (none = all); kept like the account choice
-  f: { queues: perfQueuesKept(), range: 'y' + new Date().getFullYear(), role: '' },
+  // queues: groups switched on (none = all); kept like the account choice; last: the newest n games only
+  f: { queues: perfQueuesKept(), range: 'y' + new Date().getFullYear(), from: '', to: '', role: '', last: perfLastKept() },
+  lastOwn: false,
   sort: 'n', dir: -1, open: new Set(), all: false, cSort: 'n', games: null, loading: false, trendN: 20, trendKey: 'kda',
 };
+perf.lastOwn = perf.f.last > 0 && !PERF_LAST.includes(perf.f.last);
 
 async function loadPerf() {
   if (perf.loading) return;
@@ -47,17 +54,40 @@ function renderPerfFilter() {
     PERF_QUEUES().map(([k, l]) => `<button data-pq="${k}"${f.queues.includes(k) ? ' class="on"' : ''}>${esc(l)}</button>`).join('');
   // seasons (calendar years) with games, the current one always; then the usual ranges
   const years = [...new Set([new Date().getFullYear(), ...PerfMath.years(perf.games || [])])].sort((a, b) => b - a);
-  const ranges = [...years.map(y => ['y' + y, t('perf.season', { y })]), ['90', t('mh.r90')], ['30', t('mh.r30')], ['7', t('mh.r7')], ['all', t('mh.rAll')]];
+  const ranges = [...years.map(y => ['y' + y, t('perf.season', { y })]), ['90', t('mh.r90')], ['30', t('mh.r30')], ['7', t('mh.r7')], ['all', t('mh.rAll')], ['custom', t('mh.rCustom')]];
   $('perfRange').innerHTML = ranges.map(([k, l]) => opt(k, l, f.range === k)).join('');
+  // own dates: both days included (matchfilter.js)
+  $('perfDates').hidden = f.range !== 'custom';
+  if (document.activeElement !== $('perfFrom')) $('perfFrom').value = f.from || '';
+  if (document.activeElement !== $('perfTo')) $('perfTo').value = f.to || '';
+  // the newest n games only
+  $('perfLast').innerHTML = perfLastOpts(f.last, perf.lastOwn);
+  const own = perfLastIsOwn(f.last, perf.lastOwn);
+  $('perfLastN').hidden = !own;
+  if (own && document.activeElement !== $('perfLastN')) $('perfLastN').value = f.last || '';
   $('perfRole').innerHTML = `<button data-prole=""${!f.role ? ' class="on"' : ''}>${t('perf.allRoles')}</button>` +
     Stats.POSITIONS.map(r => `<button data-prole="${r}" title="${esc(t('pos.' + r))}"${f.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('');
+}
+// the choice "how many of the newest games": All, 10 … 200, an own number (shown in its field)
+const perfLastIsOwn = (n, own) => own || (n > 0 && !PERF_LAST.includes(n));
+function perfLastOpts(n, own) {
+  const isOwn = perfLastIsOwn(n, own);
+  const opt = (v, label, on) => `<option value="${v}"${on ? ' selected' : ''}>${esc(label)}</option>`;
+  return opt(0, t('perf.lastAll'), !n && !isOwn) + PERF_LAST.map(k => opt(k, t('perf.last', { n: k }), !isOwn && n === k)).join('')
+    + opt('own', t('perf.lastCustom'), isOwn);
+}
+// a new number: the newest n games (0 = all), kept for the next start
+function perfSetLast(n) {
+  perf.f.last = n > 0 ? Math.min(9999, Math.round(n)) : 0;
+  try { localStorage.setItem('rs.perfLast', String(perf.f.last)); } catch { /* not kept */ }
 }
 // "86 games · Ranked (Solo + Flex) · Season 2026 · Top · 3 accounts"
 function perfLine(ag) {
   const f = perf.f;
   const parts = [perfGames(ag ? ag.n : 0)];
   parts.push(f.queues.length ? PERF_QUEUES().filter(([k]) => f.queues.includes(k)).map(q => q[1]).join(' + ') : t('perf.qAll'));
-  parts.push($('perfRange').selectedOptions[0] ? $('perfRange').selectedOptions[0].textContent : '');
+  parts.push(f.range === 'custom' ? [f.from, f.to].map(d => (d ? fmtDate(new Date(d + 'T00:00').getTime()) : '…')).join(' – ') : $('perfRange').selectedOptions[0] ? $('perfRange').selectedOptions[0].textContent : '');
+  if (f.last) parts.push(t('perf.last', { n: num(f.last) }));
   if (f.role) parts.push(t('pos.' + f.role));
   const chosen = ovChosen();
   parts.push(chosen.length === 1 ? dispName(chosen[0]) : ag && ag.accounts === 1 ? t('mast.account1') : t('mast.accounts', { n: ag ? ag.accounts : 0 }));
@@ -181,12 +211,27 @@ function perfPin(role, champ) {
 function perfOpen(champ) {
   const f = perf.f;
   const y = /^y(\d{4})$/.exec(f.range);
-  const time = y ? { range: 'custom', from: `${y[1]}-01-01`, to: `${y[1]}-12-31` } : { range: f.range };
+  const time = y ? { range: 'custom', from: `${y[1]}-01-01`, to: `${y[1]}-12-31` } : f.range === 'custom' ? { range: 'custom', from: f.from || '', to: f.to || '' } : { range: f.range };
   // the match history filters one account (or all)
   const chosen = ovChosen();
   openMatchesWith({ puuid: chosen.length === 1 ? chosen[0].puuid : '', queues: [...f.queues], champ: champ || 0, ...time });
 }
-$('perfRange').onchange = () => { perf.f.range = $('perfRange').value; renderPerf(); };
+$('perfRange').onchange = () => {
+  perf.f.range = $('perfRange').value;
+  renderPerf();
+  if (perf.f.range === 'custom' && !perf.f.from) $('perfFrom').focus();
+};
+$('perfFrom').onchange = () => { perf.f.from = $('perfFrom').value; renderPerf(); };
+$('perfTo').onchange = () => { perf.f.to = $('perfTo').value; renderPerf(); };
+$('perfLast').onchange = () => {
+  const v = $('perfLast').value;
+  perf.lastOwn = v === 'own';
+  if (!perf.lastOwn) perfSetLast(Number(v));
+  renderPerf();
+  if (perf.lastOwn) { $('perfLastN').focus(); $('perfLastN').select(); }
+};
+// an own number counts once typed (Enter or leaving the field)
+$('perfLastN').onchange = () => { perfSetLast(Number($('perfLastN').value)); perf.lastOwn = true; renderPerf(); };
 $('dashPerf').addEventListener('click', e => {
   const pq = e.target.closest('[data-pq]');
   if (pq) {

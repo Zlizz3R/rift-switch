@@ -665,6 +665,11 @@
     'pl.noClient': "League 未打开——其他玩家的对局来自 League 客户端。启动 League 后，此页面会自动加载。",
     'pl.waitGame': "你在英雄选择或对局中时暂停——实时页面优先。结束后继续。",
     'pl.searchNoClient': "League 未打开——查找 Riot ID 需要 League 客户端。",
+    'perf.lastAll': "全部对局",
+    'perf.last': "最近 {n} 场",
+    'perf.lastCustom': "自定义数量 …",
+    'perf.lastPh': "场数",
+    'perf.lastT': "只看最新的对局——在其他筛选之后（例如作为中单的最近 50 场）。对局少一些，地图更清晰。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

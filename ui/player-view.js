@@ -126,13 +126,17 @@ function renderPlayer() {
   const season = new Date(new Date().getFullYear(), 0, 1).getTime();
   const rankedRows = Stats.byParticipation(all, [p.puuid]).filter(x => Stats.RANKED_QUEUES.includes(x.g.q) && x.g.t >= season);
   if (plv.queue === 'ranked' && !rankedRows.length) plv.queue = 'all';
-  const rows = plv.queue === 'ranked' ? rankedRows : Stats.byParticipation(all, [p.puuid]);
+  const rows = PerfMath.lastGames(plv.queue === 'ranked' ? rankedRows : Stats.byParticipation(all, [p.puuid]), perf.f.last);
   const ag = Stats.aggregate(rows);
   const pct = v => (v == null ? '–' : Math.round(v * 100) + ' %');
   const fig = (label, v, sub = '') => `<div class="pl-fig"><span>${esc(label)}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
   const seg = `<div class="seg pl-q"><button data-plq="ranked"${plv.queue === 'ranked' ? ' class="on"' : ''}${rankedRows.length ? '' : ' disabled'}>${t('pl.ranked')}</button><button data-plq="all"${plv.queue === 'all' ? ' class="on"' : ''}>${t('pl.all')}</button></div>`;
   const tabs = `<div class="subtabs pl-tabs">${PL_TABS.map(([k, l]) => `<button data-pltab="${k}"${plv.tab === k ? ' class="on"' : ''}>${t(l)}</button>`).join('')}</div>`;
   const basis = `<span class="coll-for">${esc(t('pl.basis', { n: num(all.length) }))}</span>`;
+  // the newest n games only (the same choice as on the Overview)
+  const lastOwn = perfLastIsOwn(perf.f.last, perf.lastOwn);
+  const last = `<select class="pl-last" data-pllast title="${esc(t('perf.lastT'))}">${perfLastOpts(perf.f.last, perf.lastOwn)}</select>`
+    + (lastOwn ? `<input class="mh-input num" data-pllastn type="number" min="1" max="9999" placeholder="${esc(t('perf.lastPh'))}" value="${perf.f.last || ''}">` : '');
   // the Overview's views for this player: the same code, their games, a role to look at
   if (plv.tab !== 'overview') {
     const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t('perf.allRoles')}</button>` +
@@ -144,7 +148,7 @@ function renderPlayer() {
         : plv.tab === 'champs' ? perfChampsHtml(parts, agR, { player: true })
           : plv.tab === 'style' ? perfStyleHtml(parts, plv.role)
             : perfMapHtml(parts, { foot: false });
-    el.innerHTML = `${tabs}<div class="pl-bar">${seg}${roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
+    el.innerHTML = `${tabs}<div class="pl-bar">${seg}${last}${roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
     return;
   }
   const figures = ag ? `<div class="pl-figs">
@@ -193,7 +197,7 @@ function renderPlayer() {
       <p class="fine">${esc(t(m.last.same ? 'know.team' : 'know.enemy', { when: ago(m.last.g.t), champ: (champById(m.last.them.champ) || {}).name || '' }))}</p>`
     : `<p class="fine">${t(own ? 'pl.own' : 'pl.never')}</p>`;
 
-  el.innerHTML = `${tabs}<div class="pl-bar">${seg}${basis}</div>
+  el.innerHTML = `${tabs}<div class="pl-bar">${seg}${last}${basis}</div>
     <div class="pl-grid">
       <div class="live-card pl-card wide"><div class="lc-head"><h3>${t('pl.figures')}</h3></div>${figures}</div>
       <div class="live-card pl-card"><div class="lc-head"><h3>${t('perf.role')}</h3></div>${roles}</div>
@@ -204,6 +208,14 @@ function renderPlayer() {
     </div>`;
 }
 
+$('viewPlayer').addEventListener('change', e => {
+  if (e.target.matches('[data-pllast]')) {
+    perf.lastOwn = e.target.value === 'own';
+    if (!perf.lastOwn) perfSetLast(Number(e.target.value));
+    renderPlayer();
+    if (perf.lastOwn) { const n = $('plBody').querySelector('[data-pllastn]'); if (n) { n.focus(); n.select(); } }
+  } else if (e.target.matches('[data-pllastn]')) { perfSetLast(Number(e.target.value)); renderPlayer(); }
+});
 $('viewPlayer').addEventListener('click', e => {
   const s = e.target.closest('[data-plsite]');
   if (s) return openSite(plSiteOf(), s.dataset.plsite);

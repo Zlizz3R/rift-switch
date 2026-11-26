@@ -80,3 +80,26 @@ test('trend: the last n games against the n before; too few games say how many a
   assert.equal(tr.better, -1);            // fewer deaths is better
   assert.deepEqual(PM.trend(parts, 20, 'kda'), { ok: false, have: 20, need: 40 });
 });
+
+test('select: the newest n games after the other filters – one game of two own accounts is one game', () => {
+  const t0 = Date.UTC(2026, 5, 1);
+  const games = [
+    ...Array.from({ length: 6 }, (_, i) => game({ t: t0 + i * 3600000 })),
+    game({ t: t0 + 10 * 3600000, q: 450, mode: 'ARAM' }),
+    // two own accounts in one game (the newest ranked one)
+    game({ t: t0 + 20 * 3600000, owners: ['me', '100-0'] }),
+  ];
+  const ranked = { queue: 'ranked', range: 'all' };
+  assert.equal(PM.select(games, ranked).length, 8, 'both accounts count as rows');
+  const last3 = PM.select(games, { ...ranked, last: 3 });
+  assert.equal(new Set(last3.map(x => x.g.id)).size, 3, 'three games');
+  assert.equal(last3.length, 4, 'four rows: the shared game has two');
+  // the ARAM game isn't one of the last three ranked ones (queue first, then the newest)
+  assert.ok(!last3.some(x => x.g.q === 450));
+  assert.deepEqual(last3.map(x => x.g.t).sort((a, b) => b - a)[3], t0 + 4 * 3600000);
+  assert.equal(PM.select(games, { ...ranked, last: 0 }).length, 8, '0 = all');
+  assert.equal(PM.select(games, { ...ranked, last: 50 }).length, 8, 'more than there are');
+  // own dates: both days included
+  assert.equal(PM.select(games, { queue: 'all', range: 'custom', from: '2026-06-01', to: '2026-06-01' }).length, 9);
+  assert.equal(PM.select(games, { queue: 'all', range: 'custom', from: '2026-06-02', to: '' }).length, 0);
+});

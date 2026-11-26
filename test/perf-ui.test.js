@@ -192,6 +192,40 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
     assert.equal(dots('kills'), 4);
     assert.equal(dots('deaths'), 0);
     assert.match(app.$('.dm-phases').textContent, /Minute 12–13/);
+    // only the newest games: the last 2 of the four Ahri games (and the jungle game in between) → 2 timelines
+    await app.click('[data-dmph="all"]');
+    app.$('#perfLast').value = '10';
+    app.$('#perfLast').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.match(app.$('#perfLine').textContent, /^10 games · .* · Last 10 games/);
+    // an own number: the field shows, 2 → the two newest ranked games (both Ahri games with a timeline)
+    app.$('#perfLast').value = 'own';
+    app.$('#perfLast').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.ok(app.visible('#perfLastN'));
+    app.$('#perfLastN').value = '2';
+    app.$('#perfLastN').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.equal(dots('deaths'), 6, 'three deaths in each of the two newest games');
+    assert.match(app.$('#perfLine').textContent, /^2 games · .* · Last 2 games/);
+    assert.equal(app.w.localStorage.getItem('rs.perfLast'), '2', 'kept for the next start');
+    // back to all games; own dates: a day without games → nothing
+    app.$('#perfLast').value = '0';
+    app.$('#perfLast').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    app.$('#perfRange').value = 'custom';
+    app.$('#perfRange').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.ok(app.visible('#perfDates'));
+    app.$('#perfFrom').value = '2001-01-01';
+    app.$('#perfFrom').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    app.$('#perfTo').value = '2001-01-02';
+    app.$('#perfTo').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.match(app.$('#perfBody').textContent, /No games match/);
+    app.$('#perfTo').value = '';
+    app.$('#perfTo').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.equal(dots('deaths'), 12, 'open end: every game since then');
     // a role without timelines: the empty state
     await app.click('[data-prole="jungle"]');
     assert.match(app.$('#perfBody').textContent, /No deaths or kills with a place yet/);

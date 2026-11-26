@@ -666,6 +666,11 @@
     'pl.noClient': "League খোলা নেই – অন্য খেলোয়াড়দের গেম League ক্লায়েন্ট থেকে আসে। League চালু করুন, পেজটি নিজে থেকেই ভরে যাবে।",
     'pl.waitGame': "চ্যাম্পিয়ন সিলেক্ট বা গেম চলাকালীন বিরতি – Live আগে। পরে আবার চলবে।",
     'pl.searchNoClient': "League খোলা নেই – Riot ID খুঁজতে League ক্লায়েন্ট লাগবে।",
+    'perf.lastAll': "সব গেম",
+    'perf.last': "শেষ {n}টি গেম",
+    'perf.lastCustom': "নিজের সংখ্যা …",
+    'perf.lastPh': "গেম",
+    'perf.lastT': "শুধু সবচেয়ে নতুন গেম – অন্য ফিল্টারের পরে (যেমন মিড হিসেবে শেষ 50টি)। কম গেমে মানচিত্র পড়া সহজ থাকে।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

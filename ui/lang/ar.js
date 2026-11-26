@@ -666,6 +666,11 @@
     'pl.noClient': "League غير مفتوح – مباريات اللاعبين الآخرين تأتي من عميل League. شغّل League وستمتلئ هذه الصفحة تلقائيًا.",
     'pl.waitGame': "متوقف مؤقتًا أثناء اختيار الأبطال أو المباراة – Live أولًا. يستمر بعد ذلك.",
     'pl.searchNoClient': "League غير مفتوح – البحث عن Riot ID يحتاج إلى عميل League.",
+    'perf.lastAll': "كل المباريات",
+    'perf.last': "آخر {n} مباراة",
+    'perf.lastCustom': "عدد مخصص …",
+    'perf.lastPh': "مباريات",
+    'perf.lastT': "أحدث المباريات فقط – بعد بقية الفلاتر (مثلًا آخر 50 في الوسط). عدد أقل من المباريات يبقي الخريطة واضحة.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

@@ -668,6 +668,11 @@
     'pl.noClient': "League не запущен – игры других игроков берутся из клиента League. Запустите League, и страница заполнится сама.",
     'pl.waitGame': "Пауза, пока вы в выборе чемпионов или в игре – Live важнее. Потом продолжится.",
     'pl.searchNoClient': "League не запущен – для поиска Riot ID нужен клиент League.",
+    'perf.lastAll': "Все игры",
+    'perf.last': "Последние {n} игр",
+    'perf.lastCustom': "Своё число …",
+    'perf.lastPh': "Игры",
+    'perf.lastT': "Только самые новые игры – после остальных фильтров (например, последние 50 на миде). Меньше игр – карта читается лучше.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;
