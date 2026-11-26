@@ -1008,6 +1008,8 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .dm-dots.kills circle { fill: #2fc4b2; opacity: .3; }
 .mc { position: relative; }
 .mc-svg { width: 340px; height: 64px; display: block; cursor: crosshair; user-select: none; }
+/* the icons' outline style (svg { stroke }) is not for the map and the chart */
+.mc-svg rect, .dm-bg, .dm-base, .dm-dots circle { stroke: none; }
 .mc-axis { stroke: var(--line); stroke-width: 1; }
 .mc-k { fill: #2fc4b2; }
 .mc-d { fill: #e84057; }
@@ -1373,9 +1375,9 @@ span.mh-ch { cursor: default; }
 
 /* ---------- sub-tabs (Overview: LP history · Mastery …) ---------- */
 .subtabs { display: flex; align-items: center; gap: 2px; margin: 4px 0 14px; border-bottom: 1px solid var(--line); }
-.subtabs [data-dt] { padding: 7px 12px 9px; color: var(--muted); font-size: 13px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.subtabs [data-dt]:hover { color: var(--text); }
-.subtabs [data-dt].on { color: var(--gold2); border-bottom-color: var(--gold); }
+.subtabs [data-dt], .subtabs [data-pltab] { padding: 7px 12px 9px; color: var(--muted); font-size: 13px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.subtabs [data-dt]:hover, .subtabs [data-pltab]:hover { color: var(--text); }
+.subtabs [data-dt].on, .subtabs [data-pltab].on { color: var(--gold2); border-bottom-color: var(--gold); }
 .subtabs .grow { flex: 1; }
 .subtabs .load-btn { margin-bottom: 6px; }
 
@@ -1713,7 +1715,10 @@ span.mh-ch { cursor: default; }
 .pl-ranks { display: flex; flex-direction: column; gap: 4px; }
 .pl-open { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .pl-prog { flex-basis: 100%; }
-.pl-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.pl-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.pl-tabs { margin-bottom: 12px; }
+.pl-tabbody { display: flex; flex-direction: column; gap: 12px; }
+.oc-row.plain, .pr-champ.plain { cursor: default; }
 .pl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
 .pl-card.wide { grid-column: 1 / -1; }
 .pl-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }

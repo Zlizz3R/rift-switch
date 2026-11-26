@@ -49,6 +49,27 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     await app.click('[data-plq="all"]');
     assert.ok(app.$('[data-plq="all"]').classList.contains('on'));
     assert.doesNotMatch(app.$('#dashTags') ? '' : app.$('#plBody').innerHTML, /\b(pl|tags?)\.[a-zA-Z]+\b(?![^<]*>)/, 'no text key without a translation');
+    // the Overview's own views for this player: Performance (no accounts column, no jumps into the own
+    // match history), Champions, Play style, Map – a role filter on them
+    assert.deepEqual(app.$$('[data-pltab]').map(b => b.textContent), ['Overview', 'Performance', 'Champions', 'Play style', 'Map']);
+    await app.click('[data-pltab="stats"]');
+    assert.ok(app.$('#plBody .perf-bar'), 'the key figures');
+    const heads = app.$$('#plBody .perf-table th').map(th => th.textContent);
+    assert.ok(!heads.some(h => /Accounts/.test(h)), heads.join('|'));
+    assert.equal(app.$('#plBody [data-ppin]'), null);
+    await app.click('#plBody [data-prow="mid"]');
+    assert.ok(app.$('#plBody .pr-champ'), 'a role unfolds into its champions');
+    await app.click('[data-pltab="champs"]');
+    assert.match(app.$('#plBody .oc-list').textContent, /Ahri[\s\S]*75 %/);
+    assert.equal(app.$('#plBody [data-pchamp]'), null);
+    await app.click('[data-pltab="style"]');
+    assert.ok(app.$('#plBody .rd-head'));
+    await app.click('[data-pltab="map"]');
+    assert.match(app.$('#plBody').textContent, /No deaths or kills with a place yet/, 'lite games have no timeline');
+    await app.click('[data-plrole="top"]');
+    assert.match(app.$('#plBody').textContent, /No games match/);
+    await app.click('[data-pltab="overview"]');
+    assert.ok(app.$('.pl-figs'));
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

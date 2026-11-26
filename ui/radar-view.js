@@ -44,9 +44,9 @@ function radarBars(axes) {
 }
 
 // ---------- Overview → Play style ----------
-function perfStyleHtml(parts) {
+function perfStyleHtml(parts, chosenRole = perf.f.role) {
   // one role: the chosen one, else the main role (else the most played)
-  let role = perf.f.role;
+  let role = chosenRole;
   let roleNote = '';
   if (!role) {
     const mr = Tags.mainRole(parts);
@@ -67,7 +67,7 @@ function perfStyleHtml(parts) {
 document.addEventListener('change', e => {
   if (e.target.id !== 'rdChamp') return;
   rdv.champ = +e.target.value;
-  renderPerf();
+  perfRerender();
 });
 
 // ---------- Live: a card shows its radar when its champion is clicked ----------

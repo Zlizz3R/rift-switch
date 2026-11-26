@@ -111,9 +111,11 @@ function perfTrendHtml(parts) {
     <span>${t('dash.wr')} <b>${perfPct(tr.wr[1])} → ${perfPct(tr.wr[0])}</b> ${arrow(tr.wr[0], tr.wr[1], 1)}</span>
     <span>${selK} <b>${fmt(tr.prev)} → ${fmt(tr.cur)}</b> ${arrow(tr.cur, tr.prev, tr.better)}</span></div>`;
 }
+// the Performance views are drawn on the Overview and on the player page: draw again where they are
+const perfRerender = () => (view === 'player' && typeof renderPlayer === 'function' ? renderPlayer() : renderPerf());
 document.addEventListener('change', e => {
-  if (e.target.id === 'trendN') { perf.trendN = +e.target.value; renderPerf(); }
-  if (e.target.id === 'trendKey') { perf.trendKey = e.target.value; renderPerf(); }
+  if (e.target.id === 'trendN') { perf.trendN = +e.target.value; perfRerender(); }
+  if (e.target.id === 'trendKey') { perf.trendKey = e.target.value; perfRerender(); }
 });
 
 // the role table: a role per row, unfolded its champions
@@ -121,41 +123,46 @@ const PERF_COLS = [
   ['n', 'perf.games'], ['winrate', 'dash.wr'], ['avg', 'perf.avg'], ['kda', 'mh.kda'], ['csMin', 'det.csMin'],
   ['dmgMin', 'perf.dmgMin'], ['kp', 'perf.kpShort'], ['visMin', 'perf.visMin'], ['accounts', 'perf.accs'],
 ];
-function perfCells(r) {
+function perfCells(r, oneAccount = false) {
   const few = r.n < PerfMath.MARK.minGames;
   return `<td>${num(r.n)}</td>
     <td class="${few ? 'muted' : PerfMath.markWinrate(r)}"${few ? ` title="${esc(t('perf.fewWr'))}"` : ''}>${perfPct(r.winrate)}</td>
     <td>${perfAvg(r)}</td><td class="${PerfMath.markKda(r)}">${perfKda(r)}</td><td>${perfDec(r.csMin)}</td>
-    <td>${num(Math.round(r.dmgMin))}</td><td>${perfPct(r.kp)}</td><td>${perfDec(r.visMin, 2)}</td><td>${r.accounts}</td>`;
+    <td>${num(Math.round(r.dmgMin))}</td><td>${perfPct(r.kp)}</td><td>${perfDec(r.visMin, 2)}</td>${oneAccount ? '' : `<td>${r.accounts}</td>`}`;
 }
-function perfStatsHtml(parts, ag) {
+// opts.player: one player's games (the player page) – no accounts column, no jumps into the own match history
+function perfStatsHtml(parts, ag, opts = {}) {
   const roles = PerfMath.roleTable(parts);
+  const cols = opts.player ? PERF_COLS.filter(([k]) => k !== 'accounts') : PERF_COLS;
+  const pin = v => (opts.player ? '' : ` data-ppin="${v}" title="${esc(t('perf.pin'))}"`);
   // one role (filtered, or only one played): open
   const isOpen = r => roles.length === 1 || perf.open.has(r);
   const arrow = k => (perf.sort === k ? (perf.dir < 0 ? ' ↓' : ' ↑') : '');
-  const head = `<tr><th>${t('perf.role')}</th>${PERF_COLS.map(([k, l]) => `<th data-psort="${k}"${k === 'kp' ? ` title="${esc(t('perf.kp'))}"` : ''}>${t(l)}${arrow(k)}</th>`).join('')}</tr>`;
+  const head = `<tr><th>${t('perf.role')}</th>${cols.map(([k, l]) => `<th data-psort="${k}"${k === 'kp' ? ` title="${esc(t('perf.kp'))}"` : ''}>${t(l)}${arrow(k)}</th>`).join('')}</tr>`;
   const body = roles.map(r => {
     const open = isOpen(r.role);
     const icon = r.role === 'none' ? '' : `<img class="pr-ic" src="${posIcon(r.role)}" alt="">`;
-    const champsHtml = open ? PerfMath.sortRows(r.champs, perf.sort, perf.dir).map(c => `<tr class="pr-champ" data-ppin="${r.role}|${c.champ}" title="${esc(t('perf.pin'))}">
-        <td><span class="mast-ch"><img src="${CHAMP_ICON(c.champ)}" alt="" loading="lazy">${esc(perfChamp(c.champ))}</span></td>${perfCells(c)}</tr>`).join('') : '';
+    const champsHtml = open ? PerfMath.sortRows(r.champs, perf.sort, perf.dir).map(c => `<tr class="pr-champ${opts.player ? ' plain' : ''}"${pin(`${r.role}|${c.champ}`)}>
+        <td><span class="mast-ch"><img src="${CHAMP_ICON(c.champ)}" alt="" loading="lazy">${esc(perfChamp(c.champ))}</span></td>${perfCells(c, opts.player)}</tr>`).join('') : '';
     // the name unfolds the role; the figures pin its games in the match history
-    return `<tr class="pr-role${open ? ' open' : ''}" data-ppin="${r.role}|" title="${esc(t('perf.pin'))}"><td data-prow="${r.role}" title="${esc(t('perf.unfold'))}"><span class="pr-name"><i class="pr-chev"></i>${icon}${esc(t('pos.' + r.role))}</span></td>${perfCells(r)}</tr>${champsHtml}`;
+    return `<tr class="pr-role${open ? ' open' : ''}"${pin(`${r.role}|`)}><td data-prow="${r.role}" title="${esc(t('perf.unfold'))}"><span class="pr-name"><i class="pr-chev"></i>${icon}${esc(t('pos.' + r.role))}</span></td>${perfCells(r, opts.player)}</tr>${champsHtml}`;
   }).join('');
   return `${perfBarHtml(ag)}${perfTrendHtml(parts)}<div class="mast-wrap"><table class="dash-table perf-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
 
 // the champion list in the style of op.gg: "All" first, then the champions by games
-function perfChampsHtml(parts, ag) {
+function perfChampsHtml(parts, ag, opts = {}) {
   let rows = PerfMath.champRows(parts);
   const total = rows.length;
   if (perf.all) rows = PerfMath.sortRows(rows, perf.cSort, -1); else rows = rows.slice(0, 8);
-  const row = (r, all) => `<button class="oc-row${all ? ' all' : ''}"${all ? '' : ` data-pchamp="${r.champ}"`} title="${esc(t('perf.open'))}">
+  // the player page: rows to read, not to click (they would open the own match history)
+  const tag = opts.player ? 'div' : 'button';
+  const row = (r, all) => `<${tag} class="oc-row${all ? ' all' : ''}${opts.player ? ' plain' : ''}"${all || opts.player ? '' : ` data-pchamp="${r.champ}"`}${opts.player ? '' : ` title="${esc(t('perf.open'))}"`}>
       ${all ? `<span class="oc-ic all">${esc(t('perf.all').slice(0, 1))}</span>` : `<img class="oc-ic" src="${CHAMP_ICON(r.champ)}" alt="" loading="lazy">`}
       <span class="oc-name"><b>${esc(all ? t('perf.all') : perfChamp(r.champ))}</b><small>${esc(t('perf.cs', { cs: num(Math.round(r.cs)), m: perfDec(r.csMin) }))}</small></span>
       <span class="oc-kda"><b class="${r.n >= PerfMath.MARK.minGames ? PerfMath.markKda(r) : ''}">${r.perfect ? esc(t('perf.perfect')) : esc(t('perf.kdaRatio', { v: perfDec(r.kda, 2) }))}</b><small>${perfAvg(r)}</small></span>
       <span class="oc-wr"><b class="${r.n >= PerfMath.MARK.minGames ? PerfMath.markWinrate(r) : 'muted'}">${perfPct(r.winrate)}</b><small>${esc(perfGames(r.n))}</small></span>
-    </button>`;
+    </${tag}>`;
   const sorts = perf.all ? `<div class="seg oc-sort"><span>${t('perf.sort')}</span>${[['n', 'perf.games'], ['winrate', 'dash.wr'], ['kda', 'mh.kda'], ['csMin', 'det.csMin']]
     .map(([k, l]) => `<button data-csort="${k}"${perf.cSort === k ? ' class="on"' : ''}>${t(l)}</button>`).join('')}</div>` : '';
   const more = total > 8 ? `<button class="btn oc-more" data-pall>${perf.all ? t('perf.less') : t('perf.more', { n: total })}</button>` : '';

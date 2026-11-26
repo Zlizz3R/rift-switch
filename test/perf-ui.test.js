@@ -169,7 +169,7 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
     const dots = cls => app.$$(`.dm-map .dm-dots.${cls} circle`).length;
     assert.equal(dots('deaths'), 12);
     assert.equal(dots('kills'), 0, 'deaths only at first');
-    assert.match(app.$('.dm-hots').textContent, /Before 10 min\s*100 % of your deaths: Top river \(8 of 8\)/);
+    assert.match(app.$('.dm-hots').textContent, /Before 10 min\s*100 % of the deaths: Top river \(8 of 8\)/);
     assert.match(app.$('.dm-side').textContent, /12 deaths in 4 games · 3\.0 per game · 33 % against two or more enemies/);
     // kills: the four solo kills
     await app.click('[data-mpk="kills"]');

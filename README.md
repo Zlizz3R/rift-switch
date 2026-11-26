@@ -127,9 +127,10 @@ into one category.
 - **Traits** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
   games, per role – or *All roles* at once, each tag with its role and that role's share of your games – each with
   the numbers behind it. "Too little data" is never shown as "not met".
-- **Deaths** – a map of where you die (the same filter: account, queue, season, role), by game phase – before
-  10 minutes, 10–20, after 20 – seen from the blue side, with the spots that stand out ("Before 10 min: 45 % of
-  your deaths in the top river") and every zone's share.
+- **Map** – where you die and where you kill (deaths, kills or both; the same filter: account, queue, season,
+  role), for a game phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart
+  under the map (kills up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min:
+  45 % of the deaths: top river") and every zone's share, deaths and kills side by side.
 - **Seasons** – what the client tells about the last season, your stored games per year, and earlier seasons you
   paste in yourself – three sources, never added up.
 </details>
@@ -155,10 +156,11 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,
   damage, streaks and records.
 - **Most played**: your top five champions, games and **play time per account**, and the teammates you played with
-  most – each with its win rate. **Clash** games have their own filter.
+  most – each with its win rate. **Clash** and **Custom** games have their own filters.
 - **Click a name** (here, on Live or after a game): the **player page** – any player's rank, key figures, roles,
   champions, traits, recent games and the games with you, from their 200 newest games (all of them read in detail),
-  with *Open with* (op.gg …). **Back / forward** arrows in the title bar (also Alt+← / Alt+→ and the mouse's side
+  with *Open with* (op.gg …) – and the Overview's own views for them: *Performance*, *Champions*, *Play style* and
+  *Map*, by queue and role. **Back / forward** arrows in the title bar (also Alt+← / Alt+→ and the mouse's side
   buttons) go through the pages like a browser. The **search** in the title bar (Ctrl+K) finds anyone: suggestions
   from everyone in your games, any other Riot ID looked up through the client (without a tag: your server's, like EUW).
 - **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each

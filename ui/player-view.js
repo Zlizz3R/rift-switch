@@ -5,13 +5,16 @@
 // figures, roles, champions, traits, the recent games, the games with you – and "Open with".
 // Uses the globals of renderer.js / views.js / matches-view.js / tags-view.js / scout-view.js.
 
-const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: 'ranked', timer: 0, loading: false };
+// tab: the page's view – 'overview' or one of the Overview's own (Performance, Champions, Play
+// style, Map), drawn with the same code from this player's games; role: '' or a position (those tabs)
+const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: 'ranked', tab: 'overview', role: '', timer: 0, loading: false };
+const PL_TABS = [['overview', 'dash.title'], ['stats', 'dash.tabStats'], ['champs', 'dash.tabChamps'], ['style', 'dash.tabStyle'], ['map', 'dash.tabMap']];
 
 // open a player: { puuid, gameName, tagLine, region }; back: from the arrows (no new history step)
 function openPlayer(p, back = false) {
   if (!p || !p.puuid) return;
   if (!plv.p || plv.p.puuid !== p.puuid) {
-    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: 'ranked' });
+    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: 'ranked', role: '' });
     // the games of the last player stay only if this one was in them too (the next load says)
   }
   showView('player', { p, back });
@@ -102,6 +105,22 @@ function renderPlayer() {
   const pct = v => (v == null ? '–' : Math.round(v * 100) + ' %');
   const fig = (label, v, sub = '') => `<div class="pl-fig"><span>${esc(label)}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
   const seg = `<div class="seg pl-q"><button data-plq="ranked"${plv.queue === 'ranked' ? ' class="on"' : ''}${rankedRows.length ? '' : ' disabled'}>${t('pl.ranked')}</button><button data-plq="all"${plv.queue === 'all' ? ' class="on"' : ''}>${t('pl.all')}</button></div>`;
+  const tabs = `<div class="subtabs pl-tabs">${PL_TABS.map(([k, l]) => `<button data-pltab="${k}"${plv.tab === k ? ' class="on"' : ''}>${t(l)}</button>`).join('')}</div>`;
+  const basis = `<span class="coll-for">${esc(t('pl.basis', { n: num(all.length) }))}</span>`;
+  // the Overview's views for this player: the same code, their games, a role to look at
+  if (plv.tab !== 'overview') {
+    const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t('perf.allRoles')}</button>` +
+      Stats.POSITIONS.map(r => `<button data-plrole="${r}" title="${esc(t('pos.' + r))}"${plv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('') + '</div>';
+    const parts = plv.role ? rows.filter(x => PerfMath.roleOf(x) === plv.role) : rows;
+    const agR = Stats.aggregate(parts);
+    const body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
+      : plv.tab === 'stats' ? perfStatsHtml(parts, agR, { player: true })
+        : plv.tab === 'champs' ? perfChampsHtml(parts, agR, { player: true })
+          : plv.tab === 'style' ? perfStyleHtml(parts, plv.role)
+            : perfMapHtml(parts, { foot: false });
+    el.innerHTML = `${tabs}<div class="pl-bar">${seg}${roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
+    return;
+  }
   const figures = ag ? `<div class="pl-figs">
       ${fig(t('perf.games'), num(ag.n), `${ag.wins} W / ${ag.losses} L`)}
       ${fig('Winrate', pct(ag.winrate))}
@@ -148,7 +167,7 @@ function renderPlayer() {
       <p class="fine">${esc(t(m.last.same ? 'know.team' : 'know.enemy', { when: ago(m.last.g.t), champ: (champById(m.last.them.champ) || {}).name || '' }))}</p>`
     : `<p class="fine">${t(own ? 'pl.own' : 'pl.never')}</p>`;
 
-  el.innerHTML = `<div class="pl-bar">${seg}<span class="coll-for">${esc(t('pl.basis', { n: num(all.length) }))}</span></div>
+  el.innerHTML = `${tabs}<div class="pl-bar">${seg}${basis}</div>
     <div class="pl-grid">
       <div class="live-card pl-card wide"><div class="lc-head"><h3>${t('pl.figures')}</h3></div>${figures}</div>
       <div class="live-card pl-card"><div class="lc-head"><h3>${t('perf.role')}</h3></div>${roles}</div>
@@ -163,7 +182,19 @@ $('viewPlayer').addEventListener('click', e => {
   const s = e.target.closest('[data-plsite]');
   if (s) return openSite(plSiteOf(), s.dataset.plsite);
   const q = e.target.closest('[data-plq]');
-  if (q && !q.disabled) { plv.queue = q.dataset.plq; renderPlayer(); }
+  if (q && !q.disabled) { plv.queue = q.dataset.plq; return renderPlayer(); }
+  const tb = e.target.closest('[data-pltab]');
+  if (tb) { plv.tab = tb.dataset.pltab; return renderPlayer(); }
+  const ro = e.target.closest('[data-plrole]');
+  if (ro) { plv.role = ro.dataset.plrole; return renderPlayer(); }
+  // the Overview's own controls inside the tabs (sorting, unfolding, more champions)
+  const so = e.target.closest('[data-psort]');
+  if (so) { const k = so.dataset.psort; perf.dir = perf.sort === k ? -perf.dir : -1; perf.sort = k; return renderPlayer(); }
+  const cs = e.target.closest('[data-csort]');
+  if (cs) { perf.cSort = cs.dataset.csort; return renderPlayer(); }
+  if (e.target.closest('[data-pall]')) { perf.all = !perf.all; return renderPlayer(); }
+  const fold = e.target.closest('[data-prow]');
+  if (fold) { const k = fold.dataset.prow; if (perf.open.has(k)) perf.open.delete(k); else perf.open.add(k); return renderPlayer(); }
 });
 
 // ---------- the search in the title bar: any player by Riot ID ----------

@@ -42,7 +42,8 @@ function mapChart(all) {
     <div class="mc-ticks">${ticks}</div><p class="fine">${t('mp.drag')}</p></div>`;
 }
 const mvWindowLabel = () => (mv.preset ? t('dm.ph.' + mv.preset) : mv.to == null ? t('mp.from', { a: mv.from }) : t('mp.range', { a: mv.from, b: mv.to }));
-function perfMapHtml(parts) {
+// opts.foot: false on the player page (its own line says where the games come from)
+function perfMapHtml(parts, opts = {}) {
   const all = MapMath.events(parts);
   const nGames = MapMath.games(parts).length;
   if (!all.length) return `<div class="chart-empty">${t('mp.none')}</div>`;
@@ -75,7 +76,7 @@ function perfMapHtml(parts) {
       ${hots.length ? `<ul class="dm-hots">${hots.join('')}</ul>` : ''}
       ${lines.map(l => `<p class="muted">${esc(l)}</p>`).join('')}
       ${shown.length ? rows : `<div class="chart-empty">${t('mp.empty')}</div>`}
-    </div></div><p class="coll-foot">${t('mp.basis')}</p>`;
+    </div></div>${opts.foot === false ? '' : `<p class="coll-foot">${t('mp.basis')}</p>`}`;
 }
 // what is on the map, and when: re-drawn where the map is (Overview or the player page)
 function mapRerender() {
