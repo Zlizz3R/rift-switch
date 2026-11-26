@@ -76,6 +76,10 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
   „Beides“ statt „Tode“, und „Beides“ steht in der Auswahl vorne (Beides / Tode / Kills). `ui/map-view.js`
   (`mv.kind`, die Reihenfolge in `kinds`); auch die Karten-Kachel auf „Auf einen Blick“ (`sumMap`, zeigt nur Tode) und
   den Test in `test/perf-ui.test.js` („deaths only at first“) anpassen.
+- [ ] **Trend-Zeile in Performance entfernen** (Nutzer, 26.11.2026 – „nichtssagend“; noch nicht anfangen): die Zeile
+  „Letzte 20 Spiele gegen die davor: Winrate 65 % → 30 % · KDA 2.01 → 2.54“ unter den Kennzahlen. `perfTrendHtml`
+  in `ui/perf.js` (Aufruf in `perfAllHtml`, die Auswahl `trendN` / `trendKey`, `perf.trendN` / `perf.trendKey`) und
+  die Tests dazu. `PerfMath.trend` bleibt – die Trendpfeile der Kennzahlen auf „Auf einen Blick“ nutzen es.
 
 ### C. Ideen-Runde (25.11.2026)
 
