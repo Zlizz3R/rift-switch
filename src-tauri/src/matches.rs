@@ -1102,12 +1102,18 @@ pub fn lite(g: &Value) -> Option<Value> {
         json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
         "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": 0, "lite": true }),
     )
-    .map(|mut o| {
-        if is_custom(g) {
-            o["custom"] = json!(true);
+    .map(|o| mark_custom(o, g))
+}
+/// A custom game gets "custom": true, and a queue the "custom" group knows (0) when Riot gave it
+/// another one – so the Custom filter finds every game that says Custom.
+fn mark_custom(mut o: Value, g: &Value) -> Value {
+    if is_custom(g) {
+        o["custom"] = json!(true);
+        if !CUSTOM_QUEUES.contains(&o["q"].as_i64().unwrap_or(-1)) {
+            o["q"] = json!(0);
         }
-        o
-    })
+    }
+    o
 }
 pub fn compact(g: &Value) -> Option<Value> {
     let players = players_of(g)?;
@@ -1120,12 +1126,7 @@ pub fn compact(g: &Value) -> Option<Value> {
         "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": GAME_VERSION,
         "teams": g["teams"].as_array().map(|t| t.iter().map(team).collect::<Vec<_>>()).unwrap_or_default() }),
     )
-    .map(|mut o| {
-        if is_custom(g) {
-            o["custom"] = json!(true);
-        }
-        o
-    })
+    .map(|o| mark_custom(o, g))
 }
 fn players_of(g: &Value) -> Option<Vec<Value>> {
     let parts = g.get("participants")?.as_array()?;
@@ -1202,6 +1203,10 @@ mod tests {
         d["queueId"] = json!(3270);
         d["gameType"] = json!("CUSTOM_GAME");
         assert_eq!(compact(&d).unwrap()["custom"], true);
+        assert_eq!(compact(&d).unwrap()["q"], 3270);
+        // a custom game on a queue the group doesn't list: stored as queue 0, so the filter finds it
+        d["queueId"] = json!(3100);
+        assert_eq!(compact(&d).unwrap()["q"], 0);
         assert!(compact(&detail(6)).unwrap().get("custom").is_none());
     }
 

@@ -790,8 +790,9 @@ fn resolve_placeholder(c: &mut Core, old_id: &str, new_id: &str) {
 }
 fn upsert(acc: Obj) {
     let renamed = with(|c| {
-        let prev = c.st.account(str_of(&acc, "puuid")).cloned();
-        let r = prev.and_then(|p| accounts::rename_of(&p, &acc));
+        let r =
+            c.st.account(str_of(&acc, "puuid"))
+                .and_then(|p| accounts::rename_of(p, &acc));
         upsert_into(&mut c.st.accounts, acc, now_ms());
         r
     });
@@ -944,7 +945,7 @@ async fn tick_inner(my_gen: u64) {
         return;
     };
     let id = cur_id.unwrap();
-    keep_offline().await;
+    keep_offline(false).await;
     let now = now_ms();
     // first login of an account that was only saved so far; and: is it the one that was picked?
     let wrong = with(|c| {
@@ -1446,6 +1447,7 @@ fn others<R>(f: impl FnOnce(&mut matches::Matches) -> R) -> R {
 fn live_memory_free() {
     *OTHERS.lock().unwrap_or_else(|e| e.into_inner()) = None;
     scout(|s| *s = Scout::default());
+    *LOOK.lock().unwrap_or_else(|e| e.into_inner()) = None;
 }
 /// The storage limit of other players' games in bytes (Settings → Data; 1 GB unless set lower or
 /// higher – there is no "unlimited")
@@ -1761,7 +1763,9 @@ fn look_snapshot(p: &str) -> Value {
 /// One step for the player page; true when something changed.
 async fn look_round() -> bool {
     let (p, listed_at) = look(|l| (l.puuid.clone(), l.listed_at));
-    if p.is_empty() || game_on() || with(|c| c.st.has(&p)) {
+    // Live goes first (champion select, a game); nothing in the tray
+    let champ_select = || with(|c| c.live.phase.as_deref() == Some("ChampSelect"));
+    if p.is_empty() || game_on() || champ_select() || !win_shown() || with(|c| c.st.has(&p)) {
         return false;
     }
     let now = now_ms();
@@ -1815,9 +1819,7 @@ async fn look_round() -> bool {
             refused += 1;
             look(|l| *l.failed.entry(id).or_insert(0) += 1);
         }
-        // Live goes first: champion select (its players' lists), a game
-        let champ_select = with(|c| c.live.phase.as_deref() == Some("ChampSelect"));
-        let stop = look(|l| l.puuid != p) || game_on() || champ_select;
+        let stop = look(|l| l.puuid != p) || game_on() || champ_select() || !win_shown();
         if stop || refused >= PAR_FAST / 2 {
             break;
         }
@@ -1848,7 +1850,7 @@ async fn fetch_one_into_others(id: &str) -> bool {
                 o.insert(g);
             }
         });
-        return true;
+        return !games.is_empty();
     }
     match fetch_game(id.to_string()).await {
         Some((g, _, _)) => {
@@ -2662,25 +2664,45 @@ async fn copy_login(id: &str, what: &str, app_pass: Option<&str>) -> Value {
     else {
         return json!({ "ok": false, "failed": true });
     };
+    *COPIED.lock().unwrap_or_else(|e| e.into_inner()) = Some(seq);
     tauri::async_runtime::spawn(async move {
         sleep(30_000).await;
-        let _ = tokio::task::spawn_blocking(move || winsys::clear_clipboard_if(seq)).await;
+        let _ = tokio::task::spawn_blocking(move || clear_copied(Some(seq))).await;
     });
     json!({ "ok": true })
+}
+/// What copy_login put on the clipboard (its sequence number) until it is cleared – also when the
+/// app quits (an update, the tray menu) or panics within the 30 s.
+static COPIED: Mutex<Option<u32>> = Mutex::new(None);
+/// Clears the clipboard if it still holds the copied login: `only` that copy, or any pending one.
+fn clear_copied(only: Option<u32>) {
+    let mut c = COPIED.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(seq) = *c {
+        if only.is_none_or(|o| o == seq) {
+            winsys::clear_clipboard_if(seq);
+            *c = None;
+        }
+    }
 }
 
 /// Appear offline: while it is on, the own chat status is set back to "offline" whenever it is
 /// something else (the client sets "chat" after every start); switched off, "chat" once.
+/// switched: the setting was just changed – switched off, an "offline" status (also one from
+/// before a restart of Rift Switch) goes back to "chat"; offline set in League by hand stays.
 static OFFLINE_SET: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-async fn keep_offline() {
+async fn keep_offline(switched: bool) {
     use std::sync::atomic::Ordering;
     if with(|c| c.st.set_bool("appearOffline")) {
-        if riot::chat_status().await.is_some_and(|s| s != "offline")
-            && riot::set_chat_status("offline").await
-        {
-            OFFLINE_SET.store(true, Ordering::Relaxed);
+        match riot::chat_status().await.as_deref() {
+            Some("offline") => OFFLINE_SET.store(true, Ordering::Relaxed),
+            Some(_) if riot::set_chat_status("offline").await => {
+                OFFLINE_SET.store(true, Ordering::Relaxed)
+            }
+            _ => {}
         }
-    } else if OFFLINE_SET.swap(false, Ordering::Relaxed) {
+    } else if OFFLINE_SET.swap(false, Ordering::Relaxed)
+        || (switched && riot::chat_status().await.as_deref() == Some("offline"))
+    {
         let _ = riot::set_chat_status("chat").await;
     }
 }
@@ -3657,7 +3679,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                     apply_autostart();
                 }
                 if k == "appearOffline" {
-                    tauri::async_runtime::spawn(keep_offline());
+                    tauri::async_runtime::spawn(keep_offline(true));
                 }
                 save();
             }
@@ -3801,6 +3823,7 @@ fn to_tray() {
     });
 }
 fn quit() {
+    clear_copied(None);
     with(|c| c.quitting = true);
     app().exit(0);
 }
@@ -4173,7 +4196,8 @@ fn main() {
     let _ = DATA.set(data_dir.clone());
     // panic = "abort" ends the app at once: the hook writes where and why to error.log first, so a
     // crash shows up in the diagnostics file instead of vanishing
-    std::panic::set_hook(Box::new(|info| {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
         let msg = info
             .payload()
             .downcast_ref::<&str>()
@@ -4189,6 +4213,13 @@ fn main() {
             "panic",
             &ops::panic_line(thread.name().unwrap_or("?"), &at, &msg),
         );
+        // a password copied within the last 30 s must not stay behind (COPIED is never held long)
+        if let Ok(mut c) = COPIED.try_lock() {
+            if let Some(seq) = c.take() {
+                winsys::clear_clipboard_if(seq);
+            }
+        }
+        default_hook(info);
     }));
 
     let (st, read_only) = match store::read_state(&data_dir.join("accounts.json")) {

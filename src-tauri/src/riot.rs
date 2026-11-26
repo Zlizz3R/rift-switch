@@ -389,7 +389,9 @@ pub async fn random_skin() -> Value {
         return json!({ "ok": false, "why": "noChamp" });
     }
     let skins = owned_skins(&list);
-    if skins.len() < 2 && skins.iter().all(|s| s.2.is_empty()) {
+    // only the base skin (no other skin, no chroma): nothing to pick from
+    let only_base = skins.len() == 1 && skins[0].0 % 1000 == 0 && skins[0].2.is_empty();
+    if skins.is_empty() || only_base {
         return json!({ "ok": false, "why": "noSkins" });
     }
     let (r1, r2) = (rand::random::<f64>(), rand::random::<f64>());
@@ -459,6 +461,26 @@ pub fn set_yaml_locale(text: &str, loc: &str) -> Option<String> {
         .collect();
     hit.then(|| out.concat())
 }
+/// `available_locales` of the Riot Client's settings: [ "de_DE", … ] on one line, or a block list
+/// ("- de_DE" lines below it).
+pub fn available_locales(text: &str) -> Vec<String> {
+    let clean = |x: &str| x.trim().trim_matches('"').trim_matches('\'').to_string();
+    let ok = |x: &String| x.len() == 5 && x.as_bytes()[2] == b'_';
+    let mut lines = text.lines();
+    let Some(head) = lines.find(|l| l.trim_start().starts_with("available_locales:")) else {
+        return vec![];
+    };
+    if let Some((_, rest)) = head.split_once('[') {
+        let inner = rest.split_once(']').map_or(rest, |x| x.0);
+        return inner.split(',').map(clean).filter(ok).collect();
+    }
+    lines
+        .map(str::trim_start)
+        .take_while(|l| l.starts_with('-'))
+        .map(|l| clean(&l[1..]))
+        .filter(ok)
+        .collect()
+}
 /// The languages League has here (from the Riot Client's list, else the known ones) and the one set now.
 pub fn client_language() -> Value {
     let files = locale_files();
@@ -468,27 +490,20 @@ pub fn client_language() -> Value {
             .as_deref()
             .and_then(yaml_locale)
     });
-    let listed: Vec<String> = std::fs::read_to_string(&files[1])
-        .ok()
-        .and_then(|t| {
-            let l = t
-                .lines()
-                .find(|l| l.trim_start().starts_with("available_locales:"))?;
-            let inner = l.split_once('[')?.1.split_once(']')?.0;
-            Some(
-                inner
-                    .split(',')
-                    .map(|x| x.trim().trim_matches('"').to_string())
-                    .filter(|x| x.len() == 5)
-                    .collect(),
-            )
-        })
+    let listed = std::fs::read_to_string(&files[1])
+        .map(|t| available_locales(&t))
         .unwrap_or_default();
-    let list: Vec<String> = if listed.is_empty() {
+    let mut list: Vec<String> = if listed.is_empty() {
         CLIENT_LOCALES.iter().map(|s| s.to_string()).collect()
     } else {
         listed
     };
+    // the language set now is always a choice (else the list would show another one as chosen)
+    if let Some(c) = &cur {
+        if !list.contains(c) {
+            list.push(c.clone());
+        }
+    }
     json!({ "current": cur, "list": list, "found": files.iter().any(|f| f.exists()) })
 }
 /// Sets League's language (League must be closed: it writes its settings back when it quits).
@@ -503,24 +518,27 @@ pub fn set_client_language(loc: &str, league_open: bool) -> Value {
     if league_open {
         return json!({ "ok": false, "why": "leagueOpen" });
     }
-    let mut done = 0;
+    // every file's new text first – nothing is written unless all of them can be changed
+    let mut todo: Vec<(PathBuf, String)> = vec![];
     for f in locale_files() {
         let Ok(t) = std::fs::read_to_string(&f) else {
             continue;
         };
-        let Some(new) = set_yaml_locale(&t, loc) else {
-            continue;
-        };
-        if std::fs::write(&f, new).is_err() {
+        if let Some(new) = set_yaml_locale(&t, loc) {
+            todo.push((f, new));
+        }
+    }
+    if todo.is_empty() {
+        return json!({ "ok": false, "why": "notFound" });
+    }
+    // the Riot Client's settings first: it writes League's own file from them when League starts
+    todo.reverse();
+    for (f, new) in &todo {
+        if crate::store::write_atomic(f, new.as_bytes()).is_err() {
             return json!({ "ok": false, "why": "failed" });
         }
-        done += 1;
     }
-    if done == 0 {
-        json!({ "ok": false, "why": "notFound" })
-    } else {
-        json!({ "ok": true })
-    }
+    json!({ "ok": true })
 }
 
 /// The client's replay metadata in short: { state, progress (0–100) }.
@@ -528,7 +546,7 @@ pub fn replay_state(m: &Value) -> Value {
     let state = m["state"].as_str().unwrap_or("checking");
     let p = m["downloadProgress"].as_f64().unwrap_or(0.0);
     // older clients report 0–1, newer 0–100
-    let progress = if p <= 1.0 && state == "downloading" {
+    let progress = if p > 0.0 && p < 1.0 && state == "downloading" {
         p * 100.0
     } else {
         p
@@ -1935,6 +1953,14 @@ mod tests {
             out.contains("default_locale: \"en_US\"") && out.contains("    locale: \"fr_FR\"\n")
         );
         assert_eq!(set_yaml_locale("other: 1\n", "de_DE"), None);
+        // the list of languages: one line or a block list
+        assert_eq!(
+            available_locales("x:\n    available_locales: [\"de_DE\", \"en_US\"]\n"),
+            vec!["de_DE", "en_US"]
+        );
+        let block = "locale_data:\n    available_locales:\n    - de_DE\n    - \"en_US\"\n    default_locale: en_US\n";
+        assert_eq!(available_locales(block), vec!["de_DE", "en_US"]);
+        assert!(available_locales("nothing: 1").is_empty());
         assert!(!set_client_language("de-DE", false)["ok"].as_bool().unwrap());
         assert_eq!(set_client_language("de_DE", true)["why"], "leagueOpen");
     }
@@ -1949,6 +1975,11 @@ mod tests {
         assert_eq!(
             s(json!({ "state": "downloading", "downloadProgress": 0.42 })),
             json!({ "state": "downloading", "progress": 42.0 })
+        );
+        // a newer client's 1 % stays 1 % (only a fraction below 1 is 0–1)
+        assert_eq!(
+            s(json!({ "state": "downloading", "downloadProgress": 1 })),
+            json!({ "state": "downloading", "progress": 1.0 })
         );
         assert_eq!(
             s(json!({ "state": "downloading", "downloadProgress": 57 })),

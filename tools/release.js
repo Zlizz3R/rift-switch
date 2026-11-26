@@ -52,15 +52,7 @@ function main() {
   if (!e || !(e.en || []).length || !(e.de || []).length) fail(`ui/changelog.js has no entry (en + de) for ${v}.`);
   if (CHANGELOG[0].v !== v) fail(`The entry for ${v} must be the first one in ui/changelog.js.`);
 
-  step(`Version ${v}`);
-  for (const [name, file] of Object.entries(FILES)) {
-    const p = path.join(ROOT, file);
-    const before = fs.readFileSync(p, 'utf8');
-    const after = setVersion(name, before, v);
-    if (getVersion(name, after) !== v) fail(`Could not set the version in ${file}.`);
-    if (after !== before) fs.writeFileSync(p, after);
-  }
-
+  // the checks first – they don't need the new version; a failing one leaves nothing changed
   step('cargo fmt --check');
   sh('cargo fmt --check', { cwd: path.join(ROOT, 'src-tauri') });
   step('cargo clippy');
@@ -68,16 +60,38 @@ function main() {
   step('npm test');
   sh('npm test');
 
-  step('Commit and tag');
-  if (sh('git status --porcelain', { quiet: true }).trim()) {
-    sh(`git add ${Object.values(FILES).join(' ')} src-tauri/Cargo.lock`);
-    sh(`git commit -m "Version ${v}"`);
+  // then the version, committed and tagged – if anything goes wrong here, the files go back
+  const touched = [...Object.values(FILES), 'src-tauri/Cargo.lock'];
+  try {
+    step(`Version ${v}`);
+    for (const [name, file] of Object.entries(FILES)) {
+      const p = path.join(ROOT, file);
+      const before = fs.readFileSync(p, 'utf8');
+      const after = setVersion(name, before, v);
+      if (getVersion(name, after) !== v) throw new Error(`Could not set the version in ${file}.`);
+      if (after !== before) fs.writeFileSync(p, after);
+    }
+    // Cargo.lock takes the new version of the app itself (nothing else changes)
+    sh('cargo update --workspace --offline', { cwd: path.join(ROOT, 'src-tauri') });
+    step('Commit and tag');
+    if (sh('git status --porcelain', { quiet: true }).trim()) {
+      sh(`git add ${touched.join(' ')}`);
+      sh(`git commit -m "Version ${v}"`);
+    }
+    sh(`git tag v${v}`);
+  } catch (e) {
+    // nothing committed yet: the files as they were; committed: the commit stays, no tag
+    try { sh(`git checkout -- ${touched.join(' ')}`, { quiet: true }); } catch { /* nothing to undo */ }
+    fail(`${e.message.split('\n')[0]} – the version files are as before.`);
   }
-  sh(`git tag v${v}`);
   if (push) {
     step('Push');
-    sh('git push origin main');
-    sh(`git push origin v${v}`);
+    try {
+      sh('git push origin main');
+      sh(`git push origin v${v}`);
+    } catch {
+      fail(`Push failed. The commit and tag v${v} are here – push them when it works again:  git push origin main; git push origin v${v}`);
+    }
     console.log(`\n✔ v${v} pushed – GitHub Actions builds and publishes the release.`);
   } else {
     console.log(`\n✔ v${v} tagged. Publish with:  git push origin main; git push origin v${v}`);

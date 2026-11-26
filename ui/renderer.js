@@ -1258,7 +1258,7 @@ async function copyLogin(id, what) {
     const p = await passBox({ title: t('p.copyPass'), text: t('reveal.askCopy'), ok: t('p.copyPass') });
     if (p === null) return;
     r = await api.copyLogin(id, what, p);
-    if (!(r && r.ok)) return toast(t('pw.wrong'), true);
+    if (r && r.denied) return toast(t('pw.wrong'), true);
   }
   if (r && r.ok) toast(t(what === 'pass' ? 'copy.pass' : 'copy.user'));
   else if (!(r && r.denied)) toast(t('copy.failed'), true);

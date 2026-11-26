@@ -138,3 +138,46 @@ test('player page: one game is "1 game", long names fit on one line', () => {
     assert.equal(row.querySelector('.pl-cn b').title, 'Twisted Fate');
   });
 });
+
+test('replay: right after "download" the client may still say "download" – the bar keeps downloading and asks again', () => {
+  const games = [mhGame(1, 420)];
+  let answers = ['download', 'download', 'downloading'];
+  const replies = {
+    matches: { index: games.map((g) => [g.id, g.t, g.q, P(1)]), waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': (ids) => games.filter((g) => ids.includes(g.id)),
+    replay: (id, action) => ({ state: action === 'state' && answers.length === 3 ? 'download' : answers.shift() || 'downloading', progress: 30 }),
+  };
+  return withApp({ replies }, async (app) => {
+    await app.click('#navMatches');
+    await app.click(app.$('.mh-row .mh-meta'));
+    await app.settle();
+    assert.match(app.$('.rp-bar').textContent, /Download replay/);
+    await app.click('[data-rpact="download"]');
+    await app.settle();
+    // the client said "download" again: still downloading, no button back
+    assert.match(app.$('.rp-bar').textContent, /Downloading/);
+    assert.equal(app.$('[data-rpact="download"]'), null);
+    await new Promise((r) => setTimeout(r, 3300));
+    await app.settle();
+    assert.match(app.$('.rp-bar').textContent, /Downloading … 30 %/);
+    assert.ok(app.called('replay').length >= 3, 'it went on asking');
+  });
+});
+
+test('panel: copying with the app password – a wrong one says so, any other failure says it could not copy', () => {
+  let reply = { ok: false, denied: true };
+  return withApp({ state: sampleState({ hasLock: true }), replies: { 'copy-login': (id, what, pass) => (pass ? reply : { ok: false, noHello: true }) } }, async (app) => {
+    app.w.openProfile(P(2));
+    await app.settle();
+    const viaApp = async () => {
+      await app.click('[data-pcopy="pass"]');
+      app.$('#passIn').value = 'apppassword';
+      await app.submit('#passForm');
+    };
+    await viaApp();
+    assert.match(app.$('#toast').textContent, /Wrong password/);
+    reply = { ok: false, failed: true };
+    await viaApp();
+    assert.match(app.$('#toast').textContent, /Couldn't copy it/);
+  });
+});

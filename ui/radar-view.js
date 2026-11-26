@@ -55,11 +55,12 @@ function perfStyleHtml(parts, chosenRole = perf.f.role) {
   }
   let rows = role ? parts.filter(x => Stats.role(x.g, x.p) === role) : [];
   const champsHere = [...new Set(rows.map(x => x.p.champ))];
-  if (rdv.champ && !champsHere.includes(rdv.champ)) rdv.champ = 0;
-  if (rdv.champ) rows = rows.filter(x => x.p.champ === rdv.champ);
+  // the chosen champion where it was played (the choice itself stays for the other view)
+  const champ = champsHere.includes(rdv.champ) ? rdv.champ : 0;
+  if (champ) rows = rows.filter(x => x.p.champ === champ);
   const axes = Radar.radar(rows);
   const opts = `<option value="0">${t('rad.allChamps')}</option>` + champsHere.map(id => ({ id, n: (champById(id) || {}).name || '#' + id }))
-    .sort((a, b) => a.n.localeCompare(b.n)).map(c => `<option value="${c.id}"${c.id === rdv.champ ? ' selected' : ''}>${esc(c.n)}</option>`).join('');
+    .sort((a, b) => a.n.localeCompare(b.n)).map(c => `<option value="${c.id}"${c.id === champ ? ' selected' : ''}>${esc(c.n)}</option>`).join('');
   const head = `<div class="rd-head"><select id="rdChamp">${opts}</select>${roleNote ? `<span class="muted">${esc(roleNote)}</span>` : ''}</div>`;
   if (!axes.some(a => a.n)) return `${head}<div class="chart-empty">${t('rad.none')}</div>`;
   return `${head}<div class="rd-wrap">${radarSvg(axes, 300)}${radarBars(axes)}</div><p class="coll-foot">${t('rad.basis')}</p>`;

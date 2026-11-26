@@ -41,7 +41,9 @@ async function loadPlayer() {
     }
   } catch (e) { console.warn('player', e); }
   plv.loading = false;
-  if (view === 'player') renderPlayer();
+  // not while minutes are dragged on the map's chart (the chart would be replaced under the mouse)
+  if (view === 'player' && !mvDrag) renderPlayer();
+  else if (view === 'player') setTimeout(() => { if (view === 'player' && !mvDrag) renderPlayer(); }, 600);
 }
 // more of this player's games stored: fetch again, at most every 2 s
 api.onPlayerChanged(e => {

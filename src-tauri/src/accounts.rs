@@ -231,15 +231,16 @@ pub fn record_history(a: &mut Obj, now: i64) {
     }
 }
 
-/// Fresh data for one account merged into the list; returns the index of the merged account.
 /// The account's Riot ID changed: (old "Name#TAG", new "Name#TAG"). Only for a real account whose
-/// old Riot ID was known (not a saved login, not the "…" of a tile still waiting for its data), and
-/// only when the fresh data has a whole Riot ID. A change of case is a rename too.
+/// old Riot ID came from Riot – it has a level: not a saved login, also not one just resolved (its
+/// name is what was typed), not the "…" of a tile still waiting for its data – and only when the
+/// fresh data has a whole Riot ID. A change of case is a rename too.
 pub fn rename_of(prev: &Obj, acc: &Obj) -> Option<(String, String)> {
     let (og, ot) = (str_of(prev, "gameName"), str_of(prev, "tagLine"));
     let (ng, nt) = (str_of(acc, "gameName"), str_of(acc, "tagLine"));
     if truthy(prev.get("placeholder"))
         || truthy(prev.get("needsInfo"))
+        || !truthy(prev.get("level"))
         || og.is_empty()
         || og == "…"
         || ot.is_empty()
@@ -252,6 +253,7 @@ pub fn rename_of(prev: &Obj, acc: &Obj) -> Option<(String, String)> {
     Some((format!("{og}#{ot}"), format!("{ng}#{nt}")))
 }
 
+/// Fresh data for one account merged into the list; returns the index of the merged account.
 pub fn upsert_into(list: &mut Vec<Obj>, mut acc: Obj, now: i64) -> usize {
     let puuid = str_of(&acc, "puuid").to_string();
     let i = list.iter().position(|a| str_of(a, "puuid") == puuid);
@@ -409,7 +411,13 @@ mod tests {
     #[test]
     fn a_new_riot_id_keeps_the_old_one() {
         let mut list = vec![];
-        let named = |g: &str, t: &str| obj(json!({ "puuid": P1, "gameName": g, "tagLine": t }));
+        let named = |g: &str, t: &str| {
+            obj(json!({ "puuid": P1, "gameName": g, "tagLine": t, "level": 30 }))
+        };
+        // a saved login just resolved: the Riot ID typed by hand, no level yet – the first data
+        // from Riot is no rename
+        let resolved = obj(json!({ "puuid": P1, "gameName": "faker", "tagLine": "kr1" }));
+        assert_eq!(rename_of(&resolved, &named("Faker", "KR1")), None);
         upsert_into(&mut list, named("Old", "EUW"), 1);
         // the same name, or only a part of the data: nothing happens
         upsert_into(&mut list, named("Old", "EUW"), 2);
