@@ -1964,3 +1964,56 @@ button.srec:hover { background: rgba(255,255,255,.035); }
   border: 1px dashed #34405a; background: radial-gradient(400px 160px at 50% 0%, rgba(200,170,110,.06), transparent 70%), var(--panel); }
 .ov-empty b { font-size: 15px; color: var(--gold2); }
 .ov-empty p { color: var(--muted); max-width: 520px; }
+
+/* ---------- every other page's head: the Overview's band, slimmer (summary.js pageArt) ---------- */
+.pg-hero { padding: 22px 30px 18px; margin-bottom: 20px; }
+.mismatch:not([hidden]) ~ * .ov-hero, .crypto-warn:not([hidden]) ~ * .ov-hero { margin-top: 0; }
+.pg-hero h1 { font-size: 26px; font-weight: 700; letter-spacing: .3px; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
+.pg-hero h1 > span[data-i18n] { font-size: inherit; font-weight: inherit; color: var(--text); margin-left: 0; }
+.pg-hero .sub { color: #b9bfcc; margin-top: 4px; }
+.pg-hero .title-row h1 { font-size: 24px; }
+.pg-hero .search, .pg-hero #sort, .pg-hero .seg, .pg-hero .tool-btn { background-color: rgba(10,13,20,.66); backdrop-filter: blur(6px); }
+.pg-hero .add-cat { background: rgba(10,13,20,.45); }
+
+/* ---------- depth for every box: a soft light from above, a gold hairline, a shadow ---------- */
+.live-card, .dash-card, .mh-sum, .tag-top > div, .tag-group, .oc-list, .ss-acc, .trend, .tool-card, .pk, .coll-tiles > *, .mast-totals > * {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 64px);
+  box-shadow: 0 14px 34px -24px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.035); }
+.live-card, .dash-card, .mh-sum, .tag-top > div, .tag-group, .tool-card, .ss-acc { position: relative; }
+.live-card::before, .dash-card::before, .mh-sum::before, .tag-top > div::before, .tag-group::before, .tool-card::before, .ss-acc::before {
+  content: ""; position: absolute; left: 20px; right: 20px; top: -1px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(200,170,110,.42), transparent); }
+/* card titles with the gold diamond */
+.lc-head h3, .tag-top .d-sec-t, .tag-group > .d-sec-t { display: inline-flex; align-items: center; gap: 8px; }
+.lc-head h3::before, .tag-top .d-sec-t::before, .tag-group > .d-sec-t::before { content: ""; width: 6px; height: 6px; flex: none; transform: rotate(45deg);
+  background: linear-gradient(135deg, var(--gold2), var(--gold)); box-shadow: 0 0 8px rgba(200,170,110,.5); }
+/* the key figure tiles (LP history, Performance) */
+.stat, .pk { border: 1px solid var(--line); background-color: var(--panel); }
+.stat { padding: 12px 14px; border-radius: 12px; }
+.stat b, .pk b { font-size: 19px; }
+/* tools: a hover with light */
+.tool-card { transition: border-color .15s, transform .15s, box-shadow .15s; }
+.tool-card:hover { transform: translateY(-2px); box-shadow: 0 16px 34px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(200,170,110,.25), inset 0 1px 0 rgba(255,255,255,.05); }
+/* the match list: each game a little card, its result as a soft glow from the left */
+.mh-row { background-image: linear-gradient(90deg, rgba(83,131,232,.16), rgba(83,131,232,.04) 45%, transparent);
+  box-shadow: 0 10px 26px -22px rgba(0,0,0,.9); transition: box-shadow .15s, transform .15s; }
+.mh-row.loss { background-image: linear-gradient(90deg, rgba(232,64,87,.16), rgba(232,64,87,.04) 45%, transparent); }
+.mh-row.remake { background-image: none; }
+.mh-row:hover { box-shadow: 0 14px 30px -18px rgba(0,0,0,.95), inset 0 0 0 1px rgba(255,255,255,.05); }
+.mh-champ img { box-shadow: 0 0 0 2px rgba(83,131,232,.65), 0 4px 12px rgba(0,0,0,.45); }
+.loss .mh-champ img { box-shadow: 0 0 0 2px rgba(232,64,87,.6), 0 4px 12px rgba(0,0,0,.45); }
+/* tables: rows light up under the mouse */
+.dash-table tbody tr { transition: background .12s; }
+.dash-table tbody tr:hover { background: rgba(255,255,255,.025); }
+/* account tiles: a little more light on top and around the active one */
+.tile { background-image: radial-gradient(260px 120px at 50% -20px, rgba(200,170,110,.07), transparent 70%), linear-gradient(180deg, var(--panel2), var(--panel)); }
+.tile.active { background-image: radial-gradient(260px 120px at 50% -20px, rgba(10,200,185,.12), transparent 70%), linear-gradient(180deg, var(--panel2), var(--panel)); }
+/* the segmented controls and buttons: a touch of depth */
+.seg { box-shadow: inset 0 1px 2px rgba(0,0,0,.35); }
+.seg button.on { box-shadow: 0 1px 0 rgba(255,255,255,.05), 0 2px 8px -2px rgba(0,0,0,.6), inset 0 0 0 1px rgba(200,170,110,.22); }
+.btn { background-image: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)); }
+.btn.gold { box-shadow: 0 6px 18px -8px rgba(200,170,110,.6); }
+/* the page itself: a faint hextech pattern behind everything */
+main { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='48' viewBox='0 0 56 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8zM42 24l14 8v16l-14 8-14-8V32z' fill='none' stroke='%23c8aa6e' stroke-opacity='.035' stroke-width='1'/%3E%3C/svg%3E");
+  background-attachment: local; }
+#viewAccounts .pg-hero { padding-top: 34px; padding-bottom: 30px; }

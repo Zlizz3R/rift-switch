@@ -79,6 +79,7 @@ function showView(v, o = {}) {
   $('navColl').classList.toggle('active', v === 'coll');
   $('navTools').classList.toggle('active', v === 'tools');
   $('navMatches').classList.toggle('active', v === 'matches');
+  if (typeof pageArt === 'function') pageArt(v);
   if (v === 'live') pollLive(true);
   if (v === 'matches') { renderMatches(); loadMatches(); }
   if (v === 'dash') { loadDash(); if (typeof showDashTab === 'function') showDashTab(dashTab()); }
@@ -565,6 +566,7 @@ setInterval(() => {
 }, 1000);
 
 function renderLive(force) {
+  if (typeof pageArt === 'function') pageArt('live');
   if (!force && document.activeElement && document.activeElement.closest && document.activeElement.closest('#liveBody input')) return;
   const d = liveData || {};
   $('liveSub').textContent = !d.clientUp ? t('app.closed') : phaseName(d.phase);

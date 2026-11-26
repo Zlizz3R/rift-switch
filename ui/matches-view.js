@@ -353,6 +353,7 @@ async function loadMatches() {
 }
 
 function renderMatches() {
+  if (typeof pageArt === 'function') pageArt('matches');
   if (view !== 'matches') return;
   const accs = S.accounts.filter(a => !a.placeholder);
   const d = mh.data;

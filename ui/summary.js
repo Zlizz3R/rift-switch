@@ -407,3 +407,37 @@ $('viewDash').addEventListener('change', e => {
     if (perf.lastOwn) { const n = $('sumBar').querySelector('[data-pllastn]'); if (n) { n.focus(); n.select(); } }
   } else if (e.target.matches('[data-pllastn]')) { perfSetLast(Number(e.target.value)); renderSum(); }
 });
+
+// ---------- the head of every other page: a champion's splash art ----------
+// Accounts: the signed-in (or first) account's best mastery champion; Collection and Tools: the next
+// ones; Match history: the champion of the newest game; Live: the champion picked now.
+const PG_ART = { accounts: 'pgArtAccounts', coll: 'pgArtColl', live: 'pgArtLive', matches: 'pgArtMatches', tools: 'pgArtTools' };
+let pgArtAsked = false;
+function pgTopChamps() {
+  const accs = (S.accounts || []).filter(a => !a.placeholder);
+  const first = accs.find(a => a.puuid === (S.live && S.live.puuid)) || accs.find(a => a.puuid === S.active);
+  const out = [];
+  for (const a of [first, ...accs].filter(Boolean)) for (const m of (a.profile && a.profile.topMastery) || []) if (m && m.id && !out.includes(m.id)) out.push(m.id);
+  return out;
+}
+function pgLiveChamp() {
+  const d = typeof liveData !== 'undefined' ? liveData : null;
+  if (!d || !d.me) return 0;
+  const list = [...((d.champSelect && d.champSelect.allies) || []), ...((d.inGame && [...(d.inGame.teamOne || []), ...(d.inGame.teamTwo || [])]) || [])];
+  const me = list.find(p => p.puuid === d.me && p.championId);
+  return me ? me.championId : 0;
+}
+function pageArt(v) {
+  const el = $(PG_ART[v] || '');
+  if (!el) return;
+  if (!champs.length) {
+    if (!pgArtAsked) { pgArtAsked = true; api.champions().then(c => { if (Array.isArray(c) && c.length) { champs = c; pageArt(view); } }).catch(() => {}); }
+    return;
+  }
+  const top = pgTopChamps();
+  let champ = { accounts: top[0], coll: top[1] || top[0], tools: top[2] || top[0] }[v] || 0;
+  if (v === 'matches') { const g = mh.data && mh.data.games && mh.data.games[0]; champ = (g && MatchFilter.me(g) && MatchFilter.me(g).champ) || top[0]; }
+  if (v === 'live') champ = pgLiveChamp() || top[0];
+  sumArt(el, champ || 0);
+}
+api.onState(() => pageArt(view));
