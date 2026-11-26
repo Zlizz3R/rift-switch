@@ -98,3 +98,52 @@ test('tags: "All roles" – the role tags carry their role and its share of the 
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+// ARAM: 14 ARAM games of account 2 (and the 12 ranked ones of account 1): the Traits tab starts on
+// ARAM for an ARAM player, its own catalogue without roles; "At a glance" the same
+test('traits: ARAM players get ARAM traits – the tab starts on ARAM, no roles, its own catalogue', async () => {
+  const aram = Array.from({ length: 14 }, (_, i) => {
+    const players = [...POS.map((_, j) => player(100, j, { pos: '' })), ...POS.map((_, j) => player(200, j, { pos: '' }))];
+    // lots of damage and healing, a triple kill in half of the games, wins
+    players[0] = { ...players[0], puuid: P(2), champ: 103, k: 14, d: 4, a: 20, dmg: 70000, multi: i % 2 ? 3 : 1, x: { taken: 90000, mitig: 60000, heal: 26000, cc: 50 } };
+    return { id: String(700 + i), t: now - (i + 1) * 3600000, dur: 1200, q: 450, mode: 'ARAM', remake: false, v: 3, players };
+  });
+  const all = [...games, ...aram];
+  const app = await boot({ replies: { ...replies, matches: { index: all.map(g => [g.id, g.t, g.q, g.players.some(p => p.puuid === P(2)) ? P(2) : P(1)]), waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': all } });
+  try {
+    await app.click('#navDash');
+    // only account 2 (the ARAM player)
+    app.$(`[data-ovacc="${P(2)}"]`).dispatchEvent(new app.w.MouseEvent('click', { bubbles: true, ctrlKey: true }));
+    await app.click('[data-dt="tags"]');
+    await app.settle();
+    assert.ok(app.$('[data-tmode="aram"]').classList.contains('on'), 'more ARAM games: ARAM first');
+    assert.ok(!app.visible('#tagRole'), 'no roles in ARAM');
+    assert.match(app.$('#tagSub').textContent, /14 ARAM games this season/);
+    const strong = app.$$('.tag-top > div')[0].textContent;
+    assert.match(strong, /Damage dealer ★/);
+    assert.match(strong, /Healing machine ★/);
+    assert.match(strong, /Frontliner ★/);
+    assert.match(app.$('#tagBody').textContent, /Multikill hunter/);
+    assert.match(app.$('#tagBody').textContent, /Hot streak/);
+    assert.match(app.$('#tagBody .coll-foot').textContent, /Only this season's ARAM games count/);
+    // the ARAM catalogue in "All possible traits": no lane traits there
+    await app.click('[data-tagall]');
+    const allTxt = app.$('.tag-all').textContent;
+    assert.match(allTxt, /CC machine/);
+    assert.doesNotMatch(allTxt, /Lane tyrant|Great farmer|Ward hunter/);
+    // the other way: Summoner's Rift has no games of this account
+    await app.click('[data-tmode="sr"]');
+    assert.ok(app.visible('#tagRole'));
+    assert.match(app.$$('.tag-top > div')[0].textContent, /Nothing yet/);
+    // At a glance: the ARAM scope first, its cards for ARAM (team share, activity)
+    await app.click('[data-dt="sum"]');
+    await app.settle();
+    assert.ok(app.$('[data-sumq="aram"]').classList.contains('on'));
+    assert.ok(app.$('.ovc-share'), 'the share of the team');
+    assert.match(app.$('.ovc-share').textContent, /Damage[\s\S]*Healing/);
+    assert.ok(app.$('.ovc-act'), 'activity instead of the radar');
+    assert.match(app.$('.ovc-traits').textContent, /Damage dealer/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

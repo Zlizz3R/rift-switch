@@ -4,7 +4,8 @@
 // this role (the Live-only ones are left out) – with what it measures, the own value and the
 // thresholds on hover. A click on a tag shows the numbers behind it. Engine: tags.js. Uses the globals of renderer.js / views.js.
 
-const tagv = { role: '', games: null, mast: null, loading: false, open: '' };
+// mode: 'sr' (ranked, Summoner's Rift) | 'aram' | '' = the one with more games this season
+const tagv = { role: '', mode: '', games: null, mast: null, loading: false, open: '' };
 
 async function loadTagsView() {
   if (tagv.loading) return;
@@ -21,7 +22,7 @@ async function loadTagsView() {
 api.onMatchesChanged(() => { if (view === 'dash' && dashTab() === 'tags') loadTagsView(); });
 
 // the last shown levels per account and role – a tag only goes 5 % past its threshold (tags.js)
-const tagPrevKey = () => `rs.tagPrev.${ovChosen().map(a => a.puuid.slice(0, 8)).sort().join('+') || 'none'}.${tagv.role || 'main'}`;
+const tagPrevKey = () => `rs.tagPrev.${ovChosen().map(a => a.puuid.slice(0, 8)).sort().join('+') || 'none'}.${tagv.aram ? 'aram' : tagv.role || 'main'}`;
 function tagPrev() { try { return new Set(JSON.parse(localStorage.getItem(tagPrevKey()) || '[]')); } catch { return new Set(); } }
 function tagKeep(results) { try { localStorage.setItem(tagPrevKey(), JSON.stringify([...Tags.keys(results)])); } catch { /* private mode: no memory */ } }
 
@@ -136,6 +137,22 @@ function renderTagsView() {
     Stats.POSITIONS.map(r => `<button data-trole="${r}" title="${esc(t('pos.' + r))}"${tagv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('');
   if (!tagv.games) { $('tagSub').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
   const own = accs.map(a => a.puuid);
+  // Summoner's Rift (ranked) or ARAM: an ARAM player starts on ARAM
+  const rows = Stats.byParticipation(tagv.games).filter(x => own.includes(x.p.puuid));
+  const nSr = sumScopeRows(rows, 'ranked').length, nAram = sumScopeRows(rows, 'aram').length;
+  tagv.aram = (tagv.mode || (nAram > nSr ? 'aram' : 'sr')) === 'aram';
+  $('tagMode').innerHTML = [['sr', t('tags.modeSr'), nSr], ['aram', 'ARAM', nAram]]
+    .map(([k, l, n]) => `<button data-tmode="${k}"${(k === 'aram') === tagv.aram ? ' class="on"' : ''}>${esc(l)} <small>${num(n)}</small></button>`).join('');
+  $('tagRole').hidden = tagv.aram;
+  if (tagv.aram) {
+    const res = Tags.evaluateAram({ games: tagv.games, own, prev: tagPrev() });
+    tagKeep(res.results);
+    tagv.res = res.results;
+    if (!res.n) { $('tagSub').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('ov.noAramTraits')}</div>`; return; }
+    $('tagSub').textContent = t('tags.subAram', { n: num(res.n) });
+    el.innerHTML = tagsBodyHtml(res, null);
+    return;
+  }
   const read = (tagv.mast || []).filter(m => own.includes(m.puuid));
   const acc = accs.length === 1 ? accs[0] : null;
   const ctx = { games: tagv.games, own, role: tagv.role && tagv.role !== 'all' ? tagv.role : null, prev: tagPrev(),
@@ -180,6 +197,8 @@ const tagGroupsOf = res => (res.aram && Tags.ARAM_GROUPS ? Tags.ARAM_GROUPS : Ta
 $('dashTags').addEventListener('click', e => {
   const r = e.target.closest('[data-trole]');
   if (r) { tagv.role = r.dataset.trole; tagv.open = ''; return renderTagsView(); }
+  const m = e.target.closest('[data-tmode]');
+  if (m) { tagv.mode = m.dataset.tmode; tagv.open = ''; return renderTagsView(); }
   if (e.target.closest('[data-tagall]')) {
     try { localStorage.setItem(TAG_ALL_KEY, tagAllOpen() ? '0' : '1'); } catch { /* private mode: stays as it is */ }
     return renderTagsView();

@@ -211,14 +211,43 @@
     // ---------- mastery (all accounts together on the own accounts) ----------
     { id: 'mastery', group: 'mastery', type: 'mastery', stage: 'M', color: 'info', steps: { millionaire: 1000000, veteran: 500000, expert: 100000 }, max: 3 },
   ];
+  // ---------- ARAM: this season's ARAM games (no roles, no lane, no vision) ----------
+  // Thresholds from the stored ARAM games of the other players (1,462 games, 3,451 player games,
+  // 26.11.2026; the short match-list games count wherever a figure needs no team): weak = the lowest
+  // 25 %, terrible = the lowest 10 %, great = the best 33 %, master = the best 16.6 % (deaths the other
+  // way round), each the middle of one game and a mix of ten. ARAM numbers are far higher than on
+  // the Rift (more fights, shorter games). Recalculate: node tools/aram-thresholds.js
+  const ARAM_RULES = [
+    { id: 'greatWith', group: 'pool', type: 'champWinrate', pct: true, games: 6, winrate: 0.6, min: 6, stage: 'A', color: 'good', period: 'season' },
+    { id: 'arHot', group: 'form', type: 'streak', win: true, n: 3, min: 3, stage: 'A', color: 'good', period: 'all' },
+    { id: 'arCold', group: 'form', type: 'streak', win: false, n: 3, min: 3, stage: 'A', color: 'bad', period: 'all' },
+    { id: 'arDamage', group: 'stats', type: 'metric', metric: 'dmgMin', dir: 1, min: 10, stage: 'A', period: 'season', dec: 0,
+      levels: { great: 2380, master: 2780, weak: 1700, terrible: 1400 } },
+    { id: 'arKda', group: 'stats', type: 'metric', metric: 'kda', dir: 1, min: 10, stage: 'A', period: 'season', dec: 2,
+      levels: { great: 3.54, master: 4.25, weak: 2.59, terrible: 2.24 } },
+    // per 10 minutes: ARAM games differ a lot in length
+    { id: 'arDeaths', group: 'stats', type: 'metric', metric: 'deathsMin10', dir: -1, min: 10, stage: 'A', period: 'season', dec: 1,
+      levels: { great: 5.7, master: 5.1, weak: 7, terrible: 7.7 } },
+    { id: 'arTeam', group: 'fight', type: 'metric', metric: 'kp', dir: 1, min: 10, stage: 'B', period: 'season', pct: true,
+      levels: { great: 0.69, master: 0.73, weak: 0.6, terrible: 0.55 } },
+    // damage taken + mitigated, healing (own and team), crowd control – only a good side: a low value is a role, not a weakness
+    { id: 'arTank', group: 'fight', type: 'metric', metric: 'tankMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 4900, master: 6530 } },
+    { id: 'arHeal', group: 'fight', type: 'metric', metric: 'healMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 580, master: 840 } },
+    { id: 'arCc', group: 'fight', type: 'metric', metric: 'ccMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 1, levels: { great: 1.95, master: 2.53 } },
+    // a triple kill or more in 27 % of all ARAM games; 45 % of ten games is about the best tenth
+    { id: 'arMulti', group: 'fight', type: 'avg', metric: 'multi3', atLeast: 0.45, min: 10, stage: 'A', color: 'good', period: 'season', pct: true },
+    // the damage share of ten games: 22 % for the best sixth; together with a kill participation above the best third
+    { id: 'arCarry', group: 'fight', type: 'carry', pct: true, share: 0.24, kp: 0.67, min: 10, stage: 'B', color: 'good', period: 'season' },
+  ];
   // what may not stand next to each other (5.4); the first one wins
-  const TAG_CONFLICTS = [['otp', 'flexPool'], ['otp', 'smallPool'], ['flexPool', 'smallPool'], ['generalist', 'autofill'], ['hotStreak', 'lossStreak'], ['unkillable', 'gankVictim'], ['aggroJungler', 'passiveJungler']];
+  const TAG_CONFLICTS = [['otp', 'flexPool'], ['otp', 'smallPool'], ['flexPool', 'smallPool'], ['generalist', 'autofill'], ['hotStreak', 'lossStreak'], ['unkillable', 'gankVictim'], ['aggroJungler', 'passiveJungler'],
+    ['arHot', 'arCold']];
   // a tag stays until its value is this much past the threshold the other way (no flicker)
   const TAG_HYSTERESIS = 0.05;
   // the main role: at least this share of the games, from this many games on
   const MAIN_ROLE = { share: 0.6, min: 10 };
 
-  const api = { TAG_RULES, TAG_CONFLICTS, TAG_HYSTERESIS, MAIN_ROLE };
+  const api = { TAG_RULES, ARAM_RULES, TAG_CONFLICTS, TAG_HYSTERESIS, MAIN_ROLE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TagRules = api;
 })(typeof window !== 'undefined' ? window : this);

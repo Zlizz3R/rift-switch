@@ -63,8 +63,10 @@ function scGames(puuid) {
 }
 
 // everything a card shows about one player
-function scCard(p, enemyChamps) {
-  const key = `${p.puuid}|${p.championId}|${scIdsOf(p.puuid).length}`;
+// queue: the game's – an ARAM game shows the ARAM traits (this season's ARAM games)
+function scCard(p, enemyChamps, queue) {
+  const aram = [450, 2400].includes(queue);
+  const key = `${p.puuid}|${p.championId}|${scIdsOf(p.puuid).length}|${aram ? 'a' : ''}`;
   if (scv.memo && scv.memo.has(key)) return scv.memo.get(key);
   const games = scGames(p.puuid);
   const parts = Stats.byParticipation(games).filter(x => x.p.puuid === p.puuid);
@@ -76,7 +78,8 @@ function scCard(p, enemyChamps) {
   const topM = m ? Object.entries(m).sort((a, b) => b[1] - a[1])[0] : null;
   const mastRows = m ? [[champ, pts], topM].filter(x => x && x[0]).filter((x, i, a) => a.findIndex(y => +y[0] === +x[0]) === i)
     .map(([id, v]) => ({ id: +id, total: +v, n: 1 })).sort((a, b) => b.total - a.total) : null;
-  const res = Tags.evaluate({ games, own: [p.puuid], level: p.level, mastery: mastRows, now: Date.now() });
+  const res = aram ? Tags.evaluateAram({ games, own: [p.puuid], now: Date.now() })
+    : Tags.evaluate({ games, own: [p.puuid], level: p.level, mastery: mastRows, now: Date.now() });
   const roles = Tags.mainRole(parts);
   const pos = SC_POS[String(p.position || '').toUpperCase()] || '';
   const live = Tags.liveTags({ games, puuid: p.puuid, champ, mastery: pts, position: pos, main: res.main, enemyChamps, bans: [], results: res.results });
@@ -194,7 +197,7 @@ function scoutBoardHtml(d) {
   const theirsKey = mineKey === 'teamOne' ? 'teamTwo' : 'teamOne';
   const champsOf = team => g[team].map(p => p.championId).filter(Boolean);
   // blue side always on top, red side below
-  const laid = [['teamOne', 'teamTwo'], ['teamTwo', 'teamOne']].map(([team, enemy]) => scOrder(g[team].map(p => scCard(p, champsOf(enemy))), g.queueId));
+  const laid = [['teamOne', 'teamTwo'], ['teamTwo', 'teamOne']].map(([team, enemy]) => scOrder(g[team].map(p => scCard(p, champsOf(enemy), g.queueId)), g.queueId));
   const extras = typeof lmBoardExtras === 'function' ? lmBoardExtras(g, laid) : new Map();
   const row = (i, side) => laid[i].map(({ c, slot, guess }) => scCardHtml(c, side, slot, guess, extras.get(c.p.puuid))).join('');
   const team = k => g[k].map(p => ({ puuid: p.puuid, champ: p.championId }));

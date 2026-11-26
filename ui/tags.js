@@ -125,6 +125,13 @@
     firstDrake: rows => { const r = rows.filter(x => x.g.drake1 != null); return { v: avgOf(r.map(x => (x.g.drake1 === x.p.team ? 1 : 0))), n: r.length }; },
     gank: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => (St.gankedBefore(x.g, x.p) ? 1 : 0))), n: r.length }; },
     takedowns15: rows => { const r = rows.filter(x => St.hasKills(x.g)); return { v: avgOf(r.map(x => St.takedownsBefore(x.g, x.p, 900))), n: r.length }; },
+    // ARAM: per minute, because the games differ in length (also from the short match-list games)
+    deathsMin10: rows => { const r = rows.filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => x.p.d / (x.g.dur / 600))), n: r.length }; },
+    tankMin: rows => { const r = withX(rows).filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => ((x.p.x.taken || 0) + (x.p.x.mitig || 0)) / (x.g.dur / 60))), n: r.length }; },
+    healMin: rows => { const r = withX(rows).filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => (x.p.x.heal || 0) / (x.g.dur / 60))), n: r.length }; },
+    ccMin: rows => { const r = withX(rows).filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => (x.p.x.cc || 0) / (x.g.dur / 60))), n: r.length }; },
+    // games with a triple kill or more
+    multi3: rows => ({ v: avgOf(rows.map(x => ((x.p.multi || 0) >= 3 ? 1 : 0))), n: rows.length }),
   };
 
   const COMEBACK_GOLD = 2000;
@@ -335,6 +342,21 @@
     return { ...base, role: null, all: true, roles: roles.map(([role, n]) => ({ role, n, share: n / base.total })), results };
   }
 
+  // ARAM: this season's ARAM games with the ARAM catalogue (tag-rules.js ARAM_RULES) – no roles.
+  // ctx: { games, own: puuids counted, now, prev } → { aram: true, n, results }
+  const ARAM_Q = [450, 2400];
+  const ARAM_GROUPS = ['pool', 'form', 'stats', 'fight'];
+  function evaluateAram(ctx) {
+    const now = ctx.now || Date.now();
+    const own = new Set(ctx.own || []);
+    const all = St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && ARAM_Q.includes(x.g.q) && x.g.t >= seasonStart(now));
+    const d = { all, now, level: null, mastery: null, prev: ctx.prev || new Set(), role: null, roleRows: all, season: all,
+      d7: all.filter(x => now - x.g.t <= 7 * DAY), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY) };
+    const results = [];
+    for (const r of TR.ARAM_RULES || []) if (!r.off && !r.live) results.push(...evalRule(r, d));
+    return { aram: true, role: null, n: all.length, roleN: all.length, results };
+  }
+
   // what is shown: met tags, conflicts resolved (the first of a pair wins), in group order
   function pick(results) {
     const met = results.filter(x => x.state === 'met');
@@ -389,7 +411,8 @@
   // ctx: { champ: played now, position: from the client, main: main role } – a trait about another
   // champion than the one played now, or "one role only" on that very role, is background.
   const TIER1 = new Set(['fbVictim', 'gankVictim', 'invaded', 'throws', 'lossStreak', 'hotStreak', 'smurf', 'firstBlood', 'aggroJungler',
-    'ganker', 'roamer', 'invader', 'duelist', 'soloFighter', 'unkillable', 'carry', 'newTo', 'mainTaken', 'mainBanned', 'autofill', 'otp', 'noPinks']);
+    'ganker', 'roamer', 'invader', 'duelist', 'soloFighter', 'unkillable', 'carry', 'newTo', 'mainTaken', 'mainBanned', 'autofill', 'otp', 'noPinks',
+    'arHot', 'arCold', 'arCarry', 'arMulti']);
   const TIER3 = new Set(['flexPool', 'smallPool', 'generalist', 'oneRole', 'mastery', 'grinder', 'backAgain']);
   function tierOf(x, ctx = {}) {
     if (x.live) return 1;
@@ -399,7 +422,7 @@
     return TIER1.has(x.id) ? 1 : TIER3.has(x.id) ? 3 : 2;
   }
 
-  const api = { GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, tierOf, pick, isStrength, isWeakness, keys, liveTags };
+  const api = { GROUPS, ARAM_GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, evaluateAram, tierOf, pick, isStrength, isWeakness, keys, liveTags };
   if (node) module.exports = api;
   else root.Tags = api;
 })(typeof window !== 'undefined' ? window : this);
