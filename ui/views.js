@@ -705,34 +705,73 @@ async function poolFromHistory() {
   }
   return [...count].filter(([, n]) => n >= POOL_MIN).sort((a, b) => b[1] - a[1]).slice(0, POOL_MAX).map(([id]) => id);
 }
-// Riot doesn't show the enemies' positions in ranked: the likely laner is the enemy with the biggest
-// share of his games on this lane (counterstats), if it is a real one (15 % and more)
+// Riot doesn't show the enemies' positions in ranked: the likely laner comes from the lane table of
+// every stored game (all five enemies placed together, laneGuess) when it knows that champion well
+// (LANE_SURE games); else the enemy with the biggest share of his games on this lane (counterstats),
+// if it is a real one (15 % and more); else the table's guess anyway
+const LANE_SURE = 20;
 function guessLaner(picks) {
   if (picks.some(p => p.laner)) return picks;
+  const role = { top: 'top', jungle: 'jungle', mid: 'mid', adc: 'bot', support: 'support' }[lane()];
+  const g = picks.length ? laneGuess(picks.map(p => p.id)).find(x => x.role === role && x.share != null) : null;
   let best = null;
-  for (const p of picks) {
+  if (g && g.n >= LANE_SURE) { best = picks.find(p => p.id === g.champ); best.share = g.share * 100; }
+  for (const p of best ? [] : picks) {
     const c = csCache.get(csKey(p.id, lane()));
     p.share = c ? c.share : null;
     if (p.share >= 15 && (!best || p.share > best.share)) best = p;
   }
-  if (!best && picks.length) {
-    const role = { top: 'top', jungle: 'jungle', mid: 'mid', adc: 'bot', support: 'support' }[lane()];
-    const g = laneGuess(picks.map(p => p.id)).find(x => x.role === role && x.share != null);
-    if (g) { best = picks.find(p => p.id === g.champ); best.share = g.share * 100; }
-  }
+  if (!best && g) { best = picks.find(p => p.id === g.champ); best.share = g.share * 100; }
   if (best) { best.laner = true; best.guess = true; }
   return picks;
 }
-// the enemies on their likely lanes, from how often each champion is played where in every stored
-// game (own and Live's); the counts are worked out once per set of games
-const laneCounts = { games: null, other: null, counts: new Map() };
+// the lane table of every stored game (lanes.rs, built in the background): this and last month
+// count fully, older months half (positions move with the patches)
+const laneDb = { at: 0, counts: null, asked: 0 };
+function laneDbCounts(tbl) {
+  const out = new Map();
+  const now = new Date(), cur = now.getFullYear() * 12 + now.getMonth();
+  for (const [m, list] of Object.entries((tbl && tbl.months) || {})) {
+    const [y, mo] = m.split('-').map(Number);
+    const w = cur - (y * 12 + mo - 1) <= 1 ? 1 : 0.5;
+    for (const [c, arr] of Object.entries(list)) {
+      const mm = out.get(+c) || new Map();
+      Stats.POSITIONS.forEach((r, i) => { if (arr[i]) mm.set(r, (mm.get(r) || 0) + arr[i] * w); });
+      out.set(+c, mm);
+    }
+  }
+  return out;
+}
+// asked once a minute at most (the table changes after a Load or every few hours)
+function laneDbLoad() {
+  if (Date.now() - laneDb.asked < 60000) return;
+  laneDb.asked = Date.now();
+  Promise.resolve(api.laneStats()).then(tbl => {
+    if (!tbl || !tbl.months || tbl.at === laneDb.at) return;
+    laneDb.at = tbl.at || 0;
+    laneDb.counts = laneDbCounts(tbl);
+    if (view === 'live') renderLive();
+  }).catch(() => {});
+}
+// two count tables added up
+function laneMerge(a, b) {
+  const out = new Map([...a].map(([c, m]) => [c, new Map(m)]));
+  for (const [c, m] of b) { const mm = out.get(c) || new Map(); for (const [r, n] of m) mm.set(r, (mm.get(r) || 0) + n); out.set(c, mm); }
+  return out;
+}
+// the enemies on their likely lanes, from how often each champion is played where: the lane table
+// of every stored game, plus the games in the window that are newer than it (own and Live's) – or
+// those alone until the table is there; worked out once per set of games
+const laneCounts = { games: null, other: null, db: null, counts: new Map() };
 function laneGuess(champIds) {
+  laneDbLoad();
   const own = typeof scv !== 'undefined' ? scv.own : null;
   if (!own) { if (typeof lmNeedOwn === 'function') lmNeedOwn(); }
   const other = typeof scv !== 'undefined' ? scv.games.size : 0;
-  if (laneCounts.games !== own || laneCounts.other !== other) {
-    laneCounts.games = own; laneCounts.other = other;
-    laneCounts.counts = Insights.roleCounts([...(own || []), ...(typeof scv !== 'undefined' ? scv.games.values() : [])]);
+  if (laneCounts.games !== own || laneCounts.other !== other || laneCounts.db !== laneDb.counts) {
+    laneCounts.games = own; laneCounts.other = other; laneCounts.db = laneDb.counts;
+    const mem = [...(own || []), ...(typeof scv !== 'undefined' ? scv.games.values() : [])];
+    laneCounts.counts = laneDb.counts ? laneMerge(laneDb.counts, Insights.roleCounts(mem.filter(g => g.t > laneDb.at))) : Insights.roleCounts(mem);
   }
   return Insights.guessLanes(champIds, laneCounts.counts);
 }
@@ -752,7 +791,7 @@ function laneRowsHtml(rows) {
   return `<div class="h-sub">${t('live.lanes')}</div><div class="h-lanes">${rows.map(x => {
     const name = id => esc((champById(id) || {}).name || '');
     const e = x.enemy;
-    const tip = e ? `${name(e.champ)} – ${e.share == null ? t('live.laneGuessNone') : t('live.laneGuess', { pct: Math.round(e.share * 100), n: e.n })}` : '';
+    const tip = e ? `${name(e.champ)} – ${e.share == null ? t('live.laneGuessNone') : t('live.laneGuess', { pct: Math.round(e.share * 100), n: Math.round(e.n) })}` : '';
     return `<div class="h-lane${x.role === myRole ? ' mine' : ''}">
       <span class="h-ally">${x.ally && x.ally.championId ? `<b>${name(x.ally.championId)}</b>` : ''}${icon(x.ally && x.ally.championId)}</span>
       <img class="h-pos" src="${posIcon(x.role)}" alt="${esc(t('pos.' + x.role))}" title="${esc(t('pos.' + x.role))}">

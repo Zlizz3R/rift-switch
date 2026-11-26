@@ -635,6 +635,38 @@ test('champ select helper: Riot hides the enemy positions – the enemy who play
   });
 });
 
+test('champ select helper: the lane table of every stored game places the enemies – and beats counterstats when it knows the champion well', () => {
+  const champs = [{ id: 1, name: 'Garen' }, { id: 2, name: 'Darius' }, { id: 4, name: 'Malphite' }, { id: 5, name: 'Ahri' }];
+  const st = sampleState();
+  st.settings.champPool = [1];
+  st.settings.lane = 'top';
+  // counterstats would say Darius (88 % top) – the table knows better: Darius jungles this patch,
+  // Malphite is the top laner (40 games, 30 of them top), Ahri mid
+  const share = { Darius: 88, Malphite: 40, Ahri: 2 };
+  const now = new Date();
+  const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const table = { v: 1, at: Date.now(), n: 160, months: { [m]: { 2: [8, 40, 0, 0, 0], 4: [30, 0, 4, 0, 6], 5: [0, 0, 70, 2, 0] } } };
+  const live = { clientUp: true, phase: 'ChampSelect', region: 'EUW', me: 'x',
+    champSelect: { myPosition: 'top', hiddenNames: true, allies: [], team: [{ championId: 1, position: 'top', me: true }],
+      enemies: [{ championId: 4, position: '' }, { championId: 2, position: '' }, { championId: 5, position: '' }] } };
+  return withApp({ state: st, replies: { champions: champs, live, 'lane-stats': table, counters: (n) => ({ ok: true, share: share[n], list: [{ name: 'Garen', wr: 50 }] }) } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 200));
+    await app.settle();
+    app.w.eval('renderLive(true)');
+    await app.settle();
+    assert.ok(app.called('lane-stats').length >= 1, 'the table is asked for');
+    assert.ok(app.$('[data-hpick="4"] .h-guess'), 'Malphite marked as the likely laner');
+    assert.equal(app.$('#hEnemy').value, 'Malphite');
+    const rows = app.$$('.h-lane');
+    assert.match(rows[0].querySelector('.h-foe').textContent, /Malphite/);
+    assert.match(rows[0].querySelector('.h-foe').title, /75 % of 40 stored games on this lane/);
+    assert.match(rows[1].querySelector('.h-foe').textContent, /Darius/);
+    assert.match(rows[2].querySelector('.h-foe').textContent, /Ahri/);
+    assert.deepEqual(app.errors.map(String), []);
+  });
+});
+
 // ---------- tools ----------
 test('tools: every card runs its tool', () => withApp({}, async (app) => {
   await app.click('#navTools');

@@ -6,6 +6,7 @@
 
 mod accounts;
 mod events;
+mod lanes;
 mod live;
 mod matches;
 mod menu;
@@ -1360,6 +1361,7 @@ async fn load_all() -> Value {
         r
     });
     push();
+    lanes_rebuild();
     r
 }
 
@@ -1429,6 +1431,22 @@ const PAR_FAST: usize = 12;
 const PAR_IN_GAME: usize = 6;
 const IN_GAME_GAP: i64 = 700;
 const BACK_OFF: i64 = 3000;
+/// The lane table (lanes.rs): built again in a thread of its own from both stores – one at a time.
+static LANES_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+fn lanes_rebuild() {
+    use std::sync::atomic::Ordering;
+    if LANES_BUSY.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let dir = data().to_path_buf();
+    std::thread::spawn(move || {
+        let t = lanes::build(&[dir.join("matches"), dir.join("matches-others")], now_ms());
+        if let Err(e) = store::write_atomic(&dir.join("lanes.json"), t.to_string().as_bytes()) {
+            log_error("lanes", &e.to_string());
+        }
+        LANES_BUSY.store(false, Ordering::SeqCst);
+    });
+}
 /// Other players' games: loaded when Live needs them, let go when the window goes to the tray.
 static OTHERS: Mutex<Option<matches::Matches>> = Mutex::new(None);
 fn others<R>(f: impl FnOnce(&mut matches::Matches) -> R) -> R {
@@ -3498,6 +3516,14 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
         }
         // the search for the player page: "Name#Tag" (without a tag: the server's own, like EUW) →
         // { puuid, gameName, tagLine, region, … } or null – through the client, like adding an account
+        // the lane table for the champ select helper (lanes.rs); null before the first build
+        "lane-stats" => {
+            let t = lanes::read(data());
+            if now_ms() - t["at"].as_i64().unwrap_or(0) > lanes::STALE_MS {
+                lanes_rebuild();
+            }
+            t
+        }
         "find-player" => {
             let q = s(0);
             let q = q.trim();
@@ -4308,6 +4334,12 @@ fn main() {
             }
             tauri::async_runtime::spawn(tick_loop());
             tauri::async_runtime::spawn(scout_loop());
+            tauri::async_runtime::spawn(async {
+                sleep(90_000).await;
+                if now_ms() - lanes::built_at(data()) > lanes::STALE_MS {
+                    lanes_rebuild();
+                }
+            });
             tauri::async_runtime::spawn(accept_loop());
             updater::init(push, || with(|c| c.st.set_bool("updateCheck")));
             if with(|c| menu::switch_arg(&argv, &c.st)).is_some() {

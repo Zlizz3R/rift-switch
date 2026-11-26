@@ -60,6 +60,7 @@
     othersClear: () => call('others-clear'),
     scoutGames: (puuids, have) => call('scout-games', puuids, have || []),
     playerGames: (puuid, have) => call('player-games', puuid, have || []),
+    laneStats: () => call('lane-stats'),
     findPlayer: q => call('find-player', q),
     champDamage: ids => call('champ-damage', ids),
     replay: (gameId, action) => call('replay', String(gameId), action || 'state'),
