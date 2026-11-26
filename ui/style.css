@@ -986,27 +986,49 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .det-body { display: none; flex-direction: column; gap: 10px; padding: 0 0 10px; }
 .det-g.open + .det-body { display: flex; }
 .mh-det { gap: 0; }
-/* Overview → Deaths: the map and the zones */
-.dm-phases { margin-bottom: 12px; }
-.dm-phases small { opacity: .6; margin-left: 3px; }
+/* Overview → Map: deaths and kills, the minute chart, the zones */
+.mp-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.mp-bar .seg button small { opacity: .6; margin-left: 3px; font-variant-numeric: tabular-nums; }
+.mp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.mp-dot.deaths { background: #e84057; }
+.mp-dot.kills { background: #2fc4b2; }
+.mp-dot.both { background: linear-gradient(90deg, #e84057 50%, #2fc4b2 50%); }
 .dm-wrap { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.mp-left { display: flex; flex-direction: column; gap: 6px; width: 340px; flex: none; }
 .dm-map { width: 340px; height: 340px; flex: none; }
 .dm-bg { fill: var(--panel2); }
 .dm-lane { fill: none; stroke: var(--line); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
 .dm-river { fill: none; stroke: rgba(90, 160, 210, .18); stroke-width: 11; stroke-linecap: round; }
 .dm-base.own { fill: rgba(10, 200, 185, .12); }
 .dm-base.enemy { fill: rgba(232, 64, 87, .12); }
-.dm-dots circle { fill: #e84057; opacity: .28; }
-.dm-side { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 10px; }
+.dm-dots.deaths circle { fill: #e84057; opacity: .3; }
+.dm-dots.kills circle { fill: #2fc4b2; opacity: .3; }
+.mc { position: relative; }
+.mc-svg { width: 340px; height: 64px; display: block; cursor: crosshair; user-select: none; }
+.mc-axis { stroke: var(--line); stroke-width: 1; }
+.mc-k { fill: #2fc4b2; }
+.mc-d { fill: #e84057; }
+.mc-k.off, .mc-d.off { opacity: .22; }
+.mc-hit { fill: transparent; }
+.mc-hit:hover, .mc-hit.pick { fill: rgba(255, 255, 255, .07); }
+.mc-ticks { position: relative; height: 14px; font-size: 10.5px; color: var(--muted); }
+.mc-ticks span { position: absolute; transform: translateX(-50%); }
+.mc-ticks span:first-child { transform: none; }
+.mc .fine { margin: 2px 0 0; }
+.dm-side { flex: 1; min-width: 260px; max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
 .dm-hots { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .dm-hots li { padding: 8px 12px; border-radius: 8px; background: rgba(232, 64, 87, .08); border: 1px solid rgba(232, 64, 87, .25); }
+.dm-hots li.kill { background: rgba(47, 196, 178, .08); border-color: rgba(47, 196, 178, .28); }
 .dm-hots b { color: var(--gold2); margin-right: 6px; }
-.dm-rows { display: flex; flex-direction: column; gap: 6px; }
-.dm-row { display: grid; grid-template-columns: 150px 1fr 46px 32px; align-items: center; gap: 10px; font-size: 12.5px; }
-.dm-row b { text-align: right; font-variant-numeric: tabular-nums; }
-.dm-row small { opacity: .6; text-align: right; }
+.mp-rows { display: flex; flex-direction: column; gap: 6px; }
+.mp-row { display: grid; grid-template-columns: 150px minmax(80px, 1fr) 46px 32px; align-items: center; gap: 10px; font-size: 12.5px; }
+.mp-rows.both .mp-row { grid-template-columns: 150px minmax(60px, 1fr) 32px minmax(60px, 1fr) 32px; }
+.mp-row.head { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.mp-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.mp-row small { opacity: .6; text-align: right; font-variant-numeric: tabular-nums; }
 .dm-track { height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
 .dm-track i { display: block; height: 100%; background: #e84057; }
+.dm-track.k i { background: #2fc4b2; }
 /* the replay of an opened game */
 .rp-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 4px 2px; border-top: 1px solid var(--line); }
 .rp-bar:empty { display: none; }

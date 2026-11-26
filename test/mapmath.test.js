@@ -1,7 +1,7 @@
-// Overview → Deaths (deathmath.js): where you die, seen from the blue side, by game phase.
+// Overview → Map (mapmath.js): where you die, seen from the blue side, by game phase.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const DM = require('../ui/deathmath.js');
+const DM = require('../ui/mapmath.js');
 
 // a game: me at index 0 (team 100) or 5 (team 200); deaths [second, x, y, assists]
 let gid = 1;
@@ -48,4 +48,30 @@ test('deaths: by phase, the top zone named only when it stands out', () => {
   assert.equal(DM.deaths(parts([g1])).length, 6);
   // remakes and games without a timeline don't count as games
   assert.equal(DM.summary(parts([game(100, [[60, 10, 100]], { remake: true }), { ...game(100, []), kills: undefined }])).all.n, 0);
+});
+
+test('map: kills next to deaths, a window of minutes, per minute and per zone', () => {
+  // me (blue, index 0): two kills (one solo in the mid lane at 3:00, one with help in the enemy jungle at 12:30)
+  // and one death in the top river at 5:00; red side games are mirrored the same way
+  const players = Array.from({ length: 10 }, (_, i) => ({ puuid: i === 0 ? 'me' : 'p' + i, team: i < 5 ? 100 : 200, champ: 1 + i }));
+  const g = { id: 'm1', t: 1, dur: 1800, q: 420, remake: false, players,
+    kills: [[180, 0, 6, [], 74, 74], [750, 0, 7, [1, 2], 108, 78], [300, 6, 0, [7], 50, 98], [400, 1, 8, [], 30, 30]] };
+  const ev = DM.events([{ g, p: players[0] }]);
+  assert.deepEqual(ev.map(e => [e.kind, e.zone, e.s]), [['kill', 'mid', 180], ['kill', 'jungleEnemy', 750], ['death', 'riverTop', 300]]);
+  assert.equal(ev[0].solo, true);
+  assert.equal(ev[1].solo, false);
+  assert.equal(ev[2].enemies, 2);
+  // minutes 0–5: the solo kill only (the death at 5:00 is minute 5, outside [0, 5))
+  assert.deepEqual(ev.filter(e => DM.inWindow(e, 0, 5)).map(e => e.s), [180]);
+  assert.deepEqual(ev.filter(e => DM.inWindow(e, 5, null)).map(e => e.s), [750, 300]);
+  // per minute up to the last event
+  const pm = DM.perMinute(ev);
+  assert.equal(pm.length, 13);
+  assert.deepEqual([pm[3], pm[5], pm[12]], [{ m: 3, deaths: 0, kills: 1 }, { m: 5, deaths: 1, kills: 0 }, { m: 12, deaths: 0, kills: 1 }]);
+  // both per zone: every zone with something, shares per kind
+  const z = DM.zonesBoth(ev);
+  assert.deepEqual(z.map(r => [r.zone, r.deaths, r.kills]).sort(), [['jungleEnemy', 0, 1], ['mid', 0, 1], ['riverTop', 1, 0]]);
+  assert.equal(z.find(r => r.zone === 'mid').kShare, 0.5);
+  const ks = DM.sum(ev.filter(e => e.kind === 'kill'), 1);
+  assert.equal(ks.solo, 0.5);
 });

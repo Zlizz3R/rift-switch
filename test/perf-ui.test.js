@@ -154,25 +154,47 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
   } finally { app.close(); }
 });
 
-test('deaths: the map, the phases, the zones; the empty state without timelines', async () => {
-  // the four Ahri games get a timeline: three deaths each, two of them before 10 minutes in the top river
+test('map: deaths, kills or both, by phase or minutes picked on the chart; the empty state without timelines', async () => {
+  // the four Ahri games (Ahri is player 2) get a timeline: three deaths each – two before 10 minutes in the
+  // top river – and one solo kill in the mid lane at minute 12
   const withKills = games.map(g => (g.players[2].champ === 103 && g.q === 420
-    ? { ...g, kills: [[200, 7, 2, [8], 50, 98], [400, 7, 2, [], 52, 96], [1500, 7, 2, [], 74, 74]] } : g));
+    ? { ...g, kills: [[200, 7, 2, [8], 50, 98], [400, 7, 2, [], 52, 96], [1500, 7, 2, [], 74, 74], [730, 2, 7, [], 70, 72]] } : g));
   const app = await boot({ replies: { ...replies, 'matches-get': withKills } });
   try {
     await app.click('#navDash');
-    await app.click('[data-dt="deaths"]');
+    assert.match(app.$('[data-dt="map"]').textContent, /^Map$/);
+    await app.click('[data-dt="map"]');
     await app.settle();
     assert.ok(app.visible('#dashPerf'), 'the Performance filter is there');
-    assert.equal(app.$$('.dm-map .dm-dots circle').length, 12);
+    const dots = cls => app.$$(`.dm-map .dm-dots.${cls} circle`).length;
+    assert.equal(dots('deaths'), 12);
+    assert.equal(dots('kills'), 0, 'deaths only at first');
     assert.match(app.$('.dm-hots').textContent, /Before 10 min\s*100 % of your deaths: Top river \(8 of 8\)/);
     assert.match(app.$('.dm-side').textContent, /12 deaths in 4 games · 3\.0 per game · 33 % against two or more enemies/);
+    // kills: the four solo kills
+    await app.click('[data-mpk="kills"]');
+    assert.equal(dots('kills'), 4);
+    assert.equal(dots('deaths'), 0);
+    assert.match(app.$('.dm-side').textContent, /4 kills in 4 games · 1\.0 per game · 100 % without help/);
+    // both: one table with both per zone
+    await app.click('[data-mpk="both"]');
+    assert.equal(dots('kills') + dots('deaths'), 16);
+    assert.ok(app.$('.mp-rows.both'));
+    // a phase
     await app.click('[data-dmph="late"]');
-    assert.equal(app.$$('.dm-map .dm-dots circle').length, 4);
-    assert.match(app.$('.dm-rows').textContent, /Mid lane/);
+    assert.equal(dots('deaths'), 4);
+    assert.equal(dots('kills'), 0, 'the kills are at minute 12');
+    // minutes picked on the chart: press and let go on minute 12 → only the kills
+    await app.click('[data-dmph="all"]');
+    app.$('.mc-svg [data-mcm="12"]').dispatchEvent(new app.w.MouseEvent('mousedown', { bubbles: true }));
+    app.w.document.dispatchEvent(new app.w.MouseEvent('mouseup', { bubbles: true }));
+    await app.settle();
+    assert.equal(dots('kills'), 4);
+    assert.equal(dots('deaths'), 0);
+    assert.match(app.$('.dm-phases').textContent, /Minute 12–13/);
     // a role without timelines: the empty state
     await app.click('[data-prole="jungle"]');
-    assert.match(app.$('#perfBody').textContent, /No deaths with a place yet/);
+    assert.match(app.$('#perfBody').textContent, /No deaths or kills with a place yet/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
