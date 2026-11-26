@@ -97,6 +97,13 @@ into one category.
 
 <img src="docs/screens/overview.png" alt="Overview: LP history of all accounts in one chart">
 
+- **One page for your accounts and for anyone else**: a head with the splash art of the champion played most,
+  the avatar(s), Solo/Duo and Flex with their crest, the account chips – and the **player search** (Ctrl+K).
+  Another player's page looks the same, with *Open with* and the games with you.
+- **At a glance** – the start page: key figures with their trend (the last 10 games against the 10 before), form
+  (the last 20 games as pictures, the LP of 30 days), traits, champions, roles, play style, highlights (most kills,
+  best KDA, multikills, longest win streak) and mastery – each card leads into its tab. *Ranked*, *ARAM* or *All
+  games*; an ARAM player starts on ARAM (the share of the team and the activity instead of roles and the radar).
 - **The LP history of every account in one chart**, on coloured tier bands. Hover: every account's rank on that day.
 - **Any combination of queues** – Solo/Duo, Flex, Ranked 5v5, Classic 5v5: one colour per account, one line style
   per queue.
@@ -111,6 +118,9 @@ into one category.
 
 <img src="docs/screens/performance.png" alt="Performance: key figures and a table by role">
 
+- **One filter** for Performance, Champions, Play style and Map: account, queue, season, last 7 / 30 / 90 days or your
+  own dates, role – and **only the newest games** (last 10, 20, 50, 100, 200 or a number of your own), so a map of
+  many accounts stays readable.
 - **Performance** – one filter (account, queue, season, role) over all stored games: eight key figures, the trend of
   the last 10–100 games against the ones before, and a table by role that unfolds into its champions.
 - **Champions** – the op.gg-style list: KDA, CS, win rate and games per champion; a click opens those games.
@@ -127,6 +137,8 @@ into one category.
 - **Traits** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
   games, per role – or *All roles* at once, each tag with its role and that role's share of your games – each with
   the numbers behind it. "Too little data" is never shown as "not met".
+  **ARAM** has traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
+  hunter, team carry …), measured against the ARAM games of the other players – also on Live's cards in an ARAM game.
 - **Map** – where you die and where you kill (deaths, kills or both; the same filter: account, queue, season,
   role), for a game phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart
   under the map (kills up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min:
@@ -160,9 +172,10 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 - **Click a name** (here, on Live or after a game): the **player page** – any player's rank, key figures, roles,
   champions, traits, recent games and the games with you, from their 200 newest games (all of them read in detail),
   with *Open with* (op.gg …) – and the Overview's own views for them: *Performance*, *Champions*, *Play style* and
-  *Map*, by queue and role. **Back / forward** arrows in the title bar (also Alt+← / Alt+→ and the mouse's side
-  buttons) go through the pages like a browser. The **search** in the title bar (Ctrl+K) finds anyone: suggestions
-  from everyone in your games, any other Riot ID looked up through the client (without a tag: your server's, like EUW).
+  *Map* and *Traits*, by queue and role – the same page as your own Overview. **Back / forward** arrows in the title
+  bar (also Alt+← / Alt+→ and the mouse's side buttons) go through the pages like a browser. The **search** in the
+  Overview's head (Ctrl+K) finds anyone: suggestions from everyone in your games, any other Riot ID looked up through
+  the client (without a tag: your server's, like EUW). League closed? The page says so instead of waiting.
 - **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each
   minute), any two players side by side – and its **replay**: download it and watch it in League (games of the
   current patch on the server League runs on).
@@ -197,9 +210,11 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 
 Keep a pool of your champions – typed in, or *Add from match history*: every champion you played 3+ times on the lane in
 the last 180 days. The lane is the one Riot assigned you, else your main role from the match history until you pick one. Both teams
-are shown lane by lane: yours as assigned, the enemies guessed from how often each champion plays each lane in every
-stored game. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app
-marks the likely laner (by how often each champion plays your lane). Your pool is ranked by win rate and counter
+are shown lane by lane: yours as assigned, the enemies guessed from a **lane table of every stored game** – your own
+and every other player's game Live and the player pages read (also the short ones from match lists), each player
+once, by month for half a year (this and last month count fully). It grows with every game you play with the app
+open. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app marks the
+likely laner (all five placed together; a champion the table barely knows by its counterstats lane share). Your pool is ranked by win rate and counter
 rating against him (counterstats.net). Every enemy pick loads in the background; *Pre-load all matchups* reads just
 your own champions' pages while you queue – a matchup's win rates add up to 100, so they answer every enemy.
 </details>
@@ -228,7 +243,8 @@ your own champions' pages while you queue – a matchup's win rates add up to 10
   types when it recognised the login form, only while the Riot Client is the front window, and it checks that every
   click lands on the Riot Client.
 - Everything is stored in `%APPDATA%\rift-switch`, with a daily backup of your accounts for the last 5 days (`backups\`). Sessions and passwords are **encrypted with Windows DPAPI** – only
-  your Windows user on your PC can read them.
+  your Windows user on your PC can read them. The lane table of the champ select helper (`lanes.json`, a few KB) is
+  counted from the stored games on your PC.
 - **Outside connections** (the same list is in the app: Settings → About → *Data sources*) – no account data is sent
   anywhere:
   - **CommunityDragon** – icons, rank emblems, champion, skin and item pictures.
@@ -275,17 +291,19 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
   `main.rs` window, tray, the one `call` command the window uses, logging in, polling;
   `riot.rs` Riot Client / League Client API, sessions, processes; `events.rs` client events (WebSocket);
   `live.rs` live page data, champion data, matchups; `matches.rs` the match history store (no limit:
-  `matches/games.jsonl`, only an index stays in memory);
+  `matches/games.jsonl`, only an index stays in memory); `lanes.rs` the lane table of every stored game;
   `accounts.rs`, `ops.rs`, `settings.rs`, `store.rs`, `secrets.rs`, `menu.rs` – pure logic with tests;
   `updater.rs` GitHub releases; `winsys.rs` autostart and jump list
 - `src-tauri/scripts/` – typing a login into the Riot Client (UI Automation, picture scan as fallback), closing the PBE dialog
 - `ui/` – the window (`index.html`, `style.css`; `tauri-api.js` is its link to the background part):
   - accounts and frame: `renderer.js`, `views.js` (also Live and the champ select helper), `bulk.js` + `bulkparse.js`,
     `keys.js`, `changelog.js`
-  - Overview: `dashboard.js`, `ovfilter.js`, `perf.js` + `perfmath.js`, `radar.js` + `radar-view.js`,
+  - Overview: `summary.js` (the head of the Overview and the player page, *At a glance*, every page's picture),
+    `dashboard.js`, `ovfilter.js`, `perf.js` + `perfmath.js`, `radar.js` + `radar-view.js`,
     `deathmath.js` + `deaths-view.js`, `mastery.js` +
     `mastmath.js` + `playtime-rules.js`, `seasons-view.js` + `seasonparse.js`, `insights.js`
-  - tags: `tag-rules.js` (every threshold), `tags.js` (the engine), `tags-view.js`
+  - tags: `tag-rules.js` (every threshold, Summoner's Rift and ARAM), `tags.js` (the engine), `tags-view.js`;
+    thresholds from the stored games: `node tools/tag-thresholds.js`, `node tools/aram-thresholds.js`
   - collection: `collection.js`; match history: `matches-view.js`, `matchfilter.js`, `postgame.js`
   - Live: `scout-view.js` (the ten cards), `live-more.js` (premades, damage mix, helper by phase)
   - shared figures: `stats.js` (every key figure), `rankmath.js`
