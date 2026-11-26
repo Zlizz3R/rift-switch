@@ -72,6 +72,10 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
   aus (Übersicht mit Kopfbild und Showcase, „Auf einen Blick“, ein Performance-Tab, Live nach dem Spiel, Augments).
   Vor allem das **Video `docs/screens/demo.gif`** ist hinfällig; dazu die README-Bilder. Neu aufnehmen mit
   `tools/screens` (demo.js = erfundene Accounts, capture.py = headless Edge + ffmpeg), README-Texte dabei mit prüfen.
+- [ ] **Karte: standardmäßig „Beides“** (Nutzer, 26.11.2026 – noch nicht anfangen): Performance → Karte startet auf
+  „Beides“ statt „Tode“, und „Beides“ steht in der Auswahl vorne (Beides / Tode / Kills). `ui/map-view.js`
+  (`mv.kind`, die Reihenfolge in `kinds`); auch die Karten-Kachel auf „Auf einen Blick“ (`sumMap`, zeigt nur Tode) und
+  den Test in `test/perf-ui.test.js` („deaths only at first“) anpassen.
 
 ### C. Ideen-Runde (25.11.2026)
 
