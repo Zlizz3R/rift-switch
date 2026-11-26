@@ -810,6 +810,8 @@
     'ov.scopeArena': "本赛季斗魂竞技场",
     'ov.noArenaTraits': "斗魂竞技场没有特质——特质目录是为召唤师峡谷和极地大乱斗设计的。",
     'ov.resetT': "恢复“概览”的默认布局",
+    'pg.eog': "详情稍后",
+    'pg.eogT': "来自结算画面的数据——客户端记录该对局后即可在比赛记录中打开（对线对比、经济领先、回放）",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

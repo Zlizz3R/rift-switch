@@ -389,8 +389,138 @@ async fn clash_fresh() -> Option<Value> {
     )
 }
 
+// ---------- the game that just ended: the end-of-game numbers ----------
+// The client has the end-of-game block (/lol-end-of-game/v1/eog-stats-block) as soon as its end
+// screen opens – while the players still honor each other, long before the match history lists the
+// game. Live shows the game from it at once (a short form of the stored game: the ten players, K/D/A,
+// CS, gold, damage, vision, items); the stored game replaces it when it comes.
+const POST_PHASES: [&str; 3] = ["WaitingForStats", "PreEndOfGame", "EndOfGame"];
+/// (when read, the game) of the last end-of-game block
+static EOG: Mutex<Option<(i64, Value)>> = Mutex::new(None);
+/// A number of the block's stats: Riot's old stat names (CHAMPIONS_KILLED …), any of the given keys
+fn eog_stat(s: &Value, keys: &[&str]) -> i64 {
+    keys.iter()
+        .find_map(|k| s.get(*k).filter(|v| !v.is_null()))
+        .map(|v| crate::accounts::num_of(Some(v)) as i64)
+        .unwrap_or(0)
+}
+/// The queue of a block: its own id, else its name (the common ones), else the game session's
+fn eog_queue(b: &Value, session_q: i64) -> i64 {
+    if let Some(q) = b["queueId"].as_i64().filter(|q| *q > 0) {
+        return q;
+    }
+    match b["queueType"].as_str().unwrap_or("") {
+        "RANKED_SOLO_5x5" => 420,
+        "RANKED_FLEX_SR" => 440,
+        "ARAM_UNRANKED_5x5" => 450,
+        _ => session_q,
+    }
+}
+/// The end-of-game block → a game in the stored games' form (with "eog": true), or None
+pub fn eog_game(b: &Value, session_q: i64, now: i64) -> Option<Value> {
+    let id = b["gameId"].as_i64().filter(|x| *x > 0)?;
+    let dur = crate::accounts::num_of(b.get("gameLength")) as i64;
+    let mut players = vec![];
+    for tm in b["teams"].as_array()? {
+        let team = tm["teamId"].as_i64().unwrap_or(0);
+        let win = tm["isWinningTeam"] == true;
+        for p in tm["players"].as_array().into_iter().flatten() {
+            let s = &p["stats"];
+            let st = |k: &[&str]| eog_stat(s, k);
+            let mut items: Vec<i64> = p["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|x| x.as_i64().unwrap_or(0))
+                .take(7)
+                .collect();
+            items.resize(7, 0);
+            let aug: Vec<i64> = (1..=6)
+                .map(|i| st(&[&format!("PLAYER_AUGMENT_{i}"), &format!("playerAugment{i}")]))
+                .filter(|n| *n > 0)
+                .collect();
+            let name = p["riotIdGameName"]
+                .as_str()
+                .filter(|x| !x.is_empty())
+                .or(p["gameName"].as_str())
+                .or(p["summonerName"].as_str())
+                .unwrap_or("");
+            let mut o = json!({
+                "puuid": p["puuid"].as_str().unwrap_or(""), "name": name,
+                "tag": p["riotIdTagLine"].as_str().or(p["tagLine"].as_str()).unwrap_or(""),
+                "team": p["teamId"].as_i64().unwrap_or(team), "champ": p["championId"].as_i64().unwrap_or(0),
+                "lvl": st(&["LEVEL", "level"]).max(p["championLevel"].as_i64().unwrap_or(0)),
+                "k": st(&["CHAMPIONS_KILLED", "kills"]), "d": st(&["NUM_DEATHS", "deaths"]), "a": st(&["ASSISTS", "assists"]),
+                "cs": st(&["MINIONS_KILLED", "totalMinionsKilled"]) + st(&["NEUTRAL_MINIONS_KILLED", "neutralMinionsKilled"]),
+                "gold": st(&["GOLD_EARNED", "goldEarned"]), "dmg": st(&["TOTAL_DAMAGE_DEALT_TO_CHAMPIONS", "totalDamageDealtToChampions"]),
+                "vis": st(&["VISION_SCORE", "visionScore"]), "items": items,
+                "spells": [p["spell1Id"].as_i64().unwrap_or(0), p["spell2Id"].as_i64().unwrap_or(0)],
+                "keystone": st(&["PERK0", "perk0"]), "sub": st(&["PERK_SUB_STYLE", "perkSubStyle"]),
+                "win": win, "multi": st(&["LARGEST_MULTI_KILL", "largestMultiKill"]),
+            });
+            let taken = st(&["TOTAL_DAMAGE_TAKEN", "totalDamageTaken"]);
+            if taken > 0 {
+                o["x"] = json!({ "taken": taken });
+            }
+            if !aug.is_empty() {
+                o["aug"] = json!(aug);
+            }
+            players.push(o);
+        }
+    }
+    if players.len() < 2 {
+        return None;
+    }
+    Some(
+        json!({ "id": id.to_string(), "t": now - dur * 1000, "dur": dur, "q": eog_queue(b, session_q),
+        "mode": b["gameMode"].as_str().unwrap_or(""), "remake": dur > 0 && dur < 300, "players": players, "eog": true }),
+    )
+}
+/// A new end-of-game block (the client's event, or read in an end phase): kept as the game; the raw
+/// block also goes to eog-last.json in the data folder (to check the conversion against it).
+pub fn set_eog(b: &Value, session_q: i64, data_dir: &Path) {
+    let Some(g) = eog_game(b, session_q, now_ms()) else {
+        return;
+    };
+    let mut last = EOG.lock().unwrap();
+    if last.as_ref().is_some_and(|(_, x)| x["id"] == g["id"]) {
+        return;
+    }
+    *last = Some((now_ms(), g));
+    let _ = std::fs::write(data_dir.join("eog-last.json"), b.to_string());
+}
+/// The last game from its end-of-game block (12 hours at most)
+pub fn last_eog() -> Value {
+    EOG.lock()
+        .unwrap()
+        .as_ref()
+        .filter(|(at, _)| now_ms() - at < 12 * 3600 * 1000)
+        .map(|(_, g)| g.clone())
+        .unwrap_or(Value::Null)
+}
+/// The queue of the game session (it stays through the end screens)
+async fn session_queue() -> i64 {
+    lcu("/lol-gameflow/v1/session", 2000, "GET")
+        .await
+        .and_then(|s| s["gameData"]["queue"]["id"].as_i64())
+        .unwrap_or(0)
+}
+/// In an end phase without the block yet: read it (the event may have come before the window)
+pub async fn read_eog(data_dir: &Path) {
+    if let Some(b) = lcu("/lol-end-of-game/v1/eog-stats-block", 2500, "GET").await {
+        if b["gameId"].as_i64().is_some_and(|x| x > 0) {
+            set_eog(&b, session_queue().await, data_dir);
+        }
+    }
+}
+pub async fn eog_event(b: Value, data_dir: std::path::PathBuf) {
+    if b["gameId"].as_i64().is_some_and(|x| x > 0) {
+        set_eog(&b, session_queue().await, &data_dir);
+    }
+}
+
 /// Everything for the Live view in one go.
-pub async fn snapshot() -> Value {
+pub async fn snapshot(data_dir: &Path) -> Value {
     let Some(phase) = riot::gameflow_phase().await else {
         return json!({ "clientUp": false });
     };
@@ -422,8 +552,19 @@ pub async fn snapshot() -> Value {
         },
     );
     let me = me.map(|m| m["puuid"].clone()).unwrap_or(Value::Null);
+    // the end screens: the game that just ended, from its end-of-game numbers
+    if POST_PHASES.contains(&p) {
+        let have = EOG
+            .lock()
+            .unwrap()
+            .as_ref()
+            .is_some_and(|(at, _)| now_ms() - at < 15 * 60_000);
+        if !have {
+            read_eog(data_dir).await;
+        }
+    }
     json!({ "clientUp": true, "phase": phase, "region": reg.map(|r| r["region"].clone()).unwrap_or(json!("")),
-        "lobby": lb, "champSelect": cs, "clash": cl, "inGame": ig, "me": me })
+        "lobby": lb, "champSelect": cs, "clash": cl, "inGame": ig, "me": me, "eog": last_eog() })
 }
 
 // ---------- CommunityDragon (cached a day) ----------
@@ -646,6 +787,53 @@ pub async fn game_assets(data_dir: &Path) -> Value {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn end_of_game_block_becomes_a_game() {
+        use serde_json::json;
+        let pl = |i: i64, team: i64| {
+            json!({ "puuid": format!("p{i}"), "riotIdGameName": format!("N{i}"), "riotIdTagLine": "EUW", "championId": 100 + i,
+            "teamId": team, "spell1Id": 4, "spell2Id": 14, "items": [3031, 0, 0, 0, 0, 0, 3340],
+            "stats": { "CHAMPIONS_KILLED": i, "NUM_DEATHS": 2, "ASSISTS": 3, "MINIONS_KILLED": 150, "NEUTRAL_MINIONS_KILLED": 10, "GOLD_EARNED": 9000 + i,
+                "TOTAL_DAMAGE_DEALT_TO_CHAMPIONS": 20000 + i, "TOTAL_DAMAGE_TAKEN": 15000, "VISION_SCORE": 20, "LEVEL": 16, "PERK0": 8112, "PERK_SUB_STYLE": 8300,
+                "PLAYER_AUGMENT_1": if i == 0 { 1390 } else { 0 } } })
+        };
+        let b = json!({ "gameId": 77, "gameLength": 1800, "gameMode": "CLASSIC", "queueType": "RANKED_SOLO_5x5",
+            "teams": [{ "teamId": 100, "isWinningTeam": true, "players": (0..5).map(|i| pl(i, 100)).collect::<Vec<_>>() },
+                      { "teamId": 200, "isWinningTeam": false, "players": (5..10).map(|i| pl(i, 200)).collect::<Vec<_>>() }] });
+        let g = super::eog_game(&b, 0, 10_000_000).unwrap();
+        assert_eq!(g["id"], "77");
+        assert_eq!(g["q"], 420);
+        assert_eq!(g["t"], 10_000_000 - 1_800_000);
+        assert_eq!(g["eog"], true);
+        let p = &g["players"][3];
+        assert_eq!(
+            (
+                p["k"].as_i64(),
+                p["d"].as_i64(),
+                p["a"].as_i64(),
+                p["cs"].as_i64()
+            ),
+            (Some(3), Some(2), Some(3), Some(160))
+        );
+        assert_eq!(
+            (
+                p["gold"].as_i64(),
+                p["dmg"].as_i64(),
+                p["x"]["taken"].as_i64()
+            ),
+            (Some(9003), Some(20003), Some(15000))
+        );
+        assert_eq!(p["name"], "N3");
+        assert_eq!(p["items"], json!([3031, 0, 0, 0, 0, 0, 3340]));
+        assert_eq!(p["win"], true);
+        assert_eq!(g["players"][7]["win"], false);
+        assert_eq!(g["players"][0]["aug"], json!([1390]));
+        // the session's queue when the block names none the app knows
+        let mut b2 = b.clone();
+        b2["queueType"] = json!("SOMETHING_NEW");
+        assert_eq!(super::eog_game(&b2, 1700, 0).unwrap()["q"], 1700);
+        assert!(super::eog_game(&json!({ "gameId": 0 }), 0, 0).is_none());
+    }
     #[test]
     fn augments_with_icon_name_and_rarity() {
         let a = super::augments_of(Some(&serde_json::json!([

@@ -813,6 +813,8 @@
     'ov.scopeArena': "Arena nesta temporada",
     'ov.noArenaTraits': "Sem traços para Arena – os catálogos são feitos para o Summoner's Rift e ARAM.",
     'ov.resetT': "Voltar ao layout original de Visão rápida",
+    'pg.eog': "Detalhes a caminho",
+    'pg.eogT': "Dos números da tela final – a partida abre no histórico assim que o cliente a lista (rota contra rota, vantagem de ouro, replay)",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

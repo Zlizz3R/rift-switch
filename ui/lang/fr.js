@@ -814,6 +814,8 @@
     'ov.scopeArena': "Arena cette saison",
     'ov.noArenaTraits': "Pas de traits pour Arena – les catalogues sont faits pour la Faille et l'ARAM.",
     'ov.resetT': "Revenir à la disposition d'origine d'En un coup d'œil",
+    'pg.eog': "Détails à suivre",
+    'pg.eogT': "D'après les chiffres de l'écran de fin – la partie s'ouvre dans l'historique dès que le client la liste (voie contre voie, avance en or, replay)",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

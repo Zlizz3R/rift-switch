@@ -105,7 +105,7 @@ into one category.
 - **At a glance** – the start page: key figures with their trend (the last 10 games against the 10 before), the
   recent games, traits (of your main position – one click shows every position), champions, roles, play style,
   highlights (most kills, best KDA, multikills, longest win streak) and mastery – each card leads into its tab.
-  *Ranked*, *ARAM* or *All games*; an ARAM player starts on ARAM (the share of the team and the activity instead of
+  *Ranked*, *ARAM*, *Arena* or *All games*; an ARAM player starts on ARAM (the share of the team and the activity instead of
   roles and the radar). **Customize**: drag the cards into your order, make them small, wide or full width, hide
   some, add the *Form* (the last 20 games as pictures, the LP of 30 days) and a *Map* – *Reset* brings the designed
   layout back.
@@ -123,17 +123,16 @@ into one category.
 
 <img src="docs/screens/performance.png" alt="Performance: key figures and a table by role">
 
-- **One filter** for Performance, Champions, Play style and Map: account, queue, season, last 7 / 30 / 90 days or your
-  own dates, role – and **only the newest games** (last 10, 20, 50, 100, 200 or a number of your own), so a map of
-  many accounts stays readable.
-- **Performance** – one filter (account, queue, season, role) over all stored games: eight key figures, the trend of
-  the last 10–100 games against the ones before, and a table by role that unfolds into its champions.
+- **Performance** – one page with one filter (account, queue, season, last 7 / 30 / 90 days or your own dates, role –
+  and **only the newest games**: last 10, 20, 50, 100, 200 or a number of your own): eight key figures and the trend
+  of the last 10–100 games against the ones before on top, then three cards – side by side on a wide window,
+  Champions left of the other two on a medium one:
 - **Champions** – the op.gg-style list: KDA, CS, win rate and games per champion; a click opens those games.
 
 <img src="docs/screens/play-style.png" alt="Play style: a radar against the lane opponent">
 
-- **Play style** – a radar of you against your lane opponent in the same games (farm, damage, kill participation,
-  vision, survival, lane phase, towers); 100 % = as good as him. No total score.
+- **Play style** – a radar of you against your lane opponent in the same games (farm, damage, gold, kill
+  participation, vision, survival, lane phase, towers); 100 % = as good as him. No total score.
 - **Mastery** – every champion's points over all accounts, milestones, and the play time behind them
   (points ÷ 850 × game length + 7 minutes around each game).
 
@@ -206,8 +205,10 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   games at a time, each game and its timeline together – with a progress bar; during the game a little gentler (6 at
   a time, only while the window is open), and a short pause when the client starts refusing. **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.
-- **After the game**: the game's full details open right on the Live page – both teams, MVP / ACE, lane against
-  lane, the gold lead, two players side by side – and what changed in your tags (▲ / ▼).
+- **After the game**: the overview of both teams stands the moment the end screen opens – while you still honor –
+  from the client's end-of-game numbers: K/D/A, CS, items, damage, taken, gold, MVP / ACE. When the match history
+  has the game it takes over (with what changed in your tags, ▲ / ▼); lane against lane, the gold lead and the replay
+  are one click away in the match history.
 - A **blue dot** on *Live* while a game is on (champion select or in game), whatever page you are on.
 
 <details>

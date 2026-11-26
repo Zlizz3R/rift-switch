@@ -811,6 +811,8 @@
     'ov.scopeArena': "এই সিজনের অ্যারিনা",
     'ov.noArenaTraits': "অ্যারিনার জন্য কোনো ট্রেইট নেই – তালিকাগুলো সামনারস রিফট ও ARAM-এর জন্য।",
     'ov.resetT': "এক নজরে-র মূল লেআউটে ফিরুন",
+    'pg.eog': "বিস্তারিত আসছে",
+    'pg.eogT': "শেষ স্ক্রিনের সংখ্যা থেকে – ক্লায়েন্ট তালিকায় আনলেই গেমটি ম্যাচ হিস্ট্রিতে খুলবে (লেন বনাম লেন, গোল্ড লিড, রিপ্লে)",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

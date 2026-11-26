@@ -479,6 +479,15 @@ async function pollLive() {
   const inGame = liveData && ['InProgress', 'Reconnect'].includes(liveData.phase);
   if (run === liveRun) liveTimer = setTimeout(pollLive, inGame ? 15000 : 3000);
 }
+// the client's phase changed (its event reaches the state at once): Live reads again right away –
+// the end screen's numbers stand the moment the game is over, not up to 15 s later
+let livePhaseSeen = '';
+api.onState(s => {
+  const ph = (s && s.live && s.live.phase) || '';
+  if (ph === livePhaseSeen) return;
+  livePhaseSeen = ph;
+  if (view === 'live' && liveData && liveData.phase !== ph) pollLive();
+});
 // one queue's rank, labelled: "SOLO/DUO  Gold II · 45 LP  · 54% (120)"
 function queueRank(label, r) {
   if (!r) return `<div class="q-rank none"><span class="q-l">${label}</span><span>${t('tile.unranked')}</span></div>`;

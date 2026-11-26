@@ -414,14 +414,32 @@ test('live page after a game: the last game with both teams, MVP / ACE, bars wit
     // the best damage (the last player) fills its bar
     const widths = app.$$('.pg-bar.red i').map((i) => i.style.width);
     assert.equal(widths[widths.length - 1], '100%');
-    // the game's full details right here, as in the match history: a section folds open in Live
-    assert.ok(app.$('#liveBody .pg-card .mh-det'));
-    assert.ok(!app.$('#liveBody .cmp-row'));
-    await app.click('#liveBody [data-sec="compare"]');
-    assert.ok(app.$('#liveBody .cmp-row'), 'two players side by side');
-    assert.equal(app.w.eval('view'), 'live', 'still on Live');
+    // the short form: no lane against lane, gold lead or replay here – those are in the match history
+    assert.ok(!app.$('#liveBody .pg-card .mh-det'));
+    assert.ok(!app.$('#liveBody [data-sec="compare"]'));
     await app.click('#pgOpen');
     assert.equal(app.w.eval('view'), 'matches');
+  });
+});
+
+test('live after a game: the overview from the end screen\'s numbers at once – before the match history has the game', () => {
+  const pl = (i) => ({ puuid: i === 0 ? P(1) : 'x' + i, name: 'N' + i, tag: 'EUW', team: i < 5 ? 100 : 200, win: i >= 5, champ: i + 1, lvl: 14, k: i, d: 4, a: 5, cs: 120 + i,
+    gold: 8000 + i * 100, dmg: 12000 + i * 900, vis: 18, spells: [4, 14], keystone: 8112, sub: 8300, items: [3031, 0, 0, 0, 0, 0, 3340], x: { taken: 18000 } });
+  const old = { id: '70', t: Date.now() - 3 * 3600000, dur: 1500, q: 440, players: Array.from({ length: 10 }, (_, i) => pl(i)) };
+  const eog = { id: '78', t: Date.now() - 31 * 60000, dur: 1800, q: 420, eog: true, players: Array.from({ length: 10 }, (_, i) => pl(i)) };
+  const st = sampleState({ live: { clientUp: true, puuid: P(1), phase: 'PreEndOfGame', waits: [] } });
+  return withApp({ state: st, replies: { live: { clientUp: true, phase: 'PreEndOfGame', me: P(1), eog }, matches: { index: [['70', old.t, 440, P(1)]], waiting: 0 }, 'matches-get': [old] } }, async (app) => {
+    await app.click('#navLive');
+    await new Promise((r) => setTimeout(r, 60));
+    await app.settle();
+    assert.ok(!app.$('.pg-wait'), 'no waiting: the numbers are there');
+    assert.equal(app.$$('.pg-row').length, 10);
+    assert.match(app.$('.pg-card h3').textContent, /Solo\/Duo/);
+    assert.ok(app.$('.pg-card .pg-soon'), 'the details follow from the match history');
+    assert.ok(!app.$('#pgOpen'));
+    // the most damage at a glance: the last player's bar is full
+    const widths = app.$$('.pg-bar.blue i, .pg-bar.red i').map((i) => i.style.width);
+    assert.ok(widths.includes('100%'));
   });
 });
 

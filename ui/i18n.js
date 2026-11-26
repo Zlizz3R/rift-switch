@@ -860,6 +860,8 @@
     'ov.scopeArena': "Arena this season",
     'ov.noArenaTraits': "No traits for Arena – the trait catalogues are made for Summoner's Rift and ARAM.",
     'ov.resetT': "Back to the designed layout of At a glance",
+    'pg.eog': "Details follow",
+    'pg.eogT': "From the end screen's numbers – the game opens in the match history as soon as the client lists it (lane against lane, gold lead, replay)",
   };
 
   const de = {
@@ -1703,6 +1705,8 @@
     'ov.scopeArena': "Arena dieser Season",
     'ov.noArenaTraits': "Keine Traits für Arena – die Trait-Kataloge sind für Summoner's Rift und ARAM gemacht.",
     'ov.resetT': "Zurück zum vorgegebenen Layout von Auf einen Blick",
+    'pg.eog': "Details folgen",
+    'pg.eogT': "Aus den Zahlen des Endbildschirms – das Spiel lässt sich in der Match History öffnen, sobald der Client es führt (Lane gegen Lane, Goldvorsprung, Replay)",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

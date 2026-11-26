@@ -812,6 +812,8 @@
     'ov.scopeArena': "इस सीज़न का एरीना",
     'ov.noArenaTraits': "एरीना के लिए कोई ट्रेट नहीं – ट्रेट सूचियाँ समनर्स रिफ़्ट और ARAM के लिए बनी हैं।",
     'ov.resetT': "एक नज़र में के मूल लेआउट पर वापस",
+    'pg.eog': "विवरण आ रहे हैं",
+    'pg.eogT': "एंड स्क्रीन के आँकड़ों से – क्लाइंट में दर्ज होते ही गेम मैच हिस्ट्री में खुलेगा (लेन बनाम लेन, गोल्ड बढ़त, रीप्ले)",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

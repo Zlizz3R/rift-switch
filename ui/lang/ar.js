@@ -811,6 +811,8 @@
     'ov.scopeArena': "الساحة هذا الموسم",
     'ov.noArenaTraits': "لا سمات للساحة – قوائم السمات مصممة لصدع المستدعين وARAM.",
     'ov.resetT': "العودة إلى التخطيط الأصلي لنظرة سريعة",
+    'pg.eog': "التفاصيل قادمة",
+    'pg.eogT': "من أرقام شاشة النهاية – تُفتح المباراة في سجل المباريات حالما يسجلها العميل (مسار ضد مسار، تقدم الذهب، الإعادة)",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

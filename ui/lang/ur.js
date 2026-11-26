@@ -812,6 +812,8 @@
     'ov.scopeArena': "اس سیزن کا ایرینا",
     'ov.noArenaTraits': "ایرینا کے لیے کوئی خصوصیات نہیں – فہرستیں سمنرز رفٹ اور ARAM کے لیے بنی ہیں۔",
     'ov.resetT': "ایک نظر میں کے اصل لے آؤٹ پر واپس",
+    'pg.eog': "تفصیلات آ رہی ہیں",
+    'pg.eogT': "اختتامی اسکرین کے اعداد سے – کلائنٹ میں درج ہوتے ہی گیم میچ ہسٹری میں کھلے گا (لین بمقابلہ لین، گولڈ برتری، ری پلے)",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

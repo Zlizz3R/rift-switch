@@ -1,20 +1,34 @@
-// Live page, right after a game: the game's full details, the same as in the match history (both
-// teams with K/D/A, items, runes, ranks, damage and gold as bars, MVP / ACE; lane against lane, the
-// gold lead, two players side by side) – so there's no need to leave Live. Until the game that just
-// ended is stored (a few seconds after the end-of-game screen) a "coming" card stands there instead
-// of the game before. Shown up to 12 hours after the game, until the next champion select.
-// The same table is the "Players" part of a game's details in the match history (pgTableHtml).
+// Live page, right after a game: the overview of both teams (K/D/A, items, runes, ranks, damage,
+// taken and gold as bars, MVP / ACE) – the short form; lane against lane, the gold lead and the
+// replay stay in the match history ("Open in match history"). It stands the moment the client's end
+// screen opens, while you still honor: from the end-of-game numbers (liveData.eog, live.rs); the
+// stored game replaces it when the match history has it. Shown up to 12 hours after the game, until
+// the next champion select. The same table is the "Players" part of a game's details in the match
+// history (pgTableHtml).
 // Uses the globals of renderer.js / views.js / matches-view.js.
 
 const pg = { game: null, checked: 0, busy: false, key: '', postSince: 0 };
 const PG_FRESH = 12 * 3600 * 1000;
 const PG_POST = ['WaitingForStats', 'PreEndOfGame', 'EndOfGame'];
-// after a game: the newest stored game is older than 90 minutes -> the one that just ended is still
-// on its way (looked for every 4 s, at most 5 minutes)
+// the game from the end-of-game numbers while the stored one isn't there yet (another id than the
+// newest stored game, and newer than it)
+function pgEog() {
+  const e = (liveData || {}).eog;
+  if (!e || !e.players || !e.id) return null;
+  const g = pg.game;
+  if (g && (String(g.id) === String(e.id) || g.t > e.t)) return null;
+  const me = (liveData && liveData.me) || (S.live && S.live.puuid) || S.active;
+  return { ...e, owners: me ? [me] : [] };
+}
+// the game to show: the stored one when it's the newest, else the one from the end screen
+const pgShown = () => pgEog() || pg.game;
+// after a game: neither the end-of-game numbers nor the stored game yet -> it is on its way
+// (looked for every 4 s, at most 5 minutes)
 function pgWaiting() {
   const ph = (liveData || {}).phase;
   if (!PG_POST.includes(ph)) { pg.postSince = 0; return false; }
   if (!pg.postSince) pg.postSince = Date.now();
+  if (pgEog()) return false;
   const g = pg.game;
   const fresh = g && Date.now() - (g.t + (g.dur || 0) * 1000) < 90 * 60000;
   return !fresh && Date.now() - pg.postSince < 5 * 60000;
@@ -45,12 +59,14 @@ async function loadPostgame(force) {
 // the match history stored new games (right after the end-of-game screen): look at once
 api.onMatchesChanged(() => { if (view === 'live') loadPostgame(true); });
 async function pgRanks(g) {
+  if (pg.rankedFor === String(g.id) + ':' + g.players.length) return;
+  pg.rankedFor = String(g.id) + ':' + g.players.length;
   const owner = S.accounts.find(a => a.puuid === (g.owners || [])[0]);
   const ids = g.players.map(p => p.puuid).filter(Boolean).filter(id => !mh.ranks[id]);
   if (!ids.length) return;
   const r = await api.playerRanks([{ region: (owner && owner.region) || '', ids }]);
   Object.assign(mh.ranks, (r && r.ranks) || {});
-  if (r && r.pending) setTimeout(() => pgRanks(g), 800);
+  if (r && r.pending) setTimeout(() => { pg.rankedFor = ''; pgRanks(g); }, 800);
   if (view === 'live') renderLive();
 }
 
@@ -155,17 +171,18 @@ function pgTableHtml(g, as, mine) {
 function postgameHtml() {
   if (pgWaiting()) return `<div class="live-card pg-card pg-wait"><div class="lc-head"><h3>${t('pg.title')}</h3></div>
     <p class="fine"><i class="dots">●</i> ${t('pg.wait')}</p></div>`;
-  const g = pg.game;
-  if (!g || g.remake || !g.players || g.players.length < 10) return '';
+  const g = pgShown();
+  if (!g || g.remake || !g.players || g.players.length < 2) return '';
   const ended = g.t + (g.dur || 0) * 1000;
   // it stays until the next champ select (lobby and queue keep it), at most PG_FRESH
   if (Date.now() - ended > PG_FRESH || pg.closedId === String(g.id)) return '';
   const mine = new Set(S.accounts.map(a => a.puuid));
-  return `<div class="live-card pg-card"><div class="lc-head"><h3>${t('pg.title')} · ${esc(queueLabel(g))} · ${dur(g.dur)} · ${esc(ago(ended))}</h3>
-      <button class="chip" id="pgOpen">${t('pg.open')}</button></div>
-    ${typeof pgTagsHtml === 'function' ? pgTagsHtml(g) : ''}
-    ${detailsHtml(g, assets, mine)}
-    <p class="fine">${t('pg.note')}</p></div>`;
+  if (g.eog) pgRanks(g);
+  // the end screen's numbers: the details (lane against lane, gold lead, replay) once it's stored
+  const open = g.eog ? `<span class="chip pg-soon" title="${esc(t('pg.eogT'))}">${t('pg.eog')}</span>` : `<button class="chip" id="pgOpen">${t('pg.open')}</button>`;
+  return `<div class="live-card pg-card"><div class="lc-head"><h3>${t('pg.title')} · ${esc(queueLabel(g))} · ${dur(g.dur)} · ${esc(ago(ended))}</h3>${open}</div>
+    ${!g.eog && typeof pgTagsHtml === 'function' ? pgTagsHtml(g) : ''}
+    ${pgTableHtml(g, assets, mine)}</div>`;
 }
 
 document.addEventListener('click', e => {
@@ -175,7 +192,7 @@ document.addEventListener('click', e => {
 // "Last game" (compact) when no game and no post-game overview is on
 function lastGameHtml() {
   if (pgWaiting()) return '';
-  const g = pg.game;
+  const g = pgShown();
   if (!g || !g.players) return '';
   return `<div class="live-card"><div class="lc-head"><h3>${t('last.title')}</h3></div>${gameRowShort(g)}</div>`;
 }

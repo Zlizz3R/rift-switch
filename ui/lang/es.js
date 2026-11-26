@@ -814,6 +814,8 @@
     'ov.scopeArena': "Arena esta temporada",
     'ov.noArenaTraits': "Sin rasgos para Arena: los catálogos están hechos para la Grieta y ARAM.",
     'ov.resetT': "Volver al diseño original de De un vistazo",
+    'pg.eog': "Detalles en camino",
+    'pg.eogT': "De los números de la pantalla final: la partida se abre en el historial en cuanto el cliente la registra (línea contra línea, ventaja de oro, repetición)",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

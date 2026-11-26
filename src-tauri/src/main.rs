@@ -3401,7 +3401,7 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             save();
             Value::Null
         }
-        "live" => live::snapshot().await,
+        "live" => live::snapshot(data()).await,
         "champions" => live::champions(data()).await,
         "champ-damage" => {
             let ids: Vec<i64> = a(0)
@@ -4212,6 +4212,8 @@ fn on_lcu_event(ev: events::Event) {
         }
         "/lol-end-of-game/v1/eog-stats-block" => {
             with(|c| c.last_profile_at = 0); // a game just ended: fresh ranks, history and LP right away
+                                             // Live shows the game from these numbers at once (long before the match history has it)
+            tauri::async_runtime::spawn(live::eog_event(ev.data.clone(), data().to_path_buf()));
             soon_tick(3000);
         }
         _ => soon_tick(800),
