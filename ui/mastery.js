@@ -5,12 +5,20 @@
 
 const mast = { data: null, games: null, q: '', sort: 'total', dir: -1, all: false, stamp: '' };
 
-// ---------- Overview sub-tabs (the last one chosen is kept) ----------
-const DASH_TABS = ['lp', 'stats', 'champs', 'style', 'map', 'mast', 'tags', 'seasons'];
-const dashTab = () => { const v = ((S.settings && S.settings.uiTabs) || {}).dash; return DASH_TABS.includes(v) ? v : 'lp'; };
+// ---------- Overview sub-tabs ----------
+// The app starts on "At a glance" (the Overview's start page); the tab chosen then stays while the
+// app runs.
+const DASH_TABS = ['sum', 'lp', 'stats', 'champs', 'style', 'map', 'mast', 'tags', 'seasons'];
+let dashTabNow = 'sum';
+const dashTab = () => dashTabNow;
 function showDashTab(tab) {
+  tab = DASH_TABS.includes(tab) ? tab : 'sum';
+  dashTabNow = tab;
   document.querySelectorAll('#dashTabs [data-dt]').forEach(b => b.classList.toggle('on', b.dataset.dt === tab));
+  $('dashSum').hidden = tab !== 'sum';
   $('dashLp').hidden = tab !== 'lp';
+  if (tab === 'sum' && typeof renderSum === 'function') { renderSum(); loadSum(); }
+  if (tab === 'lp') { renderDash(); }
   $('dashPerf').hidden = !['stats', 'champs', 'style', 'map'].includes(tab);
   $('dashMast').hidden = tab !== 'mast';
   $('dashTags').hidden = tab !== 'tags';
@@ -25,9 +33,6 @@ function showDashTab(tab) {
 $('dashTabs').addEventListener('click', e => {
   const b = e.target.closest('[data-dt]');
   if (!b) return;
-  const tabs = { ...((S.settings && S.settings.uiTabs) || {}), dash: b.dataset.dt };
-  S.settings = { ...S.settings, uiTabs: tabs };
-  api.setSetting('uiTabs', tabs);
   showDashTab(b.dataset.dt);
 });
 

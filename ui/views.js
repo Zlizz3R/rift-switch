@@ -71,13 +71,17 @@ function showView(v, o = {}) {
   $('detail').hidden = v !== 'accounts';
   $('navAccounts').classList.toggle('active', v === 'accounts');
   $('navLive').classList.toggle('active', v === 'live');
-  $('navDash').classList.toggle('active', v === 'dash');
+  // the player page is the Overview of another player
+  $('navDash').classList.toggle('active', v === 'dash' || v === 'player');
+  // the player search sits in the head of the Overview and of the player page
+  const slot = $(v === 'player' ? 'plSearchSlot' : 'ovSearchSlot');
+  if (slot && $('plSearchBox') && $('plSearchBox').parentNode !== slot) slot.appendChild($('plSearchBox'));
   $('navColl').classList.toggle('active', v === 'coll');
   $('navTools').classList.toggle('active', v === 'tools');
   $('navMatches').classList.toggle('active', v === 'matches');
   if (v === 'live') pollLive(true);
   if (v === 'matches') { renderMatches(); loadMatches(); }
-  if (v === 'dash') { renderDash(); loadDash(); if (typeof showDashTab === 'function') showDashTab(dashTab()); }
+  if (v === 'dash') { loadDash(); if (typeof showDashTab === 'function') showDashTab(dashTab()); }
   if (v === 'coll') { renderColl(); loadColl(); }
 }
 $('navAccounts').onclick = () => showView('accounts');

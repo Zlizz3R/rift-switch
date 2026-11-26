@@ -27,7 +27,8 @@ function tagKeep(results) { try { localStorage.setItem(tagPrevKey(), JSON.string
 
 // ---------- texts ----------
 const tagChampName = id => (champById(id) || {}).name || '#' + id;
-const tagRule = id => TagRules.TAG_RULES.find(r => r.id === id) || {};
+// a rule of either catalogue (Summoner's Rift, ARAM)
+const tagRule = id => TagRules.TAG_RULES.find(r => r.id === id) || (TagRules.ARAM_RULES || []).find(r => r.id === id) || {};
 function tagName(x) {
   const lv = x.level === 'master' ? 'great' : x.level;
   const key = x.id === 'mastery' ? `tag.mastery.${x.level}` : lv ? `tag.${x.id}.${lv}` : `tag.${x.id}`;
@@ -94,13 +95,13 @@ function tagWhy(x, role) {
 // every tag of the catalogue, by group (folded; the state is remembered)
 const TAG_ALL_KEY = 'rs.tagsAll';
 const tagAllOpen = () => { try { return localStorage.getItem(TAG_ALL_KEY) === '1'; } catch { return false; } };
-function tagAllHtml(list, role, openX) {
+function tagAllHtml(list, role, openX, aram = false) {
   // the Live-only tags are about the game being played – nothing to show here
-  const rules = TagRules.TAG_RULES.filter(r => !r.off && !r.live);
+  const rules = (aram ? TagRules.ARAM_RULES || [] : TagRules.TAG_RULES).filter(r => !r.off && !r.live);
   const metN = new Set(list.filter(({ x }) => x.state === 'met').map(({ x }) => x.id)).size;
   const head = `<button class="tag-all-h" data-tagall>${tagAllOpen() ? '▾' : '▸'} ${esc(t('tags.all'))} <small>${esc(t('tags.allSub', { met: metN, total: rules.length }))}</small></button>`;
   if (!tagAllOpen()) return `<div class="tag-group tag-all">${head}</div>`;
-  const body = Tags.GROUPS.map(g => {
+  const body = (aram && Tags.ARAM_GROUPS ? Tags.ARAM_GROUPS : Tags.GROUPS).map(g => {
     const chips = rules.filter(r => r.group === g).map(r => {
       const mine = list.filter(({ x }) => x.id === r.id);
       if (mine.length) return mine.map(({ x, i }) => tagChip(x, i, 'all|', tagWhy(x, x.role || role))).join('');
@@ -149,6 +150,11 @@ function renderTagsView() {
     : !res.role ? '' : tagv.role ? t('pos.' + res.role) : res.main ? t('tags.roleMain', { role: t('pos.' + res.role) }) : t('tags.roleMost', { role: t('pos.' + res.role) });
   $('tagSub').textContent = [t('tags.sub', { n: num(n) }), roleTxt].filter(Boolean).join(' · ');
 
+  el.innerHTML = tagsBodyHtml(res, res.role);
+}
+// the page of one evaluation (the Overview's tab, the player page's): strengths and things to work
+// on, the met tags by group, "All possible tags"; res.aram: the ARAM catalogue and its texts
+function tagsBodyHtml(res, role) {
   const list = res.results.map((x, i) => ({ x, i }));
   const chips = f => list.filter(({ x }) => f(x)).map(({ x, i }) => tagChip(x, i)).join('');
   const strong = chips(Tags.isStrength), weak = chips(Tags.isWeakness);
@@ -159,15 +165,17 @@ function renderTagsView() {
       <div><span class="d-sec-t">${t('tags.strengths')}</span><div class="tchips">${strong || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
       <div><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
     </div>`;
-  const groups = Tags.GROUPS.map(g => {
+  const groups = tagGroupsOf(res).map(g => {
     // only the met ones here; everything else is in "All possible tags"
     const inG = list.filter(({ x }) => x.group === g && x.state === 'met');
     if (!inG.length) return '';
     const det = openX && !openX.all && openX.x.group === g ? tagDetail(openX.x) : '';
     return `<div class="tag-group"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${inG.map(({ x, i }) => tagChip(x, i)).join('')}</div>${det}</div>`;
   }).join('');
-  el.innerHTML = `${top}${groups}${tagAllHtml(list, res.role, openX)}<p class="coll-foot">${t('tags.basis')}</p>`;
+  return `${top}${groups}${tagAllHtml(list, role, openX, res.aram)}<p class="coll-foot">${t(res.aram ? 'tags.basisAram' : 'tags.basis')}</p>`;
 }
+// the groups of a catalogue, in their order
+const tagGroupsOf = res => (res.aram && Tags.ARAM_GROUPS ? Tags.ARAM_GROUPS : Tags.GROUPS);
 
 $('dashTags').addEventListener('click', e => {
   const r = e.target.closest('[data-trole]');

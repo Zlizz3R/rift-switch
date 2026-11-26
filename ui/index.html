@@ -11,7 +11,6 @@
   <header class="titlebar">
     <div class="brand"><span class="logo">L</span><span data-i18n="app.name">Rift Switch</span></div>
     <div class="nav-arrows"><button id="navBack" data-i18n-title="nav.back" disabled><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button id="navFwd" data-i18n-title="nav.fwd" disabled><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div>
-    <div class="pl-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="plSearch" type="text" spellcheck="false" autocomplete="off" data-i18n-ph="pl.searchPh" data-i18n-title="pl.searchT"><div class="pl-suggest" id="plSuggest" hidden></div></div>
     <div class="live" id="live"></div>
     <button class="stream-pill" id="streamPill" hidden data-i18n-title="stream.pillTitle"><svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg><span data-i18n="stream.pill"></span></button>
     <label class="aa-toggle" data-i18n-title="aa.title"><input type="checkbox" id="aaToggle"><span class="sw"></span><span data-i18n="aa.label"></span></label>
@@ -96,13 +95,20 @@
       </div>
 
       <section id="viewDash" hidden>
-        <div class="head"><h1><span data-i18n="dash.title"></span></h1><p class="sub" data-i18n="dash.sub"></p></div>
-        <div class="subtabs" id="dashTabs">
-          <button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="style" data-i18n="dash.tabStyle"></button><button data-dt="map" data-i18n="dash.tabMap"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="tags" data-i18n="dash.tabTags"></button><button data-dt="seasons" data-i18n="dash.tabSeasons"></button>
+        <div class="ov-hero">
+          <div class="ov-art" id="ovArt"></div>
+          <div class="ov-top">
+            <div class="ov-who" id="ovWho"></div>
+            <div class="ov-side"><div class="ov-search-slot" id="ovSearchSlot"><div class="pl-search" id="plSearchBox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="plSearch" type="text" spellcheck="false" autocomplete="off" data-i18n-ph="pl.searchPh" data-i18n-title="pl.searchT"><kbd>Ctrl K</kbd><div class="pl-suggest" id="plSuggest" hidden></div></div></div></div>
+          </div>
+          <div class="seg ov-accs" id="ovAccs" hidden></div>
+          <div class="subtabs ov-tabs" id="dashTabs">
+          <button data-dt="sum" data-i18n="ov.tabSum"></button><button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="style" data-i18n="dash.tabStyle"></button><button data-dt="map" data-i18n="dash.tabMap"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="tags" data-i18n="dash.tabTags"></button><button data-dt="seasons" data-i18n="dash.tabSeasons"></button>
           <span class="grow"></span><button class="btn load-btn" data-loadall=""></button>
+          </div>
         </div>
-        <div class="seg ov-accs" id="ovAccs" hidden></div>
-        <div id="dashLp">
+        <div id="dashSum" hidden><div class="pl-bar ov-bar" id="sumBar"></div><div id="sumBody"></div></div>
+        <div id="dashLp" hidden>
           <div class="mh-filter">
             <div class="seg"><button data-dq="solo">Solo/Duo</button><button data-dq="flex">Flex</button><button data-dq="r5">Ranked 5v5</button><button data-dq="classic">Classic 5v5</button></div>
             <div class="seg"><button data-dd="7" data-i18n="dash.d7"></button><button data-dd="30" data-i18n="dash.d30"></button><button data-dd="90" data-i18n="dash.d90"></button><button data-dd="0" data-i18n="dash.all"></button></div>
@@ -207,7 +213,14 @@
       </section>
 
       <section id="viewPlayer" hidden>
-        <div class="head pl-head" id="plHead"></div>
+        <div class="ov-hero pl-hero">
+          <div class="ov-art" id="plArt"></div>
+          <div class="ov-top">
+            <div class="ov-who pl-head" id="plHead"></div>
+            <div class="ov-side"><div class="ov-search-slot" id="plSearchSlot"></div><button class="btn small ov-mine" id="plMine"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span data-i18n="ov.yourAccounts"></span></button></div>
+          </div>
+          <div class="subtabs ov-tabs" id="plTabs"></div>
+        </div>
         <div id="plBody"></div>
       </section>
 
@@ -601,6 +614,7 @@
 <script src="scout-view.js"></script>
 <script src="insights.js"></script>
 <script src="live-more.js"></script>
+<script src="summary.js"></script>
 <script src="player-view.js"></script>
 <script src="collection.js"></script>
 <script src="bulk.js"></script>

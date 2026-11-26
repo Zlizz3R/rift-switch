@@ -28,17 +28,19 @@ function renderOvAccs() {
   const el = $('ovAccs');
   if (!el) return;
   const accs = ovAccs();
-  // the LP history has its own coloured chips for the same choice
-  el.hidden = dashTab() === 'lp' || accs.length < 2;
+  // in the head of every tab (the LP history's coloured chips are the same choice)
+  el.hidden = accs.length < 2;
   const all = !accs.some(a => ovf.off.has(a.puuid));
   el.innerHTML = `<button data-ovacc=""${all ? ' class="on"' : ''} title="${esc(t('ov.allT'))}">${t('mh.allAccounts')}</button>` +
-    accs.map(a => `<button data-ovacc="${esc(a.puuid)}"${ovOn(a.puuid) && !all ? ' class="on"' : ''} title="${esc(t('ov.accT'))}">${esc(dispName(a))}</button>`).join('');
+    accs.map(a => `<button data-ovacc="${esc(a.puuid)}"${ovOn(a.puuid) && !all ? ' class="on"' : ''} title="${esc(t('ov.accT'))}">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : ''}${esc(dispName(a))}</button>`).join('');
 }
 // a new choice: the bar and the open tab again
 function ovRefresh() {
   renderOvAccs();
   const tab = dashTab();
-  if (tab === 'lp' && typeof renderDash === 'function') renderDash();
+  if (typeof renderOvHero === 'function') renderOvHero();
+  if (tab === 'sum' && typeof renderSum === 'function') renderSum();
+  else if (tab === 'lp' && typeof renderDash === 'function') renderDash();
   else if (['stats', 'champs', 'style', 'map'].includes(tab)) renderPerf();
   else if (tab === 'mast') renderMast();
   else if (tab === 'tags') renderTagsView();

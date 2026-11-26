@@ -132,10 +132,10 @@ test('player page: one game is "1 game", long names fit on one line', () => {
     await app.settle();
     await new Promise((r) => setTimeout(r, 30));
     await app.settle();
-    const row = app.$('.pl-champ');
+    const row = app.$('.ovc-champs .scr');
     assert.match(row.textContent, /Twisted Fate[\s\S]*1 game(?!s)/);
     assert.doesNotMatch(row.textContent, /1 games/);
-    assert.equal(row.querySelector('.pl-cn b').title, 'Twisted Fate');
+    assert.equal(row.querySelector('.scr-n b').title, 'Twisted Fate');
   });
 });
 

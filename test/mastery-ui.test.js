@@ -20,10 +20,9 @@ test('overview → mastery: points over all accounts, split per account, sorting
     { puuid: P(2), at: 1700000000000, champs: { 420: [414330, 40] } },
   ] } }, async (app) => {
   await app.click('#navDash');
-  assert.ok(app.visible('#dashLp'));
+  assert.ok(app.visible('#dashSum'), 'the Overview opens on At a glance');
   await app.click('[data-dt="mast"]');
   assert.ok(app.visible('#dashMast'));
-  assert.deepEqual(lastCall(app, 'set-setting').args, ['uiTabs', { dash: 'mast' }]);
   // the biggest champion up top: the sum of both accounts, 2M milestone
   const card = app.$('.mast-card');
   assert.match(card.textContent, /Illaoi/);

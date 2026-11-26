@@ -87,7 +87,9 @@ test('champions: "All" first, the top 8, then all of them, sortable; the tab is 
     assert.equal(app.$$('.oc-row').length, 12);         // All + 11 champions
     await app.click('[data-csort="kda"]');
     assert.match(app.$$('.oc-row')[1].textContent, /Ahri/);
-    assert.deepEqual(app.called('set-setting').map(c => c.args[1]).pop(), { dash: 'champs' });
+    await app.click('#navAccounts');
+    await app.click('#navDash');
+    assert.ok(app.$('[data-dt="champs"]').classList.contains('on'), 'back on Champions');
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
@@ -141,11 +143,11 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
     assert.ok(app.$(`[data-ovacc="${P(2)}"]`).classList.contains('on'));
     assert.ok(!app.$(`[data-ovacc="${P(1)}"]`).classList.contains('on'));
     assert.ok(!app.$('[data-ovacc=""]').classList.contains('on'));
-    // the same choice on another tab; the LP history shows it in its own chips (no second bar)
+    // the same choice on another tab – the chips sit in the head of every tab
     await app.click('[data-dt="stats"]');
     assert.match(app.$('#perfBody').textContent, /No games match/);
     await app.click('[data-dt="lp"]');
-    assert.ok(!app.visible('#ovAccs'));
+    assert.ok(app.visible('#ovAccs'));
     // "All" brings every account back
     await app.click('[data-dt="champs"]');
     await app.click('[data-ovacc=""]');

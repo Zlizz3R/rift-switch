@@ -15,7 +15,7 @@ const info = { puuid: 'x1', gameName: 'Faker', tagLine: 'KR1', iconId: 7, level:
 test('player page: rank, key figures, roles, champions, traits and the recent games of any player', async () => {
   const app = await boot({ replies: {
     'player-games': () => ({ ids: lite.map(g => g.id), games: lite, info, mastery: { 103: 1500000 }, progress: { listed: true, done: 3, total: 12 } }),
-    champions: [{ id: 103, name: 'Ahri' }],
+    champions: [{ id: 103, name: 'Ahri', alias: 'Ahri' }],
     'open-external': true,
   } });
   try {
@@ -33,15 +33,21 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     assert.match(app.$('#plHead .pl-prog').textContent, /3 \/ 12/);
     const body = app.$('#plBody').textContent;
     assert.match(body, /12 games known/);
-    assert.match(app.$('.pl-figs').textContent, /75 %/);           // 9 of 12
-    assert.match(app.$('.pl-figs').textContent, /7\.00/);           // (8 + 6) / 2
-    assert.match(app.$$('.pl-role')[0].textContent, /Mid[\s\S]*100 %/);
-    // the points under the name, then games, win rate, KDA
-    assert.match(app.$('.pl-champ').textContent, /Ahri[\s\S]*1,500,000 pts[\s\S]*12 games[\s\S]*75 %/);
+    // "At a glance", the same page as the own Overview's
+    assert.ok(app.$('[data-pltab="sum"]').classList.contains('on'));
+    assert.match(app.$('.ovc-figs').textContent, /75 %/);           // 9 of 12
+    assert.match(app.$('.ovc-figs').textContent, /7\.00/);           // (8 + 6) / 2
+    assert.match(app.$$('.ovc-roles .sro')[0].textContent, /Mid[\s\S]*100 %/);
+    // games, win rate, KDA per champion; the mastery points in their own card
+    assert.match(app.$('.ovc-champs .scr').textContent, /Ahri[\s\S]*12 games[\s\S]*75 %/);
+    assert.match(app.$('.ovc-mast').textContent, /Ahri[\s\S]*1,500,000 pts/);
     assert.match(body, /Ahri OTP/, 'traits from his games');
-    assert.equal(app.$$('.pl-game').length, 12);
-    assert.ok(app.$('.pl-game.win') && app.$('.pl-game.loss'));
-    assert.match(body, /Never in one of your stored games/);
+    // form: the games as pictures, wins and losses
+    assert.equal(app.$$('.sf-g').length, 12);
+    assert.ok(app.$('.sf-g.win') && app.$('.sf-g.loss'));
+    assert.match(app.$('.ovc-rec').textContent, /Most kills[\s\S]*8 kills/);
+    // the splash art of the champion played most (Ahri)
+    assert.equal(app.$('#plArt').dataset.alias, 'ahri');
     await app.click('[data-plsite="opgg"]');
     const ext = app.called('open-external').pop();
     assert.match(String(ext.args[0]), /op\.gg\/lol\/summoners\/euw\/Faker-KR1/);
@@ -51,7 +57,7 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     assert.doesNotMatch(app.$('#dashTags') ? '' : app.$('#plBody').innerHTML, /\b(pl|tags?)\.[a-zA-Z]+\b(?![^<]*>)/, 'no text key without a translation');
     // the Overview's own views for this player: Performance (no accounts column, no jumps into the own
     // match history), Champions, Play style, Map – a role filter on them
-    assert.deepEqual(app.$$('[data-pltab]').map(b => b.textContent), ['Overview', 'Performance', 'Champions', 'Play style', 'Map']);
+    assert.deepEqual(app.$$('[data-pltab]').map(b => b.textContent), ['At a glance', 'Performance', 'Champions', 'Play style', 'Map', 'Traits']);
     await app.click('[data-pltab="stats"]');
     assert.ok(app.$('#plBody .perf-bar'), 'the key figures');
     const heads = app.$$('#plBody .perf-table th').map(th => th.textContent);
@@ -68,8 +74,22 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     assert.match(app.$('#plBody').textContent, /No deaths or kills with a place yet/, 'lite games have no timeline');
     await app.click('[data-plrole="top"]');
     assert.match(app.$('#plBody').textContent, /No games match/);
-    await app.click('[data-pltab="overview"]');
-    assert.ok(app.$('.pl-figs'));
+    // Traits: the Overview's traits page for him
+    await app.click('[data-plrole=""]');
+    await app.click('[data-pltab="tags"]');
+    assert.match(app.$('#plBody .tag-top').textContent, /Your strengths/);
+    assert.match(app.$('#plBody').textContent, /Ahri OTP/);
+    await app.click('#plBody [data-tagall]');
+    assert.ok(app.$('#plBody .tag-all .tag-sub'), 'all possible traits unfold');
+    // "→" on a card opens that tab
+    await app.click('[data-pltab="sum"]');
+    assert.ok(app.$('.ovc-figs'));
+    await app.click('.ovc-champs [data-ovgo="champs"]');
+    assert.ok(app.$('[data-pltab="champs"]').classList.contains('on'));
+    // back to the own accounts
+    await app.click('#plMine');
+    assert.ok(app.visible('#viewDash'));
+    assert.ok(app.$('#ovSearchSlot #plSearch'), 'the search moved back into the Overview');
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
@@ -88,7 +108,7 @@ test('player page: the window sends the keys of the games it holds; "player-chan
     const calls = app.called('player-games');
     assert.ok(calls.length >= 2);
     assert.deepEqual([...calls[calls.length - 1].args[1]].sort(), lite.map(g => g.k).sort());
-    assert.equal(app.$$('.pl-game').length, 12, 'still there after a reply without games');
+    assert.equal(app.$$('.sf-g').length, 12, 'still there after a reply without games');
     // loaded: no progress bar
     assert.equal(app.$('#plHead .pl-prog'), null);
     assert.deepEqual(app.errors.map(String), []);

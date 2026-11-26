@@ -1110,6 +1110,7 @@ function dashState() {
 }
 test('overview: every account in one LP chart, the period in numbers, a goal per account', () => withApp({ state: dashState(), replies: dashReplies() }, async (app) => {
   await app.click('#navDash');
+  await app.click('[data-dt="lp"]');
   assert.ok(!app.$('#viewDash').hidden);
   assert.equal(app.$$('.dash-chip').length, 3);
   assert.equal(app.$$('.dash-chart path.acc').length, 3);

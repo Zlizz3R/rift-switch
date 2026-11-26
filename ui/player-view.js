@@ -5,16 +5,17 @@
 // figures, roles, champions, traits, the recent games, the games with you – and "Open with".
 // Uses the globals of renderer.js / views.js / matches-view.js / tags-view.js / scout-view.js.
 
-// tab: the page's view – 'overview' or one of the Overview's own (Performance, Champions, Play
-// style, Map), drawn with the same code from this player's games; role: '' or a position (those tabs)
-const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: 'ranked', tab: 'overview', role: '', timer: 0, loading: false };
-const PL_TABS = [['overview', 'dash.title'], ['stats', 'dash.tabStats'], ['champs', 'dash.tabChamps'], ['style', 'dash.tabStyle'], ['map', 'dash.tabMap']];
+// tab: the page's view – 'sum' (At a glance) or one of the Overview's own (Performance, Champions,
+// Play style, Map, Traits), drawn with the same code from this player's games; role: '' or a
+// position (those tabs); queue: 'ranked' | 'aram' | 'all', '' = the one with the most games
+const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: '', tab: 'sum', role: '', timer: 0, loading: false };
+const PL_TABS = [['sum', 'ov.tabSum'], ['stats', 'dash.tabStats'], ['champs', 'dash.tabChamps'], ['style', 'dash.tabStyle'], ['map', 'dash.tabMap'], ['tags', 'dash.tabTags']];
 
 // open a player: { puuid, gameName, tagLine, region }; back: from the arrows (no new history step)
 function openPlayer(p, back = false) {
   if (!p || !p.puuid) return;
   if (!plv.p || plv.p.puuid !== p.puuid) {
-    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: 'ranked', role: '' });
+    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: '', role: '' });
     // the games of the last player stay only if this one was in them too (the next load says)
   }
   showView('player', { p, back });
@@ -109,103 +110,57 @@ function renderPlayer() {
     const pct = !pr.listed ? 5 : pr.total ? Math.round((100 * pr.done) / pr.total) : 100;
     if (txt) load = `<div class="sc-prog pl-prog"><span>${esc(txt)}</span><b>${pct} %</b><span class="bar"><i style="width:${pct}%"></i></span></div>`;
   }
-  $('plHead').innerHTML = `<div class="pl-id">
-      ${info.iconId != null ? `<img class="pl-icon" src="${iconUrl(info.iconId)}" alt="">` : '<span class="pl-icon"></span>'}
-      <div><h1>${esc(site.gameName || '?')}<small>${site.tagLine ? '#' + esc(site.tagLine) : ''}</small></h1>
-      <p class="sub">${[info.level ? t('scout.level', { n: info.level }) : '', own ? t('pl.own') : ''].filter(Boolean).map(esc).join(' · ')}</p></div>
-    </div>
-    <div class="pl-ranks">${queueRank('Solo/Duo', info.solo)}${queueRank('Flex', info.flex)}</div>
-    <div class="pl-open"><span class="p-open">${t('p.openWith')}</span>${site.gameName ? SITES.map(([k, n]) => `<button class="chip" data-plsite="${k}">${n}</button>`).join('') : ''}</div>
-    ${load}`;
-
   const all = plGames();
+  const rowsAll = Stats.byParticipation(all, [p.puuid]);
+  // the chosen scope – none chosen (or one without games): the one with the most games
+  const scope = plv.queue && (plv.queue === 'all' || sumScopeRows(rowsAll, plv.queue).length) ? plv.queue : sumAutoScope(rowsAll);
+  const scoped = sumScopeRows(rowsAll, scope);
+  const sub = [info.level ? t('scout.level', { n: info.level }) : '', site.region || '', own ? t('pl.own') : ''].filter(Boolean).map(esc).join(' · ');
+  $('plHead').innerHTML = sumWho({ icons: info.iconId != null ? [info.iconId] : [], name: site.gameName || '?', tag: site.tagLine, sub,
+    ranks: sumRank('Solo/Duo', info.solo) + sumRank('Flex', info.flex) })
+    + `<div class="pl-open"><span class="p-open">${t('p.openWith')}</span>${site.gameName ? SITES.map(([k, n]) => `<button class="chip" data-plsite="${k}">${n}</button>`).join('') : ''}</div>${load}`;
+  sumArt($('plArt'), sumTopChamp(scoped.length ? scoped : rowsAll));
+  $('plTabs').innerHTML = PL_TABS.map(([k, l]) => `<button data-pltab="${k}"${plv.tab === k ? ' class="on"' : ''}>${t(l)}</button>`).join('');
+
   if (!all.length) {
-    el.innerHTML = `<div class="live-card"><p class="fine">${t(halt || (pr && !pr.listed && !own ? 'pl.wait' : 'pl.none'))}</p></div>`;
+    el.innerHTML = `<div class="ov-empty"><b>${esc(t('ov.emptyT'))}</b><p>${esc(t(halt || (pr && !pr.listed && !own ? 'pl.wait' : 'pl.none')))}</p></div>`;
     return;
   }
-  const season = new Date(new Date().getFullYear(), 0, 1).getTime();
-  const rankedRows = Stats.byParticipation(all, [p.puuid]).filter(x => Stats.RANKED_QUEUES.includes(x.g.q) && x.g.t >= season);
-  if (plv.queue === 'ranked' && !rankedRows.length) plv.queue = 'all';
-  const rows = PerfMath.lastGames(plv.queue === 'ranked' ? rankedRows : Stats.byParticipation(all, [p.puuid]), perf.f.last);
-  const ag = Stats.aggregate(rows);
-  const pct = v => (v == null ? '–' : Math.round(v * 100) + ' %');
-  const fig = (label, v, sub = '') => `<div class="pl-fig"><span>${esc(label)}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
-  const seg = `<div class="seg pl-q"><button data-plq="ranked"${plv.queue === 'ranked' ? ' class="on"' : ''}${rankedRows.length ? '' : ' disabled'}>${t('pl.ranked')}</button><button data-plq="all"${plv.queue === 'all' ? ' class="on"' : ''}>${t('pl.all')}</button></div>`;
-  const tabs = `<div class="subtabs pl-tabs">${PL_TABS.map(([k, l]) => `<button data-pltab="${k}"${plv.tab === k ? ' class="on"' : ''}>${t(l)}</button>`).join('')}</div>`;
+  const rows = PerfMath.lastGames(scoped, perf.f.last);
   const basis = `<span class="coll-for">${esc(t('pl.basis', { n: num(all.length) }))}</span>`;
-  // the newest n games only (the same choice as on the Overview)
-  const lastOwn = perfLastIsOwn(perf.f.last, perf.lastOwn);
-  const last = `<select class="pl-last" data-pllast title="${esc(t('perf.lastT'))}">${perfLastOpts(perf.f.last, perf.lastOwn)}</select>`
-    + (lastOwn ? `<input class="mh-input num" data-pllastn type="number" min="1" max="9999" placeholder="${esc(t('perf.lastPh'))}" value="${perf.f.last || ''}">` : '');
+  const bar = sumBarHtml(rowsAll, scope, 'data-plq');
+  const mastRows = plv.mastery && Object.keys(plv.mastery).length ? Object.entries(plv.mastery).map(([id, v]) => ({ id: +id, total: +v, n: 1 })).sort((a, b) => b.total - a.total) : null;
   // the Overview's views for this player: the same code, their games, a role to look at
-  if (plv.tab !== 'overview') {
-    const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t('perf.allRoles')}</button>` +
+  if (plv.tab !== 'sum') {
+    const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t(plv.tab === 'tags' ? 'tags.allRoles' : 'perf.allRoles')}</button>` +
       Stats.POSITIONS.map(r => `<button data-plrole="${r}" title="${esc(t('pos.' + r))}"${plv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('') + '</div>';
     const parts = plv.role ? rows.filter(x => PerfMath.roleOf(x) === plv.role) : rows;
     const agR = Stats.aggregate(parts);
-    const body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
-      : plv.tab === 'stats' ? perfStatsHtml(parts, agR, { player: true })
-        : plv.tab === 'champs' ? perfChampsHtml(parts, agR, { player: true })
-          : plv.tab === 'style' ? perfStyleHtml(parts, plv.role)
-            : perfMapHtml(parts, { foot: false });
-    el.innerHTML = `${tabs}<div class="pl-bar">${seg}${last}${roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
+    let body;
+    if (plv.tab === 'tags') {
+      const ctx = { games: all, own: [p.puuid], level: info.level != null ? info.level : null, mastery: mastRows, now: Date.now() };
+      const res = scope === 'aram' ? sumRes(all, [p.puuid], ctx.level, mastRows, 'aram')
+        : plv.role ? Tags.evaluate({ ...ctx, role: plv.role }) : Tags.evaluateAll(ctx);
+      body = res ? tagsBodyHtml(res, scope === 'aram' ? null : res.role) : `<div class="chart-empty">${t('ov.noAramTraits')}</div>`;
+    } else {
+      body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
+        : plv.tab === 'stats' ? perfStatsHtml(parts, agR, { player: true })
+          : plv.tab === 'champs' ? perfChampsHtml(parts, agR, { player: true })
+            : plv.tab === 'style' ? perfStyleHtml(parts, plv.role)
+              : perfMapHtml(parts, { foot: false });
+    }
+    el.innerHTML = `<div class="pl-bar">${bar}${scope === 'aram' && plv.tab === 'tags' ? '' : roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
     return;
   }
-  const figures = ag ? `<div class="pl-figs">
-      ${fig(t('perf.games'), num(ag.n), `${ag.wins} W / ${ag.losses} L`)}
-      ${fig('Winrate', pct(ag.winrate))}
-      ${fig('KDA', ag.perfect ? t('perf.perfect') : ag.kda.toFixed(2), `${ag.avg.k.toFixed(1)} / ${ag.avg.d.toFixed(1)} / ${ag.avg.a.toFixed(1)}`)}
-      ${fig('CS/min', ag.csMin.toFixed(1))}
-      ${fig(t('perf.dmgMin'), num(Math.round(ag.dmgMin)))}
-      ${fig(t('perf.kp'), pct(ag.kp))}
-    </div>` : '';
-
-  // roles: share of the games on each position
-  const mr = Tags.mainRole(rows);
-  const roles = mr.total ? [...mr.shares].sort((a, b) => b[1] - a[1]).map(([r, n]) => `<div class="pl-role"><img src="${posIcon(r)}" alt=""><span>${esc(t('pos.' + r))}</span>
-      <span class="bar"><i style="width:${Math.round((100 * n) / mr.total)}%"></i></span><b>${Math.round((100 * n) / mr.total)} %</b></div>`).join('') : `<p class="fine">${t('pl.noRoles')}</p>`;
-
-  // champions: the most played, with win rate, KDA and mastery
-  const mast = plv.mastery || {};
-  const champsRows = [...Stats.groupBy(rows, x => x.p.champ)].sort((a, b) => b[1].n - a[1].n).slice(0, 10).map(([c, a]) => `<div class="pl-champ">
-      <img src="${champIcon(c)}" alt=""><span class="pl-cn"><b title="${esc((champById(c) || {}).name || '')}">${esc((champById(c) || {}).name || '#' + c)}</b>${mast[c] ? `<small>${t('pl.points', { n: num(Number(mast[c])) })}</small>` : ''}</span>
-      <span>${perfGames(a.n)}</span><span class="${a.winrate >= 0.55 ? 'good' : a.winrate <= 0.45 ? 'bad' : ''}">${pct(a.winrate)}</span>
-      <span>${a.perfect ? t('perf.perfect') : a.kda.toFixed(2) + ' KDA'}</span></div>`).join('');
-
-  // traits: this season's ranked games, every role (as on the Overview)
-  const mastRows = Object.keys(mast).length ? Object.entries(mast).map(([id, v]) => ({ id: +id, total: +v, n: 1 })).sort((a, b) => b.total - a.total) : null;
-  const res = Tags.evaluateAll({ games: all, own: [p.puuid], level: info.level != null ? info.level : null, mastery: mastRows, now: Date.now() });
-  const picked = Tags.pick(res.results);
-  const chip = x => `<span class="tchip tc-${tagColor(x)}" title="${esc([tagText(x), tagRoleText(x)].filter(Boolean).join('\n'))}">${tagRoleIcon(x)}${esc(tagName(x))}</span>`;
-  const strong = picked.filter(Tags.isStrength), weak = picked.filter(Tags.isWeakness), rest = picked.filter(x => !Tags.isStrength(x) && !Tags.isWeakness(x));
-  const traits = picked.length ? `<div class="tag-top">
-      <div><span class="d-sec-t">${t('tags.strengths')}</span><div class="tchips">${strong.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
-      <div><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
-    </div>${rest.length ? `<div class="tchips pl-rest">${rest.map(chip).join('')}</div>` : ''}` : `<p class="fine">${t('tags.none')}</p>`;
-
-  // the recent games (all queues): champion, result, K/D/A, queue, when
-  const recent = Stats.byParticipation(all.slice(0, 20), [p.puuid]).map(({ g, p: x }) => {
-    const res2 = Stats.isRemake(g) ? 'remake' : x.win ? 'win' : 'loss';
-    return `<div class="pl-game ${res2}"><img src="${champIcon(x.champ)}" alt=""><b>${t('mh.' + res2)}</b>
-      <span>${x.k} / ${x.d} / ${x.a}</span><span>${esc(queueLabel(g))}</span><small>${esc(ago(g.t))}</small></div>`;
-  }).join('');
-
-  // the games with you
+  // At a glance: the same page as the own Overview's
   const ownIds = (S.accounts || []).filter(a => !a.placeholder).map(a => a.puuid);
   const m = own ? null : Insights.meetings(scv.own || [], ownIds, p.puuid, null);
-  const withYou = m ? `<p>${esc(t('know.total', { n: m.n, e: m.against.n, ew: m.against.w, el: m.against.n - m.against.w, tm: m.same.n, tw: m.same.w }))}</p>
-      <p class="fine">${esc(t(m.last.same ? 'know.team' : 'know.enemy', { when: ago(m.last.g.t), champ: (champById(m.last.them.champ) || {}).name || '' }))}</p>`
-    : `<p class="fine">${t(own ? 'pl.own' : 'pl.never')}</p>`;
-
-  el.innerHTML = `${tabs}<div class="pl-bar">${seg}${last}${basis}</div>
-    <div class="pl-grid">
-      <div class="live-card pl-card wide"><div class="lc-head"><h3>${t('pl.figures')}</h3></div>${figures}</div>
-      <div class="live-card pl-card"><div class="lc-head"><h3>${t('perf.role')}</h3></div>${roles}</div>
-      <div class="live-card pl-card"><div class="lc-head"><h3>${t('pl.withYou')}</h3></div>${withYou}</div>
-      <div class="live-card pl-card wide"><div class="lc-head"><h3>${t('dash.tabTags')}</h3></div>${traits}</div>
-      <div class="live-card pl-card"><div class="lc-head"><h3>${t('pl.champs')}</h3></div>${champsRows || `<p class="fine">${t('pl.none')}</p>`}</div>
-      <div class="live-card pl-card"><div class="lc-head"><h3>${t('pl.recent')}</h3></div>${recent}</div>
-    </div>`;
+  const withYou = m ? `<div class="swy"><b>${esc(t('ov.met', { n: m.n }))}</b><p>${esc(t('know.total', { n: m.n, e: m.against.n, ew: m.against.w, el: m.against.n - m.against.w, tm: m.same.n, tw: m.same.w }))}</p>
+      <p class="fine">${esc(t(m.last.same ? 'know.team' : 'know.enemy', { when: ago(m.last.g.t), champ: (champById(m.last.them.champ) || {}).name || '' }))}</p></div>`
+    : `<p class="muted">${t(own ? 'pl.own' : 'pl.never')}</p>`;
+  const res = sumRes(all, [p.puuid], info.level != null ? info.level : null, mastRows, scope);
+  el.innerHTML = `<div class="pl-bar ov-bar">${bar}${basis}</div>` + sumHtml({ parts: rows, scope, own: false, tabs: PL_TABS.map(x => x[0]), withYou, res,
+    mastery: mastRows });
 }
 
 $('viewPlayer').addEventListener('change', e => {
@@ -223,6 +178,16 @@ $('viewPlayer').addEventListener('click', e => {
   if (q && !q.disabled) { plv.queue = q.dataset.plq; return renderPlayer(); }
   const tb = e.target.closest('[data-pltab]');
   if (tb) { plv.tab = tb.dataset.pltab; return renderPlayer(); }
+  const go = e.target.closest('[data-ovgo]');
+  if (go) { plv.tab = go.dataset.ovgo; renderPlayer(); const top = document.querySelector('main'); if (top) top.scrollTop = 0; return; }
+  if (e.target.closest('#plMine')) return showView('dash');
+  // the traits tab: "All possible traits" and the numbers behind one
+  if (e.target.closest('[data-tagall]')) {
+    try { localStorage.setItem(TAG_ALL_KEY, tagAllOpen() ? '0' : '1'); } catch { /* stays as it is */ }
+    return renderPlayer();
+  }
+  const tg = e.target.closest('[data-tag]');
+  if (tg) { tagv.open = tagv.open === tg.dataset.tag ? '' : tg.dataset.tag; return renderPlayer(); }
   const ro = e.target.closest('[data-plrole]');
   if (ro) { plv.role = ro.dataset.plrole; return renderPlayer(); }
   // the Overview's own controls inside the tabs (sorting, unfolding, more champions)
@@ -331,6 +296,11 @@ function plOpenFound(x) {
   });
   // Ctrl+K: into the search
   document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k' && !e.shiftKey && !e.altKey) { e.preventDefault(); inp.focus(); inp.select(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k' && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      // the search lives in the Overview's head (and the player page's)
+      if (view !== 'dash' && view !== 'player') showView('dash');
+      inp.focus(); inp.select();
+    }
   });
 })();

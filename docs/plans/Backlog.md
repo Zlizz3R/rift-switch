@@ -4,6 +4,36 @@ Was noch offen ist – das Neueste oben. Erledigtes wird gestrichen oder mit Dat
 
 ## Offen
 
+### D. Konflikte mit den Riot-Policies – vor der Registrierung beheben (26.11.2026)
+
+Der Nutzer will Rift Switch im Riot Developer Portal registrieren und muss dabei den
+[General Policies](https://developer.riotgames.com/policies/general) zustimmen. Drei Punkte widersprechen ihnen nach
+Stichproben in Code und Screenshots (Stellen vor dem Ändern selbst nachsuchen, die Liste ist nicht vollständig). Die
+Lösungen sind Vorschläge; das Registrieren und Zustimmen macht der Nutzer selbst.
+
+- [ ] **D1 – Keine Spieler bloßstellen.** Policy: „Shame players based on any metric including their recent
+  performance“ ist verboten, ebenso Annahmen, die zu einem schlechten Bild von einem Spieler führen.
+  - Betroffen: Live-Karten (`ui/scout-view.js`, z. B. „Losing streak“, „Weak farmer“, „Smurf?“) und die Spieler-Seite
+    (`ui/player-view.js`, teilt in `strong` / `weak` / Rest).
+  - Vorschlag: Schwächen und „Smurf?“ nur bei den eigenen Accounts zeigen, bei Fremden nur Positives und Neutrales.
+  - Achtung: `Tags.isWeakness` (`ui/tags.js`) reicht als Filter nicht – es lässt die Form-Tags (`lossStreak`) aus,
+    und `smurf` hat die Farbe `warn`. Auch die übrigen `bad`- / `warn`-Tags und die Live-Tags einzeln durchgehen.
+- [ ] **D2 – Keine Verbindung zum League-Chat.** Policy: keine Wege zu anderen League-Systemen wie dem Chat, die nicht
+  zu den Third-Party-Tools gehören.
+  - Betroffen: „Offline erscheinen“ – `chat_status` / `set_chat_status` über `/lol-chat/v1/me`
+    (`src-tauri/src/riot.rs`), Aufrufe in `src-tauri/src/main.rs` (um Zeile 2695 und 3681), Standardwert
+    `appearOffline` in `src-tauri/src/settings.rs`, Schalter in `ui/index.html`, Test in `test/extras-ui.test.js`,
+    Texte in `ui/i18n.js` + `ui/lang/*.js`, Erwähnung in `ui/changelog.js`.
+  - Vorschlag: Funktion ganz entfernen. Wer sie eingeschaltet hat, soll danach nicht offline hängen bleiben.
+- [ ] **D3 – Kein Scraping fremder Quellen.** Policy: keine Daten von Quellen außerhalb der Riot-API und der
+  dokumentierten Third-Party-Tools. Laut `docs/plans/Pruefbericht.md` §3 verstößt der Abruf außerdem sehr
+  wahrscheinlich gegen das User Agreement von counterstats.net.
+  - Betroffen: Champ-Select-Helper – Abruf in `src-tauri/src/live.rs`, Anzeige in `ui/views.js`, Test in
+    `test/ui-clicks.test.js`, README (Champ select helper, „Outside connections“) und die Liste *Data sources* in
+    der App.
+  - Vorschlag: Winrates aus den eigenen gespeicherten Spielen berechnen (mit Anzahl der Spiele) oder nur noch auf
+    counterstats.net verlinken. Ersetzt die Entscheidung vom 24.11., den Helper so zu lassen.
+
 ### A. Version 1.3 – ✔ 25.11.2026 fertig (1.2.2 wurde nie veröffentlicht und steckt in 1.3.0)
 
 Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-tauri/tauri.conf.json`, Notizen in `ui/changelog.js`, Tag `v1.3.0` pushen – der Nutzer hat das Pushen dafür freigegeben).
