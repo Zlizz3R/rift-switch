@@ -770,6 +770,20 @@
     'live.muNone': "Pas encore de partie enregistrée de ce matchup sur cette lane – trié selon tes propres parties avec ce champion",
     'live.muN': "{n} parties",
     'live.sourceOwn': "Taux de victoire issus des parties enregistrées sur ton PC – les tiennes et celles de chaque joueur que Live et les pages joueur lisent. Plus tu joues avec l'appli ouverte, plus elle connaît de matchups. – = pas encore de partie enregistrée de ce matchup.",
+    'ov.customize': "Personnaliser",
+    'ov.customizeT': "Organise les cartes : ordre, taille, lesquelles s'affichent – pour tes comptes et les pages joueur",
+    'ov.editHint': "Glisse les cartes (ou ← →), choisis une taille, masque ce dont tu n'as pas besoin.",
+    'ov.hiddenCards': "Masquées :",
+    'ov.noneHidden': "Toutes les cartes sont affichées.",
+    'ov.reset': "Réinitialiser",
+    'ov.done': "Terminé",
+    'ov.drag': "Glisser pour déplacer",
+    'ov.moveL': "Une place plus tôt",
+    'ov.moveR': "Une place plus tard",
+    'ov.sizeS': "Petite",
+    'ov.sizeM': "Large",
+    'ov.sizeL': "Pleine largeur",
+    'ov.hide': "Masquer",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

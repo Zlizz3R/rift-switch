@@ -104,6 +104,8 @@ into one category.
   (the last 20 games as pictures, the LP of 30 days), traits, champions, roles, play style, highlights (most kills,
   best KDA, multikills, longest win streak) and mastery – each card leads into its tab. *Ranked*, *ARAM* or *All
   games*; an ARAM player starts on ARAM (the share of the team and the activity instead of roles and the radar).
+  **Customize**: drag the cards into your order, make them small, wide or full width, hide some, add *Recent games*
+  and a *Map* – *Reset* brings the designed layout back.
 - **The LP history of every account in one chart**, on coloured tier bands. Hover: every account's rank on that day.
 - **Any combination of queues** – Solo/Duo, Flex, Ranked 5v5, Classic 5v5: one colour per account, one line style
   per queue.
@@ -139,6 +141,7 @@ into one category.
   the numbers behind it. "Too little data" is never shown as "not met".
   **ARAM** has traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
   hunter, team carry …), measured against the ARAM games of the other players – also on Live's cards in an ARAM game.
+  Other players (Live, the player page) only get what speaks for them – the things to work on are for your own accounts.
 - **Map** – where you die and where you kill (deaths, kills or both; the same filter: account, queue, season,
   role), for a game phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart
   under the map (kills up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min:
@@ -162,7 +165,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 - **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed.
   One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and the 200 newest
   games of every account – the most the League client hands out. Rift Switch keeps them all, so the history grows
-  with every Load. Your own games also keep the client's raw data (gzip, up to 2 × 100 MB); other players'
+  with every Load – and it **loads by itself** when an account signs in (Settings → Logging in; once per account in
+  30 minutes, never while queueing, in champion select or a game). Your own games also keep the client's raw data (gzip, up to 2 × 100 MB); other players'
   games (from Live) stay 30 days – a year in their short form from the match list – and at most 1 GB (Settings → Data: 500 MB to 5 GB).
 - **Filters**: account, any combination of queues, time or your own dates, wins/losses, champion, sorting, and more
   (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,
@@ -214,9 +218,10 @@ are shown lane by lane: yours as assigned, the enemies guessed from a **lane tab
 and every other player's game Live and the player pages read (also the short ones from match lists), each player
 once, by month for half a year (this and last month count fully). It grows with every game you play with the app
 open. In champion select the enemy picks appear as pictures – Riot hides their positions, so the app marks the
-likely laner (all five placed together; a champion the table barely knows by its counterstats lane share). Your pool is ranked by win rate and counter
-rating against him (counterstats.net). Every enemy pick loads in the background; *Pre-load all matchups* reads just
-your own champions' pages while you queue – a matchup's win rates add up to 100, so they answer every enemy.
+likely laner (all five placed together). Your pool is ranked against him by the **matchups in the stored games** (every
+game with all ten players: who met whom on this lane, and who won), with the number of games – plus your own record
+against him and your win rate on each champion. Nothing is fetched from websites; *counterstats.net ↗* opens that
+site in your browser if you want a second opinion.
 </details>
 
 ### 🔧 Tools & settings
@@ -248,7 +253,6 @@ your own champions' pages while you queue – a matchup's win rates add up to 10
 - **Outside connections** (the same list is in the app: Settings → About → *Data sources*) – no account data is sent
   anywhere:
   - **CommunityDragon** – icons, rank emblems, champion, skin and item pictures.
-  - **counterstats.net** – champion names only, for the champ select helper.
   - **GitHub** – every 6 hours: is there a newer version? The installer is checked (size, SHA-256) and only runs when
     you say so.
   - op.gg and the other sites only when you open a profile there yourself.

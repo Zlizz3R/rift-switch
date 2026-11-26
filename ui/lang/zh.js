@@ -766,6 +766,20 @@
     'live.muNone': "此路线尚无该对位的已保存对局——按你使用该英雄的对局排序",
     'live.muN': "{n} 场",
     'live.sourceOwn': "胜率来自你电脑上保存的对局——你的对局，以及实时页面和玩家页面读取的每位玩家的对局。开着应用玩得越多，它知道的对位就越多。– = 尚无该对位的已保存对局。",
+    'ov.customize': "自定义",
+    'ov.customizeT': "排列卡片：顺序、大小、显示哪些——适用于你的账号和玩家页面",
+    'ov.editHint': "拖动卡片（或 ← →），选择大小，隐藏不需要的卡片。",
+    'ov.hiddenCards': "已隐藏：",
+    'ov.noneHidden': "所有卡片都已显示。",
+    'ov.reset': "重置",
+    'ov.done': "完成",
+    'ov.drag': "拖动以移动",
+    'ov.moveL': "前移一位",
+    'ov.moveR': "后移一位",
+    'ov.sizeS': "小",
+    'ov.sizeM': "宽",
+    'ov.sizeL': "整行",
+    'ov.hide': "隐藏",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

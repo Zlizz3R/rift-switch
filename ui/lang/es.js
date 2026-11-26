@@ -770,6 +770,20 @@
     'live.muNone': "Aún no hay partidas guardadas de este enfrentamiento en esta línea; ordenado por tus propias partidas con este campeón",
     'live.muN': "{n} partidas",
     'live.sourceOwn': "Tasas de victoria de las partidas guardadas en tu PC: las tuyas y las de cada jugador que leen Live y las páginas de jugador. Cuanto más juegues con la app abierta, más enfrentamientos conoce. – = aún no hay partidas guardadas de este enfrentamiento.",
+    'ov.customize': "Personalizar",
+    'ov.customizeT': "Ordena las tarjetas: orden, tamaño y cuáles se ven; vale para tus cuentas y las páginas de jugador",
+    'ov.editHint': "Arrastra las tarjetas (o ← →), elige un tamaño y oculta lo que no necesites.",
+    'ov.hiddenCards': "Ocultas:",
+    'ov.noneHidden': "Se ven todas las tarjetas.",
+    'ov.reset': "Restablecer",
+    'ov.done': "Listo",
+    'ov.drag': "Arrastra para mover",
+    'ov.moveL': "Un puesto antes",
+    'ov.moveR': "Un puesto después",
+    'ov.sizeS': "Pequeña",
+    'ov.sizeM': "Ancha",
+    'ov.sizeL': "Ancho completo",
+    'ov.hide': "Ocultar",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

@@ -11,21 +11,32 @@ Der Nutzer will Rift Switch im Riot Developer Portal registrieren und muss dabei
 Stichproben in Code und Screenshots (Stellen vor dem Ändern selbst nachsuchen, die Liste ist nicht vollständig). Die
 Lösungen sind Vorschläge; das Registrieren und Zustimmen macht der Nutzer selbst.
 
-- [ ] **D1 – Keine Spieler bloßstellen.** Policy: „Shame players based on any metric including their recent
+- [x] ✔ 26.11.2026 **D1 – Keine Spieler bloßstellen.** Umgesetzt mit `Tags.forOthers` (Live-Karten, Spieler-Seite,
+  „Auf einen Blick“, Traits-Tab ohne „Baustellen“ und ohne „Alle möglichen Traits“; Pechsträhne in der Form-Karte nur
+  bei eigenen Accounts). Neutral bleiben nur `readyToRumble` und `aggroJungler`. Policy: „Shame players based on any metric including their recent
   performance“ ist verboten, ebenso Annahmen, die zu einem schlechten Bild von einem Spieler führen.
   - Betroffen: Live-Karten (`ui/scout-view.js`, z. B. „Losing streak“, „Weak farmer“, „Smurf?“) und die Spieler-Seite
     (`ui/player-view.js`, teilt in `strong` / `weak` / Rest).
   - Vorschlag: Schwächen und „Smurf?“ nur bei den eigenen Accounts zeigen, bei Fremden nur Positives und Neutrales.
   - Achtung: `Tags.isWeakness` (`ui/tags.js`) reicht als Filter nicht – es lässt die Form-Tags (`lossStreak`) aus,
     und `smurf` hat die Farbe `warn`. Auch die übrigen `bad`- / `warn`-Tags und die Live-Tags einzeln durchgehen.
-- [ ] **D2 – Keine Verbindung zum League-Chat.** Policy: keine Wege zu anderen League-Systemen wie dem Chat, die nicht
+- [x] ✔ 26.11.2026 **D2 – Keine Verbindung zum League-Chat.** Funktion entfernt; wer sie an hatte, wird beim ersten
+  League-Start nach dem Update einmal online gesetzt (`undo_offline`), danach ist der Schlüssel weg. Policy: keine Wege zu anderen League-Systemen wie dem Chat, die nicht
   zu den Third-Party-Tools gehören.
   - Betroffen: „Offline erscheinen“ – `chat_status` / `set_chat_status` über `/lol-chat/v1/me`
     (`src-tauri/src/riot.rs`), Aufrufe in `src-tauri/src/main.rs` (um Zeile 2695 und 3681), Standardwert
     `appearOffline` in `src-tauri/src/settings.rs`, Schalter in `ui/index.html`, Test in `test/extras-ui.test.js`,
     Texte in `ui/i18n.js` + `ui/lang/*.js`, Erwähnung in `ui/changelog.js`.
   - Vorschlag: Funktion ganz entfernen. Wer sie eingeschaltet hat, soll danach nicht offline hängen bleiben.
-- [ ] **D3 – Kein Scraping fremder Quellen.** Policy: keine Daten von Quellen außerhalb der Riot-API und der
+- [x] ✔ 26.11.2026 **D3 – Kein Scraping fremder Quellen.** Abruf entfernt (`live.rs`, Befehl `counters`, Cache
+  `counters.json` wird beim Start gelöscht). Winrates aus den gespeicherten Spielen (`lanes.rs` zählt die Lane-Matchups
+  jedes Spiels mit allen zehn Spielern) plus eigene Bilanz; counterstats.net nur noch als Link.
+- [x] ✔ 26.11.2026 **D4 – Versteckte Spieler.** Policy: „Products cannot identify or analyze players who are deliberately
+  hidden by the game.“ Zellen mit `nameVisibilityType: HIDDEN` oder ohne ID werden nie nachgeschlagen (`live.rs has_id`).
+- [ ] **D5 – Noch offen, Nutzer entscheidet:** Auto-Accept und Premade-Erkennung bei Gegnern werden in den Policies
+  nicht genannt; „Products should not remove game decisions“ bzw. „no game-session-specific information that would be
+  previously unknown to the player“ könnten beim Audit gefragt werden. Beim Registrieren die genutzten LCU-Endpunkte
+  angeben (Policy: „We need to know which endpoints you're using and how you're using them“). Policy: keine Daten von Quellen außerhalb der Riot-API und der
   dokumentierten Third-Party-Tools. Laut `docs/plans/Pruefbericht.md` §3 verstößt der Abruf außerdem sehr
   wahrscheinlich gegen das User Agreement von counterstats.net.
   - Betroffen: Champ-Select-Helper – Abruf in `src-tauri/src/live.rs`, Anzeige in `ui/views.js`, Test in

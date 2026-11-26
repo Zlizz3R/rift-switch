@@ -5,7 +5,8 @@
 // you). Uses the globals of renderer.js / views.js / matches-view.js / dashboard.js / perf.js /
 // radar-view.js / tags-view.js / ovfilter.js.
 
-const sumv = { scope: '', mast: null, loading: false };
+// edit: the cards are being arranged (Customize)
+const sumv = { scope: '', mast: null, loading: false, edit: false };
 const SUM_ARAM = [450, 2400];
 const sumSeason = () => new Date(new Date().getFullYear(), 0, 1).getTime();
 
@@ -330,22 +331,147 @@ function sumMastery(list, ctx, max = 4) {
 
 // the whole page. ctx: { parts (the scope's participations), scope, res (traits), mastery: [{ id, total, lvl }] or null,
 //   lp (html: own accounts) , withYou (html: the player page), own (games open in the match history), tabs: tabs the page has }
+// the recent games: champion, result, K/D/A, queue, when (own games open in the match history)
+function sumGames(parts, ctx) {
+  const list = [...parts].sort((a, b) => b.g.t - a.g.t).slice(0, 8);
+  const tag = ctx.own ? 'button' : 'div';
+  const body = list.map(x => {
+    const res = x.p.win ? 'win' : 'loss';
+    return `<${tag} class="sgm ${res}"${ctx.own ? ` data-opengame="${esc(x.g.id)}"` : ''}><img src="${champIcon(x.p.champ)}" alt="" loading="lazy"><b>${t('mh.' + res)}</b>
+      <span>${x.p.k} / ${x.p.d} / ${x.p.a}</span><span class="q">${esc(queueLabel(x.g))}</span><small>${esc(ago(x.g.t))}</small></${tag}>`;
+  }).join('');
+  return sumCard('games', t('pl.recent'), body || `<p class="muted">${esc(t('ov.none'))}</p>`);
+}
+// the map: where the deaths are, with the spot that stands out
+function sumMap(parts, ctx) {
+  const ev = MapMath.events(parts).filter(e => e.kind === 'death');
+  const go = sumGo(ctx, 'map', t('dash.tabMap'));
+  if (!ev.length) return sumCard('map', t('dash.tabMap'), `<p class="muted">${esc(t('mp.none'))}</p>`, go);
+  const z = MapMath.hotspot(MapMath.sum(ev, MapMath.games(parts).length));
+  return sumCard('map', t('dash.tabMap'), `<div class="smap">${mapSvg(ev)}</div>${z ? `<p class="fine">${esc(t('dm.hot', { pct: Math.round(z.share * 100), zone: t('dm.z.' + z.zone), n: z.n, all: ev.length }))}</p>` : ''}`, go);
+}
+
+// ---------- the cards and their layout ----------
+// Every card has an id; "At a glance" shows them in its designed layout (no holes at any width) –
+// or, once arranged by hand (setting ovLayout: { order, hidden, size }), in that order and size on
+// a grid of 1–4 columns. Sizes: 1 small, 2 wide, 4 the full row. "Recent games" and "Map" are extra
+// cards, hidden until added.
+const SUM_CARDS = ['figs', 'form', 'traits', 'champs', 'roles', 'style', 'rec', 'mast', 'games', 'map'];
+const SUM_EXTRA = ['games', 'map'];
+const SUM_SIZE = { figs: 4, form: 2, traits: 1, champs: 1, roles: 1, style: 1, rec: 1, mast: 1, games: 2, map: 1 };
+const SUM_NAME = { figs: 'pl.figures', form: 'ov.form', traits: 'dash.tabTags', champs: 'pl.champs', roles: 'ov.roles', style: 'dash.tabStyle',
+  rec: 'ov.records', mast: 'dash.tabMast', games: 'pl.recent', map: 'dash.tabMap' };
+function sumCardOf(id, p, ctx) {
+  const aram = ctx.scope === 'aram';
+  const html = {
+    figs: () => `<section class="ovc ovc-figsw">${sumFigs(p, ctx.scope)}</section>`,
+    form: () => sumForm(p, ctx), traits: () => sumTraits(ctx.res, ctx), champs: () => sumChamps(p, ctx),
+    roles: () => (aram ? sumTeamShare(p, ctx) : sumRoles(p, ctx)), style: () => (aram ? sumActivity(p) : sumStyle(p, ctx)),
+    rec: () => sumRecords(p, ctx), mast: () => sumMastery(ctx.mastery, ctx, ctx.withYou != null ? 3 : 4),
+    games: () => sumGames(p, ctx), map: () => sumMap(p, ctx),
+  }[id]();
+  return html.replace('<section class="', `<section data-card="${id}" class="`);
+}
+// the arrangement by hand, or null (the designed layout)
+const sumLayout = () => { const l = S.settings && S.settings.ovLayout; return l && Array.isArray(l.order) && l.order.length ? l : null; };
+// every card in its place: { order (all cards), hidden (Set), size }
+function sumLayoutFull(l) {
+  const order = (l ? l.order : SUM_CARDS).filter(id => SUM_CARDS.includes(id));
+  const extra = SUM_CARDS.filter(id => !order.includes(id));
+  return { order: [...order, ...extra], hidden: new Set(l ? [...(l.hidden || []), ...extra.filter(id => SUM_EXTRA.includes(id))] : SUM_EXTRA),
+    size: { ...SUM_SIZE, ...((l && l.size) || {}) } };
+}
 function sumHtml(ctx) {
   const p = ctx.parts;
   if (!p.length) return `<div class="ov-empty"><b>${esc(t('ov.emptyT'))}</b><p>${esc(t(ctx.emptyKey || 'ov.empty'))}</p></div>`;
-  const aram = ctx.scope === 'aram';
-  const extra = sumMastery(ctx.mastery, ctx, ctx.withYou != null ? 3 : 4);
-  return `<div class="ov-sum">
-    <section class="ovc ovc-figsw">${sumFigs(p, ctx.scope)}</section>
-    ${sumForm(p, ctx)}
-    ${sumTraits(ctx.res, ctx)}
-    ${sumChamps(p, ctx)}
-    ${aram ? sumTeamShare(p, ctx) : sumRoles(p, ctx)}
-    ${aram ? sumActivity(p) : sumStyle(p, ctx)}
-    ${sumRecords(p, ctx)}
-    ${extra}
-  </div>`;
+  const l = sumLayout();
+  if (!l && !sumv.edit) return `<div class="ov-sum">${SUM_CARDS.filter(id => !SUM_EXTRA.includes(id)).map(id => sumCardOf(id, p, ctx)).join('')}</div>`;
+  const lay = sumLayoutFull(l);
+  const tools = id => `<div class="ovc-edit"><span class="ovc-drag" title="${esc(t('ov.drag'))}">⠿</span>
+    <button data-omove="${id}:-1" title="${esc(t('ov.moveL'))}">←</button><button data-omove="${id}:1" title="${esc(t('ov.moveR'))}">→</button>
+    ${[[1, 'ov.sizeS', 'S'], [2, 'ov.sizeM', 'M'], [4, 'ov.sizeL', 'L']].map(([n, key, l2]) => `<button data-osize="${id}:${n}" title="${esc(t(key))}"${lay.size[id] === n ? ' class="on"' : ''}>${l2}</button>`).join('')}
+    <button data-ohide="${id}" title="${esc(t('ov.hide'))}">✕</button></div>`;
+  const cards = lay.order.filter(id => !lay.hidden.has(id)).map(id => {
+    let h = sumCardOf(id, p, ctx).replace(`<section data-card="${id}"`, `<section data-card="${id}" data-span="${lay.size[id]}"${sumv.edit ? ' draggable="true"' : ''}`);
+    if (sumv.edit) h = h.replace(/<\/section>$/, `${tools(id)}</section>`);
+    return h;
+  }).join('');
+  const hidden = lay.order.filter(id => lay.hidden.has(id));
+  const tray = sumv.edit ? `<div class="ov-tray"><span class="ov-tray-t">${esc(t('ov.editHint'))}</span>
+      <span class="ov-tray-h">${hidden.length ? `${esc(t('ov.hiddenCards'))} ${hidden.map(id => `<button class="chip" data-oadd="${id}">+ ${esc(t(SUM_NAME[id]))}</button>`).join('')}` : esc(t('ov.noneHidden'))}</span>
+      <span class="grow"></span><button class="btn small" data-oreset>${esc(t('ov.reset'))}</button><button class="btn small gold" data-odone>${esc(t('ov.done'))}</button></div>` : '';
+  return `${tray}<div class="ov-sum custom${sumv.edit ? ' editing' : ''}">${cards}</div>`;
 }
+// the "Customize" button in the bar above the cards
+const sumCustBtn = () => (sumv.edit ? '' : `<button class="btn small ov-cust" data-ocust title="${esc(t('ov.customizeT'))}"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>${esc(t('ov.customize'))}</button>`);
+// a change of the arrangement: kept (the setting) and drawn again where it is shown
+function sumSaveLayout(lay) {
+  const l = { order: lay.order, hidden: [...lay.hidden], size: lay.size };
+  S.settings = { ...S.settings, ovLayout: l };
+  api.setSetting('ovLayout', l);
+  sumRedraw();
+}
+const sumRedraw = () => (view === 'player' ? renderPlayer() : renderSum());
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ocust], [data-odone], [data-oreset], [data-oadd], [data-ohide], [data-osize], [data-omove]');
+  if (!b || !b.closest('#viewDash, #viewPlayer')) return;
+  if (b.dataset.ocust !== undefined) { sumv.edit = true; return sumRedraw(); }
+  if (b.dataset.odone !== undefined) { sumv.edit = false; return sumRedraw(); }
+  if (b.dataset.oreset !== undefined) {
+    S.settings = { ...S.settings, ovLayout: null };
+    api.setSetting('ovLayout', null);
+    return sumRedraw();
+  }
+  const lay = sumLayoutFull(sumLayout());
+  if (b.dataset.oadd) { lay.hidden.delete(b.dataset.oadd); lay.order = [...lay.order.filter(x => x !== b.dataset.oadd), b.dataset.oadd]; }
+  else if (b.dataset.ohide) lay.hidden.add(b.dataset.ohide);
+  else if (b.dataset.osize) { const [id, n] = b.dataset.osize.split(':'); lay.size[id] = Number(n); }
+  else if (b.dataset.omove) {
+    // one place left or right among the shown cards
+    const [id, d] = b.dataset.omove.split(':');
+    const shown = lay.order.filter(x => !lay.hidden.has(x));
+    const i = shown.indexOf(id), j = i + Number(d);
+    if (i < 0 || j < 0 || j >= shown.length) return;
+    [shown[i], shown[j]] = [shown[j], shown[i]];
+    lay.order = [...shown, ...lay.order.filter(x => lay.hidden.has(x))];
+  }
+  sumSaveLayout(lay);
+});
+// dragging a card onto another: before it (left half) or after it (right half)
+let sumDrag = '';
+document.addEventListener('dragstart', e => {
+  const c = e.target.closest && e.target.closest('.ov-sum.editing [data-card]');
+  if (!c) return;
+  sumDrag = c.dataset.card;
+  c.classList.add('dragging');
+  if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', sumDrag); }
+});
+document.addEventListener('dragover', e => {
+  const c = e.target.closest && e.target.closest('.ov-sum.editing [data-card]');
+  if (!c || !sumDrag) return;
+  e.preventDefault();
+  const r = c.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+  document.querySelectorAll('.drop-before, .drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after'));
+  if (c.dataset.card !== sumDrag) c.classList.add(after ? 'drop-after' : 'drop-before');
+});
+document.addEventListener('drop', e => {
+  const c = e.target.closest && e.target.closest('.ov-sum.editing [data-card]');
+  if (!c || !sumDrag) return;
+  e.preventDefault();
+  const to = c.dataset.card, after = c.classList.contains('drop-after');
+  const lay = sumLayoutFull(sumLayout());
+  if (to !== sumDrag) {
+    const order = lay.order.filter(x => x !== sumDrag);
+    order.splice(order.indexOf(to) + (after ? 1 : 0), 0, sumDrag);
+    lay.order = order;
+    sumSaveLayout(lay);
+  }
+  sumDrag = '';
+});
+document.addEventListener('dragend', () => {
+  sumDrag = '';
+  document.querySelectorAll('.dragging, .drop-before, .drop-after').forEach(x => x.classList.remove('dragging', 'drop-before', 'drop-after'));
+});
 
 // ---------- the own Overview's "At a glance" ----------
 async function loadSum() {
@@ -377,7 +503,7 @@ function renderSum() {
   const rows = Stats.byParticipation(perf.games).filter(x => ids.includes(x.p.puuid));
   const scope = sumv.scope || sumAutoScope(rows);
   const parts = PerfMath.lastGames(sumScopeRows(rows, scope), perf.f.last);
-  $('sumBar').innerHTML = sumBarHtml(rows, scope, 'data-sumq');
+  $('sumBar').innerHTML = sumBarHtml(rows, scope, 'data-sumq') + sumCustBtn();
   const read = (sumv.mast || []).filter(m => ids.includes(m.puuid));
   const table = read.length ? MastMath.masteryTable(read) : null;
   const acc = chosen.length === 1 ? chosen[0] : null;

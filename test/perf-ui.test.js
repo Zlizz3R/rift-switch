@@ -234,3 +234,46 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('at a glance: customize – order, size, hide, the extra cards; kept as a setting, reset brings the designed layout back', async () => {
+  const app = await boot({ replies });
+  try {
+    await app.click('#navDash');
+    await app.settle();
+    const cards = () => app.$$('#sumBody [data-card]').map(c => c.dataset.card);
+    const lastSet = () => app.called('set-setting').pop().args;
+    assert.deepEqual(cards(), ['figs', 'form', 'traits', 'champs', 'roles', 'style', 'rec', 'mast'], 'the designed layout, no extra cards');
+    assert.ok(!app.$('#sumBody .ov-sum.custom'));
+    await app.click('[data-ocust]');
+    assert.ok(app.$('.ov-sum.editing'));
+    assert.match(app.$('.ov-tray').textContent, /Recent games[\s\S]*Map/);
+    // the map in, traits out, champions one place earlier, the form small
+    await app.click('[data-oadd="map"]');
+    await app.click('[data-ohide="traits"]');
+    await app.click('[data-omove="champs:-1"]');
+    await app.click('[data-osize="form:1"]');
+    assert.deepEqual(cards(), ['figs', 'champs', 'form', 'roles', 'style', 'rec', 'mast', 'map']);
+    assert.equal(app.$('[data-card="form"]').dataset.span, '1');
+    const saved = lastSet();
+    assert.equal(saved[0], 'ovLayout');
+    assert.deepEqual([...saved[1].hidden].sort(), ['games', 'traits']);
+    // dragging a card onto another: before it
+    const drag = (type, el, x) => { const ev = new app.w.Event(type, { bubbles: true, cancelable: true }); ev.clientX = x; el.dispatchEvent(ev); };
+    drag('dragstart', app.$('[data-card="map"]'), 0);
+    drag('dragover', app.$('[data-card="champs"]'), -1);
+    drag('drop', app.$('[data-card="champs"]'), -1);
+    await app.settle();
+    assert.deepEqual(cards().slice(0, 3), ['figs', 'map', 'champs']);
+    // done: the arrangement stays without the tools
+    await app.click('[data-odone]');
+    assert.ok(app.$('.ov-sum.custom') && !app.$('.ov-sum.editing') && !app.$('.ovc-edit'));
+    assert.ok(app.$('[data-card="map"]'));
+    // reset: the designed layout again
+    await app.click('[data-ocust]');
+    await app.click('[data-oreset]');
+    assert.deepEqual(lastSet(), ['ovLayout', null]);
+    await app.click('[data-odone]');
+    assert.deepEqual(cards(), ['figs', 'form', 'traits', 'champs', 'roles', 'style', 'rec', 'mast']);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

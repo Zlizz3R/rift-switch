@@ -816,6 +816,20 @@
     'live.muNone': "No stored game of this matchup on this lane yet – sorted by your own games on this champion",
     'live.muN': "{n} games",
     'live.sourceOwn': "Win rates from the games stored on your PC – yours and every player Live and the player pages read. The more you play with the app open, the more matchups it knows. – = no stored game of this matchup yet.",
+    'ov.customize': "Customize",
+    'ov.customizeT': "Arrange the cards: their order, size, which ones show – kept for your accounts and the player pages",
+    'ov.editHint': "Drag the cards (or ← →), pick a size, hide what you don't need.",
+    'ov.hiddenCards': "Hidden:",
+    'ov.noneHidden': "Every card is shown.",
+    'ov.reset': "Reset",
+    'ov.done': "Done",
+    'ov.drag': "Drag to move",
+    'ov.moveL': "One place earlier",
+    'ov.moveR': "One place later",
+    'ov.sizeS': "Small",
+    'ov.sizeM': "Wide",
+    'ov.sizeL': "Full width",
+    'ov.hide': "Hide",
   };
 
   const de = {
@@ -1615,6 +1629,20 @@
     'live.muNone': "Noch kein gespeichertes Spiel dieses Matchups auf dieser Lane – sortiert nach deinen eigenen Spielen mit diesem Champion",
     'live.muN': "{n} Spiele",
     'live.sourceOwn': "Winrates aus den auf deinem PC gespeicherten Spielen – deinen und denen jedes Spielers, den Live und die Spieler-Seiten lesen. Je mehr du mit offener App spielst, desto mehr Matchups kennt sie. – = noch kein gespeichertes Spiel dieses Matchups.",
+    'ov.customize': "Anpassen",
+    'ov.customizeT': "Karten anordnen: Reihenfolge, Größe, welche sichtbar sind – gilt für deine Accounts und die Spieler-Seiten",
+    'ov.editHint': "Karten ziehen (oder ← →), Größe wählen, ausblenden, was du nicht brauchst.",
+    'ov.hiddenCards': "Ausgeblendet:",
+    'ov.noneHidden': "Alle Karten sind sichtbar.",
+    'ov.reset': "Zurücksetzen",
+    'ov.done': "Fertig",
+    'ov.drag': "Zum Verschieben ziehen",
+    'ov.moveL': "Einen Platz nach vorn",
+    'ov.moveR': "Einen Platz nach hinten",
+    'ov.sizeS': "Klein",
+    'ov.sizeM': "Breit",
+    'ov.sizeL': "Volle Breite",
+    'ov.hide': "Ausblenden",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

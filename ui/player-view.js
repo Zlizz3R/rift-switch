@@ -162,7 +162,7 @@ function renderPlayer() {
       <p class="fine">${esc(t(m.last.same ? 'know.team' : 'know.enemy', { when: ago(m.last.g.t), champ: (champById(m.last.them.champ) || {}).name || '' }))}</p></div>`
     : `<p class="muted">${t(own ? 'pl.own' : 'pl.never')}</p>`;
   const res = sumRes(all, [p.puuid], info.level != null ? info.level : null, mastRows, scope);
-  el.innerHTML = `<div class="pl-bar ov-bar">${bar}${basis}</div>` + sumHtml({ parts: rows, scope, own: false, others: !own, tabs: PL_TABS.map(x => x[0]), withYou,
+  el.innerHTML = `<div class="pl-bar ov-bar">${bar}${basis}${sumCustBtn()}</div>` + sumHtml({ parts: rows, scope, own: false, others: !own, tabs: PL_TABS.map(x => x[0]), withYou,
     res: res && !own ? plOthers(res) : res, mastery: mastRows });
 }
 
