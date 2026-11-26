@@ -67,7 +67,11 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Live: Traits in drei Stufen (Wichtig / Mehr / Alle), Rest einer Karte hinter „+n“.
 - [x] Live lädt viel schneller: alle Match-Listen auf einmal, dann 12 Spiele gleichzeitig ohne Pause zwischen den Runden, Spiel + Timeline parallel; im Spiel 6 gleichzeitig statt 1 alle 4 s; kurze Pause, wenn der Client ablehnt. Die Spieler-Seite lädt ebenso 12 gleichzeitig.
 - [x] Spielersuche in der Titelleiste (Strg+K): Vorschläge aus allen Spielern deiner Spiele, sonst Riot ID über den Client (ohne Tag: der eigene Server).
-- [ ] Als 1.3.2 veröffentlichen (Tag auf main; die Tags v1.3.0/v1.3.1 haben keinen Release – die Läufe scheiterten an „Tag nicht auf main“ und `cargo fmt`). Jetzt mit `npm run release 1.3.2 --push`.
+- [x] ✔ 26.11.2026 Als 1.3.2 veröffentlicht (Release-Lauf grün), danach 1.3.3.
+- [ ] **GitHub-Seite neu machen** (Nutzer, 26.11.2026 – noch nicht anfangen): Seit 1.3.2/1.3.3 sieht vieles anders
+  aus (Übersicht mit Kopfbild und Showcase, „Auf einen Blick“, ein Performance-Tab, Live nach dem Spiel, Augments).
+  Vor allem das **Video `docs/screens/demo.gif`** ist hinfällig; dazu die README-Bilder. Neu aufnehmen mit
+  `tools/screens` (demo.js = erfundene Accounts, capture.py = headless Edge + ffmpeg), README-Texte dabei mit prüfen.
 
 ### C. Ideen-Runde (25.11.2026)
 
