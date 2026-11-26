@@ -1,7 +1,7 @@
 // Match history page: recent games of all saved accounts in one list (op.gg style, kept short).
 // Uses the globals of renderer.js / views.js (S, t, $, esc, api, CHAMP_ICON, SITES, openSite …).
 
-const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 710: 'Ranked 5v5', 4310: 'Classic 5v5', 700: 'Clash', 720: 'ARAM Clash', 3220: 'ARAM', 3270: 'ARAM', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
+const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 710: 'Ranked 5v5', 4310: 'Classic 5v5', 700: 'Clash', 720: 'ARAM Clash', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
 const NORMAL_QUEUES = [400, 430, 480, 490];
 const MULTI = { 2: 'mh.double', 3: 'mh.triple', 4: 'mh.quadra', 5: 'mh.penta' };
 const MH_DEFAULT = { from: '', to: '', range: 'all', result: '', champ: 0, sort: 'new', minKills: '', maxDeaths: '', minKda: '', minMulti: '' };
@@ -269,7 +269,11 @@ function rankTip(r) {
 }
 let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, more: {}, filter: { accs: new Set(), queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
 
+// custom games: Riot's own queues for them (matches.rs CUSTOM_QUEUES) or marked when stored
+const CUSTOM_QUEUES = [0, 3220, 3270];
+const isCustom = g => !!g.custom || CUSTOM_QUEUES.includes(g.q);
 function queueLabel(g) {
+  if (isCustom(g)) return t('mh.custom');
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440, 710, 4310].includes(g.q) ? ' ' + t('mh.ranked') : '');
   if (NORMAL_QUEUES.includes(g.q)) return t('mh.normal');
   return g.mode ? g.mode.charAt(0) + g.mode.slice(1).toLowerCase() : t('mh.other');

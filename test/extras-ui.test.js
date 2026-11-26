@@ -98,3 +98,43 @@ test('panel: no copy buttons for an account without a saved login', () => {
     assert.equal(app.$('[data-pcopy]'), null);
   });
 });
+
+// a custom game on the ARAM map (Riot's queue 3270) and a real ARAM game
+function mhGame(id, q, over = {}) {
+  const players = Array.from({ length: 10 }, (_, i) => ({ puuid: i === 0 ? P(1) : `x${i}`, name: 'N' + i, tag: 'EUW', team: i < 5 ? 100 : 200, champ: i + 1,
+    lvl: 15, k: 3, d: 2, a: 4, cs: 60, gold: 9000, dmg: 20000, vis: 5, items: [0, 0, 0, 0, 0, 0, 0], spells: [4, 32], win: i < 5 }));
+  return { id: String(id), t: Date.now() - id * 3600000, dur: 1300, q, mode: 'KIWI', remake: false, v: 6, players, ...over };
+}
+
+test('match history: a custom game on the ARAM map says "Custom" and has its own filter', () => {
+  const games = [mhGame(1, 3270, { custom: true }), mhGame(2, 2400)];
+  const replies = {
+    matches: { index: games.map((g) => [g.id, g.t, g.q, P(1)]), waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': (ids) => games.filter((g) => ids.includes(g.id)),
+  };
+  return withApp({ replies }, async (app) => {
+    await app.click('#navMatches');
+    const labels = app.$$('.mh-row .mh-q').map((x) => x.textContent);
+    assert.deepEqual(labels, ['Custom', 'ARAM']);
+    assert.ok(app.$('[data-mhq="custom"]'), 'a Custom filter');
+    await app.click('[data-mhq="custom"]');
+    assert.equal(last(app, 'matches').args[0].queue, 'custom');
+  });
+});
+
+test('player page: one game is "1 game", long names fit on one line', () => {
+  const lite = [{ id: '900', t: Date.now() - 3600000, dur: 1800, q: 420, mode: 'CLASSIC', remake: false, v: 0, lite: true, k: '900:0.900',
+    players: [{ puuid: 'x1', name: 'Faker', tag: 'KR1', team: 100, champ: 4, pos: 'mid', win: true, k: 5, d: 1, a: 5, cs: 200, dmg: 20000, vis: 10, spells: [4, 14] }] }];
+  const info = { puuid: 'x1', gameName: 'Faker', tagLine: 'KR1', iconId: 7, level: 300, solo: null, flex: null };
+  return withApp({ replies: { 'player-games': () => ({ ids: ['900'], games: lite, info, mastery: null, progress: { listed: true, done: 1, total: 1 } }),
+    champions: [{ id: 4, name: 'Twisted Fate' }] } }, async (app) => {
+    app.w.eval(`openPlayer({ puuid: 'x1', gameName: 'Faker', tagLine: 'KR1', region: 'EUW' })`);
+    await app.settle();
+    await new Promise((r) => setTimeout(r, 30));
+    await app.settle();
+    const row = app.$('.pl-champ');
+    assert.match(row.textContent, /Twisted Fate[\s\S]*1 game(?!s)/);
+    assert.doesNotMatch(row.textContent, /1 games/);
+    assert.equal(row.querySelector('.pl-cn b').title, 'Twisted Fate');
+  });
+});

@@ -1529,9 +1529,14 @@ async fn read_own_games(ids: Vec<String>) -> Vec<Value> {
     }
     got
 }
+/// Wakes the scouting loop at once (the player page opened another player).
+static LOOK_KICK: tokio::sync::Notify = tokio::sync::Notify::const_new();
 async fn scout_loop() {
     loop {
-        sleep(1500).await;
+        tokio::select! {
+            _ = sleep(1500) => {}
+            _ = LOOK_KICK.notified() => {}
+        }
         if riot::offline_test() || !win_shown() {
             continue;
         }
@@ -1789,15 +1794,69 @@ async fn look_round() -> bool {
     let ids: Vec<String> = others(|o| o.missing_all(&p))
         .into_iter()
         .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
-        .take(PAR_FAST)
         .collect();
     if ids.is_empty() {
         return false;
     }
-    for id in fetch_into_others(ids).await {
-        look(|l| *l.failed.entry(id).or_insert(0) += 1);
+    // always PAR_FAST games on their way: when one comes, the next starts (no waiting for the
+    // slowest of a round); progress to the window now and then. Stops for another player, a game,
+    // Live's own work, or when the client keeps refusing (the loop tries again after a pause).
+    use futures_util::StreamExt;
+    let mut jobs = futures_util::stream::iter(ids.into_iter().map(|id| async move {
+        let ok = fetch_one_into_others(&id).await;
+        (id, ok)
+    }))
+    .buffer_unordered(PAR_FAST);
+    let (mut last_emit, mut refused) = (now_ms(), 0usize);
+    while let Some((id, ok)) = jobs.next().await {
+        if ok {
+            refused = 0;
+        } else {
+            refused += 1;
+            look(|l| *l.failed.entry(id).or_insert(0) += 1);
+        }
+        // Live goes first: champion select (its players' lists), a game
+        let champ_select = with(|c| c.live.phase.as_deref() == Some("ChampSelect"));
+        let stop = look(|l| l.puuid != p) || game_on() || champ_select;
+        if stop || refused >= PAR_FAST / 2 {
+            break;
+        }
+        if now_ms() - last_emit > 400 {
+            last_emit = now_ms();
+            emit(
+                "player-changed",
+                json!({ "puuid": p, "progress": look_snapshot(&p) }),
+            );
+        }
+    }
+    let limit = others_limit();
+    others(|o| o.prune_to(limit));
+    if refused >= PAR_FAST / 2 {
+        sleep(BACK_OFF as u64).await;
     }
     true
+}
+/// One game into the others' store: from the own match history if it is there, else from the
+/// client (game and timeline). false when the client didn't give it.
+async fn fetch_one_into_others(id: &str) -> bool {
+    let own = with(|c| c.mh.has(id));
+    if own {
+        let ids = [id.to_string()];
+        let games = with(|c| matches::read_entries(&c.mh.games_file(), &c.mh.entries(&ids)));
+        others(|o| {
+            for g in &games {
+                o.insert(g);
+            }
+        });
+        return true;
+    }
+    match fetch_game(id.to_string()).await {
+        Some((g, _, _)) => {
+            others(|o| o.insert(&g));
+            true
+        }
+        None => false,
+    }
 }
 
 // ---------- auto-login ----------
@@ -3383,14 +3442,19 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             if p.is_empty() || p.len() > 80 {
                 return Value::Null;
             }
-            look(|l| {
-                if l.puuid != p {
+            let fresh = look(|l| {
+                let fresh = l.puuid != p;
+                if fresh {
                     *l = Look {
                         puuid: p.clone(),
                         ..Default::default()
                     };
                 }
+                fresh
             });
+            if fresh {
+                LOOK_KICK.notify_one();
+            }
             let have: std::collections::HashSet<String> = a(1)
                 .as_array()
                 .into_iter()

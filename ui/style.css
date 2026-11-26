@@ -1701,7 +1701,12 @@ span.mh-ch { cursor: default; }
 .pl-role .bar i { display: block; height: 100%; background: var(--gold); }
 .pl-role b { text-align: right; }
 .pl-champ, .pl-game { display: grid; align-items: center; gap: 10px; padding: 5px 6px; border-radius: 8px; font-size: 12.5px; }
-.pl-champ { grid-template-columns: 28px 1fr 64px 48px 78px 96px; }
+.pl-champ { grid-template-columns: 28px minmax(0, 1fr) 76px 44px 72px; }
+.pl-champ > span { white-space: nowrap; }
+.pl-champ > span:not(.pl-cn) { text-align: right; font-variant-numeric: tabular-nums; }
+.pl-cn { display: flex; flex-direction: column; min-width: 0; }
+.pl-cn b, .pl-cn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-cn small { font-size: 11px; }
 .pl-game { grid-template-columns: 28px 70px 76px 1fr auto; border-left: 3px solid transparent; }
 .pl-champ img, .pl-game img { width: 28px; height: 28px; border-radius: 6px; }
 .pl-champ .good { color: #4cc38a; } .pl-champ .bad { color: #ef6b70; }

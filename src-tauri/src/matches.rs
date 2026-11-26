@@ -16,17 +16,26 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-pub const QUEUE_GROUPS: [(&str, &[i64]); 8] = [
+pub const QUEUE_GROUPS: [(&str, &[i64]); 9] = [
     ("solo", &[420]),
     ("flex", &[440]),
     ("r5", &[710]),
     ("classic", &[4310]),
     ("normal", &[400, 430, 490, 480]),
-    ("aram", &[450, 2400, 3220, 3270]),
+    ("aram", &[450, 2400]),
     ("arena", &[1700, 1710]),
     // Clash on the Rift and ARAM Clash (the client calls their mode "CLASSIC" / "ARAM")
     ("clash", &[700, 720]),
+    // custom games: the client gives custom games on the ARAM map their own queues (3220 ARAM,
+    // 3270 ARAM: Mayhem), older ones queue 0; any other is marked "custom" when stored
+    ("custom", CUSTOM_QUEUES),
 ];
+pub const CUSTOM_QUEUES: &[i64] = &[0, 3220, 3270];
+/// A custom game (Riot's game type; Clash is one too, but it stays Clash).
+pub fn is_custom(g: &Value) -> bool {
+    let q = g["queueId"].as_i64().unwrap_or(-1);
+    (g["gameType"] == "CUSTOM_GAME" && q != 700 && q != 720) || CUSTOM_QUEUES.contains(&q)
+}
 const RANK_TTL: i64 = 12 * 3600 * 1000;
 const RANK_KEEP: i64 = 14 * 24 * 3600 * 1000;
 
@@ -1093,6 +1102,12 @@ pub fn lite(g: &Value) -> Option<Value> {
         json!({ "id": id_str(&g["gameId"]), "t": num(&g["gameCreation"]), "dur": dur, "q": num(&g["queueId"]),
         "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": 0, "lite": true }),
     )
+    .map(|mut o| {
+        if is_custom(g) {
+            o["custom"] = json!(true);
+        }
+        o
+    })
 }
 pub fn compact(g: &Value) -> Option<Value> {
     let players = players_of(g)?;
@@ -1105,6 +1120,12 @@ pub fn compact(g: &Value) -> Option<Value> {
         "mode": g["gameMode"].as_str().unwrap_or(""), "remake": dur < 300, "players": players, "v": GAME_VERSION,
         "teams": g["teams"].as_array().map(|t| t.iter().map(team).collect::<Vec<_>>()).unwrap_or_default() }),
     )
+    .map(|mut o| {
+        if is_custom(g) {
+            o["custom"] = json!(true);
+        }
+        o
+    })
 }
 fn players_of(g: &Value) -> Option<Vec<Value>> {
     let parts = g.get("participants")?.as_array()?;
@@ -1164,6 +1185,25 @@ pub fn own_rows(games: &[Value], owners: &HashSet<String>) -> Obj {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn custom_games_are_their_own_queue() {
+        let g = |q: i64, ty: &str| json!({ "queueId": q, "gameType": ty });
+        // Riot's custom queues on the ARAM map (3270 ARAM: Mayhem, 3220 ARAM), and any custom game
+        assert!(is_custom(&g(3270, "CUSTOM_GAME")) && is_custom(&g(3220, "CUSTOM_GAME")));
+        assert!(is_custom(&g(3100, "CUSTOM_GAME")) && is_custom(&g(0, "")));
+        // Clash is a custom game for Riot, but stays Clash; real ARAM stays ARAM
+        assert!(!is_custom(&g(700, "CUSTOM_GAME")) && !is_custom(&g(720, "CUSTOM_GAME")));
+        assert!(!is_custom(&g(2400, "MATCHED_GAME")) && !is_custom(&g(450, "MATCHED_GAME")));
+        let aram = QUEUE_GROUPS.iter().find(|(k, _)| *k == "aram").unwrap().1;
+        assert!(!aram.contains(&3270) && !aram.contains(&3220));
+        // stored games say so
+        let mut d = detail(5);
+        d["queueId"] = json!(3270);
+        d["gameType"] = json!("CUSTOM_GAME");
+        assert_eq!(compact(&d).unwrap()["custom"], true);
+        assert!(compact(&detail(6)).unwrap().get("custom").is_none());
+    }
 
     fn detail(id: i64) -> Value {
         json!({ "gameId": id, "gameCreation": id * 1000, "gameDuration": 1800, "queueId": 420, "gameMode": "CLASSIC",

@@ -36,7 +36,8 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     assert.match(app.$('.pl-figs').textContent, /75 %/);           // 9 of 12
     assert.match(app.$('.pl-figs').textContent, /7\.00/);           // (8 + 6) / 2
     assert.match(app.$$('.pl-role')[0].textContent, /Mid[\s\S]*100 %/);
-    assert.match(app.$('.pl-champ').textContent, /Ahri[\s\S]*12 games[\s\S]*75 %[\s\S]*1,500,000 pts/);
+    // the points under the name, then games, win rate, KDA
+    assert.match(app.$('.pl-champ').textContent, /Ahri[\s\S]*1,500,000 pts[\s\S]*12 games[\s\S]*75 %/);
     assert.match(body, /Ahri OTP/, 'traits from his games');
     assert.equal(app.$$('.pl-game').length, 12);
     assert.ok(app.$('.pl-game.win') && app.$('.pl-game.loss'));

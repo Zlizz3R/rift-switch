@@ -34,7 +34,7 @@ const perfKda = r => (r.perfect ? t('mh.perfect') : perfDec(r.kda, 2));
 const perfGames = n => (n === 1 ? t('perf.game1') : t('dash.nGames', { n: num(n) }));
 const perfChamp = id => (champById(id) || {}).name || '#' + id;
 const PERF_QUEUES = () => [['solo', 'Solo/Duo'], ['flex', 'Flex'], ['r5', 'Ranked 5v5'], ['classic', 'Classic 5v5'], ['normal', t('mh.normal')],
-  ['aram', 'ARAM'], ['arena', 'Arena'], ['clash', 'Clash']];
+  ['aram', 'ARAM'], ['arena', 'Arena'], ['clash', 'Clash'], ['custom', t('mh.custom')]];
 // what the filter counts, for select(): the chosen accounts and queues
 const perfF = () => ({ ...perf.f, accs: ovChosen().map(a => a.puuid) });
 

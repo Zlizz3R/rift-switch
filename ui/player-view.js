@@ -119,9 +119,9 @@ function renderPlayer() {
   // champions: the most played, with win rate, KDA and mastery
   const mast = plv.mastery || {};
   const champsRows = [...Stats.groupBy(rows, x => x.p.champ)].sort((a, b) => b[1].n - a[1].n).slice(0, 10).map(([c, a]) => `<div class="pl-champ">
-      <img src="${champIcon(c)}" alt=""><b>${esc((champById(c) || {}).name || '#' + c)}</b>
-      <span>${t('pl.gamesN', { n: a.n })}</span><span class="${a.winrate >= 0.55 ? 'good' : a.winrate <= 0.45 ? 'bad' : ''}">${pct(a.winrate)}</span>
-      <span>${a.perfect ? t('perf.perfect') : a.kda.toFixed(2) + ' KDA'}</span><small>${mast[c] ? t('pl.points', { n: num(Number(mast[c])) }) : ''}</small></div>`).join('');
+      <img src="${champIcon(c)}" alt=""><span class="pl-cn"><b title="${esc((champById(c) || {}).name || '')}">${esc((champById(c) || {}).name || '#' + c)}</b>${mast[c] ? `<small>${t('pl.points', { n: num(Number(mast[c])) })}</small>` : ''}</span>
+      <span>${perfGames(a.n)}</span><span class="${a.winrate >= 0.55 ? 'good' : a.winrate <= 0.45 ? 'bad' : ''}">${pct(a.winrate)}</span>
+      <span>${a.perfect ? t('perf.perfect') : a.kda.toFixed(2) + ' KDA'}</span></div>`).join('');
 
   // traits: this season's ranked games, every role (as on the Overview)
   const mastRows = Object.keys(mast).length ? Object.entries(mast).map(([id, v]) => ({ id: +id, total: +v, n: 1 })).sort((a, b) => b.total - a.total) : null;
