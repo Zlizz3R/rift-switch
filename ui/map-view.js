@@ -42,11 +42,13 @@ function mapChart(all) {
     <div class="mc-ticks">${ticks}</div><p class="fine">${t('mp.drag')}</p></div>`;
 }
 const mvWindowLabel = () => (mv.preset ? t('dm.ph.' + mv.preset) : mv.to == null ? t('mp.from', { a: mv.from }) : t('mp.range', { a: mv.from, b: mv.to }));
+// only games on other maps (ARAM, Arena): the map is Summoner's Rift's
+const mvOnlyOff = parts => parts.length > 0 && parts.every(x => Stats.offRift(x.g));
 // opts.foot: false on the player page (its own line says where the games come from)
 function perfMapHtml(parts, opts = {}) {
   const all = MapMath.events(parts);
   const nGames = MapMath.games(parts).length;
-  if (!all.length) return `<div class="chart-empty">${t('mp.none')}</div>`;
+  if (!all.length) return `<div class="chart-empty">${t(mvOnlyOff(parts) ? 'mp.rift' : 'mp.none')}</div>`;
   const win = all.filter(e => MapMath.inWindow(e, mv.from, mv.to));
   const shown = mv.kind === 'both' ? win : win.filter(e => e.kind === (mv.kind === 'kills' ? 'kill' : 'death'));
   const dl = win.filter(e => e.kind === 'death'), kl = win.filter(e => e.kind === 'kill');

@@ -242,21 +242,21 @@ test('at a glance: customize – order, size, hide, the extra cards; kept as a s
     await app.settle();
     const cards = () => app.$$('#sumBody [data-card]').map(c => c.dataset.card);
     const lastSet = () => app.called('set-setting').pop().args;
-    assert.deepEqual(cards(), ['figs', 'form', 'traits', 'champs', 'roles', 'style', 'rec', 'mast'], 'the designed layout, no extra cards');
+    assert.deepEqual(cards(), ['figs', 'games', 'traits', 'champs', 'roles', 'style', 'rec', 'mast'], 'the designed layout: recent games, no form, no map');
     assert.ok(!app.$('#sumBody .ov-sum.custom'));
     await app.click('[data-ocust]');
     assert.ok(app.$('.ov-sum.editing'));
-    assert.match(app.$('.ov-tray').textContent, /Recent games[\s\S]*Map/);
-    // the map in, traits out, champions one place earlier, the form small
+    assert.match(app.$('.ov-tray').textContent, /Form[\s\S]*Map/);
+    // the map in, traits out, champions one place earlier, the recent games small
     await app.click('[data-oadd="map"]');
     await app.click('[data-ohide="traits"]');
     await app.click('[data-omove="champs:-1"]');
-    await app.click('[data-osize="form:1"]');
-    assert.deepEqual(cards(), ['figs', 'champs', 'form', 'roles', 'style', 'rec', 'mast', 'map']);
-    assert.equal(app.$('[data-card="form"]').dataset.span, '1');
+    await app.click('[data-osize="games:1"]');
+    assert.deepEqual(cards(), ['figs', 'champs', 'games', 'roles', 'style', 'rec', 'mast', 'map']);
+    assert.equal(app.$('[data-card="games"]').dataset.span, '1');
     const saved = lastSet();
     assert.equal(saved[0], 'ovLayout');
-    assert.deepEqual([...saved[1].hidden].sort(), ['games', 'traits']);
+    assert.deepEqual([...saved[1].hidden].sort(), ['form', 'traits']);
     // dragging a card onto another: before it
     const drag = (type, el, x) => { const ev = new app.w.Event(type, { bubbles: true, cancelable: true }); ev.clientX = x; el.dispatchEvent(ev); };
     drag('dragstart', app.$('[data-card="map"]'), 0);
@@ -273,7 +273,47 @@ test('at a glance: customize – order, size, hide, the extra cards; kept as a s
     await app.click('[data-oreset]');
     assert.deepEqual(lastSet(), ['ovLayout', null]);
     await app.click('[data-odone]');
-    assert.deepEqual(cards(), ['figs', 'form', 'traits', 'champs', 'roles', 'style', 'rec', 'mast']);
+    assert.deepEqual(cards(), ['figs', 'games', 'traits', 'champs', 'roles', 'style', 'rec', 'mast']);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('showcase: favourites from the collections in the head – pick, order, size, empty; kept as a setting', async () => {
+  const colls = [{ puuid: 'p1', skins: [[103001, 'Dynasty Ahri', '/lol-game-data/assets/ahri1.jpg'], [103015, 'K/DA Ahri', '/lol-game-data/assets/ahri15.jpg']], icons: [29, 7],
+    wards: [[3, 'Poro Ward', '/lol-game-data/assets/w3.png']] }, { puuid: 'p2', skins: [[103001, 'Dynasty Ahri', '/lol-game-data/assets/ahri1.jpg']], emotes: [[4096, 'Thumbs up', '/lol-game-data/assets/e.png']] }];
+  const app = await boot({ replies: { ...replies, collections: colls } });
+  try {
+    await app.click('#navDash');
+    await app.settle();
+    assert.ok(app.$('#ovShow').hidden, 'nothing chosen: no showcase, only the button');
+    await app.click('#ovShowBtn [data-shedit]');
+    await app.settle();
+    assert.ok(!app.$('#showBox').hidden);
+    // each skin once, across the accounts
+    assert.equal(app.$$('.sh-grid .sh-pick').length, 2);
+    await app.click('[data-shadd="skin:103015"]');
+    await app.click('[data-shkind="icon"]');
+    await app.click('[data-shadd="icon:29"]');
+    await app.click('[data-shkind="emote"]');
+    await app.click('[data-shadd="emote:4096"]');
+    const last = () => app.called('set-setting').filter(c => c.args[0] === 'showcase').pop().args[1];
+    assert.deepEqual(last().items.map(x => x.k + x.id), ['skin103015', 'icon29', 'emote4096']);
+    // the emote one place earlier, taken out with a second click, the size large
+    await app.click('[data-shmove="2:-1"]');
+    assert.deepEqual(last().items.map(x => x.id), [103015, 4096, 29]);
+    await app.click('[data-shadd="emote:4096"]');
+    await app.click('[data-shsize="3"]');
+    assert.deepEqual(last(), { size: 3, items: [{ k: 'skin', id: 103015, n: 'K/DA Ahri', p: '/lol-game-data/assets/ahri15.jpg' }, { k: 'icon', id: 29, n: '', p: '' }] });
+    await app.click('#showDone');
+    assert.ok(app.$('#showBox').hidden);
+    assert.ok(!app.$('#ovShow').hidden && app.$('#ovShow').classList.contains('s-3'));
+    assert.equal(app.$$('#ovShow .shi').length, 2);
+    assert.match(app.$('#ovShow .shi.k-skin').title, /K\/DA Ahri/);
+    // empty again
+    await app.click('#ovShowBtn [data-shedit]');
+    await app.settle();
+    await app.click('#showClear');
+    assert.ok(app.$('#ovShow').hidden);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

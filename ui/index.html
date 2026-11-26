@@ -99,8 +99,9 @@
           <div class="ov-art" id="ovArt"></div>
           <div class="ov-top">
             <div class="ov-who" id="ovWho"></div>
-            <div class="ov-side"><div class="ov-search-slot" id="ovSearchSlot"><div class="pl-search" id="plSearchBox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="plSearch" type="text" spellcheck="false" autocomplete="off" data-i18n-ph="pl.searchPh" data-i18n-title="pl.searchT"><kbd>Ctrl K</kbd><div class="pl-suggest" id="plSuggest" hidden></div></div></div></div>
+            <div class="ov-side"><div class="ov-search-slot" id="ovSearchSlot"><div class="pl-search" id="plSearchBox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="plSearch" type="text" spellcheck="false" autocomplete="off" data-i18n-ph="pl.searchPh" data-i18n-title="pl.searchT"><kbd>Ctrl K</kbd><div class="pl-suggest" id="plSuggest" hidden></div></div></div><div id="ovShowBtn"></div></div>
           </div>
+          <div class="ov-show" id="ovShow" hidden></div>
           <div class="seg ov-accs" id="ovAccs" hidden></div>
           <div class="subtabs ov-tabs" id="dashTabs">
           <button data-dt="sum" data-i18n="ov.tabSum"></button><button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="champs" data-i18n="dash.tabChamps"></button><button data-dt="style" data-i18n="dash.tabStyle"></button><button data-dt="map" data-i18n="dash.tabMap"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="tags" data-i18n="dash.tabTags"></button><button data-dt="seasons" data-i18n="dash.tabSeasons"></button>
@@ -472,6 +473,15 @@
   </form>
 </div>
 
+<div class="overlay" id="showBox" hidden>
+  <div class="card show-card">
+    <h2 data-i18n="sh.title"></h2>
+    <p class="sub" data-i18n="sh.sub"></p>
+    <div id="showEd"></div>
+    <div class="row"><button class="btn" id="showClear" data-i18n="sh.clear"></button><span class="grow"></span><button class="btn gold" id="showDone" data-i18n="ov.done"></button></div>
+  </div>
+</div>
+
 <div class="overlay" id="helpBox" hidden>
   <div class="card help-card">
     <h2 id="helpTitle"></h2>
@@ -616,6 +626,7 @@
 <script src="insights.js"></script>
 <script src="live-more.js"></script>
 <script src="summary.js"></script>
+<script src="showcase.js"></script>
 <script src="player-view.js"></script>
 <script src="collection.js"></script>
 <script src="bulk.js"></script>

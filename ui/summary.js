@@ -111,6 +111,7 @@ function renderOvHero() {
   }
   el.innerHTML = sumWho(who);
   sumArt($('ovArt'), sumTopChamp(season.length ? season : rows));
+  if (typeof renderShowcase === 'function') renderShowcase();
 }
 
 // ---------- the cards ----------
@@ -218,16 +219,25 @@ function sumChamps(parts, ctx) {
   return sumCard('champs', t('pl.champs'), body || `<p class="muted">${esc(t('ov.none'))}</p>`, sumGo(ctx, 'champs', t('dash.tabChamps')));
 }
 
-// traits: strengths and things to work on (res: Tags.evaluate…; null = none for this scope)
+// traits: strengths and things to work on (res: Tags.evaluate…; null = none for this scope). The
+// role tags of the main position only (the position played most) – or of every position, a switch
+// in the card's head (kept in this browser: rs.sumTraitsAll)
+const sumTraitsAll = () => { try { return localStorage.getItem('rs.sumTraitsAll') === '1'; } catch (e) { return false; } };
 function sumTraits(res, ctx) {
   const chip = x => `<span class="tchip tc-${tagColor(x)}" title="${esc([tagText(x), tagRoleText(x)].filter(Boolean).join('\n'))}">${tagRoleIcon(x)}${esc(tagName(x))}</span>`;
-  const picked = res ? Tags.pick(res.results) : [];
+  const main = res && !res.aram ? res.main || res.most : null;
+  const roles = res && res.roles ? res.roles.length : 0;
+  const all = sumTraitsAll() || !main;
+  const picked = res ? Tags.pick(res.results).filter(x => all || !x.role || x.role === main) : [];
   const strong = picked.filter(Tags.isStrength), weak = picked.filter(Tags.isWeakness), rest = picked.filter(x => !Tags.isStrength(x) && !Tags.isWeakness(x));
   const body = picked.length ? `<div class="st-sec"><span class="d-sec-t">${t('tags.strengths')}</span><div class="tchips">${strong.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>
     ${ctx.others ? '' : `<div class="st-sec"><span class="d-sec-t">${t('tags.work')}</span><div class="tchips">${weak.map(chip).join('') || `<span class="muted">${t('tags.nothing')}</span>`}</div></div>`}
     ${rest.length ? `<div class="st-sec"><span class="d-sec-t">${t('ov.more')}</span><div class="tchips">${rest.map(chip).join('')}</div></div>` : ''}`
     : `<p class="muted">${esc(t(ctx.scope === 'aram' ? 'ov.noAramTraits' : 'tags.none'))}</p>`;
-  const mode = ctx.scope === 'aram' ? `<span class="ovc-sub">ARAM</span>` : `<span class="ovc-sub">${esc(t('pl.ranked'))}</span>`;
+  const sw = main && roles > 1
+    ? `<button class="ovc-sub st-pos" data-straits title="${esc(t(all ? 'ov.traitsMainT' : 'ov.traitsAllT'))}">${all ? esc(t('ov.allPos')) : `<img src="${posIcon(main)}" alt="">${esc(t('pos.' + main))}`}</button>`
+    : main && !ctx.others ? `<span class="ovc-sub st-pos"><img src="${posIcon(main)}" alt="">${esc(t('pos.' + main))}</span>` : '';
+  const mode = ctx.scope === 'aram' ? `<span class="ovc-sub">ARAM</span>` : `${sw}<span class="ovc-sub">${esc(t('pl.ranked'))}</span>`;
   return sumCard('traits', t('dash.tabTags'), body, sumGo(ctx, 'tags', t('dash.tabTags')), mode);
 }
 
@@ -346,7 +356,7 @@ function sumGames(parts, ctx) {
 function sumMap(parts, ctx) {
   const ev = MapMath.events(parts).filter(e => e.kind === 'death');
   const go = sumGo(ctx, 'map', t('dash.tabMap'));
-  if (!ev.length) return sumCard('map', t('dash.tabMap'), `<p class="muted">${esc(t('mp.none'))}</p>`, go);
+  if (!ev.length) return sumCard('map', t('dash.tabMap'), `<p class="muted">${esc(t(mvOnlyOff(parts) ? 'mp.rift' : 'mp.none'))}</p>`, go);
   const z = MapMath.hotspot(MapMath.sum(ev, MapMath.games(parts).length));
   return sumCard('map', t('dash.tabMap'), `<div class="smap">${mapSvg(ev)}</div>${z ? `<p class="fine">${esc(t('dm.hot', { pct: Math.round(z.share * 100), zone: t('dm.z.' + z.zone), n: z.n, all: ev.length }))}</p>` : ''}`, go);
 }
@@ -354,10 +364,10 @@ function sumMap(parts, ctx) {
 // ---------- the cards and their layout ----------
 // Every card has an id; "At a glance" shows them in its designed layout (no holes at any width) –
 // or, once arranged by hand (setting ovLayout: { order, hidden, size }), in that order and size on
-// a grid of 1–4 columns. Sizes: 1 small, 2 wide, 4 the full row. "Recent games" and "Map" are extra
-// cards, hidden until added.
-const SUM_CARDS = ['figs', 'form', 'traits', 'champs', 'roles', 'style', 'rec', 'mast', 'games', 'map'];
-const SUM_EXTRA = ['games', 'map'];
+// a grid of 1–4 columns. Sizes: 1 small, 2 wide, 4 the full row. "Form" and "Map" are extra cards,
+// hidden until added ("Recent games" has the form's place in the designed layout).
+const SUM_CARDS = ['figs', 'games', 'traits', 'champs', 'roles', 'style', 'rec', 'mast', 'form', 'map'];
+const SUM_EXTRA = ['form', 'map'];
 const SUM_SIZE = { figs: 4, form: 2, traits: 1, champs: 1, roles: 1, style: 1, rec: 1, mast: 1, games: 2, map: 1 };
 const SUM_NAME = { figs: 'pl.figures', form: 'ov.form', traits: 'dash.tabTags', champs: 'pl.champs', roles: 'ov.roles', style: 'dash.tabStyle',
   rec: 'ov.records', mast: 'dash.tabMast', games: 'pl.recent', map: 'dash.tabMap' };
@@ -412,6 +422,12 @@ function sumSaveLayout(lay) {
   sumRedraw();
 }
 const sumRedraw = () => (view === 'player' ? renderPlayer() : renderSum());
+// the traits card: main position ⇄ every position
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-straits]')) return;
+  try { localStorage.setItem('rs.sumTraitsAll', sumTraitsAll() ? '0' : '1'); } catch (err) { /* only for this time */ }
+  sumRedraw();
+});
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-ocust], [data-odone], [data-oreset], [data-oadd], [data-ohide], [data-osize], [data-omove]');
   if (!b || !b.closest('#viewDash, #viewPlayer')) return;

@@ -1,5 +1,5 @@
 // Overview → Map: where you die and where you kill, by minute. Every death and kill with a place
-// (game format 6: "kills" [second, killer, victim, [assists], x, y], Summoner's Rift in hundreds of
+// (Summoner's Rift games only; game format 6: "kills" [second, killer, victim, [assists], x, y], Summoner's Rift in hundreds of
 // units). Seen from the blue side: a red-side game is mirrored across the map's other diagonal, so
 // your base is always bottom left and top lane stays top lane. No DOM; shared by the window and tests.
 (function (root) {
@@ -30,7 +30,7 @@
   function events(parts) {
     const out = [];
     for (const { g, p } of parts) {
-      if (!Array.isArray(g.kills) || St.isRemake(g)) continue;
+      if (!Array.isArray(g.kills) || St.isRemake(g) || St.offRift(g)) continue;
       const i = g.players.indexOf(p);
       if (i < 0) continue;
       for (const k of g.kills) {
@@ -46,7 +46,7 @@
   // only deaths (as before)
   const deaths = parts => events(parts).filter(e => e.kind === 'death');
   // games that count: with a timeline (places), not remakes
-  const games = parts => parts.filter(({ g }) => Array.isArray(g.kills) && !St.isRemake(g) && g.kills.some(k => k.length >= 6));
+  const games = parts => parts.filter(({ g }) => Array.isArray(g.kills) && !St.isRemake(g) && !St.offRift(g) && g.kills.some(k => k.length >= 6));
 
   // in a time window: minutes [from, to) – to null = to the end
   const inWindow = (e, from, to) => e.s >= from * 60 && (to == null || e.s < to * 60);

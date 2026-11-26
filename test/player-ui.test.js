@@ -42,9 +42,10 @@ test('player page: rank, key figures, roles, champions, traits and the recent ga
     assert.match(app.$('.ovc-champs .scr').textContent, /Ahri[\s\S]*12 games[\s\S]*75 %/);
     assert.match(app.$('.ovc-mast').textContent, /Ahri[\s\S]*1,500,000 pts/);
     assert.match(body, /Ahri OTP/, 'traits from his games');
-    // form: the games as pictures, wins and losses
-    assert.equal(app.$$('.sf-g').length, 12);
-    assert.ok(app.$('.sf-g.win') && app.$('.sf-g.loss'));
+    // the recent games (where the form was): the newest 8, wins and losses
+    assert.equal(app.$$('.ovc-games .sgm').length, 8);
+    assert.match(app.$('.ovc-games .sgm').textContent, /Ahri|Victory|Win/);
+    assert.ok(app.$('.sgm.win'));
     assert.match(app.$('.ovc-rec').textContent, /Most kills[\s\S]*8 kills/);
     // the splash art of the champion played most (Ahri)
     assert.equal(app.$('#plArt').dataset.alias, 'ahri');
@@ -110,7 +111,7 @@ test('player page: the window sends the keys of the games it holds; "player-chan
     const calls = app.called('player-games');
     assert.ok(calls.length >= 2);
     assert.deepEqual([...calls[calls.length - 1].args[1]].sort(), lite.map(g => g.k).sort());
-    assert.equal(app.$$('.sf-g').length, 12, 'still there after a reply without games');
+    assert.equal(app.$$('.ovc-games .sgm').length, 8, 'still there after a reply without games');
     // loaded: no progress bar
     assert.equal(app.$('#plHead .pl-prog'), null);
     assert.deepEqual(app.errors.map(String), []);

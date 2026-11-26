@@ -100,12 +100,15 @@ into one category.
 - **One page for your accounts and for anyone else**: a head with the splash art of the champion played most,
   the avatar(s), Solo/Duo and Flex with their crest, the account chips – and the **player search** (Ctrl+K).
   Another player's page looks the same, with *Open with* and the games with you.
-- **At a glance** – the start page: key figures with their trend (the last 10 games against the 10 before), form
-  (the last 20 games as pictures, the LP of 30 days), traits, champions, roles, play style, highlights (most kills,
-  best KDA, multikills, longest win streak) and mastery – each card leads into its tab. *Ranked*, *ARAM* or *All
-  games*; an ARAM player starts on ARAM (the share of the team and the activity instead of roles and the radar).
-  **Customize**: drag the cards into your order, make them small, wide or full width, hide some, add *Recent games*
-  and a *Map* – *Reset* brings the designed layout back.
+- **Showcase** – your favourite skins, icons, ward skins and emotes from all your accounts in the Overview's head,
+  over the splash art: any mix, your order, small, medium or large (*★ Showcase* next to the search). Only you see it.
+- **At a glance** – the start page: key figures with their trend (the last 10 games against the 10 before), the
+  recent games, traits (of your main position – one click shows every position), champions, roles, play style,
+  highlights (most kills, best KDA, multikills, longest win streak) and mastery – each card leads into its tab.
+  *Ranked*, *ARAM* or *All games*; an ARAM player starts on ARAM (the share of the team and the activity instead of
+  roles and the radar). **Customize**: drag the cards into your order, make them small, wide or full width, hide
+  some, add the *Form* (the last 20 games as pictures, the LP of 30 days) and a *Map* – *Reset* brings the designed
+  layout back.
 - **The LP history of every account in one chart**, on coloured tier bands. Hover: every account's rank on that day.
 - **Any combination of queues** – Solo/Duo, Flex, Ranked 5v5, Classic 5v5: one colour per account, one line style
   per queue.
@@ -142,7 +145,7 @@ into one category.
   **ARAM** has traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
   hunter, team carry …), measured against the ARAM games of the other players – also on Live's cards in an ARAM game.
   Other players (Live, the player page) only get what speaks for them – the things to work on are for your own accounts.
-- **Map** – where you die and where you kill (deaths, kills or both; the same filter: account, queue, season,
+- **Map** – Summoner's Rift games only (ARAM and Arena are other maps) – where you die and where you kill (deaths, kills or both; the same filter: account, queue, season,
   role), for a game phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart
   under the map (kills up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min:
   45 % of the deaths: top river") and every zone's share, deaths and kills side by side.

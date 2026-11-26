@@ -13,7 +13,7 @@ pub fn defaults() -> Obj {
         "autostart": false, "startMinimized": false, "askedStart": false, "updateCheck": true, "autoAccept": false, "matchNotify": false, "autoPlay": true, "confirmSwitch": true,
         "sort": "level", "lang": "en", "theme": "system", "champPool": null, "lane": "top", "laneChosen": false, "tile": null,
         "streamer": false, "streamerHide": null, "uiScale": "100", "layout": "tiles", "seenVersion": "", "uiTabs": null,
-        "othersLimit": "1000", "tagsLong": false, "tagTier": "2", "autoLoad": true, "ovLayout": null
+        "othersLimit": "1000", "tagsLong": false, "tagTier": "2", "autoLoad": true, "ovLayout": null, "showcase": null
     })
     .as_object()
     .unwrap()
@@ -109,6 +109,43 @@ fn as_num(v: &Value) -> Option<f64> {
 const OV_CARDS: [&str; 10] = [
     "figs", "form", "traits", "champs", "roles", "style", "rec", "mast", "games", "map",
 ];
+/// The Overview's showcase (ui/showcase.js): { size: 1–3, items: [{ k, id, n, p }] } – at most 24
+/// items of the four kinds, a name and a game-data picture path; anything else is dropped.
+const SHOW_KINDS: [&str; 4] = ["icon", "skin", "ward", "emote"];
+fn showcase(v: &Value) -> Value {
+    let Some(o) = v.as_object() else {
+        return Value::Null;
+    };
+    let size = o
+        .get("size")
+        .and_then(Value::as_u64)
+        .filter(|n| (1..=3).contains(n))
+        .unwrap_or(2);
+    let mut items: Vec<Value> = vec![];
+    for x in o
+        .get("items")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let (Some(k), Some(id)) = (
+            x["k"].as_str().filter(|k| SHOW_KINDS.contains(k)),
+            x["id"].as_i64(),
+        ) else {
+            continue;
+        };
+        if id < 0 || items.iter().any(|y| y["k"] == k && y["id"] == id) || items.len() >= 24 {
+            continue;
+        }
+        let n: String = x["n"].as_str().unwrap_or("").chars().take(80).collect();
+        let p = x["p"]
+            .as_str()
+            .filter(|p| p.starts_with("/lol-game-data/assets/") && p.len() <= 300)
+            .unwrap_or("");
+        items.push(json!({ "k": k, "id": id, "n": n, "p": p }));
+    }
+    json!({ "size": size, "items": items })
+}
 fn ov_layout(v: &Value) -> Value {
     let Some(o) = v.as_object() else {
         return Value::Null;
@@ -174,6 +211,7 @@ pub fn clean_setting(key: &str, value: &Value) -> Option<Value> {
         },
         // Overview → At a glance: { order: [card …], hidden: [card …], size: { card: 1–4 } }
         "ovLayout" => ov_layout(value),
+        "showcase" => showcase(value),
         "champPool" => match value.as_array() {
             Some(a) => Value::Array(
                 a.iter()
@@ -244,6 +282,19 @@ mod tests {
         );
         assert_eq!(clean_setting("ovLayout", &json!(null)), Some(Value::Null));
         assert_eq!(clean_setting("autoLoad", &json!(0)), Some(json!(false)));
+        // the showcase: known kinds, each item once, picture paths of the game data only
+        let v = clean_setting(
+            "showcase",
+            &json!({ "size": 7, "items": [{ "k": "skin", "id": 103001, "n": "Ahri", "p": "/lol-game-data/assets/a.jpg" },
+                { "k": "skin", "id": 103001 }, { "k": "x", "id": 1 }, { "k": "ward", "id": 3, "p": "https://evil" }, { "k": "icon", "id": 29 }] }),
+        )
+        .unwrap();
+        assert_eq!(
+            v,
+            json!({ "size": 2, "items": [{ "k": "skin", "id": 103001, "n": "Ahri", "p": "/lol-game-data/assets/a.jpg" },
+                { "k": "ward", "id": 3, "n": "", "p": "" }, { "k": "icon", "id": 29, "n": "", "p": "" }] })
+        );
+        assert_eq!(clean_setting("showcase", &json!(null)), Some(Value::Null));
         // gone: appear offline (Riot's policies)
         assert_eq!(clean_setting("appearOffline", &json!(true)), None);
     }

@@ -829,6 +829,9 @@ pub struct GameData {
     pub chroma: HashMap<i64, u8>,
     pub ward: HashMap<i64, u8>,
     pub icon: HashMap<i64, u8>,
+    /// name and picture of ward skins and emotes (the Overview's showcase)
+    pub ward_info: HashMap<i64, (String, String)>,
+    pub emote_info: HashMap<i64, (String, String)>,
 }
 pub fn rarity_of_name(s: &str) -> u8 {
     match s {
@@ -850,8 +853,8 @@ fn rarity_num(v: &Value) -> u8 {
         .unwrap_or(0);
     pick.min(7) as u8
 }
-/// skins.json / ward-skins.json / summoner-icons.json → the maps
-pub fn game_data_of(skins: &Value, wards: &Value, icons: &Value) -> GameData {
+/// skins.json / ward-skins.json / summoner-icons.json / summoner-emotes.json → the maps
+pub fn game_data_of(skins: &Value, wards: &Value, icons: &Value, emotes: &Value) -> GameData {
     let mut g = GameData::default();
     let list: Vec<&Value> = match skins {
         Value::Object(o) => o.values().collect(),
@@ -880,6 +883,30 @@ pub fn game_data_of(skins: &Value, wards: &Value, icons: &Value) -> GameData {
     for w in wards.as_array().into_iter().flatten() {
         if let Some(id) = w["id"].as_i64() {
             g.ward.insert(id, rarity_num(w));
+            let path = w["wardImagePath"].as_str().unwrap_or("");
+            if !path.is_empty() {
+                g.ward_info.insert(
+                    id,
+                    (
+                        w["name"].as_str().unwrap_or("").to_string(),
+                        path.to_string(),
+                    ),
+                );
+            }
+        }
+    }
+    for e in emotes.as_array().into_iter().flatten() {
+        let (Some(id), Some(path)) = (e["id"].as_i64(), e["inventoryIcon"].as_str()) else {
+            continue;
+        };
+        if id > 0 && !path.is_empty() {
+            g.emote_info.insert(
+                id,
+                (
+                    e["name"].as_str().unwrap_or("").to_string(),
+                    path.to_string(),
+                ),
+            );
         }
     }
     for i in icons.as_array().into_iter().flatten() {
@@ -910,16 +937,22 @@ pub async fn game_data() -> Option<std::sync::Arc<GameData>> {
             return Some(g);
         }
     }
-    let (s, w, i) = tokio::join!(
+    let (s, w, i, e) = tokio::join!(
         lcu("/lol-game-data/assets/v1/skins.json", 15000, "GET"),
         lcu("/lol-game-data/assets/v1/ward-skins.json", 10000, "GET"),
         lcu("/lol-game-data/assets/v1/summoner-icons.json", 15000, "GET"),
+        lcu(
+            "/lol-game-data/assets/v1/summoner-emotes.json",
+            10000,
+            "GET"
+        ),
     );
     let s = s?;
     let mut g = game_data_of(
         &s,
         w.as_ref().unwrap_or(&Value::Null),
         i.as_ref().unwrap_or(&Value::Null),
+        e.as_ref().unwrap_or(&Value::Null),
     );
     if g.skin.is_empty() {
         return None;
@@ -971,6 +1004,43 @@ pub fn rarities_of(inv: &Value, g: &GameData, skins: &[i64]) -> Value {
         }
     }
     Value::Object(out)
+}
+
+/// What the Overview's showcase can show: the owned summoner icons (ids – their picture is known by
+/// the id), ward skins and emotes ([id, name, picture], from the client's game data; without it
+/// only the icons). Each list only when the inventory has any.
+pub fn showcase_items_of(inv: &Value, g: Option<&GameData>) -> Obj {
+    let items = inv.as_array().map(|a| a.as_slice()).unwrap_or(&[]);
+    let owned = |ty: &str| -> Vec<i64> {
+        let mut ids: Vec<i64> = items
+            .iter()
+            .filter(|x| x["inventoryType"] == ty && x["owned"] == true)
+            .filter_map(|x| x["itemId"].as_i64())
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        ids
+    };
+    let mut out = Obj::new();
+    let icons = owned("SUMMONER_ICON");
+    if !icons.is_empty() {
+        out.insert("icons".into(), json!(icons));
+    }
+    if let Some(g) = g {
+        for (key, ty, info) in [
+            ("wards", "WARD_SKIN", &g.ward_info),
+            ("emotes", "EMOTE", &g.emote_info),
+        ] {
+            let list: Vec<Value> = owned(ty)
+                .into_iter()
+                .filter_map(|id| info.get(&id).map(|(n, t)| json!([id, n, t])))
+                .collect();
+            if !list.is_empty() {
+                out.insert(key.into(), json!(list));
+            }
+        }
+    }
+    out
 }
 
 /// The owned champions (ids) of the inventory – the second source when champions-minimal is empty.
@@ -1066,6 +1136,14 @@ pub async fn profile_data(me: &Obj) -> Obj {
             c["champs"] = json!(inv_champs);
         }
     }
+    let gd_now = game_data().await;
+    let show = showcase_items_of(inv.as_ref().unwrap_or(&Value::Null), gd_now.as_deref());
+    if !show.is_empty() {
+        let c = p_coll.get_or_insert_with(|| json!({ "at": now_ms() }));
+        for (k, v) in show {
+            c[k.as_str()] = v;
+        }
+    }
     let mut counts = counts_of(
         inv.as_ref().unwrap_or(&Value::Null),
         perks.as_ref().unwrap_or(&Value::Null),
@@ -1075,7 +1153,7 @@ pub async fn profile_data(me: &Obj) -> Obj {
     if let (Some(inv), Some(gd)) = (
         inv.as_ref()
             .filter(|i| i.as_array().is_some_and(|a| !a.is_empty())),
-        game_data().await,
+        gd_now,
     ) {
         if let Some(c) = counts.as_mut().and_then(Value::as_object_mut) {
             let owned_skins: Vec<i64> = skins
@@ -2197,6 +2275,39 @@ mod tests {
     }
 
     #[test]
+    fn showcase_items_owned_with_name_and_picture() {
+        let inv = json!([
+            { "inventoryType": "SUMMONER_ICON", "itemId": 29, "owned": true },
+            { "inventoryType": "SUMMONER_ICON", "itemId": 7, "owned": true },
+            { "inventoryType": "SUMMONER_ICON", "itemId": 8, "owned": false },
+            { "inventoryType": "WARD_SKIN", "itemId": 3, "owned": true },
+            { "inventoryType": "WARD_SKIN", "itemId": 99, "owned": true },
+            { "inventoryType": "EMOTE", "itemId": 4096, "owned": true }
+        ]);
+        let g = game_data_of(
+            &json!([]),
+            &json!([{ "id": 3, "name": "Poro Ward", "wardImagePath": "/lol-game-data/assets/w3.png" }]),
+            &Value::Null,
+            &json!([{ "id": 4096, "name": "Thumbs up", "inventoryIcon": "/lol-game-data/assets/e.png" }, { "id": 0, "inventoryIcon": "" }]),
+        );
+        let o = showcase_items_of(&inv, Some(&g));
+        assert_eq!(o["icons"], json!([7, 29]));
+        // a ward the game data doesn't know is left out
+        assert_eq!(
+            o["wards"],
+            json!([[3, "Poro Ward", "/lol-game-data/assets/w3.png"]])
+        );
+        assert_eq!(
+            o["emotes"],
+            json!([[4096, "Thumbs up", "/lol-game-data/assets/e.png"]])
+        );
+        // without game data: only the icons; nothing owned: nothing
+        let o = showcase_items_of(&inv, None);
+        assert!(o.contains_key("icons") && !o.contains_key("wards"));
+        assert!(showcase_items_of(&Value::Null, Some(&g)).is_empty());
+    }
+
+    #[test]
     fn champions_from_the_inventory() {
         let inv = json!([
             { "inventoryType": "CHAMPION", "itemId": 266, "owned": true },
@@ -2249,7 +2360,7 @@ mod tests {
         });
         let wards = json!([{ "id": 5, "rarities": [{ "region": "riot", "rarity": 4 }] }, { "id": 6, "rarities": [] }]);
         let icons = json!([{ "id": 29, "rarities": [{ "region": "TENCENT", "rarity": 1 }, { "region": "riot", "rarity": 6 }] }]);
-        let g = game_data_of(&skins, &wards, &icons);
+        let g = game_data_of(&skins, &wards, &icons, &Value::Null);
         assert!(!g.skin.contains_key(&1000)); // base skins aren't owned skins
         let it = |ty: &str, id: i64| json!({ "inventoryType": ty, "itemId": id, "owned": true });
         let inv = json!([

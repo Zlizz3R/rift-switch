@@ -3,6 +3,19 @@
 (function (root) {
   const CHANGELOG = [
     {
+      v: '1.3.3',
+      en: [
+        'Showcase: put your favourite skins, icons, ward skins and emotes from all your accounts in the Overview\'s head – any mix, your order, small, medium or large (the ★ Showcase button next to the search).',
+        'At a glance: Recent games take the form\'s place (Form is still there under Customize), and the traits card shows your main position – one click shows every position.',
+        'Fix: the map counted ARAM and Arena games – ARAM\'s one lane made most deaths look like mid lane. The map is Summoner\'s Rift only now.',
+      ],
+      de: [
+        'Showcase: Lieblings-Skins, -Icons, -Ward-Skins und -Emotes aus allen Accounts im Kopf der Übersicht – beliebig gemischt, in deiner Reihenfolge, klein, mittel oder groß (Knopf ★ Showcase neben der Suche).',
+        'Auf einen Blick: Letzte Spiele stehen an der Stelle der Form (die Form gibt es weiter unter Anpassen), und die Traits-Karte zeigt deine Hauptposition – ein Klick zeigt alle Positionen.',
+        'Fix: Die Karte hat ARAM- und Arena-Spiele mitgezählt – durch die eine ARAM-Lane sahen die meisten Tode nach Midlane aus. Die Karte zählt jetzt nur Summoner\'s Rift.',
+      ],
+    },
+    {
       v: '1.3.2',
       en: [
         'Overview, new look: one page for your accounts and for any other player – a head with the splash art of the champion played most, the avatars, Solo/Duo and Flex with their crest, and the player search (Ctrl+K).',

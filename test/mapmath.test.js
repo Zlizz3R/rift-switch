@@ -75,3 +75,12 @@ test('map: kills next to deaths, a window of minutes, per minute and per zone', 
   const ks = DM.sum(ev.filter(e => e.kind === 'kill'), 1);
   assert.equal(ks.solo, 0.5);
 });
+
+test('map: only Summoner\'s Rift – ARAM\'s one lane (and Arena) would all count as mid lane', () => {
+  const rift = game(100, [[300, 10, 100]]);
+  const aram = game(100, [[300, 74, 74], [400, 70, 78]], { q: 450 });
+  const arena = game(100, [[300, 74, 74]], { q: 1700 });
+  const ev = DM.events(parts([rift, aram, arena]));
+  assert.deepEqual(ev.filter(e => e.kind === 'death').map(e => e.zone), ['top']);
+  assert.equal(DM.games(parts([rift, aram, arena])).length, 1);
+});

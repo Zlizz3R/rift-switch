@@ -17,6 +17,10 @@
   const winPct = (w, n) => (n ? Math.round((100 * w) / n) : null);
 
   // ---------- one game ----------
+  // games on another map than Summoner's Rift (ARAM's Howling Abyss, Arena, Swarm): their places mean
+  // nothing on the Rift's map – ARAM's one lane would count as mid lane
+  const OFF_RIFT = [...ARAM_QUEUES, 1700, 1710, 1810, 1820, 1830, 1840];
+  const offRift = g => OFF_RIFT.includes(Number(g.q));
   const isRemake = g => !!g.remake || (g.dur != null && g.dur < REMAKE_SEC);
   const minutes = g => Math.max(1, (g.dur || 0) / 60);
   const kda = (k, d, a) => (k + a) / Math.max(1, d);
@@ -233,7 +237,7 @@
     return new Map([...m].map(([k, list]) => [k, aggregate(list)]));
   }
 
-  const api = { REMAKE_SEC, ARAM_QUEUES, RANKED_QUEUES, winPct, isRemake, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
+  const api = { REMAKE_SEC, ARAM_QUEUES, RANKED_QUEUES, winPct, isRemake, offRift, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
     visMin, dmgShare, perGame, POSITIONS, roles, role, laneOpponent, goldDiffAt, xpDiffAt, teamGoldDiffAt, zone, placeAt, hasKills, csAt, soloKills, soloDeaths, deathsBefore, gankDeathsBefore, takedownsBefore, killBefore, farmShare, gankedBefore, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Stats = api;
