@@ -664,6 +664,9 @@
     'tag.aggroJungler.d': "15ویں منٹ سے پہلے کِلز + اسسٹس، فی گیم اوسط۔",
     'tag.passiveJungler.d': "15ویں منٹ سے پہلے کِلز + اسسٹس، فی گیم اوسط – کم قدر = شروع میں کم کارروائی۔",
     'tag.mastery.d': "ایک چیمپئن پر ماسٹری پوائنٹس، آپ کے تمام اکاؤنٹس ملا کر۔",
+    'pl.noClient': "League کھلا نہیں ہے – دوسرے کھلاڑیوں کے گیمز League کلائنٹ سے آتے ہیں۔ League شروع کریں، یہ صفحہ خود بخود بھر جائے گا۔",
+    'pl.waitGame': "چیمپئن سلیکٹ یا گیم کے دوران رکا ہوا ہے – Live پہلے۔ اس کے بعد جاری رہے گا۔",
+    'pl.searchNoClient': "League کھلا نہیں ہے – Riot ID تلاش کرنے کے لیے League کلائنٹ چاہیے۔",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

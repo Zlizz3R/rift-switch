@@ -666,6 +666,9 @@
     'tag.aggroJungler.d': "Asesinatos + asistencias antes del minuto 15, por partida de media.",
     'tag.passiveJungler.d': "Asesinatos + asistencias antes del minuto 15, por partida de media; un valor bajo significa pocas jugadas tempranas.",
     'tag.mastery.d': "Puntos de maestría con un campeón, sumando todas tus cuentas.",
+    'pl.noClient': "League no está abierto: las partidas de otros jugadores vienen del cliente de League. Inicia League y esta página se completará sola.",
+    'pl.waitGame': "En pausa mientras estás en la selección de campeón o en partida: Live va primero. Después continúa.",
+    'pl.searchNoClient': "League no está abierto: buscar un Riot ID necesita el cliente de League.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

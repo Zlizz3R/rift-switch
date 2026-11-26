@@ -664,6 +664,9 @@
     'tag.aggroJungler.d': "15वें मिनट से पहले किल + असिस्ट, प्रति गेम औसत।",
     'tag.passiveJungler.d': "15वें मिनट से पहले किल + असिस्ट, प्रति गेम औसत – कम मान = शुरुआत में कम कार्रवाई।",
     'tag.mastery.d': "एक चैंपियन पर मास्टरी पॉइंट, आपके सभी अकाउंट मिलाकर।",
+    'pl.noClient': "League खुला नहीं है – दूसरे खिलाड़ियों के गेम League क्लाइंट से आते हैं। League शुरू करें, यह पेज अपने आप भर जाएगा।",
+    'pl.waitGame': "जब तक आप चैंपियन चयन या गेम में हैं, रुका हुआ है – Live पहले। उसके बाद जारी रहेगा।",
+    'pl.searchNoClient': "League खुला नहीं है – Riot ID खोजने के लिए League क्लाइंट चाहिए।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

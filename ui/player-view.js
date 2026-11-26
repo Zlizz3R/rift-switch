@@ -69,7 +69,29 @@ function plGames() {
   return out.sort((a, b) => b.t - a.t);
 }
 
-const plSiteOf = () => ({ gameName: (plv.info && plv.info.gameName) || plv.p.gameName, tagLine: (plv.info && plv.info.tagLine) || plv.p.tagLine, region: plv.p.region || (S.live && S.live.region) || 'EUW' });
+// why the player's games don't come (yet): League closed, or Live goes first (champion select, a
+// game) – null while they can come. Only while something is still missing (the list or details).
+function plHalt(own) {
+  if (own) return null;
+  const pr = plv.progress, live = S.live || {};
+  if (pr && pr.listed && pr.done >= pr.total) return null;
+  if (!live.clientUp) return 'pl.noClient';
+  return LIVE_GAME_PHASES.includes(live.phase) ? 'pl.waitGame' : null;
+}
+// League opened or closed, a game started or ended: the page says so (and asks again)
+let plLive = '';
+api.onState(() => {
+  const up = !!(S.live && S.live.clientUp);
+  const now = `${up}:${(S.live && S.live.phase) || ''}`;
+  if (now === plLive) return;
+  const wasUp = plLive.startsWith('true');
+  plLive = now;
+  if (view !== 'player' || !plv.p) return;
+  renderPlayer();
+  if (up && !wasUp) loadPlayer();
+});
+
+const plSiteOf = () =>({ gameName: (plv.info && plv.info.gameName) || plv.p.gameName, tagLine: (plv.info && plv.info.tagLine) || plv.p.tagLine, region: plv.p.region || (S.live && S.live.region) || 'EUW' });
 
 function renderPlayer() {
   const el = $('plBody');
@@ -79,8 +101,10 @@ function renderPlayer() {
   const own = (S.accounts || []).some(a => a.puuid === p.puuid);
   // the head: icon, Riot ID, level, ranks, open with, the loading
   const pr = plv.progress;
+  const halt = plHalt(own);
   let load = '';
-  if (!own && pr) {
+  if (halt) load = `<div class="pl-note${halt === 'pl.noClient' ? ' warn' : ''}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg><span>${esc(t(halt))}</span></div>`;
+  else if (!own && pr) {
     const txt = !pr.listed ? t('pl.reading') : pr.done < pr.total ? t('scout.games', { done: pr.done, total: pr.total }) : '';
     const pct = !pr.listed ? 5 : pr.total ? Math.round((100 * pr.done) / pr.total) : 100;
     if (txt) load = `<div class="sc-prog pl-prog"><span>${esc(txt)}</span><b>${pct} %</b><span class="bar"><i style="width:${pct}%"></i></span></div>`;
@@ -96,7 +120,7 @@ function renderPlayer() {
 
   const all = plGames();
   if (!all.length) {
-    el.innerHTML = `<div class="live-card"><p class="fine">${t(pr && !pr.listed && !own ? 'pl.wait' : 'pl.none')}</p></div>`;
+    el.innerHTML = `<div class="live-card"><p class="fine">${t(halt || (pr && !pr.listed && !own ? 'pl.wait' : 'pl.none'))}</p></div>`;
     return;
   }
   const season = new Date(new Date().getFullYear(), 0, 1).getTime();
@@ -258,7 +282,7 @@ async function plGo() {
   pls.busy = false;
   if (r && r.puuid) return plOpenFound(r);
   plDrawSuggest();
-  toast(t('pl.notFound', { q }), true);
+  toast(S.live && S.live.clientUp ? t('pl.notFound', { q }) : t('pl.searchNoClient'), true);
 }
 function plOpenFound(x) {
   const inp = $('plSearch');

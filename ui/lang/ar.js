@@ -663,6 +663,9 @@
     'tag.aggroJungler.d': "القتلات + المساعدات قبل الدقيقة 15، بالمتوسط لكل مباراة.",
     'tag.passiveJungler.d': "القتلات + المساعدات قبل الدقيقة 15، بالمتوسط لكل مباراة – القيمة المنخفضة تعني تحركات مبكرة قليلة.",
     'tag.mastery.d': "نقاط الإتقان على بطل، لكل حساباتك معًا.",
+    'pl.noClient': "League غير مفتوح – مباريات اللاعبين الآخرين تأتي من عميل League. شغّل League وستمتلئ هذه الصفحة تلقائيًا.",
+    'pl.waitGame': "متوقف مؤقتًا أثناء اختيار الأبطال أو المباراة – Live أولًا. يستمر بعد ذلك.",
+    'pl.searchNoClient': "League غير مفتوح – البحث عن Riot ID يحتاج إلى عميل League.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

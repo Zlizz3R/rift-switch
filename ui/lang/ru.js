@@ -665,6 +665,9 @@
     'tag.aggroJungler.d': "Убийства + помощь до 15-й минуты, за игру в среднем.",
     'tag.passiveJungler.d': "Убийства + помощь до 15-й минуты, за игру в среднем – низкое значение означает мало ранних действий.",
     'tag.mastery.d': "Очки мастерства на чемпионе, по всем вашим аккаунтам вместе.",
+    'pl.noClient': "League не запущен – игры других игроков берутся из клиента League. Запустите League, и страница заполнится сама.",
+    'pl.waitGame': "Пауза, пока вы в выборе чемпионов или в игре – Live важнее. Потом продолжится.",
+    'pl.searchNoClient': "League не запущен – для поиска Riot ID нужен клиент League.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

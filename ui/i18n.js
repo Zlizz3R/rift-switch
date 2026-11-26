@@ -712,6 +712,9 @@
     'tag.aggroJungler.d': "Kills + assists before minute 15, per game on average.",
     'tag.passiveJungler.d': "Kills + assists before minute 15, per game on average – a low value means few early plays.",
     'tag.mastery.d': "Mastery points on a champion, over all your accounts together.",
+    'pl.noClient': "League isn't open – other players' games come from the League client. Start League and this page fills in by itself.",
+    'pl.waitGame': "Paused while you're in champion select or a game – Live goes first. It goes on afterwards.",
+    'pl.searchNoClient': "League isn't open – looking up a Riot ID needs the League client.",
   };
 
   const de = {
@@ -1407,6 +1410,9 @@
     'tag.aggroJungler.d': "Kills + Assists vor Minute 15, pro Spiel im Schnitt.",
     'tag.passiveJungler.d': "Kills + Assists vor Minute 15, pro Spiel im Schnitt – ein niedriger Wert heißt: wenige frühe Aktionen.",
     'tag.mastery.d': "Meisterschaftspunkte auf einem Champion, über alle deine Accounts zusammen.",
+    'pl.noClient': "League ist nicht offen – die Spiele anderer Spieler kommen aus dem League-Client. Starte League, dann füllt sich die Seite von selbst.",
+    'pl.waitGame': "Pausiert, solange du in der Champ-Auswahl oder im Spiel bist – Live geht vor. Danach geht es weiter.",
+    'pl.searchNoClient': "League ist nicht offen – eine Riot ID nachschlagen geht nur über den League-Client.",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

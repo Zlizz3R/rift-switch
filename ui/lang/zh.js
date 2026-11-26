@@ -662,6 +662,9 @@
     'tag.aggroJungler.d': "15 分钟前的击杀 + 助攻，每局平均。",
     'tag.passiveJungler.d': "15 分钟前的击杀 + 助攻，每局平均——数值低说明前期动作少。",
     'tag.mastery.d': "某个英雄的成就点数，你所有账号合计。",
+    'pl.noClient': "League 未打开——其他玩家的对局来自 League 客户端。启动 League 后，此页面会自动加载。",
+    'pl.waitGame': "你在英雄选择或对局中时暂停——实时页面优先。结束后继续。",
+    'pl.searchNoClient': "League 未打开——查找 Riot ID 需要 League 客户端。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

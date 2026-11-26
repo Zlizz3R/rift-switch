@@ -95,6 +95,41 @@ test('player page: the window sends the keys of the games it holds; "player-chan
   } finally { app.close(); }
 });
 
+test('player page: League closed – a note instead of a progress bar stuck at 5 %; it goes on once League is open', async () => {
+  const { sampleState } = require('./harness');
+  const st = sampleState({ live: { clientUp: false, puuid: null, phase: null, waits: [] } });
+  let listed = false;
+  const app = await boot({ state: st, replies: {
+    'player-games': () => ({ ids: listed ? lite.map(g => g.id) : [], games: listed ? lite : [], info: null, mastery: null, progress: { listed, done: 0, total: listed ? 12 : 0 } }),
+    'find-player': () => null,
+  } });
+  try {
+    app.w.eval(`openPlayer({ puuid: 'x1', gameName: 'Faker', tagLine: 'KR1', region: 'EUW' })`);
+    await app.settle();
+    assert.equal(app.$('#plHead .pl-prog'), null, 'no progress bar while nothing can come');
+    assert.match(app.$('#plHead .pl-note').textContent, /League isn't open/);
+    assert.match(app.$('#plBody').textContent, /League isn't open/);
+    // the search says why too
+    const inp = app.$('#plSearch');
+    await app.type(inp, 'Nobody#X');
+    await app.key('Enter', inp);
+    await app.settle();
+    assert.match(app.$('#toast').textContent, /looking up a Riot ID needs the League client/);
+    // League opens: asked again, the list comes
+    listed = true;
+    const before = app.called('player-games').length;
+    await app.push({ ...st, live: { clientUp: true, puuid: P(1), phase: 'Lobby', waits: [] } });
+    await app.settle();
+    assert.ok(app.called('player-games').length > before, 'loaded again');
+    assert.equal(app.$('#plHead .pl-note'), null);
+    assert.match(app.$('#plHead .pl-prog').textContent, /0 \/ 12/);
+    // champion select: Live goes first – the page says so
+    await app.push({ ...st, live: { clientUp: true, puuid: P(1), phase: 'ChampSelect', waits: [] } });
+    assert.match(app.$('#plHead .pl-note').textContent, /Live goes first/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
 test('trait tiers: what to act on first, background last; another champion\'s trait is background', () => {
   assert.equal(Tags.tierOf({ id: 'gankVictim' }), 1);
   assert.equal(Tags.tierOf({ id: 'fbVictim' }), 1);

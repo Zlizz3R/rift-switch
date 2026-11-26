@@ -663,6 +663,9 @@
     'tag.aggroJungler.d': "১৫তম মিনিটের আগে কিল + অ্যাসিস্ট, প্রতি গেমে গড়।",
     'tag.passiveJungler.d': "১৫তম মিনিটের আগে কিল + অ্যাসিস্ট, প্রতি গেমে গড় – কম মান মানে শুরুতে কম পদক্ষেপ।",
     'tag.mastery.d': "একটি চ্যাম্পিয়নে মাস্টারি পয়েন্ট, আপনার সব অ্যাকাউন্ট মিলিয়ে।",
+    'pl.noClient': "League খোলা নেই – অন্য খেলোয়াড়দের গেম League ক্লায়েন্ট থেকে আসে। League চালু করুন, পেজটি নিজে থেকেই ভরে যাবে।",
+    'pl.waitGame': "চ্যাম্পিয়ন সিলেক্ট বা গেম চলাকালীন বিরতি – Live আগে। পরে আবার চলবে।",
+    'pl.searchNoClient': "League খোলা নেই – Riot ID খুঁজতে League ক্লায়েন্ট লাগবে।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

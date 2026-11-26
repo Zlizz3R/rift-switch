@@ -666,6 +666,9 @@
     'tag.aggroJungler.d': "Éliminations + assistances avant la minute 15, par partie en moyenne.",
     'tag.passiveJungler.d': "Éliminations + assistances avant la minute 15, par partie en moyenne – une valeur basse signifie peu d’actions en début de partie.",
     'tag.mastery.d': "Points de maîtrise sur un champion, tous tes comptes réunis.",
+    'pl.noClient': "League n'est pas ouvert – les parties des autres joueurs viennent du client League. Lance League et cette page se remplira toute seule.",
+    'pl.waitGame': "En pause pendant la sélection des champions ou une partie – Live passe d'abord. Ça reprend ensuite.",
+    'pl.searchNoClient': "League n'est pas ouvert – chercher un Riot ID passe par le client League.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;
