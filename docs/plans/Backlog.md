@@ -80,6 +80,12 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
   „Letzte 20 Spiele gegen die davor: Winrate 65 % → 30 % · KDA 2.01 → 2.54“ unter den Kennzahlen. `perfTrendHtml`
   in `ui/perf.js` (Aufruf in `perfAllHtml`, die Auswahl `trendN` / `trendKey`, `perf.trendN` / `perf.trendKey`) und
   die Tests dazu. `PerfMath.trend` bleibt – die Trendpfeile der Kennzahlen auf „Auf einen Blick“ nutzen es.
+- [ ] **Übersicht-Reiter neu ordnen, Performance als Startseite?** (Nutzer, 26.11.2026 – erst besprechen, nicht
+  einfach bauen): Der Nutzer findet Performance inzwischen schöner und nützlicher als „Auf einen Blick“ – nur die
+  Kennzahlen-Zeile von „Auf einen Blick“ (`sumFigs`: Ring für die Winrate, Trendpfeile) gefällt ihm besser als die
+  `perf-bar` von Performance. Ideen zum Vorschlagen: Performance wird der Start-Tab (`dashTabNow` in `ui/mastery.js`)
+  mit der Kennzahlen-Zeile von „Auf einen Blick“; „Auf einen Blick“ geht in Performance auf oder wird ein späterer
+  Tab; die Reihenfolge der Reiter (`#dashTabs` in `ui/index.html`, `PL_TABS` der Spieler-Seite) neu denken.
 
 ### C. Ideen-Runde (25.11.2026)
 
