@@ -815,6 +815,11 @@
     'ov.resetT': "Voltar ao layout original de Visão rápida",
     'pg.eog': "Detalhes a caminho",
     'pg.eogT': "Dos números da tela final – a partida abre no histórico assim que o cliente a lista (rota contra rota, vantagem de ouro, replay)",
+    'perf.wins': "{n} V",
+    'perf.losses': "{n} D",
+    'perf.allTraitsT': "Todos os traços com os números por trás",
+    'pl.mastPts': "Pontos de maestria",
+    'pl.seasonsNote': "Duas fontes, nunca somadas: o cliente só informa a temporada anterior e a atual; as partidas guardadas contam por ano civil.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

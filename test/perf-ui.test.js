@@ -26,23 +26,26 @@ const replies = {
   champions: [{ id: 103, name: 'Ahri' }, { id: 64, name: 'Lee Sin' }],
 };
 
-test('performance: one page – key figures, then champions, play style and map; a champion opens the match history', async () => {
+test('performance: one page – key figures, then champions, roles, play style and map; a champion opens the match history', async () => {
   const app = await boot({ replies });
   try {
     await app.click('#navDash');
-    assert.deepEqual(app.$$('#dashTabs [data-dt]').map(b => b.dataset.dt), ['sum', 'lp', 'stats', 'mast', 'tags', 'seasons']);
+    assert.deepEqual(app.$$('#dashTabs [data-dt]').map(b => b.dataset.dt), ['stats', 'tags', 'mast', 'matches', 'lp', 'seasons']);
+    assert.ok(app.$('[data-dt="stats"]').classList.contains('on'), 'Performance is the start page');
     await app.click('[data-dt="stats"]');
     await app.settle();
     assert.ok(app.visible('#dashPerf'));
     // ranked of this season by default: 14 games (the ARAM game isn't ranked)
     assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex · Season \d{4}/);
-    assert.match(app.$('.perf-bar .pk').textContent, /Games\s*14/);
-    // no role table any more; the three cards
+    assert.match(app.$('.perf-strip .pf').textContent, /Games\s*14/);
+    // no role table any more; the four cards
     assert.equal(app.$('.perf-table'), null);
-    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-style', 'perfSec-map']);
-    // the role filter
+    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-roles', 'perfSec-style', 'perfSec-map']);
+    assert.match(app.$('.pc-roles').textContent, /Mid ★/);
+    // the role filter: one role – no roles card
     await app.click('[data-prole="jungle"]');
     assert.match(app.$('#perfLine').textContent, /^1 game · .*Jungle/);
+    assert.equal(app.$('.pc-roles'), null);
     await app.click('[data-prole=""]');
     // a champion: the match history with this champion
     await app.click('.oc-row[data-pchamp="103"]');
@@ -98,7 +101,7 @@ test('play style: a radar against the lane opponent on the main role, the same v
 test('records: one mode only, with their scope ("bests in 14 stored Summoner\'s Rift games")', async () => {
   const app = await boot({ replies });
   try {
-    await app.click('#navMatches');
+    await app.openMatches();
     await app.settle();
     assert.match(app.$('.mh-rec-scope').textContent, /Bests in 14 stored Summoner's Rift games/);
     assert.deepEqual(app.errors.map(String), []);
@@ -126,7 +129,7 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
     assert.ok(!app.$(`[data-ovacc="${P(1)}"]`).classList.contains('on'));
     assert.ok(!app.$('[data-ovacc=""]').classList.contains('on'));
     // the same choice on another tab – the chips sit in the head of every tab
-    await app.click('[data-dt="sum"]');
+    await app.click('[data-dt="tags"]');
     await app.click('[data-dt="stats"]');
     assert.match(app.$('#perfBody').textContent, /No games match/);
     await app.click('[data-dt="lp"]');
@@ -152,8 +155,14 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
     await app.settle();
     assert.ok(app.visible('#dashPerf'), 'the Performance filter is there');
     const dots = cls => app.$$(`.dm-map .dm-dots.${cls} circle`).length;
+    // both at first, "Both" first in the choice
+    assert.deepEqual(app.$$('[data-mpk]').map(b => b.dataset.mpk), ['both', 'deaths', 'kills']);
     assert.equal(dots('deaths'), 12);
-    assert.equal(dots('kills'), 0, 'deaths only at first');
+    assert.equal(dots('kills'), 4, 'both at first');
+    assert.ok(app.$('.mp-rows.both'));
+    // deaths only
+    await app.click('[data-mpk="deaths"]');
+    assert.equal(dots('kills'), 0);
     assert.match(app.$('.dm-hots').textContent, /Before 10 min\s*100 % of the deaths: Top river \(8 of 8\)/);
     assert.match(app.$('.dm-side').textContent, /12 deaths in 4 games · 3\.0 per game · 33 % against two or more enemies/);
     // kills: the four solo kills
@@ -218,45 +227,32 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
   } finally { app.close(); }
 });
 
-test('at a glance: customize – order, size, hide, the extra cards; kept as a setting, reset brings the designed layout back', async () => {
+test('performance: the key figures in one strip – wins and losses in colour, the traits on the right lead into the Traits tab; ARAM only: team share and activity', async () => {
   const app = await boot({ replies });
   try {
     await app.click('#navDash');
     await app.settle();
-    const cards = () => app.$$('#sumBody [data-card]').map(c => c.dataset.card);
-    const lastSet = () => app.called('set-setting').pop().args;
-    assert.deepEqual(cards(), ['figs', 'games', 'traits', 'champs', 'roles', 'style', 'rec', 'mast'], 'the designed layout: recent games, no form, no map');
-    assert.ok(!app.$('#sumBody .ov-sum.custom'));
-    await app.click('[data-ocust]');
-    assert.ok(app.$('.ov-sum.editing'));
-    assert.match(app.$('.ov-tray').textContent, /Form[\s\S]*Map/);
-    // the map in, traits out, champions one place earlier, the recent games small
-    await app.click('[data-oadd="map"]');
-    await app.click('[data-ohide="traits"]');
-    await app.click('[data-omove="champs:-1"]');
-    await app.click('[data-osize="games:1"]');
-    assert.deepEqual(cards(), ['figs', 'champs', 'games', 'roles', 'style', 'rec', 'mast', 'map']);
-    assert.equal(app.$('[data-card="games"]').dataset.span, '1');
-    const saved = lastSet();
-    assert.equal(saved[0], 'ovLayout');
-    assert.deepEqual([...saved[1].hidden].sort(), ['form', 'traits']);
-    // dragging a card onto another: before it
-    const drag = (type, el, x) => { const ev = new app.w.Event(type, { bubbles: true, cancelable: true }); ev.clientX = x; el.dispatchEvent(ev); };
-    drag('dragstart', app.$('[data-card="map"]'), 0);
-    drag('dragover', app.$('[data-card="champs"]'), -1);
-    drag('drop', app.$('[data-card="champs"]'), -1);
-    await app.settle();
-    assert.deepEqual(cards().slice(0, 3), ['figs', 'map', 'champs']);
-    // done: the arrangement stays without the tools
-    await app.click('[data-odone]');
-    assert.ok(app.$('.ov-sum.custom') && !app.$('.ov-sum.editing') && !app.$('.ovc-edit'));
-    assert.ok(app.$('[data-card="map"]'));
-    // reset: the designed layout again
-    await app.click('[data-ocust]');
-    await app.click('[data-oreset]');
-    assert.deepEqual(lastSet(), ['ovLayout', null]);
-    await app.click('[data-odone]');
-    assert.deepEqual(cards(), ['figs', 'games', 'traits', 'champs', 'roles', 'style', 'rec', 'mast']);
+    assert.ok(app.visible('#dashPerf'), 'the Overview opens on Performance');
+    const strip = app.$('#perfBody .perf-strip');
+    assert.match(strip.querySelector('.pf.games').textContent, /Games\s*14/);
+    assert.match(strip.querySelector('.pf.games i.w').textContent, /^\d+ W$/);
+    assert.match(strip.querySelector('.pf.games i.l').textContent, /^\d+ L$/);
+    assert.ok(strip.querySelector('.pf.wr .ov-ring'), 'the win rate as a ring');
+    assert.ok(strip.querySelector('.pf.kda i.l'), 'the deaths in red');
+    assert.equal(app.$('.trend'), null, 'no trend line any more');
+    // the traits on the right: a click leads into the Traits tab
+    assert.ok(strip.querySelector('.pf-traits .tchips'));
+    await app.click('.pf-traits [data-ovgo="tags"]');
+    assert.ok(app.$('[data-dt="tags"]').classList.contains('on'));
+    assert.ok(app.visible('#dashTags'));
+    // ARAM only: no lanes – the share of the team and the activity, no CS, the damage share
+    await app.click('[data-dt="stats"]');
+    await app.click('[data-pq="flex"]');
+    await app.click('[data-pq="aram"]');
+    await app.click('[data-pq="solo"]');
+    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-share', 'perfSec-act']);
+    assert.equal(app.$('.pf.cs'), null);
+    assert.ok(app.$('.pf.share'));
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

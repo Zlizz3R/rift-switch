@@ -277,7 +277,14 @@ function rankTip(r) {
   const [tier, div, lp] = r;
   return tierName(tier) + (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ' ' + div) + ' · ' + lp + ' LP';
 }
-let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, more: {}, filter: { accs: new Set(), queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+let mh = { open: new Set(), secs: new Map(), cmp: new Map(), pin: 0, ranks: {}, more: {}, filter: { queues: new Set() }, f: { ...MH_DEFAULT }, show: 40, adv: false, data: null, loading: false };
+// the match history is a tab of the Overview (mastery.js showDashTab); its accounts are the Overview's
+// choice (ovfilter.js) – every account chosen = all games
+const mhOn = () => view === 'dash' && typeof dashTab === 'function' && dashTab() === 'matches';
+function mhAccSet() {
+  const all = ovAccs(), ch = ovChosen();
+  return ch.length && ch.length < all.length ? new Set(ch.map(a => a.puuid)) : new Set();
+}
 
 // custom games: Riot's own queues for them (matches.rs CUSTOM_QUEUES) or marked when stored
 const CUSTOM_QUEUES = [0, 3220, 3270];
@@ -337,7 +344,7 @@ async function loadMatches() {
     if (!assets || !Object.keys(assets.items || {}).length) assets = (await api.matchesAssets()) || null;
     // one account: the app filters already; several: all games – kept when one of the chosen played
     // (and that one counts as "me" in the game); filtered here in both cases
-    const accs = mh.filter.accs;
+    const accs = mhAccSet();
     const d = await api.matches({ puuid: accs.size === 1 ? [...accs][0] : null, queue: [...mh.filter.queues].join(',') || null });
     if (d) {
       const index = accs.size
@@ -353,15 +360,8 @@ async function loadMatches() {
 }
 
 function renderMatches() {
-  if (typeof pageArt === 'function') pageArt('matches');
-  if (view !== 'matches') return;
-  const accs = S.accounts.filter(a => !a.placeholder);
+  if (!mhOn()) return;
   const d = mh.data;
-  // accounts as chips, like the queues: "All", or any of them
-  const sel = mh.filter.accs;
-  $('mhAccs').hidden = accs.length < 2;
-  $('mhAccs').innerHTML = `<button data-mhaccs=""${!sel.size ? ' class="on"' : ''}>${esc(t('mh.allAccounts'))}</button>`
-    + accs.map(a => `<button data-mhaccs="${esc(a.puuid)}"${sel.has(a.puuid) ? ' class="on"' : ''}>${esc(dispName(a))}</button>`).join('');
   document.querySelectorAll('[data-mhq]').forEach(b => b.classList.toggle('on', b.dataset.mhq ? mh.filter.queues.has(b.dataset.mhq) : !mh.filter.queues.size));
   // the shared "Load" (views.js) loads everything, the whole match history too
   refreshLoadBtns();
@@ -412,8 +412,8 @@ async function loadRanks(games) {
     Object.assign(mh.ranks, (r && r.ranks) || {});
     const grew = Object.keys(mh.ranks).length > before;
     ranksBusy = false;
-    if (grew && view === 'matches') renderMatches();
-    else if (r && r.pending && view === 'matches') setTimeout(() => loadRanks(games), 500);
+    if (grew) mhRedraw();
+    else if (r && r.pending && (mhOn() || view === 'player')) setTimeout(() => loadRanks(games), 500);
   } catch { ranksBusy = false; }
 }
 
@@ -468,7 +468,9 @@ function playTime(sec) {
   const m = Math.round(sec / 60);
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
 }
-function summaryHtml(list) {
+// opts.player: another player's list – no filters there (champions and multikills only to read)
+function summaryHtml(list, opts = {}) {
+  const pl = !!opts.player;
   const s = MatchFilter.summarize(list, 1000);
   if (!s) return '';
   // 5 of each list, "+5" shows five more, "less" goes back to 5
@@ -499,21 +501,22 @@ function summaryHtml(list) {
       ${s.time ? `<span title="${esc(t('mh.timeT'))}">⏱ <b>${playTime(s.time)}</b> ${t('mh.time')}</span>` : ''}
       ${s.streak && s.streak.n >= 2 ? `<span class="${s.streak.win ? 'good' : 'bad'}">${t(s.streak.win ? 'mh.streakW' : 'mh.streakL', { n: s.streak.n })}</span>` : ''}
     </div>
-    ${[5, 4, 3, 2].some(m => s.multis[m]) ? `<div class="mh-multis">${[5, 4, 3, 2].filter(m => s.multis[m]).map(m =>
-      `<button class="mh-multi m${m}${mh.pin === m ? ' on' : ''}" data-pin="${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</button>`).join('')}</div>` : ''}
-    ${s.accounts.length > 1 ? `<div class="mh-champs mh-accs"><span class="mh-ch-t">${t('mh.perAccount')}</span>${cut('acc', s.accounts).map(a => {
+    ${[5, 4, 3, 2].some(m => s.multis[m]) ? `<div class="mh-multis">${[5, 4, 3, 2].filter(m => s.multis[m]).map(m => (pl
+      ? `<span class="mh-multi m${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</span>`
+      : `<button class="mh-multi m${m}${mh.pin === m ? ' on' : ''}" data-pin="${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</button>`)).join('')}</div>` : ''}
+    ${s.accounts.length > 1 && !pl ? `<div class="mh-champs mh-accs"><span class="mh-ch-t">${t('mh.perAccount')}</span>${cut('acc', s.accounts).map(a => {
       const acc = S.accounts.find(x => x.puuid === a.puuid);
       return `<button class="mh-ch" data-mhacc="${esc(a.puuid)}" title="${esc(t('mh.perAccountT'))}">
       ${acc && acc.iconId != null && !hides('icon') ? `<img src="${iconUrl(acc.iconId)}" alt="">` : ''}<span class="mh-ch-n">${esc(acc ? dispName(acc) : '?')}</span>
       <b>${a.games}</b><span class="${a.winrate >= 50 ? 'good' : 'bad'}">${a.winrate}% WR</span><span class="muted">${a.share}%</span><span class="muted">⏱ ${playTime(a.time)}</span></button>`;
     }).join('')}${more('acc', s.accounts)}</div>` : ''}
-    ${s.duos.length ? `<div class="mh-champs mh-duos"><span class="mh-ch-t">${t('mh.duos')}</span>${cut('duo', s.duos).map(d => `<span class="mh-ch" title="${esc(t('mh.duosT'))}">
+    ${s.duos.length && !pl ? `<div class="mh-champs mh-duos"><span class="mh-ch-t">${t('mh.duos')}</span>${cut('duo', s.duos).map(d => `<span class="mh-ch" title="${esc(t('mh.duosT'))}">
       <img src="${CHAMP_ICON(d.champ)}" alt=""><span class="mh-ch-n">${esc(S.accounts.some(a => a.puuid === d.puuid) ? dispName(S.accounts.find(a => a.puuid === d.puuid)) : d.name)}</span>
       <b>${d.games}</b><span class="${d.winrate >= 50 ? 'good' : 'bad'}">${d.winrate}% WR</span></span>`).join('')}${more('duo', s.duos)}</div>` : ''}
-    ${(s.champs.length > 1 || mh.f.champ) ? `<div class="mh-champs"><span class="mh-ch-t">${t('mh.topChamps')}</span>${cut('champ', s.champs).map(c => `<button class="mh-ch${mh.f.champ === c.champ ? ' on' : ''}" data-mhchamp="${c.champ}" title="${esc(t('mh.topChampT'))}">
+    ${(s.champs.length > 1 || (!pl && mh.f.champ)) ? `<div class="mh-champs"><span class="mh-ch-t">${t('mh.topChamps')}</span>${cut('champ', s.champs).map(c => `<${pl ? 'span' : 'button'} class="mh-ch${!pl && mh.f.champ === c.champ ? ' on' : ''}"${pl ? '' : ` data-mhchamp="${c.champ}" title="${esc(t('mh.topChampT'))}"`}>
       <img src="${CHAMP_ICON(c.champ)}" alt=""><span class="mh-ch-n">${esc(champName(c.champ) || '#' + c.champ)}</span>
       <b>${c.games}</b><span class="${c.winrate >= 50 ? 'good' : 'bad'}">${c.winrate}% WR</span><span class="muted">${c.playrate}% ${t('mh.playrate')}</span>
-      <span class="muted">${c.kda == null ? t('mh.perfect') : c.kda.toFixed(1) + ' KDA'}</span></button>`).join('')}${more('champ', s.champs)}</div>` : ''}
+      <span class="muted">${c.kda == null ? t('mh.perfect') : c.kda.toFixed(1) + ' KDA'}</span></${pl ? 'span' : 'button'}>`).join('')}${pl ? '' : more('champ', s.champs)}</div>` : ''}
     <div class="mh-recs">
       ${mode ? `<span class="mh-rec-scope">${esc(t('mh.recScope', { n: num(mode[1]), mode: modeName }))}</span>` : ''}
       ${rec('kills', t('mh.recKills'), r.kills, r.kills && r.kills.p.k)}
@@ -548,7 +551,7 @@ function gameRow(g, as) {
   const owner = S.accounts.find(a => a.puuid === ownerId);
   const others = g.owners.slice(1).map(id => S.accounts.find(a => a.puuid === id)).filter(Boolean);
   const mine = new Set(g.owners);
-  return `<div class="mh-row ${res}${mh.open.has(String(g.id)) ? ' open' : ''}" data-owner="${esc(ownerId)}" data-gid="${esc(g.id)}">
+  return `<div class="mh-row ${res}${g.lite ? ' lite' : ''}${mh.open.has(String(g.id)) && !g.lite ? ' open' : ''}" data-owner="${esc(ownerId)}" data-gid="${esc(g.id)}">
     <svg class="mh-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
     <div class="mh-meta">
       <b class="mh-q">${esc(queueLabel(g))}</b>
@@ -564,7 +567,7 @@ function gameRow(g, as) {
     <div class="mh-main">
       <div class="mh-top">
         <div class="mh-champ"><img src="${CHAMP_ICON(me.champ)}" alt=""><span>${me.lvl}</span></div>
-        <div class="mh-col">${icon(as.spells, me.spells[0], 'mh-ic')}${icon(as.spells, me.spells[1], 'mh-ic')}</div>
+        <div class="mh-col">${icon(as.spells, (me.spells || [])[0], 'mh-ic')}${icon(as.spells, (me.spells || [])[1], 'mh-ic')}</div>
         <div class="mh-col">${icon(as.perks, me.keystone, 'mh-ic round')}${icon(as.styles, me.sub, 'mh-ic round small')}</div>
         <div class="mh-kda">
           <div class="mh-k">${me.k} / <i>${me.d}</i> / ${me.a}</div>
@@ -577,12 +580,12 @@ function gameRow(g, as) {
           <span>${t('mh.gold')} <b>${short(me.gold)}</b></span>
         </div>
       </div>
-      <div class="mh-items">${me.items.map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}
+      <div class="mh-items">${(me.items || [0, 0, 0, 0, 0, 0, 0]).map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}
         ${MULTI[me.multi] ? `<span class="mh-badge">${t(MULTI[me.multi])}</span>` : ''}${me.place ? `<span class="mh-badge place p${me.place}">${t('mh.place', { n: me.place })}</span>` : ''}</div>
       ${augIcons(me, as, 'mh-augs')}
     </div>
     <div class="mh-teams">${teamsTable(g, mine)}</div>
-    ${mh.open.has(String(g.id)) ? detailsHtml(g, as, mine) : ''}
+    ${mh.open.has(String(g.id)) && !g.lite ? detailsHtml(g, as, mine) : ''}
   </div>`;
 }
 
@@ -602,8 +605,9 @@ function gameRowShort(g) {
 // a game opened in the match history: every filter off, the game unfolded and scrolled to
 async function openGame(id) {
   id = String(id);
+  ovAll();
   showView('matches');
-  mh.filter.accs = new Set(); mh.filter.queues.clear(); mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
+  mh.filter.queues.clear(); mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
   $('mhChamp').value = '';
   mh.open.add(id);
   await loadMatches();
@@ -614,16 +618,19 @@ async function openGame(id) {
 }
 // the match history with a set of games on top (a row of the Overview), every filter off
 function openMatchesPinned(ids, label) {
-  mh.filter.accs = new Set(); mh.filter.queues = new Set();
+  ovAll();
+  mh.filter.queues = new Set();
   mh.f = { ...MH_DEFAULT }; mh.pin = 0; mh.show = 40;
   mh.pinIds = new Set(ids.map(String)); mh.pinLabel = label;
   $('mhChamp').value = '';
   showView('matches');
   setTimeout(() => { const l = $('mhList'); if (l) l.scrollIntoView({ block: 'start' }); }, 50);
 }
-// the match history with some filters set (from the Overview): account, queue groups, champion, time
+// the match history with some filters set (from Performance): queue groups, champion, time – the
+// accounts are the Overview's choice already (puuid: just that one)
 function openMatchesWith({ puuid = '', queues = [], champ = 0, range = 'all', from = '', to = '' } = {}) {
-  mh.filter.accs = new Set(puuid ? [puuid] : []); mh.filter.queues = new Set(queues);
+  if (puuid) ovOnly(puuid);
+  mh.filter.queues = new Set(queues);
   mh.f = { ...MH_DEFAULT, champ, range, from, to }; mh.pin = 0; mh.pinIds = null; mh.show = 40;
   $('mhChamp').value = champ ? champName(champ) : '';
   showView('matches');
@@ -633,16 +640,7 @@ document.addEventListener('click', e => {
   if (b) openGame(b.dataset.opengame);
 });
 
-// filters
-// accounts: like the queues – from "All" a click picks just that one, then add or remove, none = all
-$('mhAccs').addEventListener('click', e => {
-  const b = e.target.closest('[data-mhaccs]');
-  if (!b) return;
-  const id = b.dataset.mhaccs, set = mh.filter.accs;
-  if (!id) set.clear(); else if (set.has(id)) set.delete(id); else set.add(id);
-  mh.show = 40;
-  loadMatches();
-});
+// filters (the accounts: the Overview's chips)
 // queues: any combination ("All" clears it); a click adds or removes one
 document.querySelectorAll('[data-mhq]').forEach(b => (b.onclick = () => {
   const q = b.dataset.mhq, set = mh.filter.queues;
@@ -663,7 +661,7 @@ $('viewMatches').addEventListener('click', e => {
   // a champion of the top list: only his games (again: all games)
   // an account of the breakdown: only its games
   const ac = e.target.closest('[data-mhacc]');
-  if (ac) { mh.filter.accs = new Set([ac.dataset.mhacc]); loadMatches(); return; }
+  if (ac) { ovToggle(ac.dataset.mhacc, true); return; }
   const ch = e.target.closest('[data-mhchamp]');
   if (ch) { const id = +ch.dataset.mhchamp; setFilter({ champ: mh.f.champ === id ? 0 : id }); return; }
   const pin = e.target.closest('[data-pin]');
@@ -689,8 +687,11 @@ $('mhList').addEventListener('click', e => {
   if (mh.open.has(id)) mh.open.delete(id); else mh.open.add(id);
   renderMatches();
 });
-// a game's details live in the match history and on the Live page (after a game): redraw that one
-const detRedraw = el => (el.closest('#liveBody') ? renderLive(true) : renderMatches());
+// a game's details live in the match history, on the player page and on the Live page (after a
+// game): redraw that one
+const detRedraw = el => (el.closest('#liveBody') ? renderLive(true) : el.closest('#plBody') ? renderPlayer() : renderMatches());
+// the match list that is shown: the own one (Overview) or a player's
+const mhRedraw = () => (mhOn() ? renderMatches() : view === 'player' && typeof renderPlayer === 'function' ? renderPlayer() : null);
 // details: fold a section open/closed
 function toggleSec(head) {
   const det = head.closest('[data-det]');
@@ -700,7 +701,7 @@ function toggleSec(head) {
   mh.secs.set(id, open);
   detRedraw(head);
 }
-for (const host of [$('mhList'), $('liveBody')]) {
+for (const host of [$('mhList'), $('liveBody'), $('plBody')]) {
   host.addEventListener('click', e => { const h = e.target.closest('[data-det] [data-sec]'); if (h) toggleSec(h); });
   host.addEventListener('keydown', e => { const h = e.target.closest('[data-det] [data-sec]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleSec(h); } });
   host.addEventListener('change', e => {
@@ -738,5 +739,5 @@ function playerMenu(e) {
 let mhChanged = null;
 api.onMatchesChanged(() => {
   clearTimeout(mhChanged);
-  mhChanged = setTimeout(() => { if (view === 'matches') loadMatches(); }, 1200);
+  mhChanged = setTimeout(() => { if (mhOn()) loadMatches(); }, 1200);
 });

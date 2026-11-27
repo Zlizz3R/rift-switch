@@ -20,7 +20,7 @@ test('overview → mastery: points over all accounts, split per account, sorting
     { puuid: P(2), at: 1700000000000, champs: { 420: [414330, 40] } },
   ] } }, async (app) => {
   await app.click('#navDash');
-  assert.ok(app.visible('#dashSum'), 'the Overview opens on At a glance');
+  assert.ok(app.visible('#dashPerf'), 'the Overview opens on Performance');
   await app.click('[data-dt="mast"]');
   assert.ok(app.visible('#dashMast'));
   // the biggest champion up top: the sum of both accounts, 2M milestone

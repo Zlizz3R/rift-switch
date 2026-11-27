@@ -816,6 +816,11 @@
     'ov.resetT': "Revenir à la disposition d'origine d'En un coup d'œil",
     'pg.eog': "Détails à suivre",
     'pg.eogT': "D'après les chiffres de l'écran de fin – la partie s'ouvre dans l'historique dès que le client la liste (voie contre voie, avance en or, replay)",
+    'perf.wins': "{n} V",
+    'perf.losses': "{n} D",
+    'perf.allTraitsT': "Tous les traits avec leurs chiffres",
+    'pl.mastPts': "Points de maîtrise",
+    'pl.seasonsNote': "Deux sources, jamais additionnées : le client n'indique que la saison précédente et l'actuelle ; les parties enregistrées comptent par année civile.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

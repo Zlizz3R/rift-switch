@@ -1,21 +1,22 @@
 // The player page: an Overview for any player – a click on a name in the match history, on Live or
 // after a game opens it. Their games: the 200 newest from their match list (each with their own
 // numbers) and the details of the newest 50 ranked ones (main.rs: the player page's loading, the
-// store of other players' games), plus every own stored game they were in. On it: rank, key
-// figures, roles, champions, traits, the recent games, the games with you – and "Open with".
+// store of other players' games), plus every own stored game they were in. The Overview's tabs
+// (Performance, Traits, Mastery, Match history, Seasons – no LP history: there is none for another
+// player), drawn with the same code from their games – and "Open with".
 // Uses the globals of renderer.js / views.js / matches-view.js / tags-view.js / scout-view.js.
 
-// tab: the page's view – 'sum' (At a glance) or one of the Overview's own (Performance, Champions,
-// Play style, Map, Traits), drawn with the same code from this player's games; role: '' or a
-// position (those tabs); queue: 'ranked' | 'aram' | 'all', '' = the one with the most games
-const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: '', tab: 'sum', role: '', timer: 0, loading: false };
-const PL_TABS = [['sum', 'ov.tabSum'], ['stats', 'dash.tabStats'], ['tags', 'dash.tabTags']];
+// tab: one of PL_TABS; role: '' or a position (Performance, Traits); queue: 'ranked' | 'aram' |
+// 'arena' | 'all', '' = the one with the most games; show: rows of the match list; withYou: only
+// the games with one of your accounts
+const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: '', tab: 'stats', role: '', show: 40, withYou: false, timer: 0, loading: false };
+const PL_TABS = [['stats', 'dash.tabStats'], ['tags', 'dash.tabTags'], ['mast', 'dash.tabMast'], ['matches', 'mh.title'], ['seasons', 'dash.tabSeasons']];
 
 // open a player: { puuid, gameName, tagLine, region }; back: from the arrows (no new history step)
 function openPlayer(p, back = false) {
   if (!p || !p.puuid) return;
   if (!plv.p || plv.p.puuid !== p.puuid) {
-    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: '', role: '' });
+    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: '', role: '', show: 40, withYou: false });
     // the games of the last player stay only if this one was in them too (the next load says)
   }
   showView('player', { p, back });
@@ -28,8 +29,10 @@ async function loadPlayer() {
   plv.loading = true;
   try {
     const have = [...plv.games.values()].map(g => g.k).filter(Boolean);
-    const [d, own, ch] = await Promise.all([api.playerGames(p.puuid, have), scv.own ? null : allGames(), champs.length ? null : api.champions()]);
+    const noAssets = !assets || !Object.keys(assets.items || {}).length;
+    const [d, own, ch, as] = await Promise.all([api.playerGames(p.puuid, have), scv.own ? null : allGames(), champs.length ? null : api.champions(), noAssets ? api.matchesAssets() : null]);
     if (own) scv.own = own;
+    if (as) assets = as;
     if (Array.isArray(ch) && ch.length) champs = ch;
     if (d && plv.p && plv.p.puuid === p.puuid) {
       for (const g of Array.isArray(d.games) ? d.games : []) if (g && g.id != null) plv.games.set(String(g.id), g);
@@ -133,34 +136,65 @@ function renderPlayer() {
   const basis = `<span class="coll-for">${esc(t('pl.basis', { n: num(all.length) }))}</span>`;
   const bar = sumBarHtml(rowsAll, scope, 'data-plq');
   const mastRows = plv.mastery && Object.keys(plv.mastery).length ? Object.entries(plv.mastery).map(([id, v]) => ({ id: +id, total: +v, n: 1 })).sort((a, b) => b.total - a.total) : null;
-  // the Overview's views for this player: the same code, their games, a role to look at
-  if (plv.tab !== 'sum') {
-    const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t(plv.tab === 'tags' ? 'tags.allRoles' : 'perf.allRoles')}</button>` +
-      Stats.POSITIONS.map(r => `<button data-plrole="${r}" title="${esc(t('pos.' + r))}"${plv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('') + '</div>';
+  const level = info.level != null ? info.level : null;
+  const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t(plv.tab === 'tags' ? 'tags.allRoles' : 'perf.allRoles')}</button>` +
+    Stats.POSITIONS.map(r => `<button data-plrole="${r}" title="${esc(t('pos.' + r))}"${plv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('') + '</div>';
+  // the traits of the scope (another player: only what speaks for them)
+  const traitsOf = role => {
+    const ctx = { games: all, own: [p.puuid], level, mastery: mastRows, now: Date.now() };
+    const res = scope === 'aram' || scope === 'arena' ? sumRes(all, [p.puuid], level, mastRows, scope) : role ? Tags.evaluate({ ...ctx, role }) : Tags.evaluateAll(ctx);
+    return res && !own ? plOthers(res) : res;
+  };
+  let body, head = `${bar}${basis}`;
+  if (plv.tab === 'tags') {
+    const res = traitsOf(plv.role);
+    body = res ? tagsBodyHtml(res, scope === 'aram' ? null : res.role) : `<div class="chart-empty">${t(scope === 'arena' ? 'ov.noArenaTraits' : 'ov.noAramTraits')}</div>`;
+    head = `${bar}${scope === 'aram' || scope === 'arena' ? '' : roleSeg}${basis}`;
+  } else if (plv.tab === 'mast') {
+    body = mastPlayerHtml(mastRows, p.puuid, all);
+    head = basis;
+  } else if (plv.tab === 'matches') {
+    body = plMatchesHtml(rows, own);
+  } else if (plv.tab === 'seasons') {
+    const ranked = rowsAll.filter(x => Stats.RANKED_QUEUES.includes(x.g.q));
+    body = ssAccHtml({ puuid: p.puuid, solo: info.solo, flex: info.flex }, ranked, false) + `<p class="coll-foot">${t('pl.seasonsNote')}</p>`;
+    head = basis;
+  } else {
+    // Performance: the same page as the own Overview's, for a role to look at
     const parts = plv.role ? rows.filter(x => PerfMath.roleOf(x) === plv.role) : rows;
     const agR = Stats.aggregate(parts);
-    let body;
-    if (plv.tab === 'tags') {
-      const ctx = { games: all, own: [p.puuid], level: info.level != null ? info.level : null, mastery: mastRows, now: Date.now() };
-      const res = scope === 'aram' || scope === 'arena' ? sumRes(all, [p.puuid], ctx.level, mastRows, scope)
-        : plv.role ? Tags.evaluate({ ...ctx, role: plv.role }) : Tags.evaluateAll(ctx);
-      body = res ? tagsBodyHtml(own ? res : plOthers(res), scope === 'aram' ? null : res.role) : `<div class="chart-empty">${t(scope === 'arena' ? 'ov.noArenaTraits' : 'ov.noAramTraits')}</div>`;
-    } else {
-      body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
-        : perfAllHtml(parts, agR, { player: true, role: plv.role });
-    }
-    el.innerHTML = `<div class="pl-bar">${bar}${(scope === 'aram' || scope === 'arena') && plv.tab === 'tags' ? '' : roleSeg}${basis}</div><div class="pl-tabbody">${body}</div>`;
-    return;
+    body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
+      : perfAllHtml(parts, agR, { player: true, role: plv.role, traits: { res: traitsOf(''), scope, player: true, role: plv.role } });
+    head = `${bar}${roleSeg}${basis}`;
   }
-  // At a glance: the same page as the own Overview's
+  el.innerHTML = `<div class="pl-bar">${head}</div><div class="pl-tabbody">${body}</div>`;
+  if (plv.tab === 'matches') loadRanks(plv.shown || []);
+}
+
+// the player's match history: the games with you on top (a filter), what the list shows, the games
+// as in the own match history – a click unfolds one (all ten players when its details are stored)
+function plMatchesHtml(rows, own) {
+  const p = plv.p;
   const ownIds = (S.accounts || []).filter(a => !a.placeholder).map(a => a.puuid);
   const m = own ? null : Insights.meetings(scv.own || [], ownIds, p.puuid, null);
-  const withYou = m ? `<div class="swy"><b>${esc(t('ov.met', { n: m.n }))}</b><p>${esc(t('know.total', { n: m.n, e: m.against.n, ew: m.against.w, el: m.against.n - m.against.w, tm: m.same.n, tw: m.same.w }))}</p>
-      <p class="fine">${esc(t(m.last.same ? 'know.team' : 'know.enemy', { when: ago(m.last.g.t), champ: (champById(m.last.them.champ) || {}).name || '' }))}</p></div>`
-    : `<p class="muted">${t(own ? 'pl.own' : 'pl.never')}</p>`;
-  const res = sumRes(all, [p.puuid], info.level != null ? info.level : null, mastRows, scope);
-  el.innerHTML = `<div class="pl-bar ov-bar">${bar}${basis}${sumCustBtn()}</div>` + sumHtml({ parts: rows, scope, own: false, others: !own, tabs: PL_TABS.map(x => x[0]), withYou,
-    res: res && !own ? plOthers(res) : res, mastery: mastRows });
+  const seen = new Set(), games = [];
+  for (const x of [...rows].sort((a, b) => b.g.t - a.g.t)) {
+    if (seen.has(String(x.g.id))) continue;
+    seen.add(String(x.g.id));
+    games.push(x.g);
+  }
+  const mineIds = new Set(ownIds);
+  const withYou = g => g.players.some(x => x.puuid !== p.puuid && mineIds.has(x.puuid));
+  const list = plv.withYou ? games.filter(withYou) : games;
+  const met = m ? `<div class="pl-with"><b>${esc(t('pl.withYou'))}</b><span>${esc(t('know.total', { n: m.n, e: m.against.n, ew: m.against.w, el: m.against.n - m.against.w, tm: m.same.n, tw: m.same.w }))}</span>
+      <div class="seg"><button data-plwith=""${plv.withYou ? '' : ' class="on"'}>${esc(t('pl.all'))}</button><button data-plwith="1"${plv.withYou ? ' class="on"' : ''}>${esc(t('pl.withYou'))} <small>${games.filter(withYou).length}</small></button></div></div>`
+    : `<p class="pl-with muted">${esc(t(own ? 'pl.own' : 'pl.never'))}</p>`;
+  if (!list.length) return `${met}<div class="mh-empty">${t('mh.noMatch')}</div>`;
+  const shown = list.slice(0, plv.show);
+  plv.shown = shown;
+  const more = list.length > shown.length ? `<div class="mh-more"><button class="btn" data-plmore>${t('mh.showMore', { n: Math.min(40, list.length - shown.length) })}</button>`
+    + `<button class="btn" data-plall>${t('mh.showAll', { n: num(list.length) })}</button></div>` : '';
+  return `${met}${summaryHtml(list, { player: true })}<div class="pl-mh">${shown.map(g => gameRow(g, assets || {})).join('')}</div>${more}`;
 }
 
 $('viewPlayer').addEventListener('change', e => {
@@ -178,6 +212,27 @@ $('viewPlayer').addEventListener('click', e => {
   if (q && !q.disabled) { plv.queue = q.dataset.plq; return renderPlayer(); }
   const tb = e.target.closest('[data-pltab]');
   if (tb) { plv.tab = tb.dataset.pltab; return renderPlayer(); }
+  // the match list: more rows, only the games with you, a game unfolded, a record's game
+  if (e.target.closest('[data-plmore]')) { plv.show += 40; return renderPlayer(); }
+  if (e.target.closest('[data-plall]')) { plv.show = Infinity; return renderPlayer(); }
+  const wy = e.target.closest('[data-plwith]');
+  if (wy) { plv.withYou = !!wy.dataset.plwith; plv.show = 40; return renderPlayer(); }
+  if (e.target.closest('[data-mast-all]')) { mast.all = true; return renderPlayer(); }
+  const rec = e.target.closest('#plBody [data-goto]');
+  if (rec) {
+    const find = () => document.querySelector(`#plBody .mh-row[data-gid="${CSS.escape(rec.dataset.goto)}"]`);
+    if (!find()) { plv.show = Infinity; renderPlayer(); }
+    const row = find();
+    if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1200); }
+    return;
+  }
+  // a game from their match list only (no details stored): nothing to unfold
+  const mr = e.target.closest('#plBody .mh-row:not(.lite)');
+  if (mr && !e.target.closest('[data-player], [data-pin], [data-goto], button, a, input, select, .mh-det')) {
+    const id = mr.dataset.gid;
+    if (mh.open.has(id)) mh.open.delete(id); else mh.open.add(id);
+    return renderPlayer();
+  }
   const go = e.target.closest('[data-ovgo]');
   if (go) {
     const sec = PERF_SECS.includes(go.dataset.ovgo) ? go.dataset.ovgo : '';

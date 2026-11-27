@@ -1,4 +1,4 @@
-// Match history: accounts as chips like the queues (the real window, harness.js).
+// Match history (a tab of the Overview): its accounts are the Overview's chips (the real window, harness.js).
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { boot, P } = require('./harness');
@@ -10,35 +10,35 @@ const game = (id, owner, hoursAgo) => ({ id: String(id), t: Date.now() - hoursAg
 const games = [game(1, P(1), 1), game(2, P(2), 2), game(3, P(3), 3)];
 const index = games.map(g => [g.id, g.t, 420, g.players[0].puuid]);
 
-test('match history: accounts as chips – from "All" one, then more, none = all again', async () => {
+test('match history: the account chips of the Overview – from "All" one, then more, none = all again', async () => {
   const app = await boot({ replies: {
     // the app filters one account itself
     matches: (f) => ({ index: f && f.puuid ? index.filter(r => r[3] === f.puuid) : index, waiting: 0, clientUp: true }),
     'matches-get': games,
   } });
   try {
-    await app.click('#navMatches');
+    await app.openMatches();
     await app.settle();
     const rows = () => app.$$('.mh-row').map(r => r.dataset.gid).sort();
     assert.deepEqual(rows(), ['1', '2', '3']);
-    assert.ok(!app.$('#mhAccount'), 'no drop-down any more');
-    assert.ok(app.$('[data-mhaccs=""]').classList.contains('on'));
+    assert.ok(!app.$('#mhAccount') && !app.$('#mhAccs'), 'no chips of its own any more');
+    assert.ok(app.$('[data-ovacc=""]').classList.contains('on'));
     // from "All": just this one
-    await app.click(`[data-mhaccs="${P(2)}"]`);
+    await app.click(`[data-ovacc="${P(2)}"]`);
     await app.settle();
     assert.deepEqual(rows(), ['2']);
     assert.equal(app.called('matches').pop().args[0].puuid, P(2));
     // another one added: both
-    await app.click(`[data-mhaccs="${P(1)}"]`);
+    await app.click(`[data-ovacc="${P(1)}"]`);
     await app.settle();
     assert.deepEqual(rows(), ['1', '2']);
-    assert.ok(!app.$('[data-mhaccs=""]').classList.contains('on'));
+    assert.ok(!app.$('[data-ovacc=""]').classList.contains('on'));
     // both off again: all
-    await app.click(`[data-mhaccs="${P(1)}"]`);
-    await app.click(`[data-mhaccs="${P(2)}"]`);
+    await app.click(`[data-ovacc="${P(1)}"]`);
+    await app.click(`[data-ovacc="${P(2)}"]`);
     await app.settle();
     assert.deepEqual(rows(), ['1', '2', '3']);
-    assert.ok(app.$('[data-mhaccs=""]').classList.contains('on'));
+    assert.ok(app.$('[data-ovacc=""]').classList.contains('on'));
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

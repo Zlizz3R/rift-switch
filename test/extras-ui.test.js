@@ -114,7 +114,7 @@ test('match history: a custom game on the ARAM map says "Custom" and has its own
     'matches-get': (ids) => games.filter((g) => ids.includes(g.id)),
   };
   return withApp({ replies }, async (app) => {
-    await app.click('#navMatches');
+    await app.openMatches();
     const labels = app.$$('.mh-row .mh-q').map((x) => x.textContent);
     assert.deepEqual(labels, ['Custom', 'ARAM']);
     assert.ok(app.$('[data-mhq="custom"]'), 'a Custom filter');
@@ -133,10 +133,10 @@ test('player page: one game is "1 game", long names fit on one line', () => {
     await app.settle();
     await new Promise((r) => setTimeout(r, 30));
     await app.settle();
-    const row = app.$('.ovc-champs .scr');
+    const row = app.$('.pc-champs .oc-row:not(.all)');
     assert.match(row.textContent, /Twisted Fate[\s\S]*1 game(?!s)/);
     assert.doesNotMatch(row.textContent, /1 games/);
-    assert.equal(row.querySelector('.scr-n b').title, 'Twisted Fate');
+    assert.equal(row.querySelector('.oc-name b').title, 'Twisted Fate');
   });
 });
 
@@ -149,7 +149,7 @@ test('replay: right after "download" the client may still say "download" – the
     replay: (id, action) => ({ state: action === 'state' && answers.length === 3 ? 'download' : answers.shift() || 'downloading', progress: 30 }),
   };
   return withApp({ replies }, async (app) => {
-    await app.click('#navMatches');
+    await app.openMatches();
     await app.click(app.$('.mh-row .mh-meta'));
     await app.settle();
     assert.match(app.$('.rp-bar').textContent, /Download replay/);

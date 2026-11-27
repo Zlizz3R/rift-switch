@@ -6,24 +6,26 @@
 const mast = { data: null, games: null, q: '', sort: 'total', dir: -1, all: false, stamp: '' };
 
 // ---------- Overview sub-tabs ----------
-// The app starts on "At a glance" (the Overview's start page); the tab chosen then stays while the
-// app runs.
-// Performance ("stats") holds the champions, the play style and the map as its sections: a way into
-// one of them ("champs" / "style" / "map") opens Performance there.
-const DASH_TABS = ['sum', 'lp', 'stats', 'mast', 'tags', 'seasons'];
+// The app starts on Performance (the Overview's start page); the tab chosen then stays while the app
+// runs. The same tabs, in the same order, on the player page (player-view.js PL_TABS).
+// Performance ("stats") holds the champions, the roles, the play style and the map as its sections:
+// a way into one of them ("champs" / "style" / "map") opens Performance there.
+const DASH_TABS = ['stats', 'tags', 'mast', 'matches', 'lp', 'seasons'];
 const PERF_SECS = ['champs', 'style', 'map'];
-let dashTabNow = 'sum';
+let dashTabNow = 'stats';
 const dashTab = () => dashTabNow;
 function showDashTab(tab) {
   const sec = PERF_SECS.includes(tab) ? tab : '';
   if (sec) tab = 'stats';
-  tab = DASH_TABS.includes(tab) ? tab : 'sum';
+  tab = DASH_TABS.includes(tab) ? tab : 'stats';
   dashTabNow = tab;
+  // the head counts the games and shows the champion played most, whatever tab is open
+  if (!perf.games && tab !== 'stats') loadPerf();
   document.querySelectorAll('#dashTabs [data-dt]').forEach(b => b.classList.toggle('on', b.dataset.dt === tab));
-  $('dashSum').hidden = tab !== 'sum';
   $('dashLp').hidden = tab !== 'lp';
-  if (tab === 'sum' && typeof renderSum === 'function') { renderSum(); loadSum(); }
+  $('viewMatches').hidden = tab !== 'matches';
   if (tab === 'lp') { renderDash(); }
+  if (tab === 'matches') { renderMatches(); loadMatches(); }
   $('dashPerf').hidden = tab !== 'stats';
   $('dashMast').hidden = tab !== 'mast';
   $('dashTags').hidden = tab !== 'tags';
@@ -161,6 +163,26 @@ function renderMast() {
     <div class="mast-top">${top}</div>
     <div class="mast-wrap"><table class="dash-table mast-table"><thead>${head}</thead><tbody>${body || `<tr><td colspan="${3 + accs.length}" class="muted">${t('mast.noHits')}</td></tr>`}</tbody></table></div>
     ${more ? `<button class="btn mast-more" data-mast-all>${t('mast.showAll', { n: more })}</button>` : ''}`;
+}
+
+// another player's mastery (the player page): their points per champion and the play time behind
+// them, estimated from their own games' length and ARAM share. list: [{ id, total }], games: theirs
+function mastPlayerHtml(list, puuid, games) {
+  if (!list || !list.length) return `<div class="chart-empty">${t('ov.noMastery')}</div>`;
+  const short = games.map(g => { const p = g.players.find(x => x.puuid === puuid) || {}; return [g.t, g.dur, g.q, p.champ, p.win, g.remake]; });
+  const min = MastMath.gameMinutes(MastMath.avgMinutes(short));
+  const rows = list.map(r => ({ ...r, name: mastName(r.id), est: MastMath.estimate(r.total, { min, aram: MastMath.aramShare(short, r.id) }) }));
+  const total = mastSum(rows.map(r => r.est)), pts = rows.reduce((x, r) => x + r.total, 0);
+  const ms = n => { const m = MastMath.milestone(n); return m ? ` <i class="ms">${MS_LABEL[m]}</i>` : ''; };
+  const top = rows.slice(0, 5).map(r => `<div class="mast-card"><img src="${CHAMP_ICON(r.id)}" alt="" loading="lazy">
+      <div><b>${esc(r.name)}</b><div class="mc-pts">${num(r.total)}${ms(r.total)}</div><small>${esc(mastHours(r.est))}</small></div></div>`).join('');
+  const shown = mast.all ? rows : rows.slice(0, 50);
+  const body = shown.map(r => `<tr><td><span class="mast-ch"><img src="${CHAMP_ICON(r.id)}" alt="" loading="lazy">${esc(r.name)}</span></td>
+      <td class="num"><b>${num(r.total)}</b>${ms(r.total)}</td><td class="num muted">${esc(mastHours(r.est))}</td></tr>`).join('');
+  return `<div class="mast-totals"><div><span>${t('pl.mastPts')}</span><b>${num(pts)}</b></div><div><span>${t('mast.time')}</span><b>${esc(mastHours(total))}</b></div></div>
+    <div class="mast-top">${top}</div>
+    <div class="mast-wrap"><table class="dash-table mast-table"><thead><tr><th>${t('mast.champ')}</th><th class="num">${t('mast.total')}</th><th class="num">${t('mast.time')}</th></tr></thead><tbody>${body}</tbody></table></div>
+    ${rows.length > shown.length ? `<button class="btn mast-more" data-mast-all>${t('mast.showAll', { n: rows.length - shown.length })}</button>` : ''}`;
 }
 
 $('mastSearch').addEventListener('input', () => { mast.q = $('mastSearch').value; renderMast(); });

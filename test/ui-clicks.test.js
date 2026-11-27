@@ -418,7 +418,7 @@ test('live page after a game: the last game with both teams, MVP / ACE, bars wit
     assert.ok(!app.$('#liveBody .pg-card .mh-det'));
     assert.ok(!app.$('#liveBody [data-sec="compare"]'));
     await app.click('#pgOpen');
-    assert.equal(app.w.eval('view'), 'matches');
+    assert.equal(app.w.eval('view'), 'dash'); assert.equal(app.w.eval('dashTab()'), 'matches');
   });
 });
 
@@ -694,7 +694,7 @@ const mhReplies = (games) => ({
 });
 
 test('match history: games load once (index, then only missing ones); blue left', () => withApp({ replies: mhReplies([game(1), game(2)]) }, async (app) => {
-  await app.click('#navMatches');
+  await app.openMatches();
   assert.equal(app.$$('.mh-row').length, 2);
   assert.deepEqual(lastCall(app, 'matches-get').args[0].sort(), ['1', '2']);
   const before = app.called('matches-get').length;
@@ -708,7 +708,7 @@ test('match history: games load once (index, then only missing ones); blue left'
 }));
 
 test('match history: a click opens the details (not on a name); a name opens the player page, back returns', () => withApp({ replies: mhReplies([game(1)]) }, async (app) => {
-  await app.click('#navMatches');
+  await app.openMatches();
   const name = app.$('.mh-row .mh-c.nm');
   const who = JSON.parse(name.dataset.player);
   assert.ok(who.puuid, 'the name knows its player');
@@ -750,7 +750,7 @@ test('match history: an opened game has its replay – download with progress, t
   const asked = [];
   const replies = { ...mhReplies([game(1)]), replay: (id, action) => { asked.push([id, action]); if (action === 'download') state = { state: 'downloading', progress: 40 }; if (action === 'watch') return { state: 'watch', started: true }; return state; } };
   await withApp({ replies }, async (app) => {
-    await app.click('#navMatches');
+    await app.openMatches();
     await app.click(app.$('.mh-row .mh-meta'));
     await app.settle();
     assert.deepEqual(asked[0], ['1', 'state']);
@@ -773,7 +773,7 @@ test('match history: an opened game has its replay – download with progress, t
 });
 
 test('match history: a replay League can\'t play says why', () => withApp({ replies: { ...mhReplies([game(1)]), replay: { state: 'incompatible', progress: 0 } } }, async (app) => {
-  await app.click('#navMatches');
+  await app.openMatches();
   await app.click(app.$('.mh-row .mh-meta'));
   await app.settle();
   assert.match(app.$('.rp-bar').textContent, /older patch/);
@@ -800,7 +800,7 @@ test('positions: Riot\'s wrong guesses are fixed (Smite = jungle, support item =
 test('match history: the lists above show 5, "+5" five more, "less" back to 5', () => {
   const games = Array.from({ length: 12 }, (_, k) => { const g = game(k + 1); g.players[0].champ = 100 + k; return g; });
   return withApp({ replies: mhReplies(games) }, async (app) => {
-    await app.click('#navMatches');
+    await app.openMatches();
     const champs = () => app.$$('[data-mhchamp]').length;
     assert.equal(champs(), 5);
     assert.equal(app.$('[data-mhmore="champ"]').textContent, 'Show more (5)');
@@ -817,7 +817,7 @@ test('match history: the lists above show 5, "+5" five more, "less" back to 5', 
 });
 
 test('match details: two freely chosen players compared, with their gold over time', () => withApp({ replies: mhReplies([game(1, { v: 3, gold: Array.from({ length: 20 }, (_, m) => Array.from({ length: 10 }, (_, i) => 500 + m * 400 + i * 10)) })]) }, async (app) => {
-  await app.click('#navMatches');
+  await app.openMatches();
   await app.click(app.$('.mh-row .mh-meta'));
   await app.click('[data-sec="compare"]');
   const sel = app.$$('[data-cmp]');
@@ -831,7 +831,7 @@ test('match details: two freely chosen players compared, with their gold over ti
 }));
 
 test('match history: multikill chip pins those games; the bin deletes after the red warning', () => withApp({ replies: mhReplies([game(1), game(2, { players: game(2).players.map((p) => ({ ...p, multi: 0 })) })]) }, async (app) => {
-  await app.click('#navMatches');
+  await app.openMatches();
   await app.click('[data-pin="5"]');
   assert.ok(app.$('.mh-sec.pin'));
   await app.click('#mhClear');
@@ -841,7 +841,7 @@ test('match history: multikill chip pins those games; the bin deletes after the 
 }));
 
 test('match history: every filter control works without errors', () => withApp({ replies: mhReplies([game(1), game(2), game(30)]) }, async (app) => {
-  await app.click('#navMatches');
+  await app.openMatches();
   for (const v of ['today', '7', '30', '90', 'custom', 'all']) await app.type('#mhRange', v);
   for (const b of app.$$('[data-mhr]')) await app.click(b);
   for (const b of app.$$('[data-mhq]')) await app.click(b);
@@ -862,18 +862,18 @@ test('match history: every filter control works without errors', () => withApp({
 }));
 
 test('match history: the one "Load" loads everything – also every older game – and waits until a game is over', () => withApp({ replies: { ...mhReplies([game(1)]), 'load-all': { ok: false, why: 'inGame' } } }, async (app) => {
-  await app.click('#navMatches');
+  await app.openMatches();
   assert.ok(!app.$('#mhMore'), 'no separate "load older games" any more');
-  await app.click('#viewMatches [data-loadall]');
+  await app.click('#dashTabs [data-loadall]');
   assert.equal(app.called('load-all').length, 1);
   assert.match(app.$('#toast').textContent, /Not during a game/);
 }));
 
 test('match history: the shared progress while everything loads', () => withApp({}, async (app) => {
   await app.push({ ...app.S.state, loading: { step: 'lists', n: 4, of: 5, done: 2, total: 6, since: 0 } });
-  await app.click('#navMatches');
-  assert.match(app.$('#viewMatches [data-loadall]').textContent, /Match lists … 4\/5/);
-  assert.ok(app.$('#viewMatches [data-loadall]').disabled);
+  await app.openMatches();
+  assert.match(app.$('#dashTabs [data-loadall]').textContent, /Match lists … 4\/5/);
+  assert.ok(app.$('#dashTabs [data-loadall]').disabled);
 }));
 
 // ---------- adding many accounts ----------
@@ -1199,7 +1199,7 @@ test('overview: every account in one LP chart, the period in numbers, a goal per
 // ---------- everything clickable ----------
 test('every button of every page can be clicked without a script error', () => withApp({ replies: mhReplies([game(1)]) }, async (app) => {
   const skip = '#close, #toTray, #min, #updBtn, #supportBtn, #navCoffee, #exportBtn, #importBtn';
-  for (const nav of ['#navAccounts', '#navDash', '#navLive', '#navMatches', '#navTools', '#navSettings']) {
+  for (const nav of ['#navAccounts', '#navDash', '#navLive', '#navTools', '#navSettings']) {
     await app.click(nav);
     for (const b of app.$$('button:not([hidden])').filter((b) => !b.matches(skip) && !b.closest('[hidden]'))) {
       await app.click(b);

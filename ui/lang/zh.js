@@ -812,6 +812,11 @@
     'ov.resetT': "恢复“概览”的默认布局",
     'pg.eog': "详情稍后",
     'pg.eogT': "来自结算画面的数据——客户端记录该对局后即可在比赛记录中打开（对线对比、经济领先、回放）",
+    'perf.wins': "{n} 胜",
+    'perf.losses': "{n} 负",
+    'perf.allTraitsT': "所有特质及其背后的数据",
+    'pl.mastPts': "专精点数",
+    'pl.seasonsNote': "两个来源，从不相加：客户端只提供上个和当前赛季；已存储的对局按自然年统计。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

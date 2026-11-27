@@ -48,8 +48,10 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   navGo(e.key === 'ArrowLeft' ? -1 : 1);
 });
-// o: { back: shown by the arrows (no new step), p: the player of the player page }
+// o: { back: shown by the arrows (no new step), p: the player of the player page, tab: an
+// Overview tab to open }. The match history is a tab of the Overview: 'matches' opens it there.
 function showView(v, o = {}) {
+  if (v === 'matches') { v = 'dash'; o = { ...o, tab: 'matches' }; }
   if (!o.back) {
     const step = v === 'player' ? { v, p: o.p } : { v };
     if (!navSame(navh.list[navh.at], step)) {
@@ -67,7 +69,6 @@ function showView(v, o = {}) {
   $('viewDash').hidden = v !== 'dash';
   $('viewColl').hidden = v !== 'coll';
   $('viewTools').hidden = v !== 'tools';
-  $('viewMatches').hidden = v !== 'matches';
   $('detail').hidden = v !== 'accounts';
   $('navAccounts').classList.toggle('active', v === 'accounts');
   $('navLive').classList.toggle('active', v === 'live');
@@ -78,11 +79,9 @@ function showView(v, o = {}) {
   if (slot && $('plSearchBox') && $('plSearchBox').parentNode !== slot) slot.appendChild($('plSearchBox'));
   $('navColl').classList.toggle('active', v === 'coll');
   $('navTools').classList.toggle('active', v === 'tools');
-  $('navMatches').classList.toggle('active', v === 'matches');
   if (typeof pageArt === 'function') pageArt(v);
   if (v === 'live') pollLive(true);
-  if (v === 'matches') { renderMatches(); loadMatches(); }
-  if (v === 'dash') { loadDash(); if (typeof showDashTab === 'function') showDashTab(dashTab()); }
+  if (v === 'dash') { loadDash(); if (typeof showDashTab === 'function') showDashTab(o.tab || dashTab()); }
   if (v === 'coll') { renderColl(); loadColl(); }
 }
 $('navAccounts').onclick = () => showView('accounts');
@@ -98,7 +97,6 @@ $('navLive').onclick = () => showView('live');
 $('navDash').onclick = () => showView('dash');
 $('navColl').onclick = () => showView('coll');
 $('navTools').onclick = () => showView('tools');
-$('navMatches').onclick = () => showView('matches');
 
 // ---------- several accounts at once ----------
 let picked = new Set(), lastPick = null;

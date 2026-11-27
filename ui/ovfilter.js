@@ -1,5 +1,5 @@
-// Overview: which accounts count – one choice for every tab (LP history, Performance, Champions,
-// Play style, Mastery, Tags, Seasons), chips like the match history's queues: from "All" a click
+// Overview: which accounts count – one choice for every tab (Performance, Traits, Mastery, Match
+// history, LP history, Seasons), chips like the match history's queues: from "All" a click
 // picks just that account, further clicks add or remove one, none left = "All" again.
 // Ctrl+click keeps only that one. Kept in this browser profile (a viewer's convenience).
 // The LP history shows the same choice in its coloured chips (dashboard.js).
@@ -12,6 +12,9 @@ const ovOn = id => !ovf.off.has(id);
 // the accounts in the evaluation
 const ovChosen = () => ovAccs().filter(a => ovOn(a.puuid));
 
+// every account / just this one (a game or an account opened from elsewhere)
+function ovAll() { ovf.off.clear(); ovSave(); renderOvAccs(); }
+function ovOnly(id) { ovf.off = new Set(ovAccs().map(a => a.puuid).filter(x => x !== id)); ovSave(); renderOvAccs(); }
 function ovToggle(id, only) {
   const all = ovAccs().map(a => a.puuid);
   const allOn = !all.some(x => ovf.off.has(x));
@@ -39,8 +42,8 @@ function ovRefresh() {
   renderOvAccs();
   const tab = dashTab();
   if (typeof renderOvHero === 'function') renderOvHero();
-  if (tab === 'sum' && typeof renderSum === 'function') renderSum();
-  else if (tab === 'lp' && typeof renderDash === 'function') renderDash();
+  if (tab === 'lp' && typeof renderDash === 'function') renderDash();
+  else if (tab === 'matches') { mh.show = 40; loadMatches(); }
   else if (['stats', 'champs', 'style', 'map'].includes(tab)) renderPerf();
   else if (tab === 'mast') renderMast();
   else if (tab === 'tags') renderTagsView();

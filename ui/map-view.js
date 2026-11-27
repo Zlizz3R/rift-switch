@@ -5,7 +5,7 @@
 
 // kind: 'deaths' | 'kills' | 'both'; the window in minutes [from, to) – to null = the end;
 // preset: the phase button that is on ('all', 'early' …) or '' for minutes picked on the chart
-const mv = { kind: 'deaths', from: 0, to: null, preset: 'all' };
+const mv = { kind: 'both', from: 0, to: null, preset: 'all' };
 const MV_PRESETS = { all: [0, null], early: [0, 10], mid: [10, 20], late: [20, null] };
 
 // Summoner's Rift as a sketch (0–148, blue base bottom left; SVG y runs down)
@@ -54,7 +54,7 @@ function perfMapHtml(parts, opts = {}) {
   const dl = win.filter(e => e.kind === 'death'), kl = win.filter(e => e.kind === 'kill');
   const ds = MapMath.sum(dl, nGames), ks = MapMath.sum(kl, nGames);
   const count = k => all.filter(e => (k === 'both' || e.kind === (k === 'kills' ? 'kill' : 'death')) && MapMath.inWindow(e, mv.from, mv.to)).length;
-  const kinds = `<div class="seg mp-kinds">${['deaths', 'kills', 'both'].map(k => `<button data-mpk="${k}"${mv.kind === k ? ' class="on"' : ''}><i class="mp-dot ${k}"></i>${esc(t('mp.' + k))} <small>${count(k)}</small></button>`).join('')}</div>`;
+  const kinds = `<div class="seg mp-kinds">${['both', 'deaths', 'kills'].map(k => `<button data-mpk="${k}"${mv.kind === k ? ' class="on"' : ''}><i class="mp-dot ${k}"></i>${esc(t('mp.' + k))} <small>${count(k)}</small></button>`).join('')}</div>`;
   const presets = `<div class="seg dm-phases">${Object.keys(MV_PRESETS).map(id => `<button data-dmph="${id}"${mv.preset === id ? ' class="on"' : ''}>${esc(t('dm.ph.' + id))}</button>`).join('')}${mv.preset ? '' : `<button class="on" disabled>${esc(mvWindowLabel())}</button>`}</div>`;
   // the spots that stand out: per phase for the whole game, else for the chosen minutes
   const hotLine = (label, list, kind) => {

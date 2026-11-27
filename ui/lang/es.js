@@ -816,6 +816,11 @@
     'ov.resetT': "Volver al diseño original de De un vistazo",
     'pg.eog': "Detalles en camino",
     'pg.eogT': "De los números de la pantalla final: la partida se abre en el historial en cuanto el cliente la registra (línea contra línea, ventaja de oro, repetición)",
+    'perf.wins': "{n} V",
+    'perf.losses': "{n} D",
+    'perf.allTraitsT': "Todos los rasgos con sus números",
+    'pl.mastPts': "Puntos de maestría",
+    'pl.seasonsNote': "Dos fuentes, nunca sumadas: el cliente solo indica la temporada anterior y la actual; las partidas guardadas cuentan por año natural.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

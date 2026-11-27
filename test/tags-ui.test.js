@@ -136,14 +136,15 @@ test('traits: ARAM players get ARAM traits – the tab starts on ARAM, no roles,
     await app.click('[data-tmode="sr"]');
     assert.ok(app.visible('#tagRole'));
     assert.match(app.$$('.tag-top > div')[0].textContent, /Nothing yet/);
-    // At a glance: the ARAM scope first, its cards for ARAM (team share, activity)
-    await app.click('[data-dt="sum"]');
+    // Performance: ARAM first (no queues picked by hand yet), its cards for ARAM (team share, activity)
+    await app.click('[data-dt="stats"]');
     await app.settle();
-    assert.ok(app.$('[data-sumq="aram"]').classList.contains('on'));
-    assert.ok(app.$('.ovc-share'), 'the share of the team');
-    assert.match(app.$('.ovc-share').textContent, /Damage[\s\S]*Healing/);
-    assert.ok(app.$('.ovc-act'), 'activity instead of the radar');
-    assert.match(app.$('.ovc-traits').textContent, /Damage dealer/);
+    assert.ok(app.$('[data-pq="aram"]').classList.contains('on'));
+    assert.ok(!app.$('[data-pq="solo"]').classList.contains('on'));
+    assert.ok(app.$('.pc-share'), 'the share of the team');
+    assert.match(app.$('.pc-share').textContent, /Damage[\s\S]*Healing/);
+    assert.ok(app.$('.pc-act'), 'activity instead of the radar');
+    assert.match(app.$('.pf-traits').textContent, /Damage dealer/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

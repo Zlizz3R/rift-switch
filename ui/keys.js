@@ -28,6 +28,7 @@ function stepTile(dir) {
     || tiles[dir === 'down' ? Math.min(tiles.length - 1, i + 1) : Math.max(0, i - 1)];
 }
 
+// Ctrl+5: the match history (a tab of the Overview)
 const VIEWS = ['accounts', 'dash', 'coll', 'live', 'matches', 'tools'];
 document.addEventListener('keydown', async e => {
   if (e.defaultPrevented || e.altKey) return;

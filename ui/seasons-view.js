@@ -16,36 +16,38 @@ function renderSeasonsView() {
   if (!ssv.games) { el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
   const accs = ovChosen();
   if (!accs.length) { el.innerHTML = `<div class="chart-empty">${t('ov.none')}</div>`; return; }
-  const y = new Date().getFullYear();
   const parts = Stats.byParticipation(ssv.games).filter(x => Stats.RANKED_QUEUES.includes(x.g.q));
-  el.innerHTML = accs.map(a => {
-    // 1) the client (last read of this account)
-    const client = [['solo', 'Solo/Duo'], ['flex', 'Flex']].flatMap(([k, label]) => {
-      const q = a[k] || {};
-      const out = [];
-      if (q.lastSeason || q.lastSeasonPeak) out.push(`<span class="ss-chip"><b>${t('ss.season', { y: y - 1 })} · ${label}</b>${q.lastSeason ? ' ' + esc(t('ss.end', { r: ssRank(q.lastSeason) })) : ''}${q.lastSeasonPeak ? ' · ' + esc(t('ss.peak', { r: ssRank(q.lastSeasonPeak) })) : ''}</span>`);
-      if (q.tier || q.peak) out.push(`<span class="ss-chip"><b>${t('ss.season', { y })} · ${label}</b>${q.tier ? ' ' + esc(t('ss.now', { r: ssRank(q) })) : ''}${q.peak ? ' · ' + esc(t('ss.peak', { r: ssRank(q.peak) })) : ''}</span>`);
-      return out;
-    });
-    // 2) the stored ranked games, per calendar year
-    const mine = parts.filter(x => x.p.puuid === a.puuid);
-    const years = [...new Set(mine.map(x => new Date(x.g.t).getFullYear()))].sort((p, q) => q - p);
-    const stored = years.map(yr => {
-      const ag = Stats.aggregate(mine.filter(x => new Date(x.g.t).getFullYear() === yr));
-      return `<span class="ss-chip"><b>${yr}</b> ${esc(t('ss.games', { n: ag.n, wr: Math.round(ag.winrate * 100) }))}</span>`;
-    });
-    // 3) entered by hand
-    const manual = (a.seasonsManual || []).map(e => `<span class="ss-chip manual"><b>${esc(e.season)} · ${e.queue === 'flex' ? 'Flex' : 'Solo/Duo'}</b> ${esc(ssRank(e))}${e.wins != null ? ` · ${e.wins}W` : ''}${e.losses != null ? ` ${e.losses}L` : ''}</span>`);
-    const editing = ssv.edit === a.puuid;
-    const row = (label, chips, empty) => `<div class="ss-row"><span class="ss-l">${label}</span><div class="ss-chips">${chips.length ? chips.join('') : `<span class="muted">${empty}</span>`}</div></div>`;
-    return `<div class="ss-acc">
-      <div class="ss-head"><b>${esc(dispName(a))}</b><button class="btn small" data-ssedit="${esc(a.puuid)}">${t(editing ? 'ss.close' : 'ss.edit')}</button></div>
-      ${row(t('ss.fromClient'), client, t('ss.noClient'))}
-      ${row(t('ss.fromGames'), stored, t('ss.noGames'))}
-      ${row(t('ss.byHand'), manual, t('ss.noManual'))}
-      ${editing ? ssEditorHtml() : ''}
-    </div>`;
-  }).join('') + `<p class="coll-foot">${t('ss.note')}</p>`;
+  el.innerHTML = accs.map(a => ssAccHtml(a, parts.filter(x => x.p.puuid === a.puuid), true)).join('') + `<p class="coll-foot">${t('ss.note')}</p>`;
+}
+// one account's (or player's) seasons: a = { puuid, solo, flex, seasonsManual }, parts = their ranked
+// participations; own: the own entries and the editor (another player has only the first two sources)
+function ssAccHtml(a, mine, own) {
+  const y = new Date().getFullYear();
+  // 1) the client (last read of this account)
+  const client = [['solo', 'Solo/Duo'], ['flex', 'Flex']].flatMap(([k, label]) => {
+    const q = a[k] || {};
+    const out = [];
+    if (q.lastSeason || q.lastSeasonPeak) out.push(`<span class="ss-chip"><b>${t('ss.season', { y: y - 1 })} · ${label}</b>${q.lastSeason ? ' ' + esc(t('ss.end', { r: ssRank(q.lastSeason) })) : ''}${q.lastSeasonPeak ? ' · ' + esc(t('ss.peak', { r: ssRank(q.lastSeasonPeak) })) : ''}</span>`);
+    if (q.tier || q.peak) out.push(`<span class="ss-chip"><b>${t('ss.season', { y })} · ${label}</b>${q.tier ? ' ' + esc(t('ss.now', { r: ssRank(q) })) : ''}${q.peak ? ' · ' + esc(t('ss.peak', { r: ssRank(q.peak) })) : ''}</span>`);
+    return out;
+  });
+  // 2) the stored ranked games, per calendar year
+  const years = [...new Set(mine.map(x => new Date(x.g.t).getFullYear()))].sort((p, q) => q - p);
+  const stored = years.map(yr => {
+    const ag = Stats.aggregate(mine.filter(x => new Date(x.g.t).getFullYear() === yr));
+    return `<span class="ss-chip"><b>${yr}</b> ${esc(t('ss.games', { n: ag.n, wr: Math.round(ag.winrate * 100) }))}</span>`;
+  });
+  // 3) entered by hand
+  const manual = (a.seasonsManual || []).map(e => `<span class="ss-chip manual"><b>${esc(e.season)} · ${e.queue === 'flex' ? 'Flex' : 'Solo/Duo'}</b> ${esc(ssRank(e))}${e.wins != null ? ` · ${e.wins}W` : ''}${e.losses != null ? ` ${e.losses}L` : ''}</span>`);
+  const editing = own && ssv.edit === a.puuid;
+  const row = (label, chips, empty) => `<div class="ss-row"><span class="ss-l">${label}</span><div class="ss-chips">${chips.length ? chips.join('') : `<span class="muted">${empty}</span>`}</div></div>`;
+  return `<div class="ss-acc">
+    ${own ? `<div class="ss-head"><b>${esc(dispName(a))}</b><button class="btn small" data-ssedit="${esc(a.puuid)}">${t(editing ? 'ss.close' : 'ss.edit')}</button></div>` : ''}
+    ${row(t('ss.fromClient'), client, t('ss.noClient'))}
+    ${row(t('ss.fromGames'), stored, t('ss.noGames'))}
+    ${own ? row(t('ss.byHand'), manual, t('ss.noManual')) : ''}
+    ${editing ? ssEditorHtml() : ''}
+  </div>`;
 }
 function ssEditorHtml() {
   const r = SeasonParse.parseSeasons(ssv.text);

@@ -862,6 +862,11 @@
     'ov.resetT': "Back to the designed layout of At a glance",
     'pg.eog': "Details follow",
     'pg.eogT': "From the end screen's numbers – the game opens in the match history as soon as the client lists it (lane against lane, gold lead, replay)",
+    'perf.wins': "{n} W",
+    'perf.losses': "{n} L",
+    'perf.allTraitsT': "Every trait with the numbers behind it",
+    'pl.mastPts': "Mastery points",
+    'pl.seasonsNote': "Two sources, never added up: the client tells only the last and the current season; stored games count by calendar year.",
   };
 
   const de = {
@@ -1707,6 +1712,11 @@
     'ov.resetT': "Zurück zum vorgegebenen Layout von Auf einen Blick",
     'pg.eog': "Details folgen",
     'pg.eogT': "Aus den Zahlen des Endbildschirms – das Spiel lässt sich in der Match History öffnen, sobald der Client es führt (Lane gegen Lane, Goldvorsprung, Replay)",
+    'perf.wins': "{n} S",
+    'perf.losses': "{n} N",
+    'perf.allTraitsT': "Alle Traits mit den Zahlen dahinter",
+    'pl.mastPts': "Mastery-Punkte",
+    'pl.seasonsNote': "Zwei Quellen, nie zusammengezählt: Der Client nennt nur die letzte und die aktuelle Season; gespeicherte Spiele zählen nach Kalenderjahr.",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

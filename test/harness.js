@@ -84,6 +84,8 @@ async function boot({ state = sampleState(), replies = {}, width = 1300, upTo = 
     type: async (el, value) => { if (typeof el === 'string') el = w.document.querySelector(el); el.value = value; el.dispatchEvent(new w.Event('input', { bubbles: true })); el.dispatchEvent(new w.Event('change', { bubbles: true })); await settle(w); },
     submit: async (form) => { if (typeof form === 'string') form = w.document.querySelector(form); form.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })); await settle(w); },
     settle: () => settle(w),
+    // the match history: a tab of the Overview
+    openMatches: async () => { await app.click('#navDash'); await app.click('[data-dt="matches"]'); },
     visible: (sel) => { const el = typeof sel === 'string' ? w.document.querySelector(sel) : sel; return !!el && !el.closest('[hidden]'); },
     close: () => w.close(),
   };

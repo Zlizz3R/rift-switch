@@ -1,11 +1,12 @@
-// Overview → Performance and Champions: one filter (account, queue, time, role) over all stored
-// games, the key figures, a table by role (unfold a role for its champions) and an op.gg-style
-// champion list. The maths is in perfmath.js / stats.js. A click on a champion opens the match
-// history with the same filters. Uses the globals of renderer.js / views.js / matches-view.js.
+// Overview → Performance, the Overview's start page: one filter (account, queue, time, role) over
+// all stored games; on top one strip with the key figures and their trend and the traits, then the
+// champions (op.gg-style), the roles, the play style and the map as cards. The maths is in
+// perfmath.js / stats.js. A click on a champion opens the match history with the same filters.
+// Uses the globals of renderer.js / views.js / matches-view.js / summary.js / tags-view.js.
 
 function perfQueuesKept() {
   try { const q = JSON.parse(localStorage.getItem('rs.perfQ')); if (Array.isArray(q)) return q; } catch { /* default */ }
-  return ['solo', 'flex'];
+  return null;
 }
 // how many of the newest games count (0 = all); kept like the queues
 function perfLastKept() {
@@ -14,9 +15,12 @@ function perfLastKept() {
 const PERF_LAST = [10, 20, 50, 100, 200];
 const perf = {
   // queues: groups switched on (none = all); kept like the account choice; last: the newest n games only
-  f: { queues: perfQueuesKept(), range: 'y' + new Date().getFullYear(), from: '', to: '', role: '', last: perfLastKept() },
+  f: { queues: perfQueuesKept() || ['solo', 'flex'], range: 'y' + new Date().getFullYear(), from: '', to: '', role: '', last: perfLastKept() },
+  // no queues chosen by hand yet: the ones the chosen accounts play most this season (an ARAM player
+  // starts on ARAM)
+  qAuto: !perfQueuesKept(),
   lastOwn: false,
-  all: false, cSort: 'n', games: null, loading: false, trendN: 20, trendKey: 'kda',
+  all: false, cSort: 'n', games: null, mast: null, loading: false,
 };
 perf.lastOwn = perf.f.last > 0 && !PERF_LAST.includes(perf.f.last);
 
@@ -25,10 +29,15 @@ async function loadPerf() {
   perf.loading = true;
   try {
     if (!champs.length) champs = (await api.champions()) || [];
-    perf.games = (await allGames()) || [];
+    // the mastery: for the traits (one-trick, champion pool)
+    const [g, m] = await Promise.all([allGames(), api.masteries()]);
+    perf.games = g || [];
+    perf.mast = Array.isArray(m) ? m : [];
   } catch (e) { console.warn('perf', e); }
   perf.loading = false;
   renderPerf();
+  // the Overview's head counts the games and shows the champion played most
+  if (view === 'dash' && typeof renderOvHero === 'function') renderOvHero();
 }
 const perfOn = () => view === 'dash' && dashTab() === 'stats';
 api.onMatchesChanged(() => { if (perfOn()) loadPerf(); });
@@ -100,21 +109,44 @@ function renderPerf() {
   if (!el || $('dashPerf').hidden) return;
   renderPerfFilter();
   if (!perf.games) { $('perfLine').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; return; }
+  if (perf.qAuto) {
+    const ids = ovChosen().map(a => a.puuid);
+    const scope = sumAutoScope(Stats.byParticipation(perf.games).filter(x => ids.includes(x.p.puuid)));
+    const q = { ranked: ['solo', 'flex'], aram: ['aram'], arena: ['arena'], all: [] }[scope] || ['solo', 'flex'];
+    if (q.join() !== perf.f.queues.join()) { perf.f.queues = q; renderPerfFilter(); }
+  }
   const parts = PerfMath.select(perf.games, perfF());
   const ag = Stats.aggregate(parts);
   $('perfLine').textContent = perfLine(ag);
   if (!ag) { el.innerHTML = `<div class="chart-empty">${t('mh.noMatch')}</div>`; return; }
-  el.innerHTML = perfAllHtml(parts, ag);
+  el.innerHTML = perfAllHtml(parts, ag, { role: perf.f.role, traits: perfOwnTraits() });
 }
-// one page: the key figures and the trend on top, then the champions, the play style and the map
-// as cards – side by side on a wide window, the champions left of the other two on a medium one,
-// one under the other on a narrow one (container queries in style.css)
+// the own accounts' traits for the strip: ranked (or ARAM when only ARAM is chosen), every role
+function perfOwnTraits() {
+  const chosen = ovChosen(), ids = chosen.map(a => a.puuid);
+  const q = perf.f.queues;
+  const scope = q.length && q.every(x => x === 'aram') ? 'aram' : q.length && q.every(x => x === 'arena') ? 'arena' : 'ranked';
+  const read = (perf.mast || []).filter(m => ids.includes(m.puuid));
+  const table = read.length ? MastMath.masteryTable(read) : null;
+  const acc = chosen.length === 1 ? chosen[0] : null;
+  return { res: sumRes(perf.games, ids, acc && acc.level != null ? acc.level : null, table, scope), scope };
+}
+// one page: the key figures and the traits on top, then the champions, the roles, the play style and
+// the map as cards – champions left of the others on a medium window, three columns on a wide one, one
+// under the other on a narrow one. ARAM and Arena only: the share of the team and the activity
+// instead of the roles, the play style and the map (no lanes there).
+// opts: { player: the player page, role: the role filter, traits: { res, scope, others } }
 function perfAllHtml(parts, ag, opts = {}) {
-  const card = (id, title, body) => `<section class="perf-card pc-${id}" id="perfSec-${id}"><h3 class="perf-card-h">${esc(title)}</h3>${body}</section>`;
-  return `${perfBarHtml(ag)}${perfTrendHtml(parts)}<div class="perf-grid">
-    ${card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts))}
-    ${card('style', t('dash.tabStyle'), perfStyleHtml(parts, opts.role))}
-    ${card('map', t('dash.tabMap'), perfMapHtml(parts, opts.player ? { foot: false } : {}))}</div>`;
+  const card = (id, title, body, sub = '') => `<section class="perf-card pc-${id}" id="perfSec-${id}"><h3 class="perf-card-h">${esc(title)}${sub ? `<small>${sub}</small>` : ''}</h3>${body}</section>`;
+  const off = parts.length > 0 && parts.every(x => Stats.offRift(x.g));
+  const cards = off
+    ? [card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts)),
+      card('share', t('ov.teamShare'), perfShareHtml(parts), esc(t('ov.fair'))), card('act', t('ov.activity'), perfActHtml(parts))]
+    : [card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts)),
+      opts.role ? '' : card('roles', t('ov.roles'), perfRolesHtml(parts)),
+      card('style', t('dash.tabStyle'), perfStyleHtml(parts, opts.role)),
+      card('map', t('dash.tabMap'), perfMapHtml(parts, opts.player ? { foot: false } : {}))];
+  return `${perfStripHtml(parts, ag, opts.traits)}<div class="perf-grid${off ? ' off' : opts.role ? ' one-role' : ''}">${cards.join('')}</div>`;
 }
 // a way into a section ("Champions →" on At a glance): Performance, scrolled to it
 function perfScrollTo(sec) {
@@ -122,45 +154,104 @@ function perfScrollTo(sec) {
   requestAnimationFrame(() => { const el = $('perfSec-' + sec); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
 }
 
-// the key figures in one row
-function perfBarHtml(ag) {
-  const tile = (label, value, sub = '', cls = '') => `<div class="pk${cls ? ' ' + cls : ''}"><span>${esc(label)}</span><b>${value}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
-  return `<div class="perf-bar">
-    ${tile(t('perf.games'), num(ag.n), ag.games !== ag.n ? esc(t('perf.inGames', { n: num(ag.games) })) : '')}
-    ${tile(t('dash.wr'), perfPct(ag.winrate), esc(`${ag.wins} – ${ag.losses}`), PerfMath.markWinrate(ag))}
-    ${tile(t('perf.avg'), perfAvg(ag))}
-    ${tile(t('mh.kda'), perfKda(ag), '', PerfMath.markKda(ag))}
-    ${tile(t('det.csMin'), perfDec(ag.csMin))}
-    ${tile(t('perf.dmgMin'), num(Math.round(ag.dmgMin)))}
-    ${tile(t('perf.visMin'), perfDec(ag.visMin, 2))}
-    ${tile(t('perf.kp'), perfPct(ag.kp))}
-  </div>`;
+// ---------- the strip on top: the key figures and the traits ----------
+// Games (wins green, losses red), the win rate as a ring, KDA with the average K / D / A, CS, damage,
+// kill participation and vision (ARAM / Arena: the share of the team's damage) – each with its trend
+// (the newest 10 games against the 10 before, from 20 games on). On the right the traits of the
+// main role (or of the chosen role), a way into the Traits tab.
+function perfStripHtml(parts, ag, traits) {
+  const tr = k => (parts.length >= 20 ? PerfMath.trend(parts, 10, k) : { ok: false });
+  const arrow = (cur, prev, better, fmt) => {
+    if (cur == null || prev == null || Math.abs(cur - prev) < 1e-9) return '';
+    const up = (cur - prev) * better > 0;
+    return `<em class="${up ? 'up' : 'down'}" title="${esc(t('ov.trendT'))}">${cur > prev ? '▲' : '▼'} ${fmt(Math.abs(cur - prev))}</em>`;
+  };
+  const trA = (k, fmt) => { const x = tr(k); return x.ok ? arrow(x.cur, x.prev, x.better, fmt) : ''; };
+  const wrT = tr('kda');
+  const pct = v => Math.round(v * 100) + ' %';
+  const off = parts.length > 0 && parts.every(x => Stats.offRift(x.g));
+  const fig = (cls, label, value, sub = '', title = '') => `<div class="pf ${cls}"${title ? ` title="${esc(title)}"` : ''}><span>${esc(label)}</span><b>${value}</b><small>${sub}</small></div>`;
+  const wrCls = ag.winrate >= 0.53 ? 'good' : ag.winrate <= 0.47 ? 'bad' : '';
+  const kdaCls = PerfMath.markKda(ag);
+  const figs = [
+    fig('games', t('perf.games'), num(ag.n), `<i class="w">${esc(t('perf.wins', { n: num(ag.wins) }))}</i> · <i class="l">${esc(t('perf.losses', { n: num(ag.losses) }))}</i>`,
+      ag.games !== ag.n ? t('perf.inGames', { n: num(ag.games) }) : ''),
+    `<div class="pf wr">${sumRing(ag.winrate)}<div><span>${esc(t('dash.wr'))}</span><b class="${wrCls}">${perfPct(ag.winrate)}</b><small>${wrT.ok ? arrow(wrT.wr[0], wrT.wr[1], 1, pct) : ''}</small></div></div>`,
+    fig('kda', t('mh.kda'), `<span class="${kdaCls}">${esc(perfKda(ag))}</span>`,
+      `${perfDec(ag.avg.k)} / <i class="l">${perfDec(ag.avg.d)}</i> / ${perfDec(ag.avg.a)}${trA('kda', v => perfDec(v, 2))}`, t('perf.avg')),
+    off ? '' : fig('cs', t('det.csMin'), perfDec(ag.csMin), trA('csMin', v => perfDec(v))),
+    fig('dmg', t('perf.dmgMin'), num(Math.round(ag.dmgMin)), trA('dmgMin', v => num(Math.round(v)))),
+    fig('kp', t('perf.kp'), perfPct(ag.kp), trA('kp', pct)),
+    off ? fig('share', t('ov.dmgShare'), perfPct(ag.dmgShare)) : fig('vis', t('perf.visMin'), perfDec(ag.visMin, 2), trA('visMin', v => perfDec(v, 2))),
+  ];
+  return `<div class="perf-strip"><div class="pf-figs">${figs.join('')}</div>${perfTraitsHtml(traits)}</div>`;
+}
+// the traits in the strip: the main role's (or every role's when there is no main role), the
+// strengths first; another player gets only what speaks for them (Tags.forOthers, player-view.js)
+function perfTraitsHtml(tr) {
+  if (!tr) return '';
+  const res = tr.res;
+  const role = perf.f.role && !tr.player ? perf.f.role : tr.role || '';
+  const main = res && !res.aram ? role || res.main || res.most : '';
+  const picked = res ? Tags.pick(res.results).filter(x => !x.role || !main || x.role === main) : [];
+  const order = x => (Tags.isStrength(x) ? 0 : Tags.isWeakness(x) ? 1 : 2);
+  const sorted = [...picked].sort((a, b) => order(a) - order(b));
+  const MAX = 7;
+  const chip = x => `<span class="tchip tc-${tagColor(x)}" title="${esc([tagText(x), tagRoleText(x)].filter(Boolean).join('\n'))}">${esc(tagName(x))}</span>`;
+  const more = sorted.length > MAX ? `<button class="tchip tc-more" data-ovgo="tags">+${sorted.length - MAX}</button>` : '';
+  const empty = `<span class="muted">${esc(t(tr.scope === 'aram' ? 'ov.noAramTraits' : tr.scope === 'arena' ? 'ov.noArenaTraits' : res ? 'tags.nothing' : 'tags.none'))}</span>`;
+  const where = tr.scope === 'aram' ? 'ARAM' : tr.scope === 'arena' ? 'Arena'
+    : [main ? `<img src="${posIcon(main)}" alt="">${esc(t('pos.' + main))}` : '', esc(t('pl.ranked'))].filter(Boolean).join(' · ');
+  return `<div class="pf-traits"><div class="pf-th"><button class="pf-go" data-ovgo="tags" title="${esc(t('perf.allTraitsT'))}">${esc(t('dash.tabTags'))} <span>→</span></button><small>${where}</small></div>
+    <div class="tchips">${sorted.slice(0, MAX).map(chip).join('') || empty}${more}</div></div>`;
 }
 
-// the trend: the last n games against the n before them – win rate and one chosen figure
-const PERF_TREND_LABEL = { kda: 'mh.kda', csMin: 'det.csMin', dmgMin: 'perf.dmgMin', visMin: 'perf.visMin', kp: 'perf.kp', deaths: 'trend.deaths' };
-function perfTrendHtml(parts) {
-  const n = perf.trendN, key = perf.trendKey;
-  const tr = PerfMath.trend(parts, n, key);
-  const selN = `<select id="trendN">${[10, 20, 50, 100].map(v => `<option value="${v}"${v === n ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
-  const selK = `<select id="trendKey">${Object.keys(PerfMath.TREND_KEYS).map(k => `<option value="${k}"${k === key ? ' selected' : ''}>${esc(t(PERF_TREND_LABEL[k]))}</option>`).join('')}</select>`;
-  if (!tr.ok) return `<div class="trend"><span>${t('trend.lead', { sel: selN })}</span><span class="muted">${esc(t('trend.few', { have: tr.have, need: tr.need }))}</span></div>`;
-  const fmt = v => (v == null ? '–' : key === 'kp' ? Math.round(v * 100) + ' %' : perfDec(v, key === 'dmgMin' ? 0 : key === 'visMin' || key === 'kda' ? 2 : 1));
-  const arrow = (now, before, better) => {
-    if (now == null || before == null || now === before) return '<i class="tr-eq">=</i>';
-    const up = (now - before) * better > 0;
-    return `<i class="${up ? 'tr-up' : 'tr-down'}">${up ? '▲' : '▼'}</i>`;
-  };
-  return `<div class="trend"><span>${t('trend.lead', { sel: selN })}</span>
-    <span>${t('dash.wr')} <b>${perfPct(tr.wr[1])} → ${perfPct(tr.wr[0])}</b> ${arrow(tr.wr[0], tr.wr[1], 1)}</span>
-    <span>${selK} <b>${fmt(tr.prev)} → ${fmt(tr.cur)}</b> ${arrow(tr.cur, tr.prev, tr.better)}</span></div>`;
+// ---------- roles; ARAM and Arena: the share of the team, the activity ----------
+// each position's share of the games, with its win rate
+function perfRolesHtml(parts) {
+  const mr = Tags.mainRole(parts);
+  if (!mr.total) return `<p class="muted">${esc(t('pl.noRoles'))}</p>`;
+  const by = Stats.groupBy(parts.filter(x => Stats.role(x.g, x.p)), x => Stats.role(x.g, x.p));
+  return [...mr.shares].sort((a, b) => b[1] - a[1]).map(([r, n]) => {
+    const share = Math.round((100 * n) / mr.total), ag = by.get(r);
+    return `<div class="sro${r === mr.main ? ' main' : ''}"><img src="${posIcon(r)}" alt=""><span>${esc(t('pos.' + r))}${r === mr.main ? ' ★' : ''}</span><i class="scr-bar"><i style="width:${share}%"></i></i>
+      <b>${share} %</b><small class="${ag && ag.n >= 5 ? (ag.winrate >= 0.55 ? 'good' : ag.winrate <= 0.45 ? 'bad' : '') : ''}">${ag ? esc(t('ov.wrShort', { wr: Math.round(ag.winrate * 100) })) : ''}</small></div>`;
+  }).join('');
+}
+// ARAM: the share of the own team – damage, damage taken, healing, crowd control, gold – with a
+// line at a fair fifth
+function perfShareHtml(parts) {
+  const KEYS = [['dmg', p => p.dmg], ['taken', p => p.x && p.x.taken], ['heal', p => p.x && p.x.heal], ['cc', p => p.x && p.x.cc], ['gold', p => p.gold]];
+  const full = parts.filter(x => !x.g.lite && x.g.players && x.g.players.length >= 10);
+  const rows = KEYS.map(([k, of]) => {
+    const v = full.map(x => {
+      if (k !== 'dmg' && k !== 'gold' && !x.p.x) return null;
+      const team = Stats.team(x.g, x.p), sum = team.reduce((s, o) => s + (of(o) || 0), 0);
+      return sum > 0 ? (of(x.p) || 0) / sum : null;
+    }).filter(v => v != null);
+    return { k, v: v.length >= 3 ? v.reduce((s, a) => s + a, 0) / v.length : null };
+  });
+  if (!rows.some(r => r.v != null)) return `<p class="muted">${esc(t('ov.none'))}</p>`;
+  return rows.map(r => `<div class="sro share" title="${esc(t('ov.shareT'))}"><span>${esc(t('ov.sh.' + r.k))}</span><i class="scr-bar fair"><i style="width:${r.v == null ? 0 : Math.min(100, r.v * 250).toFixed(1)}%"></i></i>
+      <b class="${r.v == null ? '' : r.v >= 0.24 ? 'good' : r.v <= 0.16 ? 'bad' : ''}">${perfPct(r.v)}</b></div>`).join('');
+}
+// activity: time played, the usual game length, days played, the busiest weekday
+function perfActHtml(parts) {
+  const games = [...new Map(parts.map(x => [String(x.g.id), x.g])).values()];
+  if (!games.length) return `<p class="muted">${esc(t('ov.none'))}</p>`;
+  const secs = games.reduce((s, g) => s + (g.dur || 0), 0);
+  const days = new Set(games.map(g => new Date(g.t).toDateString())).size;
+  const wd = new Map();
+  for (const g of games) { const d = new Date(g.t).getDay(); wd.set(d, (wd.get(d) || 0) + 1); }
+  const [day] = [...wd].sort((a, b) => b[1] - a[1])[0];
+  const dayName = new Date(2024, 0, 7 + day).toLocaleDateString(locale(), { weekday: 'long' });
+  const hm = s => t('ov.hm', { h: Math.floor(s / 3600), m: Math.round((s % 3600) / 60) });
+  const row = (label, v) => `<div class="sac"><span>${esc(label)}</span><b>${esc(v)}</b></div>`;
+  return row(t('ov.time'), hm(secs)) + row(t('ov.avgLen'), t('ov.min', { m: Math.round(secs / games.length / 60) }))
+    + row(t('ov.days'), t('ov.daysV', { d: days, g: perfDec(games.length / days, 1) })) + row(t('ov.weekday'), dayName);
 }
 // the Performance views are drawn on the Overview and on the player page: draw again where they are
 const perfRerender = () => (view === 'player' && typeof renderPlayer === 'function' ? renderPlayer() : renderPerf());
-document.addEventListener('change', e => {
-  if (e.target.id === 'trendN') { perf.trendN = +e.target.value; perfRerender(); }
-  if (e.target.id === 'trendKey') { perf.trendKey = e.target.value; perfRerender(); }
-});
 
 // the champion list in the style of op.gg: "All" first, then the champions by games
 function perfChampsHtml(parts, ag, opts = {}) {
@@ -171,7 +262,7 @@ function perfChampsHtml(parts, ag, opts = {}) {
   const tag = opts.player ? 'div' : 'button';
   const row = (r, all) => `<${tag} class="oc-row${all ? ' all' : ''}${opts.player ? ' plain' : ''}"${all || opts.player ? '' : ` data-pchamp="${r.champ}"`}${opts.player ? '' : ` title="${esc(t('perf.open'))}"`}>
       ${all ? `<span class="oc-ic all">${esc(t('perf.all').slice(0, 1))}</span>` : `<img class="oc-ic" src="${CHAMP_ICON(r.champ)}" alt="" loading="lazy">`}
-      <span class="oc-name"><b>${esc(all ? t('perf.all') : perfChamp(r.champ))}</b><small>${esc(t('perf.cs', { cs: num(Math.round(r.cs)), m: perfDec(r.csMin) }))}</small></span>
+      <span class="oc-name"><b title="${esc(all ? t('perf.all') : perfChamp(r.champ))}">${esc(all ? t('perf.all') : perfChamp(r.champ))}</b><small>${esc(t('perf.cs', { cs: num(Math.round(r.cs)), m: perfDec(r.csMin) }))}</small></span>
       <span class="oc-kda"><b class="${r.n >= PerfMath.MARK.minGames ? PerfMath.markKda(r) : ''}">${r.perfect ? esc(t('perf.perfect')) : esc(t('perf.kdaRatio', { v: perfDec(r.kda, 2) }))}</b><small>${perfAvg(r)}</small></span>
       <span class="oc-wr"><b class="${r.n >= PerfMath.MARK.minGames ? PerfMath.markWinrate(r) : 'muted'}">${perfPct(r.winrate)}</b><small>${esc(perfGames(r.n))}</small></span>
     </${tag}>`;
@@ -212,6 +303,7 @@ $('dashPerf').addEventListener('click', e => {
   if (pq) {
     const k = pq.dataset.pq, q = perf.f.queues;
     perf.f.queues = !k ? [] : q.includes(k) ? q.filter(x => x !== k) : [...q, k];
+    perf.qAuto = false;
     try { localStorage.setItem('rs.perfQ', JSON.stringify(perf.f.queues)); } catch { /* not kept */ }
     return renderPerf();
   }

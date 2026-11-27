@@ -28,7 +28,7 @@ async function loadDash() {
   if (!champs.length) { const c = await api.champions(); if (Array.isArray(c) && c.length) champs = c; }
   const d = await api.dashboard();
   dash.data = Array.isArray(d) ? d : [];
-  if (view === 'dash') { renderDash(); if (typeof renderSum === 'function' && dashTab() === 'sum') renderSum(); }
+  if (view === 'dash') renderDash();
 }
 // a new LP entry or a new account: fetch again (only while the page is open)
 api.onState(() => {
