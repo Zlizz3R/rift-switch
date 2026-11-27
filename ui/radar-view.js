@@ -29,17 +29,23 @@ function radarDiff(ratio) {
   return d > 0 ? '+' + d : d < 0 ? '−' + Math.abs(d) : '±0';
 }
 const radarVal = (a, v) => (v == null ? '–' : a.axis.pct ? Math.round(v * 100) + ' %' : v.toLocaleString(locale(), { maximumFractionDigits: a.axis.dec, minimumFractionDigits: a.axis.dec }));
+// the tooltip: the difference, both averages in the axis' unit, and what exactly is measured
 function radarTip(a) {
-  if (a.ratio == null) return t('rad.few', { axis: t('rad.' + a.id), n: a.n, min: Radar.MIN });
-  return t('rad.tip', { axis: t('rad.' + a.id), pct: radarDiff(a.ratio), mine: radarVal(a, a.mine), theirs: radarVal(a, a.theirs), n: num(a.n) });
+  const axis = `${t('rad.' + a.id)} (${t('rad.u.' + a.id)})`;
+  const head = a.ratio == null ? t('rad.few', { axis, n: a.n, min: Radar.MIN })
+    : t('rad.tip', { axis, pct: radarDiff(a.ratio), mine: radarVal(a, a.mine), theirs: radarVal(a, a.theirs), n: num(a.n) });
+  return `${head}
+${t('rad.d.' + a.id)}`;
 }
+// an axis' name with its unit under it (bars)
+const radarLabel = a => `<span>${esc(t('rad.' + a.id))}<small>${esc(t('rad.u.' + a.id))}</small></span>`;
 // the same values as bars around 100 %
 function radarBars(axes) {
   return `<div class="rd-bars">${axes.map(a => {
-    if (a.ratio == null) return `<div class="rd-bar few" title="${esc(radarTip(a))}"><span>${esc(t('rad.' + a.id))}</span><i class="rd-track"></i><b>–</b></div>`;
+    if (a.ratio == null) return `<div class="rd-bar few" title="${esc(radarTip(a))}">${radarLabel(a)}<i class="rd-track"></i><b>–</b></div>`;
     const d = Math.max(-1, Math.min(1, a.ratio - 1));
     const w = Math.abs(d) * 50;
-    return `<div class="rd-bar" title="${esc(radarTip(a))}"><span>${esc(t('rad.' + a.id))}</span><i class="rd-track"><i class="${d >= 0 ? 'up' : 'down'}" style="${d >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i></i><b class="${a.ratio > 1.005 ? 'up' : a.ratio < 0.995 ? 'down' : ''}">${radarDiff(a.ratio)} %</b></div>`;
+    return `<div class="rd-bar" title="${esc(radarTip(a))}">${radarLabel(a)}<i class="rd-track"><i class="${d >= 0 ? 'up' : 'down'}" style="${d >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i></i><b class="${a.ratio > 1.005 ? 'up' : a.ratio < 0.995 ? 'down' : ''}">${radarDiff(a.ratio)} %</b></div>`;
   }).join('')}</div>`;
 }
 

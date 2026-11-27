@@ -84,3 +84,25 @@ test('map: only Summoner\'s Rift – ARAM\'s one lane (and Arena) would all coun
   assert.deepEqual(ev.filter(e => e.kind === 'death').map(e => e.zone), ['top']);
   assert.equal(DM.games(parts([rift, aram, arena])).length, 1);
 });
+
+test('ARAM: its own map – zones along the lane from base to base, red side mirrored, the map most games were on', () => {
+  const aram = (team, deaths) => game(team, deaths, { q: 2400 });
+  // own base, own towers, middle, enemy towers, enemy base along the diagonal (0–128)
+  assert.equal(DM.zoneOf(15, 15, 'aram'), 'baseOwn');
+  assert.equal(DM.zoneOf(42, 42, 'aram'), 'aOwn');
+  assert.equal(DM.zoneOf(64, 64, 'aram'), 'aMid');
+  assert.equal(DM.zoneOf(86, 86, 'aram'), 'aEnemy');
+  assert.equal(DM.zoneOf(118, 118, 'aram'), 'baseEnemy');
+  // red side: its base (118, 118) is the own base
+  assert.equal(DM.zoneOf(...DM.toBlue(118, 118, 200, 'aram'), 'aram'), 'baseOwn');
+  const list = [aram(100, [[300, 64, 66], [900, 44, 40]]), aram(200, [[600, 40, 42]])];
+  const ev = DM.events(parts(list), 'aram').filter(e => e.kind === 'death');
+  assert.deepEqual(ev.map(e => e.zone).sort(), ['aEnemy', 'aMid', 'aOwn']);
+  // ARAM games are not on Summoner's Rift's map, and Summoner's Rift games not on ARAM's
+  assert.equal(DM.events(parts(list)).length, 0);
+  assert.equal(DM.events(parts([game(100, [[300, 50, 50]])]), 'aram').length, 0);
+  assert.equal(DM.mainMap(parts(list)), 'aram');
+  assert.equal(DM.mainMap(parts([...list, game(100, [[300, 50, 50]]), game(100, [[300, 50, 50]])])), 'sr');
+  // Arena: no map at all
+  assert.equal(DM.mapOf({ q: 1700 }), '');
+});

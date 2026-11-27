@@ -39,6 +39,7 @@ const pct = (list, q) => { const s = [...list].sort((a, b) => a - b); return s[M
 const FIG = {
   dmgMin: [rows, 1], kda: [rows, 1], deathsMin10: [rows, -1], kp: [full, 1], tankMin: [rows, 1], healMin: [rows, 1], ccMin: [rows, 1],
   multi3: [rows, 1], dmgShare: [full, 1],
+  turretMin: [rows, 1], killsMin10: [rows, 1], assistsMin10: [rows, 1], poke: [rows, 1], spree: [rows, 1], fbPart: [full, 1],
 };
 const val = (fig, list) => {
   if (fig === 'dmgShare') { const a = St.aggregate(list); return a && a.dmgShare; }

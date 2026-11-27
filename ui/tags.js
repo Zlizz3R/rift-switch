@@ -132,7 +132,28 @@
     ccMin: rows => { const r = withX(rows).filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => (x.p.x.cc || 0) / (x.g.dur / 60))), n: r.length }; },
     // games with a triple kill or more
     multi3: rows => ({ v: avgOf(rows.map(x => ((x.p.multi || 0) >= 3 ? 1 : 0))), n: rows.length }),
+    // ARAM: damage to towers per minute, kills and assists per 10 minutes, the damage dealt against the
+    // damage taken, the longest killing spree, comebacks and thrown leads at 10 minutes (shorter games)
+    turretMin: rows => { const r = withX(rows).filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => (x.p.x.turretDmg || 0) / (x.g.dur / 60))), n: r.length }; },
+    killsMin10: rows => { const r = rows.filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => x.p.k / (x.g.dur / 600))), n: r.length }; },
+    assistsMin10: rows => { const r = rows.filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => x.p.a / (x.g.dur / 600))), n: r.length }; },
+    poke: rows => {
+      const r = withX(rows).filter(x => x.p.x.taken > 0);
+      const taken = r.reduce((s, x) => s + x.p.x.taken, 0);
+      return { v: taken ? r.reduce((s, x) => s + (x.p.dmg || 0), 0) / taken : null, n: r.length };
+    },
+    spree: rows => { const r = withX(rows); return { v: avgOf(r.map(x => x.p.x.spree || 0)), n: r.length }; },
+    comeback10: rows => {
+      const r = rows.filter(x => { const d = St.teamGoldDiffAt(x.g, x.p, 10); return d != null && d <= -ARAM_COMEBACK_GOLD; });
+      return { v: r.length ? r.filter(x => x.p.win).length / r.length : null, n: r.length, vars: { w: r.filter(x => x.p.win).length } };
+    },
+    throws10: rows => {
+      const r = rows.filter(x => { const d = St.teamGoldDiffAt(x.g, x.p, 10); return d != null && d >= ARAM_COMEBACK_GOLD; });
+      return { v: r.length ? r.filter(x => !x.p.win).length / r.length : null, n: r.length, vars: { l: r.filter(x => !x.p.win).length } };
+    },
   };
+  // ARAM: a team this far behind / ahead at minute 10 counts for comebacks and thrown leads
+  const ARAM_COMEBACK_GOLD = 1500;
 
   const COMEBACK_GOLD = 2000;
   // jungle CS player i took in the enemy jungle: each minute's camps count where the player stood

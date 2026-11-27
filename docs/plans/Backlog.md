@@ -75,10 +75,18 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
   `python tools/screens/capture.py film` bzw. `shots`.
 - [x] ✔ 27.11.2026 **Karte startet auf „Beides“**, „Beides“ steht vorne.
 - [x] ✔ 27.11.2026 **Trend-Zeile in Performance entfernt** – die Trendpfeile stehen jetzt an den Kennzahlen selbst.
-- [ ] **Live während des Spiels zu langsam** (Nutzer, 27.11.2026 – noch nicht anfangen): Die App liest pro Mitspieler
-  bis zu 50 Ranked-Spiele samt Timeline (`OTHERS_DETAILS`, `scout_loop` in `main.rs`, `PAR_IN_GAME` / `IN_GAME_GAP`),
-  im Spiel bewusst gedrosselt. Offen: bremst das den Client, oder lehnt er Anfragen ab? Das sieht man nur in einem
-  echten Spiel – dafür Log-Ausgaben der Scout-Runden (Zeit, Anzahl abgelehnt) sammeln und auswerten.
+- [ ] **Live während des Spiels zu langsam** (Nutzer, 27.11.2026: nach 30 Min. Spiel noch nicht fertig; Ziel: alles in
+  höchstens 2 Minuten). 27.11.2026 umgebaut, **im echten Spiel noch zu prüfen**:
+  - Gemessen (`node tools/lcu-speed.js`, Client in der Lobby): Details einzeln ~40 ms, Timeline ~200 ms (der teure
+    Teil); parallel 8–15 Spiele/s → 450 Spiele (9 × 50) in ~30–55 s. Der Client war also nicht das Problem.
+  - Ursachen im Code: Laden lief nur bei sichtbarem Fenster (`win_shown`) – im Tray während des Spiels gar nicht;
+    Runden warteten auf die langsamste Anfrage (bis 10 s Timeout); im Spiel 6 je Runde plus 700 ms Pause.
+  - Jetzt: Warteschlange mit 12 (im Spiel 10) Anfragen gleichzeitig, bis 60 Spiele pro Runde; Spieler im Wechsel
+    (jeder zuerst sein neuestes Spiel, `missing_for`); lädt im Tray weiter, solange ein Spiel läuft (danach wird der
+    Speicher wieder frei); `IN_GAME_GAP` entfällt. Jede Runde steht in `scout.log` (Datenordner, auch in der
+    Diagnose-Datei): Listen-, Detail- und Timeline-Zeiten, Abgelehntes, „all there“ mit Gesamtzeit.
+  - Offen: im echten Spiel `scout.log` ansehen (oder währenddessen `node tools/lcu-speed.js`) – lehnt der Client
+    ab, ruckelt das Spiel? Dann `PAR_IN_GAME` anpassen. Notfalls Timelines erst nach den Details holen.
 - [x] ✔ 27.11.2026 **Übersicht neu geordnet** (Nutzer: „At a glance kann weg“): Leistung ist die Startseite, eine
   Kennzahlen-Leiste (Ring, Trendpfeile, Siege grün / Niederlagen rot) mit den Traits rechts („Traits →“), dazu eine
   Rollen-Kachel. Reiter für eigene Accounts und andere Spieler gleich: Leistung, Traits, Mastery, Spielverlauf,

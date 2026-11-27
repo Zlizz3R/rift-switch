@@ -35,8 +35,10 @@ test('performance: one page – key figures, then champions, roles, play style a
     await app.click('[data-dt="stats"]');
     await app.settle();
     assert.ok(app.visible('#dashPerf'));
-    // ranked of this season by default: 14 games (the ARAM game isn't ranked)
-    assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex · Season \d{4}/);
+    // every ranked queue of this season by default: 14 games (the ARAM game isn't ranked)
+    assert.match(app.$('#perfLine').textContent, /^14 games · All ranked · Season \d{4}/);
+    assert.ok(app.$('[data-pq="ranked"]').classList.contains('on'), '"All ranked" is on at first');
+    assert.ok(!app.$('[data-pq="solo"]').classList.contains('on'));
     assert.match(app.$('.perf-strip .pf').textContent, /Games\s*14/);
     // no role table any more; the four cards
     assert.equal(app.$('.perf-table'), null);
@@ -89,8 +91,11 @@ test('play style: a radar against the lane opponent on the main role, the same v
     assert.equal(bars.length, 8);
     assert.match(bars[2].textContent, /Gold/);
     // 13 mid games with a lane opponent: farm has a value; 100 % = as good as him
-    assert.match(bars[0].textContent, /Farm\s*±0 %/);
+    assert.match(bars[0].textContent, /Farm\s*CS per minute\s*±0 %/, 'each axis with its unit');
     assert.match(bars[0].title, /13 games/);
+    assert.match(bars[0].title, /Minions and monsters killed per minute/, 'what exactly is measured');
+    assert.match(app.$$('.rd-bar')[6].title, /gold at minute 15[\s\S]*ahead after the lane phase/);
+    assert.equal(app.$('#perfBody .pc-style .coll-foot').textContent, "Each axis: your average against your lane opponents' average in the same games.");
     // the lane phase needs the gold per minute: none stored – dashed, no value (not 0)
     assert.ok(bars[6].classList.contains('few'));
     assert.match(app.$('.rd-head').textContent, /Mid \(main role\)/);
@@ -114,9 +119,9 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
     await app.click('#navDash');
     await app.click('[data-dt="stats"]');
     await app.settle();
-    assert.match(app.$('#perfLine').textContent, /^14 games · Solo\/Duo \+ Flex/);
-    // Flex off: only the Solo/Duo games
-    await app.click('[data-pq="flex"]');
+    assert.match(app.$('#perfLine').textContent, /^14 games · All ranked/);
+    // from "All ranked" a queue: just that one – only the Solo/Duo games
+    await app.click('[data-pq="solo"]');
     assert.match(app.$('#perfLine').textContent, /^5 games · Solo\/Duo ·/);
     // ARAM on as well
     await app.click('[data-pq="aram"]');
@@ -227,7 +232,7 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
   } finally { app.close(); }
 });
 
-test('performance: the key figures in one strip – wins and losses in colour, the traits on the right lead into the Traits tab; ARAM only: team share and activity', async () => {
+test('performance: the key figures in one strip – wins and losses in colour, the traits on the right lead into the Traits tab; ARAM only: team share and its map', async () => {
   const app = await boot({ replies });
   try {
     await app.click('#navDash');
@@ -245,12 +250,11 @@ test('performance: the key figures in one strip – wins and losses in colour, t
     await app.click('.pf-traits [data-ovgo="tags"]');
     assert.ok(app.$('[data-dt="tags"]').classList.contains('on'));
     assert.ok(app.visible('#dashTags'));
-    // ARAM only: no lanes – the share of the team and the activity, no CS, the damage share
+    // ARAM only: no lanes – the share of the team instead of roles and play style, ARAM's own map; no CS,
+    // the damage share
     await app.click('[data-dt="stats"]');
-    await app.click('[data-pq="flex"]');
     await app.click('[data-pq="aram"]');
-    await app.click('[data-pq="solo"]');
-    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-share', 'perfSec-act']);
+    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-share', 'perfSec-map']);
     assert.equal(app.$('.pf.cs'), null);
     assert.ok(app.$('.pf.share'));
     assert.deepEqual(app.errors.map(String), []);

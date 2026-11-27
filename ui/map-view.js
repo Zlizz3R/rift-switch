@@ -4,12 +4,15 @@
 // globals of renderer.js / perf.js. The player page uses it too (one player's games).
 
 // kind: 'deaths' | 'kills' | 'both'; the window in minutes [from, to) – to null = the end;
-// preset: the phase button that is on ('all', 'early' …) or '' for minutes picked on the chart
-const mv = { kind: 'both', from: 0, to: null, preset: 'all' };
+// preset: the phase button that is on ('all', 'early' …) or '' for minutes picked on the chart;
+// map: 'sr' | 'aram' – '' = the one most of the games were played on
+const mv = { kind: 'both', from: 0, to: null, preset: 'all', map: '' };
 const MV_PRESETS = { all: [0, null], early: [0, 10], mid: [10, 20], late: [20, null] };
 
-// Summoner's Rift as a sketch (0–148, blue base bottom left; SVG y runs down)
-function mapSvg(list) {
+// Summoner's Rift as a sketch (0–148, blue base bottom left; SVG y runs down) – or ARAM's map
+// (0–128): one lane from base to base, two towers on each side
+function mapSvg(list, map = 'sr') {
+  if (map === 'aram') return mapSvgAram(list);
   const S = MapMath.SIZE, Y = y => (S - y).toFixed(1);
   const line = pts => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${Y(y)}`).join(' ');
   const lanes = [line([[10, 40], [10, 138], [108, 138]]), line([[40, 10], [138, 10], [138, 108]]), line([[30, 30], [118, 118]])];
@@ -19,6 +22,21 @@ function mapSvg(list) {
     <path class="dm-river" d="${line([[18, 130], [130, 18]])}"/>
     ${lanes.map(d => `<path class="dm-lane" d="${d}"/>`).join('')}
     <circle class="dm-base own" cx="10" cy="${Y(10)}" r="24"/><circle class="dm-base enemy" cx="138" cy="${Y(138)}" r="24"/>
+    <g class="dm-dots kills">${dots('kill')}</g><g class="dm-dots deaths">${dots('death')}</g>
+  </svg>`;
+}
+function mapSvgAram(list) {
+  const S = MapMath.ARAM_SIZE, Y = y => (S - y).toFixed(1);
+  // the lane: a band along the diagonal, about 12 units to each side
+  const o = 12 / Math.SQRT2, a = 12, b = S - 12;
+  const band = [[a - o, a + o], [b - o, b + o], [b + o, b - o], [a + o, a - o]].map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${Y(y)}`).join(' ') + 'Z';
+  const tower = (p, cls) => { const v = p * S; return `<rect class="dm-tower ${cls}" x="${(v - 2.5).toFixed(1)}" y="${(S - v - 2.5).toFixed(1)}" width="5" height="5" rx="1" transform="rotate(45 ${v.toFixed(1)} ${(S - v).toFixed(1)})"/>`; };
+  const dots = kind => list.filter(e => e.kind === kind).map(e => `<circle cx="${e.x.toFixed(1)}" cy="${Y(e.y)}" r="4"/>`).join('');
+  return `<svg class="dm-map aram" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(t('dash.tabMap'))} – ARAM">
+    <rect class="dm-bg" width="${S}" height="${S}" rx="6"/>
+    <path class="dm-bridge" d="${band}"/>
+    <circle class="dm-base own" cx="10" cy="${Y(10)}" r="22"/><circle class="dm-base enemy" cx="${S - 10}" cy="${Y(S - 10)}" r="22"/>
+    ${[[0.3, 'own'], [0.38, 'own'], [0.62, 'enemy'], [0.7, 'enemy']].map(([p, c]) => tower(p, c)).join('')}
     <g class="dm-dots kills">${dots('kill')}</g><g class="dm-dots deaths">${dots('death')}</g>
   </svg>`;
 }
@@ -42,13 +60,17 @@ function mapChart(all) {
     <div class="mc-ticks">${ticks}</div><p class="fine">${t('mp.drag')}</p></div>`;
 }
 const mvWindowLabel = () => (mv.preset ? t('dm.ph.' + mv.preset) : mv.to == null ? t('mp.from', { a: mv.from }) : t('mp.range', { a: mv.from, b: mv.to }));
-// only games on other maps (ARAM, Arena): the map is Summoner's Rift's
-const mvOnlyOff = parts => parts.length > 0 && parts.every(x => Stats.offRift(x.g));
+// only games without a map here (Arena …)
+const mvOnlyOff = parts => parts.length > 0 && parts.every(x => !MapMath.mapOf(x.g));
 // opts.foot: false on the player page (its own line says where the games come from)
 function perfMapHtml(parts, opts = {}) {
-  const all = MapMath.events(parts);
-  const nGames = MapMath.games(parts).length;
+  // Summoner's Rift or ARAM: the chosen one if there are games on it, else the one most were played on
+  const avail = ['sr', 'aram'].filter(m => MapMath.games(parts, m).length);
+  const map = avail.includes(mv.map) ? mv.map : MapMath.mainMap(parts) || 'sr';
+  const all = MapMath.events(parts, map);
+  const nGames = MapMath.games(parts, map).length;
   if (!all.length) return `<div class="chart-empty">${t(mvOnlyOff(parts) ? 'mp.rift' : 'mp.none')}</div>`;
+  const maps = avail.length > 1 ? `<div class="seg mp-maps">${avail.map(m => `<button data-mpmap="${m}"${m === map ? ' class="on"' : ''}>${m === 'sr' ? esc(t('tags.modeSr')) : 'ARAM'}</button>`).join('')}</div>` : '';
   const win = all.filter(e => MapMath.inWindow(e, mv.from, mv.to));
   const shown = mv.kind === 'both' ? win : win.filter(e => e.kind === (mv.kind === 'kills' ? 'kill' : 'death'));
   const dl = win.filter(e => e.kind === 'death'), kl = win.filter(e => e.kind === 'kill');
@@ -73,8 +95,8 @@ function perfMapHtml(parts, opts = {}) {
         <span>${esc(t('dm.z.' + r.zone))}</span><i class="dm-track d"><i style="width:${(r.dShare * 100).toFixed(1)}%"></i></i><b>${r.deaths}</b><i class="dm-track k"><i style="width:${(r.kShare * 100).toFixed(1)}%"></i></i><b>${r.kills}</b></div>`).join('')}</div>`
     : `<div class="mp-rows">${(mv.kind === 'kills' ? ks : ds).zones.map(z => `<div class="mp-row">
         <span>${esc(t('dm.z.' + z.zone))}</span><i class="dm-track ${mv.kind === 'kills' ? 'k' : 'd'}"><i style="width:${(z.share * 100).toFixed(1)}%"></i></i><b>${pctTxt(z.share)}</b><small>${z.n}</small></div>`).join('')}</div>`;
-  return `<div class="mp-bar">${kinds}${presets}</div>
-    <div class="dm-wrap"><div class="mp-left">${mapSvg(shown)}${mapChart(mv.kind === 'both' ? all : all.filter(e => e.kind === (mv.kind === 'kills' ? 'kill' : 'death')))}</div><div class="dm-side">
+  return `<div class="mp-bar">${maps}${kinds}${presets}</div>
+    <div class="dm-wrap"><div class="mp-left">${mapSvg(shown, map)}${mapChart(mv.kind === 'both' ? all : all.filter(e => e.kind === (mv.kind === 'kills' ? 'kill' : 'death')))}</div><div class="dm-side">
       ${hots.length ? `<ul class="dm-hots">${hots.join('')}</ul>` : ''}
       ${lines.map(l => `<p class="muted">${esc(l)}</p>`).join('')}
       ${shown.length ? rows : `<div class="chart-empty">${t('mp.empty')}</div>`}
@@ -88,6 +110,8 @@ function mapRerender() {
 document.addEventListener('click', e => {
   const k = e.target.closest('[data-mpk]');
   if (k) { mv.kind = k.dataset.mpk; return mapRerender(); }
+  const mp = e.target.closest('[data-mpmap]');
+  if (mp) { mv.map = mp.dataset.mpmap; return mapRerender(); }
   const b = e.target.closest('[data-dmph]');
   if (b) { [mv.from, mv.to] = MV_PRESETS[b.dataset.dmph]; mv.preset = b.dataset.dmph; mapRerender(); }
 });

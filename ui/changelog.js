@@ -10,6 +10,10 @@
         'Player page: the same tabs for anyone you click – their mastery points with the play time behind them, their match history (the games with you on top) and their seasons.',
         'At a glance is gone – everything it showed lives on in Performance, the match history and Mastery. An ARAM player still starts on ARAM.',
         'The map starts on "Both"; every page\'s head has the same height (the Accounts head stays one row on a narrow window).',
+        'Live loads much faster: always 12 games on their way instead of waiting for the slowest of a round, every player\'s newest game first, and it keeps loading while the window is in the tray during a game. Each round is written to scout.log, so a slow game can be looked into.',
+        'ARAM: a map of its own (own base, own towers, the middle, enemy towers, enemy base) and nine more traits – finisher, enabler, poke master, tower crusher, first blood hunter, never gives up, throws leads, late and early game.',
+        'Performance starts on "All ranked" (Solo/Duo, Flex, Ranked 5v5, Clash); the activity (usual game length, days played, busiest day) is in the match history now.',
+        'Play style: every axis says what it measures – CS per minute, gold at minute 15 for the lane phase, deaths per game … – and the note under it is one line.',
       ],
       de: [
         'Übersicht: Leistung ist die Startseite. Die Kennzahlen sind jetzt eine Leiste – Siege grün, Niederlagen rot, die Winrate als Ring, an jeder Zahl der Trend deiner letzten 10 Spiele – mit deinen Traits rechts daneben; „Traits →“ öffnet alle. Dazu eine Rollen-Kachel neben Champions, Spielstil und Karte.',
@@ -17,6 +21,10 @@
         'Spieler-Seite: dieselben Tabs für jeden, den du anklickst – seine Mastery-Punkte mit der Spielzeit dahinter, sein Spielverlauf (die Spiele mit dir obenauf) und seine Seasons.',
         '„Auf einen Blick“ ist weg – alles, was dort stand, gibt es in Leistung, im Spielverlauf und unter Mastery. Wer vor allem ARAM spielt, startet weiter auf ARAM.',
         'Die Karte startet auf „Beides“; alle Seitenköpfe sind gleich hoch (der Kopf der Accounts-Seite bleibt auch im schmalen Fenster einzeilig).',
+        'Live lädt viel schneller: immer 12 Spiele gleichzeitig unterwegs, statt auf das langsamste einer Runde zu warten, von jedem Spieler zuerst das neueste Spiel, und im Spiel lädt es auch weiter, wenn das Fenster im Tray ist. Jede Runde steht in scout.log, damit sich ein langsames Spiel nachvollziehen lässt.',
+        'ARAM: eine eigene Karte (eigene Basis, eigene Türme, Mitte, gegnerische Türme, gegnerische Basis) und neun weitere Traits – Vollstrecker, Vorbereiter, Poke-Meister, Turmbrecher, First-Blood-Jäger, Gibt nie auf, Wirft Führungen weg, Spät- und Frühspiel-Stärke.',
+        'Leistung startet auf „Alle Ranked“ (Solo/Duo, Flex, Ranked 5v5, Clash); die Aktivität (übliche Spieldauer, Spieltage, häufigster Wochentag) steht jetzt im Spielverlauf.',
+        'Spielstil: Jede Achse sagt, was sie misst – CS pro Minute, Gold bei Minute 15 für die Lane-Phase, Tode pro Spiel … – und der Hinweis darunter ist ein Satz.',
       ],
     },
     {

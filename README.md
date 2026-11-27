@@ -109,7 +109,8 @@ into one category.
 - **Performance** – the start page: one strip with the key figures (games with wins and losses, win rate, KDA, CS,
   damage, kill participation, vision), each with its trend – the last 10 games against the 10 before – and your
   traits right next to them (*Traits →* opens them all). Then the champions, the roles, the play style and the map.
-  An ARAM player starts on ARAM (the share of the team and the activity instead of roles, play style and map).
+  The queues start on *All ranked* (Solo/Duo, Flex, Ranked 5v5, Clash); an ARAM player starts on ARAM (the share of
+  the team instead of roles and play style, and ARAM's own map).
 
 <img src="docs/screens/overview.png" alt="LP history of all accounts in one chart">
 
@@ -144,9 +145,11 @@ into one category.
   games, per role – or *All roles* at once, each tag with its role and that role's share of your games – each with
   the numbers behind it. "Too little data" is never shown as "not met".
   **ARAM** has traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
-  hunter, team carry …), measured against the ARAM games of the other players – also on Live's cards in an ARAM game.
+  hunter, team carry, finisher, enabler, poke master, tower crusher, first blood hunter, never gives up, late or early
+  game …), measured against the ARAM games of the other players – also on Live's cards in an ARAM game.
   Other players (Live, the player page) only get what speaks for them – the things to work on are for your own accounts.
-- **Map** – Summoner's Rift games only (ARAM and Arena are other maps) – where you die and where you kill (both at first, or deaths or kills; the same filter: account, queue, season,
+- **Map** – Summoner's Rift or ARAM's map (its one lane from base to base: own base, own towers, the middle, enemy
+  towers, enemy base; a switch when the games are on both; Arena has no map) – where you die and where you kill (both at first, or deaths or kills; the same filter: account, queue, season,
   role), for a game phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart
   under the map (kills up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min:
   45 % of the deaths: top river") and every zone's share, deaths and kills side by side.
@@ -176,7 +179,7 @@ A tab of the Overview – its accounts are the Overview's chips.
   games (from Live) stay 30 days – a year in their short form from the match list – and at most 1 GB (Settings → Data: 500 MB to 5 GB).
 - **Filters**: account, any combination of queues, time or your own dates, wins/losses, champion, sorting, and more
   (kills, deaths, KDA, multikills). The summary above the list counts what the filters show: win rate, KDA, CS/min,
-  damage, streaks and records.
+  damage, time played, the usual game length, days played and the busiest weekday, streaks and records.
 - **Most played**: your top five champions, games and **play time per account**, and the teammates you played with
   most – each with its win rate. **Clash** and **Custom** games have their own filters.
 - **Click a name** (here, on Live or after a game): the **player page** – the same page as your own Overview for any
@@ -206,8 +209,10 @@ A tab of the Overview – its accounts are the Overview's chips.
   on this champion, main role, mastery and traits in three tiers (*Key*: what you can act on, *More*, *All* – the rest of a card behind
   "+n") – from each player's 200 newest games (all ten players' details
   for the newest 50 ranked ones), loaded from the client as fast as it answers – every match list at once, then 12
-  games at a time, each game and its timeline together – with a progress bar; during the game a little gentler (6 at
-  a time, only while the window is open), and a short pause when the client starts refusing. **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
+  games on their way at all times (when one comes, the next starts), the players in turn – everyone's newest game
+  first – each game and its timeline together, with a progress bar; during the game 10 at a time, also while the
+  window is in the tray, and a short pause when the client starts refusing. Every round goes into `scout.log` (how
+  long the lists, details and timelines took, what was refused, when all was there). **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
   team's **damage mix** (AD / AP / True) shows what to build against.
 - **After the game**: the overview of both teams stands the moment the end screen opens – while you still honor –
   from the client's end-of-game numbers: K/D/A, CS, items, damage, taken, gold, MVP / ACE. When the match history
@@ -324,6 +329,8 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 - Tests: `npm test` (the real window in jsdom with a fake background part + `cargo test`); they run on every push
 - Pictures and the promo video: `node tools/screens/demo.js`, then `python tools/screens/capture.py` (headless Edge,
   ffmpeg; `shots` or `film` for one of the two) – `docs/demo.webp` in this README, `docs/demo.mp4`
+- How fast the League client hands out match history (for Live's pace): `node tools/lcu-speed.js` while League is
+  open – best during a game; only reads, prints no names
 - Releases: add the version's notes to `ui/changelog.js` (the app's *What's new* and the release text,
   `node tools/release-notes.js vX.Y.Z`), then `npm run release X.Y.Z` – it runs every check of the release workflow
   first (on main, nothing uncommitted, changelog entry, `cargo fmt --check`, clippy, all tests), sets the version in
@@ -335,8 +342,16 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
   1. run **all** tests: `npm test` (the window tests and `cargo test`);
   2. **commit** – right away, without asking;
   3. **build again** with `npm run dist`, so `Rift Switch.cmd` (it starts
-     `src-tauri\target\release\rift-switch.exe`) runs the new version right away. A running Rift Switch
-     locks that file – close it first (`taskkill /IM rift-switch.exe /F`, no need to ask).
+     `src-tauri\target\release\rift-switch.exe`) runs the new version. A running Rift Switch locks that
+     file – it is **not** closed: first delete a `rift-switch.old.exe` left from an earlier build (if one is
+     there and no longer runs), then rename the running `rift-switch.exe` to `rift-switch.old.exe`
+     (Windows lets a running program be renamed) and build;
+  4. **tell the user how to try it**, every time, in this form (German):
+     *„Zum Ausprobieren: Die neue Version ist gebaut. Deine laufende Rift Switch ist noch die alte, ich habe
+     sie nicht beendet, sondern ihre EXE nur zu rift-switch.old.exe umbenannt. Beende sie also über ✕ und
+     starte Rift Switch.cmd neu. Danach kann src-tauri\target\release\rift-switch.old.exe weg. Dein
+     Installer heißt noch 1.3.3; die Notizen für 1.3.4 stehen in ui/changelog.js.“* – with the versions of
+     the moment, and without the renaming part when Rift Switch wasn't running.
   **Pushing** only after asking.
 </details>
 

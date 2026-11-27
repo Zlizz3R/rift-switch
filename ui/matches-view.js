@@ -501,6 +501,7 @@ function summaryHtml(list, opts = {}) {
       ${s.time ? `<span title="${esc(t('mh.timeT'))}">⏱ <b>${playTime(s.time)}</b> ${t('mh.time')}</span>` : ''}
       ${s.streak && s.streak.n >= 2 ? `<span class="${s.streak.win ? 'good' : 'bad'}">${t(s.streak.win ? 'mh.streakW' : 'mh.streakL', { n: s.streak.n })}</span>` : ''}
     </div>
+    ${mhActivityHtml(list)}
     ${[5, 4, 3, 2].some(m => s.multis[m]) ? `<div class="mh-multis">${[5, 4, 3, 2].filter(m => s.multis[m]).map(m => (pl
       ? `<span class="mh-multi m${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</span>`
       : `<button class="mh-multi m${m}${mh.pin === m ? ' on' : ''}" data-pin="${m}">${s.multis[m]}× ${esc(t(MULTI[m]))}</button>`)).join('')}</div>` : ''}
@@ -527,6 +528,22 @@ function summaryHtml(list, opts = {}) {
   </div>`;
 }
 
+// the activity of what the filters show: the usual game length, days played (games a day), the
+// busiest weekday (the time played stands in the totals above)
+function mhActivityHtml(list) {
+  const games = list.filter(g => g.dur > 0);
+  if (games.length < 2) return '';
+  const secs = games.reduce((s, g) => s + g.dur, 0);
+  const days = new Set(games.map(g => new Date(g.t).toDateString())).size;
+  const wd = new Map();
+  for (const g of games) { const d = new Date(g.t).getDay(); wd.set(d, (wd.get(d) || 0) + 1); }
+  const [day] = [...wd].sort((a, b) => b[1] - a[1])[0];
+  const dayName = new Date(2024, 0, 7 + day).toLocaleDateString(locale(), { weekday: 'long' });
+  const item = (label, v) => `<span><span class="muted">${esc(label)}</span> <b>${esc(v)}</b></span>`;
+  return `<div class="mh-act">${item(t('ov.avgLen'), t('ov.min', { m: Math.round(secs / games.length / 60) }))}
+    ${item(t('ov.days'), t('ov.daysV', { d: days, g: (games.length / days).toLocaleString(locale(), { maximumFractionDigits: 1, minimumFractionDigits: 1 }) }))}
+    ${item(t('ov.weekday'), dayName)}</div>`;
+}
 // the augments a player took (Arena, ARAM: Mayhem), with their rarity's colour
 function augIcons(p, as, cls) {
   if (!p.aug || !p.aug.length) return '';

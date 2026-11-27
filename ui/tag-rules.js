@@ -238,10 +238,25 @@
     { id: 'arMulti', group: 'fight', type: 'avg', metric: 'multi3', atLeast: 0.45, min: 10, stage: 'A', color: 'good', period: 'season', pct: true },
     // the damage share of ten games: 22 % for the best sixth; together with a kill participation above the best third
     { id: 'arCarry', group: 'fight', type: 'carry', pct: true, share: 0.24, kp: 0.67, min: 10, stage: 'B', color: 'good', period: 'season' },
+    // 27.11.2026, tools/aram-thresholds.js on 5,192 ARAM games of other players (best third / best sixth);
+    // only a good side: few kills, assists or tower damage is a role, not a weakness
+    { id: 'arKills', group: 'stats', type: 'metric', metric: 'killsMin10', dir: 1, min: 10, stage: 'A', period: 'season', dec: 1, levels: { great: 6.7, master: 8.1 } },
+    { id: 'arAssists', group: 'stats', type: 'metric', metric: 'assistsMin10', dir: 1, min: 10, stage: 'A', period: 'season', dec: 1, levels: { great: 15, master: 17 } },
+    // damage dealt ÷ damage taken: who hits from a distance and isn't hit back (the median is about 1)
+    { id: 'arPoke', group: 'stats', type: 'metric', metric: 'poke', dir: 1, min: 10, stage: 'B', period: 'season', dec: 2, levels: { great: 1.13, master: 1.37 } },
+    { id: 'arTowers', group: 'fight', type: 'metric', metric: 'turretMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 95, master: 140 } },
+    // in on the game's first kill: 43 % of all ARAM games; 60 % of ten games is about the best sixth
+    { id: 'arFirstBlood', group: 'fight', type: 'metric', metric: 'fbPart', dir: 1, min: 10, stage: 'C', period: 'season', pct: true, levels: { great: 0.6, master: 0.7 } },
+    // 1,500 gold behind / ahead at minute 10: teams still win (lose) about 28 % of those games
+    { id: 'arComeback', group: 'fight', type: 'avg', metric: 'comeback10', atLeast: 0.5, min: 5, stage: 'C', color: 'good', period: 'season', pct: true },
+    { id: 'arThrows', group: 'fight', type: 'avg', metric: 'throws10', atLeast: 0.5, min: 5, stage: 'C', color: 'bad', period: 'season', pct: true },
+    // win rate in short games (under 17 min, the shortest third) against long ones (21 min and more)
+    { id: 'arLate', group: 'fight', type: 'phase', late: true, short: 17, long: 21, diff: 0.15, min: 5, stage: 'A', color: 'info', period: 'season' },
+    { id: 'arEarly', group: 'fight', type: 'phase', late: false, short: 17, long: 21, diff: 0.15, min: 5, stage: 'A', color: 'info', period: 'season' },
   ];
   // what may not stand next to each other (5.4); the first one wins
   const TAG_CONFLICTS = [['otp', 'flexPool'], ['otp', 'smallPool'], ['flexPool', 'smallPool'], ['generalist', 'autofill'], ['hotStreak', 'lossStreak'], ['unkillable', 'gankVictim'], ['aggroJungler', 'passiveJungler'],
-    ['arHot', 'arCold']];
+    ['arHot', 'arCold'], ['arComeback', 'arThrows'], ['arLate', 'arEarly']];
   // a tag stays until its value is this much past the threshold the other way (no flicker)
   const TAG_HYSTERESIS = 0.05;
   // the main role: at least this share of the games, from this many games on

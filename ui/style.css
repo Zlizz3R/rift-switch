@@ -1005,6 +1005,11 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .dm-river { fill: none; stroke: rgba(90, 160, 210, .18); stroke-width: 11; stroke-linecap: round; }
 .dm-base.own { fill: rgba(10, 200, 185, .12); }
 .dm-base.enemy { fill: rgba(232, 64, 87, .12); }
+/* ARAM's map: the lane from base to base, two towers a side */
+.dm-bridge { fill: rgba(240, 230, 210, .045); stroke: var(--line); stroke-width: 1.2; }
+.dm-tower { fill: #1b2130; stroke-width: .9; }
+.dm-tower.own { stroke: rgba(10, 200, 185, .7); } .dm-tower.enemy { stroke: rgba(232, 64, 87, .7); }
+.mp-maps button { font-weight: 600; }
 .dm-dots.deaths circle { fill: #e84057; opacity: .3; }
 .dm-dots.kills circle { fill: #2fc4b2; opacity: .3; }
 .mc { position: relative; }
@@ -1624,6 +1629,8 @@ div.mh-more { gap: 10px; }
 .rd-bars { display: flex; flex-direction: column; gap: 8px; min-width: 280px; }
 .rd-bar { display: grid; grid-template-columns: 120px 1fr 50px; align-items: center; gap: 10px; font-size: 12.5px; }
 .rd-bar b { text-align: right; font-variant-numeric: tabular-nums; }
+.rd-bar > span { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.rd-bar > span small { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rd-bar.few { color: var(--muted); }
 .rd-track { position: relative; height: 6px; border-radius: 3px; background: #262e3f; display: block; }
 .rd-track::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: #4a5672; }
@@ -1904,6 +1911,9 @@ span.ov-crest { border-radius: 50%; border: 2px dashed #3a4560; width: 40px; hei
 .perf-card .muted { color: var(--muted); font-size: 12.5px; }
 .perf-card-h small { margin-left: 10px; font-size: 10.5px; font-weight: 500; letter-spacing: .2px; text-transform: none; color: var(--muted); }
 
+/* the match history: the activity under the totals */
+.mh-act { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 8px; font-size: 12.5px; }
+.mh-act .muted { color: var(--muted); }
 /* the player page's match history: the games with you on top */
 .pl-with { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 12px; padding: 10px 14px; border-radius: 12px;
   border: 1px solid var(--line); background: linear-gradient(90deg, rgba(200,170,110,.07), transparent 60%), var(--panel); font-size: 12.5px; }
@@ -2019,14 +2029,14 @@ main { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org
 @media (min-width: 1100px) {
   .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "champs roles" "champs style" "champs map"; align-items: start; }
   .perf-grid.one-role { grid-template-areas: "champs style" "champs map"; }
-  .perf-grid.off { grid-template-areas: "champs share" "champs act"; }
+  .perf-grid.off { grid-template-areas: "champs share" "champs map"; }
   .pc-champs { grid-area: champs; } .pc-roles { grid-area: roles; } .pc-style { grid-area: style; } .pc-map { grid-area: map; }
-  .pc-share { grid-area: share; } .pc-act { grid-area: act; }
+  .pc-share { grid-area: share; }
 }
 /* wide: three side by side */
 @media (min-width: 1700px) {
   .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr); grid-template-areas: "champs roles map" "champs style map"; }
   .perf-grid.one-role { grid-template-areas: "champs style map"; }
-  .perf-grid.off { grid-template-areas: "champs share act"; }
+  .perf-grid.off { grid-template-areas: "champs share map"; }
 }
 .pc-champs, .pc-map { align-self: stretch; }

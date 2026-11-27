@@ -338,3 +338,29 @@ test('all roles: the role tags for every role played 5+ times, each with its thr
   // hysteresis keys keep the role
   assert.ok([...T.keys(r.results)].some(k => k === 'farm:master:mid'));
 });
+
+test('ARAM: the new traits – finisher, enabler, poke master, tower crusher, first blood, comebacks, game length', () => {
+  // 12 ARAM games of 18 minutes: 15 kills and 30 assists, 60,000 damage for 30,000 taken, 2,800 tower
+  // damage, in on every first blood
+  const aram = Array.from({ length: 12 }, (_, i) => {
+    const g = game({ q: 450, ago: 2 + i, dur: 1080, me: { k: 15, a: 30, dmg: 60000, x: { taken: 30000, turretDmg: 2800 } } });
+    g.kills = [[30, 2, 7, [1]]];
+    return g;
+  });
+  const r = T.evaluateAram({ games: aram, own: ['me'], now: NOW });
+  const met = id => r.results.find(x => x.id === id);
+  assert.equal(met('arKills').level, 'master');            // 8.3 kills per 10 minutes
+  assert.equal(met('arAssists').level, 'great');           // 16.7 – the best sixth starts at 17
+  assert.equal(met('arPoke').level, 'master');             // 2.0 × the damage taken
+  assert.equal(met('arTowers').level, 'master');           // 156 per minute
+  assert.equal(met('arFirstBlood').level, 'master');       // every first blood
+  // no gold timeline, no long games: "too little data", never "not met"
+  assert.equal(met('arComeback').state, 'few');
+  assert.equal(met('arLate').state, 'few');
+  // only good sides: a quiet game is no weakness
+  const quiet = aram.map(g => ({ ...g, players: g.players.map(p => (p.puuid === 'me' ? { ...p, k: 1, a: 3, dmg: 9000, x: { taken: 40000 } } : p)) }));
+  const q = T.evaluateAram({ games: quiet, own: ['me'], now: NOW });
+  for (const id of ['arKills', 'arAssists', 'arPoke', 'arTowers']) assert.equal(q.results.find(x => x.id === id).state, 'not', id);
+  // every ARAM rule has a known metric
+  for (const rule of TR.ARAM_RULES) if (rule.type === 'metric' || rule.type === 'avg') assert.ok(T.METRICS[rule.metric], rule.id);
+});

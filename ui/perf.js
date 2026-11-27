@@ -4,6 +4,9 @@
 // perfmath.js / stats.js. A click on a champion opens the match history with the same filters.
 // Uses the globals of renderer.js / views.js / matches-view.js / summary.js / tags-view.js.
 
+// "All ranked": every ranked queue and Clash – the start
+const PERF_RANKED = ['solo', 'flex', 'r5', 'clash'];
+const perfIsRanked = q => q.length === PERF_RANKED.length && PERF_RANKED.every(k => q.includes(k));
 function perfQueuesKept() {
   try { const q = JSON.parse(localStorage.getItem('rs.perfQ')); if (Array.isArray(q)) return q; } catch { /* default */ }
   return null;
@@ -15,7 +18,7 @@ function perfLastKept() {
 const PERF_LAST = [10, 20, 50, 100, 200];
 const perf = {
   // queues: groups switched on (none = all); kept like the account choice; last: the newest n games only
-  f: { queues: perfQueuesKept() || ['solo', 'flex'], range: 'y' + new Date().getFullYear(), from: '', to: '', role: '', last: perfLastKept() },
+  f: { queues: perfQueuesKept() || [...PERF_RANKED], range: 'y' + new Date().getFullYear(), from: '', to: '', role: '', last: perfLastKept() },
   // no queues chosen by hand yet: the ones the chosen accounts play most this season (an ARAM player
   // starts on ARAM)
   qAuto: !perfQueuesKept(),
@@ -59,8 +62,10 @@ function renderPerfFilter() {
   const f = perf.f;
   const opt = (v, label, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(label)}</option>`;
   // queues like the match history: each one on or off, "All" = every queue
-  $('perfQueues').innerHTML = `<button data-pq=""${!f.queues.length ? ' class="on"' : ''}>${t('mh.allQueues')}</button>` +
-    PERF_QUEUES().map(([k, l]) => `<button data-pq="${k}"${f.queues.includes(k) ? ' class="on"' : ''}>${esc(l)}</button>`).join('');
+  const rk = perfIsRanked(f.queues);
+  $('perfQueues').innerHTML = `<button data-pq=""${!f.queues.length ? ' class="on"' : ''}>${t('mh.allQueues')}</button>`
+    + `<button data-pq="ranked" title="${esc(t('perf.allRankedT'))}"${rk ? ' class="on"' : ''}>${esc(t('perf.allRanked'))}</button>` +
+    PERF_QUEUES().map(([k, l]) => `<button data-pq="${k}"${!rk && f.queues.includes(k) ? ' class="on"' : ''}>${esc(l)}</button>`).join('');
   // seasons (calendar years) with games, the current one always; then the usual ranges
   const years = [...new Set([new Date().getFullYear(), ...PerfMath.years(perf.games || [])])].sort((a, b) => b - a);
   const ranges = [...years.map(y => ['y' + y, t('perf.season', { y })]), ['90', t('mh.r90')], ['30', t('mh.r30')], ['7', t('mh.r7')], ['all', t('mh.rAll')], ['custom', t('mh.rCustom')]];
@@ -94,7 +99,7 @@ function perfSetLast(n) {
 function perfLine(ag) {
   const f = perf.f;
   const parts = [perfGames(ag ? ag.n : 0)];
-  parts.push(f.queues.length ? PERF_QUEUES().filter(([k]) => f.queues.includes(k)).map(q => q[1]).join(' + ') : t('perf.qAll'));
+  parts.push(perfIsRanked(f.queues) ? t('perf.allRanked') : f.queues.length ? PERF_QUEUES().filter(([k]) => f.queues.includes(k)).map(q => q[1]).join(' + ') : t('perf.qAll'));
   parts.push(f.range === 'custom' ? [f.from, f.to].map(d => (d ? fmtDate(new Date(d + 'T00:00').getTime()) : '…')).join(' – ') : $('perfRange').selectedOptions[0] ? $('perfRange').selectedOptions[0].textContent : '');
   if (f.last) parts.push(t('perf.last', { n: num(f.last) }));
   if (f.role) parts.push(t('pos.' + f.role));
@@ -112,7 +117,7 @@ function renderPerf() {
   if (perf.qAuto) {
     const ids = ovChosen().map(a => a.puuid);
     const scope = sumAutoScope(Stats.byParticipation(perf.games).filter(x => ids.includes(x.p.puuid)));
-    const q = { ranked: ['solo', 'flex'], aram: ['aram'], arena: ['arena'], all: [] }[scope] || ['solo', 'flex'];
+    const q = { ranked: [...PERF_RANKED], aram: ['aram'], arena: ['arena'], all: [] }[scope] || [...PERF_RANKED];
     if (q.join() !== perf.f.queues.join()) { perf.f.queues = q; renderPerfFilter(); }
   }
   const parts = PerfMath.select(perf.games, perfF());
@@ -133,15 +138,17 @@ function perfOwnTraits() {
 }
 // one page: the key figures and the traits on top, then the champions, the roles, the play style and
 // the map as cards – champions left of the others on a medium window, three columns on a wide one, one
-// under the other on a narrow one. ARAM and Arena only: the share of the team and the activity
-// instead of the roles, the play style and the map (no lanes there).
+// under the other on a narrow one. ARAM and Arena only: the share of the team instead of the roles and
+// the play style (no lanes there); ARAM's own map.
 // opts: { player: the player page, role: the role filter, traits: { res, scope, others } }
 function perfAllHtml(parts, ag, opts = {}) {
   const card = (id, title, body, sub = '') => `<section class="perf-card pc-${id}" id="perfSec-${id}"><h3 class="perf-card-h">${esc(title)}${sub ? `<small>${sub}</small>` : ''}</h3>${body}</section>`;
   const off = parts.length > 0 && parts.every(x => Stats.offRift(x.g));
+  // ARAM and Arena: no lanes – the share of the team instead of roles and play style; ARAM keeps its map
   const cards = off
     ? [card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts)),
-      card('share', t('ov.teamShare'), perfShareHtml(parts), esc(t('ov.fair'))), card('act', t('ov.activity'), perfActHtml(parts))]
+      card('share', t('ov.teamShare'), perfShareHtml(parts), esc(t('ov.fair'))),
+      parts.some(x => MapMath.mapOf(x.g) === 'aram') ? card('map', t('dash.tabMap'), perfMapHtml(parts, opts.player ? { foot: false } : {})) : '']
     : [card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts)),
       opts.role ? '' : card('roles', t('ov.roles'), perfRolesHtml(parts)),
       card('style', t('dash.tabStyle'), perfStyleHtml(parts, opts.role)),
@@ -235,21 +242,6 @@ function perfShareHtml(parts) {
   return rows.map(r => `<div class="sro share" title="${esc(t('ov.shareT'))}"><span>${esc(t('ov.sh.' + r.k))}</span><i class="scr-bar fair"><i style="width:${r.v == null ? 0 : Math.min(100, r.v * 250).toFixed(1)}%"></i></i>
       <b class="${r.v == null ? '' : r.v >= 0.24 ? 'good' : r.v <= 0.16 ? 'bad' : ''}">${perfPct(r.v)}</b></div>`).join('');
 }
-// activity: time played, the usual game length, days played, the busiest weekday
-function perfActHtml(parts) {
-  const games = [...new Map(parts.map(x => [String(x.g.id), x.g])).values()];
-  if (!games.length) return `<p class="muted">${esc(t('ov.none'))}</p>`;
-  const secs = games.reduce((s, g) => s + (g.dur || 0), 0);
-  const days = new Set(games.map(g => new Date(g.t).toDateString())).size;
-  const wd = new Map();
-  for (const g of games) { const d = new Date(g.t).getDay(); wd.set(d, (wd.get(d) || 0) + 1); }
-  const [day] = [...wd].sort((a, b) => b[1] - a[1])[0];
-  const dayName = new Date(2024, 0, 7 + day).toLocaleDateString(locale(), { weekday: 'long' });
-  const hm = s => t('ov.hm', { h: Math.floor(s / 3600), m: Math.round((s % 3600) / 60) });
-  const row = (label, v) => `<div class="sac"><span>${esc(label)}</span><b>${esc(v)}</b></div>`;
-  return row(t('ov.time'), hm(secs)) + row(t('ov.avgLen'), t('ov.min', { m: Math.round(secs / games.length / 60) }))
-    + row(t('ov.days'), t('ov.daysV', { d: days, g: perfDec(games.length / days, 1) })) + row(t('ov.weekday'), dayName);
-}
 // the Performance views are drawn on the Overview and on the player page: draw again where they are
 const perfRerender = () => (view === 'player' && typeof renderPlayer === 'function' ? renderPlayer() : renderPerf());
 
@@ -301,8 +293,9 @@ $('perfLastN').onchange = () => { perfSetLast(Number($('perfLastN').value)); per
 $('dashPerf').addEventListener('click', e => {
   const pq = e.target.closest('[data-pq]');
   if (pq) {
-    const k = pq.dataset.pq, q = perf.f.queues;
-    perf.f.queues = !k ? [] : q.includes(k) ? q.filter(x => x !== k) : [...q, k];
+    const k = pq.dataset.pq, q = perfIsRanked(perf.f.queues) ? [] : perf.f.queues;
+    // "All ranked" on: a click on one queue picks just that one
+    perf.f.queues = !k ? [] : k === 'ranked' ? [...PERF_RANKED] : perfIsRanked(perf.f.queues) ? [k] : q.includes(k) ? q.filter(x => x !== k) : [...q, k];
     perf.qAuto = false;
     try { localStorage.setItem('rs.perfQ', JSON.stringify(perf.f.queues)); } catch { /* not kept */ }
     return renderPerf();

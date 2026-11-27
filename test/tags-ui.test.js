@@ -143,7 +143,7 @@ test('traits: ARAM players get ARAM traits – the tab starts on ARAM, no roles,
     assert.ok(!app.$('[data-pq="solo"]').classList.contains('on'));
     assert.ok(app.$('.pc-share'), 'the share of the team');
     assert.match(app.$('.pc-share').textContent, /Damage[\s\S]*Healing/);
-    assert.ok(app.$('.pc-act'), 'activity instead of the radar');
+    assert.ok(app.$('.pc-map') && !app.$('.pc-style') && !app.$('.pc-act'), "ARAM's map instead of the radar (the activity is in the match history)");
     assert.match(app.$('.pf-traits').textContent, /Damage dealer/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
