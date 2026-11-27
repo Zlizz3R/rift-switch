@@ -1,6 +1,6 @@
 [package]
 name = "rift-switch"
-version = "1.3.3"
+version = "1.3.4"
 description = "A fast, light League of Legends account switcher for Windows"
 authors = ["Zlizz3R"]
 license = "MIT"

@@ -1,6 +1,6 @@
 {
   "name": "rift-switch",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Rift Switch – the local multi-account companion for League of Legends on Windows.",
   "scripts": {
     "dev": "tauri dev",
