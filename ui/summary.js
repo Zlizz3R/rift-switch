@@ -6,7 +6,6 @@
 
 const sumv = { scope: '' };
 const SUM_ARAM = [450, 2400];
-const SUM_ARENA = [1700, 1710];
 const sumSeason = () => new Date(new Date().getFullYear(), 0, 1).getTime();
 
 // ---------- which games ----------
@@ -15,7 +14,7 @@ function sumScopeRows(rows, scope) {
   const from = sumSeason();
   if (scope === 'ranked') return rows.filter(x => Stats.RANKED_QUEUES.includes(x.g.q) && x.g.t >= from);
   if (scope === 'aram') return rows.filter(x => SUM_ARAM.includes(x.g.q) && x.g.t >= from);
-  if (scope === 'arena') return rows.filter(x => SUM_ARENA.includes(x.g.q) && x.g.t >= from);
+  if (scope === 'arena') return rows.filter(x => Stats.isArena(x.g) && x.g.t >= from);
   return rows;
 }
 // the scope shown first: the one with the most games this season – ranked when it's a tie

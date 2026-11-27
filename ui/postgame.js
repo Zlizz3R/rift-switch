@@ -112,7 +112,8 @@ function pgPlacements(g) {
   return { place: i => place.get(i), mvp: best(true), ace: best(false), lane: i => lanes[i] };
 }
 
-// both teams as one table: header per team, a row per player (mine = own accounts, marked)
+// both teams as one table: header per team, a row per player (mine = own accounts, marked). Arena:
+// a block per team of the arena by its placing (1st … 6th) – red and blue mean nothing there
 function pgTableHtml(g, as, mine) {
   as = as || {};
   const { place, mvp, ace, lane } = pgPlacements(g);
@@ -121,7 +122,9 @@ function pgTableHtml(g, as, mine) {
   const maxDmg = max(p => p.dmg || 0), maxTaken = max(p => (p.x && p.x.taken) || 0), maxGold = max(p => p.gold || 0);
   // Arena, ARAM: Mayhem: every player's augments in a column of their own, right of the gold
   const augs = all.some(p => p.aug && p.aug.length);
-  const teams = [...new Set(all.map(p => p.team))].sort((a, b) => (a === 100 ? -1 : b === 100 ? 1 : a - b));
+  const arena = Stats.isArena(g) && all.some(p => p.place);
+  const keyOf = p => (arena ? p.place || 9 : p.team);
+  const teams = [...new Set(all.map(keyOf))].sort((a, b) => (arena ? a - b : a === 100 ? -1 : b === 100 ? 1 : a - b));
   const bar = (v, m, cls) => `<span class="pg-bar ${cls}"><i style="width:${Math.max(2, Math.round((100 * v) / m))}%"></i></span>`;
   // ×1.15 under the placement: green better than the lane opponent, red worse
   const laneChip = l => {
@@ -130,7 +133,18 @@ function pgTableHtml(g, as, mine) {
     return `<small class="pg-lane ${cls}" title="${esc(t('pg.laneT', { name: l.opp.name || '?', n: Math.round(l.share * 100) }))}">×${l.mult.toFixed(2)}</small>`;
   };
   const teamHtml = team => {
-    const ps = all.map((p, i) => ({ p, i })).filter(x => x.p.team === team);
+    const ps = all.map((p, i) => ({ p, i })).filter(x => keyOf(x.p) === team);
+    const sumA = f => ps.reduce((s, x) => s + (f(x.p) || 0), 0);
+    if (arena) {
+      // the arena's teams: their placing (the top half wins), no sides, no objectives
+      const head = `<div class="pg-head arena p${team} ${team <= 3 ? 'win' : 'loss'}">
+        <b class="pg-side">${esc(t('pg.place', { n: team }))}</b>
+        <span class="pg-kda">${sumA(p => p.k)} / ${sumA(p => p.d)} / ${sumA(p => p.a)}</span><span class="pg-obj"></span>
+        <span class="pg-sum">${k1(sumA(p => p.gold))} ${t('mh.gold')}</span>
+        <span class="pg-sum">${k1(sumA(p => p.dmg))} ${t('mh.dmg')}</span>
+      </div>`;
+      return head + ps.map(x => rowHtml(x, 'blue')).join('');
+    }
     const tm = (g.teams || []).find(x => x.id === team) || {};
     const win = ps[0] && ps[0].p.win;
     const sum = f => ps.reduce((s, x) => s + (f(x.p) || 0), 0);
@@ -144,7 +158,10 @@ function pgTableHtml(g, as, mine) {
       <span class="pg-sum">${k1(sum(p => p.dmg))} ${t('mh.dmg')}</span>
       ${bans.length ? `<span class="pg-bans" title="${esc(t('pg.bans'))}">${bans.map(id => `<img src="${CHAMP_ICON(id)}" alt="">`).join('')}</span>` : ''}
     </div>`;
-    const rows = ps.map(({ p, i }) => {
+    return head + ps.map(x => rowHtml(x, team === 100 ? 'blue' : 'red')).join('');
+  };
+  // a player's row; side: the colour of the damage bar
+  const rowHtml = ({ p, i }, side) => {
       const x = p.x || {};
       const st = Stats.perGame(g, p);
       const kda = st.perfect ? null : st.kda;
@@ -159,13 +176,11 @@ function pgTableHtml(g, as, mine) {
         <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}</span>
         <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${st.kp == null ? '–' : Math.round(100 * st.kp) + '%'} KP</small></span>
         <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${st.csMin.toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
-        <span class="pg-b"><b>${k1(p.dmg)}</b>${bar(p.dmg, maxDmg, team === 100 ? 'blue' : 'red')}</span>
+        <span class="pg-b"><b>${k1(p.dmg)}</b>${bar(p.dmg, maxDmg, side)}</span>
         <span class="pg-b"><b>${x.taken != null ? k1(x.taken) : '–'}</b>${bar(x.taken || 0, maxTaken, 'taken')}</span>
         <span class="pg-b"><b>${k1(p.gold)}</b>${bar(p.gold, maxGold, 'gold')}</span>
         ${augs ? `<span class="pg-aug">${augIcons(p, as, 'pg-augs')}</span>` : ''}
       </div>`;
-    }).join('');
-    return head + rows;
   };
   const cols = `<div class="pg-cols"><span></span><span></span><span></span><span></span><span></span><span>K / D / A · KP</span><span>CS · ${t('det.vision')}</span><span>${t('pg.dealt')}</span><span>${t('pg.taken')}</span><span>${t('mh.gold')}</span>${augs ? `<span>${t('pg.augs')}</span>` : ''}</div>`;
   return `<div class="pg-wrap"><div class="pg-table${augs ? ' with-aug' : ''}">${cols}${teams.map(teamHtml).join('')}</div></div>`;

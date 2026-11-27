@@ -377,3 +377,23 @@ test('ARAM: the new traits – finisher, enabler, poke master, tower crusher, fi
   // every ARAM rule has a known metric
   for (const rule of TR.ARAM_RULES) if (rule.type === 'metric' || rule.type === 'avg') assert.ok(T.METRICS[rule.metric], rule.id);
 });
+
+test('Arena: its own catalogue – placing, podium, crown; ARAM and the Rift left out', () => {
+  const St = require('../ui/stats');
+  const arena = (place, ago) => {
+    const g = game({ q: 1750, ago, me: { place, win: place <= 3, k: 6, d: 2, a: 6 } });
+    return { ...g, mode: 'CHERRY' };
+  };
+  const games = [...Array.from({ length: 12 }, (_, i) => arena(i < 5 ? 1 : 2, i + 1)), game({ q: 420, ago: 2 }), game({ q: 450, ago: 3 })];
+  const r = T.evaluateArena({ games, own: ['me'], now: NOW });
+  assert.equal(r.n, 12);
+  assert.ok(r.arena && r.aram, 'no roles, like ARAM');
+  const met = id => r.results.find(x => x.id === id && x.state === 'met');
+  assert.ok(met('arnPodium'), 'top three in every game');
+  assert.ok(met('arnCrown'), 'first in 5 of 12');
+  assert.equal(met('arnPlace').level, 'master');
+  // only the chosen games (a filter's rows)
+  const r2 = T.evaluateArena({ games, own: ['me'], now: NOW, rows: St.byParticipation(games.slice(0, 3)) });
+  assert.equal(r2.n, 3);
+  assert.ok(TR.ARENA_RULES.length >= 15 && TR.ARAM_RULES.length >= 30);
+});

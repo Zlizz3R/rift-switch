@@ -211,3 +211,25 @@ test('match details: every player\'s augments (ARAM: Mayhem, Arena) in a column 
     assert.equal(app.$('.pg-items .aug'), null, 'not under the items any more');
   });
 });
+
+test('match history: Arena (queue 1750, mode CHERRY) says "Arena" and shows its six teams by placing', () => {
+  // 18 players, six teams of three: placings 1–6, the top three win
+  const players = Array.from({ length: 18 }, (_, i) => ({ puuid: i === 0 ? P(1) : `x${i}`, name: 'N' + i, tag: 'EUW', team: i < 9 ? 100 : 200, champ: i + 1,
+    lvl: 18, k: 3, d: 2, a: 4, cs: 10, gold: 9000, dmg: 20000, vis: 0, items: [0, 0, 0, 0, 0, 0, 0], spells: [4, 32], place: Math.floor(i / 3) + 1, win: i < 9 }));
+  const games = [{ id: '1', t: Date.now() - 3600000, dur: 1400, q: 1750, mode: 'CHERRY', remake: false, v: 7, players }];
+  const replies = {
+    matches: { index: games.map((g) => [g.id, g.t, g.q, P(1)]), waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': (ids) => games.filter((g) => ids.includes(g.id)),
+  };
+  return withApp({ replies }, async (app) => {
+    await app.openMatches();
+    assert.deepEqual(app.$$('.mh-row .mh-q').map((x) => x.textContent), ['Arena']);
+    await app.click(app.$('.mh-row .mh-meta'));
+    await app.settle();
+    const heads = app.$$('.mh-det .pg-head');
+    assert.equal(heads.length, 6, 'six teams, not red and blue');
+    assert.deepEqual(heads.map((h) => h.querySelector('.pg-side').textContent), ['Place 1', 'Place 2', 'Place 3', 'Place 4', 'Place 5', 'Place 6']);
+    assert.ok(heads[0].classList.contains('win') && heads[3].classList.contains('loss'));
+    assert.equal(app.$$('.mh-det .pg-row').length, 18);
+  });
+});

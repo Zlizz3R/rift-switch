@@ -995,13 +995,13 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .det-body { display: none; flex-direction: column; gap: 10px; padding: 0 0 10px; }
 .det-g.open + .det-body { display: flex; }
 .mh-det { gap: 0; }
-/* Overview → Map: deaths and kills, the minute chart, the zones */
+/* Overview → Map: kills, deaths and assists, the minute chart, the zones */
 .mp-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
 .mp-bar .seg button small { opacity: .6; margin-left: 3px; font-variant-numeric: tabular-nums; }
 .mp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 .mp-dot.deaths { background: #e84057; }
 .mp-dot.kills { background: #2fc4b2; }
-.mp-dot.both { background: linear-gradient(90deg, #e84057 50%, #2fc4b2 50%); }
+.mp-dot.assists { background: #6aa6ff; }
 .dm-wrap { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
 .mp-left { display: flex; flex-direction: column; gap: 6px; width: 340px; flex: none; }
 .dm-map { width: 340px; height: 340px; flex: none; }
@@ -1017,6 +1017,10 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .mp-maps button { font-weight: 600; }
 .dm-dots.deaths circle { fill: #e84057; opacity: .3; }
 .dm-dots.kills circle { fill: #2fc4b2; opacity: .3; }
+.dm-dots.assists circle { fill: #6aa6ff; opacity: .3; }
+/* Arena's map: its seven arenas, numbered */
+.dm-arena { fill: rgba(240, 230, 210, .04); stroke: var(--line); stroke-width: 1.2; }
+.dm-arena-n { fill: var(--muted); font-size: 11px; font-weight: 700; }
 .mc { position: relative; }
 .mc-svg { width: 340px; height: 64px; display: block; cursor: crosshair; user-select: none; }
 /* the icons' outline style (svg { stroke }) is not for the map and the chart */
@@ -1024,7 +1028,8 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .mc-axis { stroke: var(--line); stroke-width: 1; }
 .mc-k { fill: #2fc4b2; }
 .mc-d { fill: #e84057; }
-.mc-k.off, .mc-d.off { opacity: .22; }
+.mc-a { fill: #6aa6ff; opacity: .75; }
+.mc-k.off, .mc-d.off, .mc-a.off { opacity: .22; }
 .mc-hit { fill: transparent; }
 .mc-hit:hover, .mc-hit.pick { fill: rgba(255, 255, 255, .07); }
 .mc-ticks { position: relative; height: 14px; font-size: 10.5px; color: var(--muted); }
@@ -1034,11 +1039,17 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .dm-side { flex: 1; min-width: 260px; max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
 .dm-hots { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .dm-hots li { padding: 8px 12px; border-radius: 8px; background: rgba(232, 64, 87, .08); border: 1px solid rgba(232, 64, 87, .25); }
-.dm-hots li.kill { background: rgba(47, 196, 178, .08); border-color: rgba(47, 196, 178, .28); }
+.dm-hots li.kills { background: rgba(47, 196, 178, .08); border-color: rgba(47, 196, 178, .28); }
+.dm-hots li.assists { background: rgba(106, 166, 255, .08); border-color: rgba(106, 166, 255, .28); }
 .dm-hots b { color: var(--gold2); margin-right: 6px; }
 .mp-rows { display: flex; flex-direction: column; gap: 6px; }
-.mp-row { display: grid; grid-template-columns: minmax(0, 150px) minmax(40px, 1fr) 46px 32px; align-items: center; gap: 10px; font-size: 12.5px; }
-.mp-rows.both .mp-row { grid-template-columns: minmax(0, 150px) minmax(30px, 1fr) 32px minmax(30px, 1fr) 32px; }
+/* a zone, then per kind its number first and its bar after it (one kind: also its share) */
+.mp-row { display: grid; grid-template-columns: minmax(0, 140px) repeat(var(--k, 1), minmax(70px, 1fr)); align-items: center; gap: 12px; font-size: 12.5px; }
+.mp-rows.k2 .mp-row { --k: 2; } .mp-rows.k3 .mp-row { --k: 3; }
+.mp-cell { display: grid; grid-template-columns: 30px auto minmax(24px, 1fr); align-items: center; gap: 6px; min-width: 0; }
+.mp-rows:not(.k1) .mp-cell { grid-template-columns: 30px minmax(24px, 1fr); }
+.mp-cell b { text-align: right; }
+.mp-row.head span.kills { color: #2fc4b2; } .mp-row.head span.deaths { color: #e84057; } .mp-row.head span.assists { color: #6aa6ff; }
 .mp-row > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mp-row.head > span { overflow: visible; }
 .mp-row.head { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
@@ -1046,7 +1057,8 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .mp-row small { opacity: .6; text-align: right; font-variant-numeric: tabular-nums; }
 .dm-track { height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
 .dm-track i { display: block; height: 100%; background: #e84057; }
-.dm-track.k i { background: #2fc4b2; }
+.dm-track.kills i { background: #2fc4b2; }
+.dm-track.assists i { background: #6aa6ff; }
 /* the replay of an opened game */
 .rp-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 4px 2px; border-top: 1px solid var(--line); }
 .rp-bar:empty { display: none; }
@@ -1349,6 +1361,9 @@ span.mh-ch { cursor: default; }
 .pg-head .pg-side { min-width: 140px; }
 .pg-who { display: grid; gap: 3px; min-width: 0; justify-items: start; }
 .pg-head.blue .pg-side { color: #5aa9e6; } .pg-head.red .pg-side { color: #e5737a; }
+/* Arena: a team by its placing – first in gold, the top three green, the others muted */
+.pg-head.arena .pg-side { color: #4cc38a; } .pg-head.arena.loss .pg-side { color: var(--muted); }
+.pg-head.arena.p1 .pg-side { color: var(--gold2); }
 .pg-head .pg-obj { display: flex; gap: 12px; color: var(--muted); } .pg-head .pg-obj b { color: var(--text); }
 .pg-head .pg-sum { color: var(--muted); }
 .pg-bans { margin-left: auto; display: flex; gap: 3px; } .pg-bans img { width: 22px; height: 22px; border-radius: 4px; filter: grayscale(.7); opacity: .8; }

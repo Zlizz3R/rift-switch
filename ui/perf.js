@@ -163,7 +163,7 @@ function perfAllHtml(parts, ag, opts = {}) {
   // ARAM and Arena: no lanes – the share of the team instead of roles and play style; ARAM keeps its map
   const cards = off
     ? [champsCard,
-      sel.some(x => MapMath.mapOf(x.g) === 'aram') ? card('map', t('dash.tabMap'), perfMapHtml(sel, opts.player ? { foot: false } : {})) : '',
+      sel.some(x => ['aram', 'arena'].includes(MapMath.mapOf(x.g))) ? card('map', t('dash.tabMap'), perfMapHtml(sel, opts.player ? { foot: false } : {})) : '',
       card('share', t('ov.teamShare'), perfShareHtml(sel), esc(t('ov.fair')))]
     : [champsCard,
       card('map', t('dash.tabMap'), perfMapHtml(sel, opts.player ? { foot: false } : {})),

@@ -23,7 +23,8 @@ pub const QUEUE_GROUPS: [(&str, &[i64]); 9] = [
     ("classic", &[4310]),
     ("normal", &[400, 430, 490, 480]),
     ("aram", &[450, 2400]),
-    ("arena", &[1700, 1710]),
+    // Arena: two-player teams (1700, 1710), since 2026 six teams of three (1740, 1750)
+    ("arena", &[1700, 1710, 1740, 1750]),
     // Clash on the Rift and ARAM Clash (the client calls their mode "CLASSIC" / "ARAM")
     ("clash", &[700, 720]),
     // custom games: the client gives custom games on the ARAM map their own queues (3220 ARAM,
@@ -64,8 +65,8 @@ pub const GAME_VERSION: u8 = 7;
 /// Other players' games in two passes (Live, the player page): first the details alone, stored
 /// with this format (every figure, no timeline), then the timeline – the full game replaces it.
 pub const DETAILS_ONLY: u8 = 1;
-/// Queues with augments: Arena (1700, 1710), ARAM: Mayhem (2400; 3270 as a custom game)
-pub const AUG_QUEUES: [i64; 4] = [1700, 1710, 2400, 3270];
+/// Queues with augments: Arena (1700, 1710, 1740, 1750), ARAM: Mayhem (2400; 3270 as a custom game)
+pub const AUG_QUEUES: [i64; 6] = [1700, 1710, 1740, 1750, 2400, 3270];
 /// A stored game that needs its details again: an older format – format 6 only in a queue with augments
 fn needs_update(e: &Entry) -> bool {
     e.v < 6 || (e.v < GAME_VERSION && AUG_QUEUES.contains(&e.q))

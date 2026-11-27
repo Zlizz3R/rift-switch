@@ -22,14 +22,14 @@ async function loadTagsView() {
 api.onMatchesChanged(() => { if (view === 'dash' && dashTab() === 'tags') loadTagsView(); });
 
 // the last shown levels per account and role – a tag only goes 5 % past its threshold (tags.js)
-const tagPrevKey = () => `rs.tagPrev.${ovChosen().map(a => a.puuid.slice(0, 8)).sort().join('+') || 'none'}.${tagv.aram ? 'aram' : tagv.role || 'main'}`;
+const tagPrevKey = () => `rs.tagPrev.${ovChosen().map(a => a.puuid.slice(0, 8)).sort().join('+') || 'none'}.${tagv.aram ? tagv.cat || 'aram' : tagv.role || 'main'}`;
 function tagPrev() { try { return new Set(JSON.parse(localStorage.getItem(tagPrevKey()) || '[]')); } catch { return new Set(); } }
 function tagKeep(results) { try { localStorage.setItem(tagPrevKey(), JSON.stringify([...Tags.keys(results)])); } catch { /* private mode: no memory */ } }
 
 // ---------- texts ----------
 const tagChampName = id => (champById(id) || {}).name || '#' + id;
 // a rule of either catalogue (Summoner's Rift, ARAM)
-const tagRule = id => TagRules.TAG_RULES.find(r => r.id === id) || (TagRules.ARAM_RULES || []).find(r => r.id === id) || {};
+const tagRule = id => TagRules.TAG_RULES.find(r => r.id === id) || (TagRules.ARAM_RULES || []).find(r => r.id === id) || (TagRules.ARENA_RULES || []).find(r => r.id === id) || {};
 function tagName(x) {
   const lv = x.level === 'master' ? 'great' : x.level;
   const key = x.id === 'mastery' ? `tag.mastery.${x.level}` : lv ? `tag.${x.id}.${lv}` : `tag.${x.id}`;
@@ -96,9 +96,11 @@ function tagWhy(x, role) {
 // every tag of the catalogue, by group (folded; the state is remembered)
 const TAG_ALL_KEY = 'rs.tagsAll';
 const tagAllOpen = () => { try { return localStorage.getItem(TAG_ALL_KEY) === '1'; } catch { return false; } };
-function tagAllHtml(list, role, openX, aram = false) {
+// cat: 'sr' | 'aram' | 'arena' – the catalogue
+function tagAllHtml(list, role, openX, cat = 'sr') {
+  const aram = cat !== 'sr';
   // the Live-only tags are about the game being played – nothing to show here
-  const rules = (aram ? TagRules.ARAM_RULES || [] : TagRules.TAG_RULES).filter(r => !r.off && !r.live);
+  const rules = (cat === 'arena' ? TagRules.ARENA_RULES || [] : aram ? TagRules.ARAM_RULES || [] : TagRules.TAG_RULES).filter(r => !r.off && !r.live);
   const metN = new Set(list.filter(({ x }) => x.state === 'met').map(({ x }) => x.id)).size;
   const head = `<button class="tag-all-h" data-tagall>${tagAllOpen() ? '▾' : '▸'} ${esc(t('tags.all'))} <small>${esc(t('tags.allSub', { met: metN, total: rules.length }))}</small></button>`;
   if (!tagAllOpen()) return `<div class="tag-group tag-all">${head}</div>`;
@@ -139,17 +141,22 @@ function renderTagsView() {
   const own = accs.map(a => a.puuid);
   // Summoner's Rift (ranked) or ARAM: an ARAM player starts on ARAM
   const rows = Stats.byParticipation(tagv.games).filter(x => own.includes(x.p.puuid));
-  const nSr = sumScopeRows(rows, 'ranked').length, nAram = sumScopeRows(rows, 'aram').length;
-  tagv.aram = (tagv.mode || (nAram > nSr ? 'aram' : 'sr')) === 'aram';
-  $('tagMode').innerHTML = [['sr', t('tags.modeSr'), nSr], ['aram', 'ARAM', nAram]]
-    .map(([k, l, n]) => `<button data-tmode="${k}"${(k === 'aram') === tagv.aram ? ' class="on"' : ''}>${esc(l)} <small>${num(n)}</small></button>`).join('');
+  const nSr = sumScopeRows(rows, 'ranked').length, nAram = sumScopeRows(rows, 'aram').length, nArena = sumScopeRows(rows, 'arena').length;
+  // the catalogue: chosen, else the one with the most games (Summoner's Rift when tied)
+  const most = [['sr', nSr], ['aram', nAram], ['arena', nArena]].sort((a, b) => b[1] - a[1])[0];
+  const cat = tagv.mode || (most[1] > nSr ? most[0] : 'sr');
+  tagv.aram = cat !== 'sr';
+  tagv.cat = cat;
+  $('tagMode').innerHTML = [['sr', t('tags.modeSr'), nSr], ['aram', 'ARAM', nAram], ['arena', 'Arena', nArena]]
+    .map(([k, l, n]) => `<button data-tmode="${k}"${k === cat ? ' class="on"' : ''}>${esc(l)} <small>${num(n)}</small></button>`).join('');
   $('tagRole').hidden = tagv.aram;
   if (tagv.aram) {
-    const res = Tags.evaluateAram({ games: tagv.games, own, prev: tagPrev() });
+    const arena = cat === 'arena';
+    const res = (arena ? Tags.evaluateArena : Tags.evaluateAram)({ games: tagv.games, own, prev: tagPrev() });
     tagKeep(res.results);
     tagv.res = res.results;
-    if (!res.n) { $('tagSub').textContent = ''; el.innerHTML = `<div class="chart-empty">${t('ov.noAramTraits')}</div>`; return; }
-    $('tagSub').textContent = t('tags.subAram', { n: num(res.n) });
+    if (!res.n) { $('tagSub').textContent = ''; el.innerHTML = `<div class="chart-empty">${t(arena ? 'ov.noArenaTraits' : 'ov.noAramTraits')}</div>`; return; }
+    $('tagSub').textContent = t(arena ? 'tags.subArena' : 'tags.subAram', { n: num(res.n) });
     el.innerHTML = tagsBodyHtml(res, null);
     return;
   }
@@ -189,7 +196,8 @@ function tagsBodyHtml(res, role) {
     const det = openX && !openX.all && openX.x.group === g ? tagDetail(openX.x) : '';
     return `<div class="tag-group"><span class="d-sec-t">${t('tags.g.' + g)}</span><div class="tchips">${inG.map(({ x, i }) => tagChip(x, i)).join('')}</div>${det}</div>`;
   }).join('');
-  return `${top}${groups}${res.others ? '' : tagAllHtml(list, role, openX, res.aram)}<p class="coll-foot">${t(res.others ? 'tags.basisOthers' : res.aram ? 'tags.basisAram' : 'tags.basis')}</p>`;
+  const cat = res.arena ? 'arena' : res.aram ? 'aram' : 'sr';
+  return `${top}${groups}${res.others ? '' : tagAllHtml(list, role, openX, cat)}<p class="coll-foot">${t(res.others ? 'tags.basisOthers' : res.arena ? 'tags.basisArena' : res.aram ? 'tags.basisAram' : 'tags.basis')}</p>`;
 }
 // the groups of a catalogue, in their order
 const tagGroupsOf = res => (res.aram && Tags.ARAM_GROUPS ? Tags.ARAM_GROUPS : Tags.GROUPS);

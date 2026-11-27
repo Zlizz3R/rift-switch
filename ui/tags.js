@@ -12,6 +12,7 @@
   // ---------- the figures behind metric tags (rows: [{ g, p }]) → { v, n } ----------
   const avgOf = list => (list.length ? list.reduce((s, x) => s + x, 0) / list.length : null);
   const withX = rows => rows.filter(x => x.p.x && typeof x.p.x === 'object');
+  const dmgAll = x => (x.phys || 0) + (x.magic || 0) + (x.true || 0);
   const METRICS = {
     csMin: rows => { const a = St.aggregate(rows); return { v: a && a.csMin, n: rows.length }; },
     dmgMin: rows => { const a = St.aggregate(rows); return { v: a && a.dmgMin, n: rows.length }; },
@@ -143,6 +144,18 @@
       return { v: taken ? r.reduce((s, x) => s + (x.p.dmg || 0), 0) / taken : null, n: r.length };
     },
     spree: rows => { const r = withX(rows); return { v: avgOf(r.map(x => x.p.x.spree || 0)), n: r.length }; },
+    // double kills per game, games with a quadra or more, damage mitigated per minute, the biggest
+    // critical strike, the share of magic / physical damage in all damage dealt
+    doubles: rows => { const r = withX(rows); return { v: avgOf(r.map(x => x.p.x.doubles || 0)), n: r.length }; },
+    multi4: rows => ({ v: avgOf(rows.map(x => ((x.p.multi || 0) >= 4 ? 1 : 0))), n: rows.length }),
+    mitigMin: rows => { const r = withX(rows).filter(x => x.g.dur > 0); return { v: avgOf(r.map(x => (x.p.x.mitig || 0) / (x.g.dur / 60))), n: r.length }; },
+    crit: rows => { const r = withX(rows); return { v: avgOf(r.map(x => x.p.x.crit || 0)), n: r.length }; },
+    magicShare: rows => { const r = withX(rows).filter(x => dmgAll(x.p.x)); return { v: avgOf(r.map(x => (x.p.x.magic || 0) / dmgAll(x.p.x))), n: r.length }; },
+    physShare: rows => { const r = withX(rows).filter(x => dmgAll(x.p.x)); return { v: avgOf(r.map(x => (x.p.x.phys || 0) / dmgAll(x.p.x))), n: r.length }; },
+    // Arena: the team's placing (1–6), in the top three, first
+    placeAvg: rows => { const r = rows.filter(x => x.p.place > 0); return { v: avgOf(r.map(x => x.p.place)), n: r.length }; },
+    top3: rows => { const r = rows.filter(x => x.p.place > 0); return { v: avgOf(r.map(x => (x.p.place <= 3 ? 1 : 0))), n: r.length }; },
+    first: rows => { const r = rows.filter(x => x.p.place > 0); return { v: avgOf(r.map(x => (x.p.place === 1 ? 1 : 0))), n: r.length }; },
     comeback10: rows => {
       const r = rows.filter(x => { const d = St.teamGoldDiffAt(x.g, x.p, 10); return d != null && d <= -ARAM_COMEBACK_GOLD; });
       return { v: r.length ? r.filter(x => x.p.win).length / r.length : null, n: r.length, vars: { w: r.filter(x => x.p.win).length } };
@@ -381,6 +394,19 @@
     for (const r of TR.ARAM_RULES || []) if (!r.off && !r.live) results.push(...evalRule(r, d));
     return { aram: true, role: null, n: all.length, roleN: all.length, results };
   }
+  // Arena: this season's Arena games with the Arena catalogue (tag-rules.js ARENA_RULES) – no roles
+  // (aram: true as well: no roles, no lanes wherever the views ask)
+  function evaluateArena(ctx) {
+    const now = ctx.now || Date.now();
+    const own = new Set(ctx.own || []);
+    const all = (ctx.rows ? ctx.rows : St.byParticipation(ctx.games || []).filter(x => x.g.t >= seasonStart(now)))
+      .filter(x => own.has(x.p.puuid) && St.isArena(x.g));
+    const d = { all, now, level: null, mastery: null, prev: ctx.prev || new Set(), role: null, roleRows: all, season: all,
+      d7: all.filter(x => now - x.g.t <= 7 * DAY), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY) };
+    const results = [];
+    for (const r of TR.ARENA_RULES || []) if (!r.off && !r.live) results.push(...evalRule(r, d));
+    return { aram: true, arena: true, role: null, n: all.length, roleN: all.length, results };
+  }
 
   // what is shown: met tags, conflicts resolved (the first of a pair wins), in group order
   function pick(results) {
@@ -455,7 +481,7 @@
     return TIER1.has(x.id) ? 1 : TIER3.has(x.id) ? 3 : 2;
   }
 
-  const api = { GROUPS, ARAM_GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, evaluateAram, tierOf, pick, isStrength, isWeakness, forOthers, keys, liveTags };
+  const api = { GROUPS, ARAM_GROUPS, METRICS, mainRole, levelOf, evaluate, evaluateAll, evaluateAram, evaluateArena, tierOf, pick, isStrength, isWeakness, forOthers, keys, liveTags };
   if (node) module.exports = api;
   else root.Tags = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -253,16 +253,60 @@
     // win rate in short games (under 17 min, the shortest third) against long ones (21 min and more)
     { id: 'arLate', group: 'fight', type: 'phase', late: true, short: 17, long: 21, diff: 0.15, min: 5, stage: 'A', color: 'info', period: 'season' },
     { id: 'arEarly', group: 'fight', type: 'phase', late: false, short: 17, long: 21, diff: 0.15, min: 5, stage: 'A', color: 'info', period: 'season' },
+    // 27.11.2026, from 3,252 ARAM games (5,821 player games of other players): the best third / sixth;
+    // only a good side – none of these is a weakness when low
+    { id: 'arGold', group: 'stats', type: 'metric', metric: 'goldMin', dir: 1, min: 10, stage: 'A', period: 'season', dec: 0, levels: { great: 975, master: 1010 } },
+    { id: 'arWave', group: 'stats', type: 'metric', metric: 'csMin', dir: 1, min: 10, stage: 'A', period: 'season', dec: 1, levels: { great: 2.4, master: 2.9 } },
+    { id: 'arDoubles', group: 'fight', type: 'metric', metric: 'doubles', dir: 1, min: 10, stage: 'B', period: 'season', dec: 1, levels: { great: 2.05, master: 3.2 } },
+    // a quadra kill or more: in about one ARAM game of twenty; one game in ten over ten games is the best sixth
+    { id: 'arQuadra', group: 'fight', type: 'avg', metric: 'multi4', atLeast: 0.1, min: 10, stage: 'A', color: 'good', period: 'season', pct: true },
+    { id: 'arMitig', group: 'fight', type: 'metric', metric: 'mitigMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 2400, master: 3540 } },
+    { id: 'arCrit', group: 'stats', type: 'metric', metric: 'crit', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 470, master: 770 } },
+    { id: 'arSpree', group: 'fight', type: 'metric', metric: 'spree', dir: 1, min: 10, stage: 'B', period: 'season', dec: 1, levels: { great: 3.1, master: 3.75 } },
+    // what kind of damage: a play style, not a judgement (the median is 55 % magic, 35 % physical)
+    { id: 'arMage', group: 'stats', type: 'avg', metric: 'magicShare', atLeast: 0.75, min: 10, stage: 'B', color: 'info', period: 'season', pct: true },
+    { id: 'arWeapon', group: 'stats', type: 'avg', metric: 'physShare', atLeast: 0.7, min: 10, stage: 'B', color: 'info', period: 'season', pct: true },
+    { id: 'arGrinder', group: 'form', type: 'count', games: 20, days: 7, stage: 'A', color: 'info', period: 'd7' },
+    { id: 'arBack', group: 'form', type: 'break', days: 14, within: 3, min: 1, stage: 'A', color: 'info', period: 'all' },
+  ];
+  // ---------- Arena: this season's Arena games (six teams of three since 2026; a win = the top three) ----------
+  // 27.11.2026, from 803 Arena games of other players (623 player games with their placing): the best
+  // third / sixth, the lowest quarter / tenth for the few with a bad side
+  const ARENA_RULES = [
+    { id: 'greatWith', group: 'pool', type: 'champWinrate', pct: true, games: 5, winrate: 0.6, min: 5, stage: 'A', color: 'good', period: 'season' },
+    { id: 'arnPool', group: 'pool', type: 'pool', champs: 8, maxShare: 0.25, min: 10, stage: 'A', color: 'info', period: 'season' },
+    { id: 'arnHot', group: 'form', type: 'streak', win: true, n: 3, min: 3, stage: 'A', color: 'good', period: 'all' },
+    { id: 'arnCold', group: 'form', type: 'streak', win: false, n: 3, min: 3, stage: 'A', color: 'bad', period: 'all' },
+    { id: 'arnGrinder', group: 'form', type: 'count', games: 10, days: 7, stage: 'A', color: 'info', period: 'd7' },
+    // the top three in 70 % of ten games / first in 30 %: the best sixth of the ten-game mixes
+    { id: 'arnPodium', group: 'stats', type: 'avg', metric: 'top3', atLeast: 0.7, min: 10, stage: 'A', color: 'good', period: 'season', pct: true },
+    { id: 'arnCrown', group: 'stats', type: 'avg', metric: 'first', atLeast: 0.3, min: 10, stage: 'A', color: 'good', period: 'season', pct: true },
+    { id: 'arnPlace', group: 'stats', type: 'metric', metric: 'placeAvg', dir: -1, min: 10, stage: 'A', period: 'season', dec: 1,
+      levels: { great: 2.6, master: 2, weak: 4.4, terrible: 5.1 } },
+    { id: 'arnDamage', group: 'stats', type: 'metric', metric: 'dmgMin', dir: 1, min: 10, stage: 'A', period: 'season', dec: 0,
+      levels: { great: 1780, master: 2200, weak: 1130, terrible: 870 } },
+    { id: 'arnKda', group: 'stats', type: 'metric', metric: 'kda', dir: 1, min: 10, stage: 'A', period: 'season', dec: 2,
+      levels: { great: 3.06, master: 3.8, weak: 1.82, terrible: 1.37 } },
+    { id: 'arnDeaths', group: 'stats', type: 'metric', metric: 'deathsMin10', dir: -1, min: 10, stage: 'A', period: 'season', dec: 1,
+      levels: { great: 2.73, master: 2.49, weak: 3.34, terrible: 3.77 } },
+    { id: 'arnKills', group: 'stats', type: 'metric', metric: 'killsMin10', dir: 1, min: 10, stage: 'A', period: 'season', dec: 1, levels: { great: 3.3, master: 4.2 } },
+    { id: 'arnAssists', group: 'stats', type: 'metric', metric: 'assistsMin10', dir: 1, min: 10, stage: 'A', period: 'season', dec: 1, levels: { great: 5, master: 6.1 } },
+    { id: 'arnTank', group: 'fight', type: 'metric', metric: 'tankMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 3900, master: 5250 } },
+    { id: 'arnHeal', group: 'fight', type: 'metric', metric: 'healMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 425, master: 675 } },
+    { id: 'arnCc', group: 'fight', type: 'metric', metric: 'ccMin', dir: 1, min: 10, stage: 'B', period: 'season', dec: 1, levels: { great: 2.6, master: 3.2 } },
+    { id: 'arnMulti', group: 'fight', type: 'avg', metric: 'multi3', atLeast: 0.3, min: 10, stage: 'A', color: 'good', period: 'season', pct: true },
+    { id: 'arnSpree', group: 'fight', type: 'metric', metric: 'spree', dir: 1, min: 10, stage: 'B', period: 'season', dec: 1, levels: { great: 3.9, master: 5.2 } },
+    { id: 'arnCrit', group: 'fight', type: 'metric', metric: 'crit', dir: 1, min: 10, stage: 'B', period: 'season', dec: 0, levels: { great: 280, master: 525 } },
   ];
   // what may not stand next to each other (5.4); the first one wins
   const TAG_CONFLICTS = [['otp', 'flexPool'], ['otp', 'smallPool'], ['flexPool', 'smallPool'], ['generalist', 'autofill'], ['hotStreak', 'lossStreak'], ['unkillable', 'gankVictim'], ['aggroJungler', 'passiveJungler'],
-    ['arHot', 'arCold'], ['arComeback', 'arThrows'], ['arLate', 'arEarly']];
+    ['arHot', 'arCold'], ['arComeback', 'arThrows'], ['arLate', 'arEarly'], ['arMage', 'arWeapon'], ['arnHot', 'arnCold'], ['arnCrown', 'arnPodium']];
   // a tag stays until its value is this much past the threshold the other way (no flicker)
   const TAG_HYSTERESIS = 0.05;
   // the main role: at least this share of the games, from this many games on
   const MAIN_ROLE = { share: 0.6, min: 10 };
 
-  const api = { TAG_RULES, ARAM_RULES, TAG_CONFLICTS, TAG_HYSTERESIS, MAIN_ROLE };
+  const api = { TAG_RULES, ARAM_RULES, ARENA_RULES, TAG_CONFLICTS, TAG_HYSTERESIS, MAIN_ROLE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TagRules = api;
 })(typeof window !== 'undefined' ? window : this);

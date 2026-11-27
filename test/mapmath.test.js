@@ -67,7 +67,7 @@ test('map: kills next to deaths, a window of minutes, per minute and per zone', 
   // per minute up to the last event
   const pm = DM.perMinute(ev);
   assert.equal(pm.length, 13);
-  assert.deepEqual([pm[3], pm[5], pm[12]], [{ m: 3, deaths: 0, kills: 1 }, { m: 5, deaths: 1, kills: 0 }, { m: 12, deaths: 0, kills: 1 }]);
+  assert.deepEqual([pm[3], pm[5], pm[12]], [{ m: 3, deaths: 0, kills: 1, assists: 0 }, { m: 5, deaths: 1, kills: 0, assists: 0 }, { m: 12, deaths: 0, kills: 1, assists: 0 }]);
   // both per zone: every zone with something, shares per kind
   const z = DM.zonesBoth(ev);
   assert.deepEqual(z.map(r => [r.zone, r.deaths, r.kills]).sort(), [['jungleEnemy', 0, 1], ['mid', 0, 1], ['riverTop', 1, 0]]);
@@ -103,6 +103,26 @@ test('ARAM: its own map – zones along the lane from base to base, red side mir
   assert.equal(DM.events(parts([game(100, [[300, 50, 50]])]), 'aram').length, 0);
   assert.equal(DM.mainMap(parts(list)), 'aram');
   assert.equal(DM.mainMap(parts([...list, game(100, [[300, 50, 50]]), game(100, [[300, 50, 50]])])), 'sr');
-  // Arena: no map at all
-  assert.equal(DM.mapOf({ q: 1700 }), '');
+  // Arena has a map of its own (its queues, or its mode for a new queue); Swarm none
+  assert.equal(DM.mapOf({ q: 1700 }), 'arena');
+  assert.equal(DM.mapOf({ q: 1999, mode: 'CHERRY' }), 'arena');
+  assert.equal(DM.mapOf({ q: 1810 }), '');
+});
+
+test('assists: a place of their own; Arena: the seven arenas, no sides', () => {
+  const players = Array.from({ length: 10 }, (_, i) => ({ puuid: i === 0 ? 'me' : 'p' + i, team: i < 5 ? 100 : 200, champ: 1 + i }));
+  const g = { id: 'a1', t: 1, dur: 1800, q: 420, remake: false, players,
+    kills: [[180, 0, 6, [], 74, 74], [300, 1, 7, [0, 2], 10, 100], [400, 1, 8, [2], 30, 30]] };
+  const ev = DM.events(parts([g]));
+  assert.deepEqual(ev.map(e => [e.kind, e.zone]), [['kill', 'mid'], ['assist', 'top']]);
+  assert.equal(DM.perMinute(ev)[5].assists, 1);
+  const z = DM.zonesBy(ev, ['kill', 'assist']);
+  assert.deepEqual(z.map(r => [r.zone, r.n.kill, r.n.assist]).sort(), [['mid', 1, 0], ['top', 0, 1]]);
+  // Arena: a red player isn't mirrored; a kill in the first arena (20–60, 24–60), one between arenas
+  const ar = { ...g, id: 'a2', q: 1750, mode: 'CHERRY', kills: [[200, 5, 1, [], 40, 40], [300, 5, 2, [], 90, 80]] };
+  const red = ar.players[5];
+  const e2 = DM.events([{ g: ar, p: red }], 'arena');
+  assert.deepEqual(e2.map(e => [e.kind, e.zone, e.x, e.y]), [['kill', 'ar1', 40, 40], ['kill', 'arOther', 90, 80]]);
+  assert.equal(DM.mainMap([{ g: ar, p: red }]), 'arena');
+  assert.equal(DM.ARENAS.length, 7);
 });

@@ -23,7 +23,7 @@
   // the queue groups of the match history (matches.rs QUEUE_GROUPS): any of them can be on or off
   const GROUPS = {
     solo: [420], flex: [440], r5: [710], classic: [4310], normal: [400, 430, 480, 490], aram: [450, 2400],
-    arena: [1700, 1710], clash: [700, 720], custom: [0, 3220, 3270],
+    arena: St.ARENA_QUEUES, clash: [700, 720], custom: [0, 3220, 3270],
   };
   // f: { accs: puuids (none = all), queues: group keys (none = all) or queue: key of QUEUES,
   //      range / from / to (matchfilter.js), role: '' or ROLES }

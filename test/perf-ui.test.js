@@ -163,7 +163,7 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
   // the four Ahri games (Ahri is player 2) get a timeline: three deaths each – two before 10 minutes in the
   // top river – and one solo kill in the mid lane at minute 12
   const withKills = games.map(g => (g.players[2].champ === 103 && g.q === 420
-    ? { ...g, kills: [[200, 7, 2, [8], 50, 98], [400, 7, 2, [], 52, 96], [1500, 7, 2, [], 74, 74], [730, 2, 7, [], 70, 72]] } : g));
+    ? { ...g, kills: [[200, 7, 2, [8], 50, 98], [400, 7, 2, [], 52, 96], [1500, 7, 2, [], 74, 74], [730, 2, 7, [], 70, 72], [900, 3, 8, [2], 20, 120]] } : g));
   const app = await boot({ replies: { ...replies, 'matches-get': withKills } });
   try {
     await app.click('#navDash');
@@ -172,25 +172,38 @@ test('map: deaths, kills or both, by phase or minutes picked on the chart; the e
     await app.settle();
     assert.ok(app.visible('#dashPerf'), 'the Performance filter is there');
     const dots = cls => app.$$(`.dm-map .dm-dots.${cls} circle`).length;
-    // both at first, "Both" first in the choice
-    assert.deepEqual(app.$$('[data-mpk]').map(b => b.dataset.mpk), ['both', 'deaths', 'kills']);
+    // Kills, Deaths, Assists – each on or off by itself; kills and deaths at first
+    assert.deepEqual(app.$$('[data-mpk]').map(b => b.dataset.mpk), ['kill', 'death', 'assist']);
     assert.equal(dots('deaths'), 12);
-    assert.equal(dots('kills'), 4, 'both at first');
-    assert.ok(app.$('.mp-rows.both'));
+    assert.equal(dots('kills'), 4);
+    assert.equal(dots('assists'), 0, 'assists off at first');
+    assert.ok(app.$('.mp-rows.k2'));
+    // a zone row: the number first, the bar after it
+    assert.equal(app.$('.mp-rows .mp-row:not(.head) .mp-cell').firstElementChild.tagName, 'B');
     // deaths only
-    await app.click('[data-mpk="deaths"]');
+    await app.click('[data-mpk="kill"]');
     assert.equal(dots('kills'), 0);
     assert.match(app.$('.dm-hots').textContent, /Before 10 min\s*100 % of the deaths: Top river \(8 of 8\)/);
     assert.match(app.$('.dm-side').textContent, /12 deaths in 4 games · 3\.0 per game · 33 % against two or more enemies/);
-    // kills: the four solo kills
-    await app.click('[data-mpk="kills"]');
+    // kills only: the four solo kills
+    await app.click('[data-mpk="kill"]');
+    await app.click('[data-mpk="death"]');
     assert.equal(dots('kills'), 4);
     assert.equal(dots('deaths'), 0);
     assert.match(app.$('.dm-side').textContent, /4 kills in 4 games · 1\.0 per game · 100 % without help/);
-    // both: one table with both per zone
-    await app.click('[data-mpk="both"]');
-    assert.equal(dots('kills') + dots('deaths'), 16);
-    assert.ok(app.$('.mp-rows.both'));
+    // the last kind stays on
+    await app.click('[data-mpk="kill"]');
+    assert.ok(app.$('[data-mpk="kill"]').classList.contains('on'));
+    // assists too
+    await app.click('[data-mpk="assist"]');
+    assert.equal(dots('assists'), 4);
+    assert.match(app.$('.dm-side').textContent, /4 assists in 4 games · 1\.0 per game/);
+    // all three: one table, three columns
+    await app.click('[data-mpk="death"]');
+    assert.ok(app.$('.mp-rows.k3'));
+    assert.equal(dots('kills') + dots('deaths') + dots('assists'), 20);
+    await app.click('[data-mpk="assist"]');
+    assert.ok(app.$('.mp-rows.k2'));
     // a phase
     await app.click('[data-dmph="late"]');
     assert.equal(dots('deaths'), 4);

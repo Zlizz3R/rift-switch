@@ -10,7 +10,7 @@
 // games: every game the window holds (id → game; also across games, so premades' games aren't sent again)
 const scv = { data: {}, games: new Map(), more: new Set(), own: null, key: '', loading: false, again: false, at: 0, timer: 0, prog: null };
 const SC_POS = { TOP: 'top', JUNGLE: 'jungle', MIDDLE: 'mid', MID: 'mid', BOTTOM: 'bot', BOT: 'bot', UTILITY: 'support', SUPPORT: 'support' };
-const SC_NO_LANES = [...Stats.ARAM_QUEUES, 1700, 1710];
+const SC_NO_LANES = [...Stats.ARAM_QUEUES, ...Stats.ARENA_QUEUES];
 const scIds = () => { const g = liveData && liveData.inGame; return g ? [...g.teamOne, ...g.teamTwo].map(p => p.puuid).filter(Boolean) : []; };
 
 async function loadScout(ids) {
@@ -68,7 +68,7 @@ function scCard(p, enemyChamps, queue) {
   // hidden by the game (streamer mode): champion and position only, never looked up
   if (p.hidden) return { p, hidden: true, n: 0, ag: null, pts: null, roles: { shares: new Map(), total: 0 }, pos: SC_POS[String(p.position || '').toUpperCase()] || '', live: [], tags: [] };
   const aram = [450, 2400].includes(queue);
-  const key = `${p.puuid}|${p.championId}|${scIdsOf(p.puuid).length}|${aram ? 'a' : ''}`;
+  const key = `${p.puuid}|${p.championId}|${scIdsOf(p.puuid).length}|${aram ? 'a' : ''}${Stats.ARENA_QUEUES.includes(queue) ? 'r' : ''}`;
   if (scv.memo && scv.memo.has(key)) return scv.memo.get(key);
   const games = scGames(p.puuid);
   const parts = Stats.byParticipation(games).filter(x => x.p.puuid === p.puuid);
@@ -80,7 +80,8 @@ function scCard(p, enemyChamps, queue) {
   const topM = m ? Object.entries(m).sort((a, b) => b[1] - a[1])[0] : null;
   const mastRows = m ? [[champ, pts], topM].filter(x => x && x[0]).filter((x, i, a) => a.findIndex(y => +y[0] === +x[0]) === i)
     .map(([id, v]) => ({ id: +id, total: +v, n: 1 })).sort((a, b) => b.total - a.total) : null;
-  const res = aram ? Tags.evaluateAram({ games, own: [p.puuid], now: Date.now() })
+  const arena = Stats.ARENA_QUEUES.includes(queue);
+  const res = arena ? Tags.evaluateArena({ games, own: [p.puuid], now: Date.now() }) : aram ? Tags.evaluateAram({ games, own: [p.puuid], now: Date.now() })
     : Tags.evaluate({ games, own: [p.puuid], level: p.level, mastery: mastRows, now: Date.now() });
   const roles = Tags.mainRole(parts);
   const pos = SC_POS[String(p.position || '').toUpperCase()] || '';

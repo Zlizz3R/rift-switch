@@ -478,6 +478,11 @@ pub fn eog_game(b: &Value, session_q: i64, now: i64) -> Option<Value> {
             if !aug.is_empty() {
                 o["aug"] = json!(aug);
             }
+            // Arena: the placing of the player's team (1–6; the block's two "teams" mean nothing there)
+            let place = st(&["PLAYER_SUBTEAM_PLACEMENT", "subteamPlacement"]);
+            if place > 0 {
+                o["place"] = json!(place);
+            }
             players.push(o);
         }
     }

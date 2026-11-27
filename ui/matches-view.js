@@ -1,7 +1,11 @@
 // Match history page: recent games of all saved accounts in one list (op.gg style, kept short).
 // Uses the globals of renderer.js / views.js (S, t, $, esc, api, CHAMP_ICON, SITES, openSite …).
 
-const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 710: 'Ranked 5v5', 4310: 'Classic 5v5', 700: 'Clash', 720: 'ARAM Clash', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF' };
+const QUEUE_NAMES = { 420: 'Solo/Duo', 440: 'Flex', 710: 'Ranked 5v5', 4310: 'Classic 5v5', 700: 'Clash', 720: 'ARAM Clash', 450: 'ARAM', 2400: 'ARAM', 1700: 'Arena', 1710: 'Arena', 1740: 'Arena', 1750: 'Arena', 900: 'URF', 1900: 'URF' };
+// a queue the list doesn't know: the game mode's name as players know it (Riot's own names are code
+// words – CHERRY is Arena, KIWI ARAM: Mayhem, STRAWBERRY Swarm)
+const MODE_NAMES = { CHERRY: 'Arena', KIWI: 'ARAM: Mayhem', STRAWBERRY: 'Swarm', ARAM: 'ARAM', CLASSIC: "Summoner's Rift", URF: 'URF', ARURF: 'ARURF',
+  ONEFORALL: 'One for All', NEXUSBLITZ: 'Nexus Blitz', ULTBOOK: 'Ultimate Spellbook', TUTORIAL: 'Tutorial', PRACTICETOOL: 'Practice Tool' };
 const NORMAL_QUEUES = [400, 430, 480, 490];
 const MULTI = { 2: 'mh.double', 3: 'mh.triple', 4: 'mh.quadra', 5: 'mh.penta' };
 const MH_DEFAULT = { from: '', to: '', range: 'all', result: '', champ: 0, sort: 'new', minKills: '', maxDeaths: '', minKda: '', minMulti: '' };
@@ -293,6 +297,7 @@ function queueLabel(g) {
   if (isCustom(g)) return t('mh.custom');
   if (QUEUE_NAMES[g.q]) return QUEUE_NAMES[g.q] + ([420, 440, 710, 4310].includes(g.q) ? ' ' + t('mh.ranked') : '');
   if (NORMAL_QUEUES.includes(g.q)) return t('mh.normal');
+  if (g.mode && MODE_NAMES[g.mode]) return MODE_NAMES[g.mode];
   return g.mode ? g.mode.charAt(0) + g.mode.slice(1).toLowerCase() : t('mh.other');
 }
 const dur = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
