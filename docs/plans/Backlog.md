@@ -80,6 +80,10 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
   „Letzte 20 Spiele gegen die davor: Winrate 65 % → 30 % · KDA 2.01 → 2.54“ unter den Kennzahlen. `perfTrendHtml`
   in `ui/perf.js` (Aufruf in `perfAllHtml`, die Auswahl `trendN` / `trendKey`, `perf.trendN` / `perf.trendKey`) und
   die Tests dazu. `PerfMath.trend` bleibt – die Trendpfeile der Kennzahlen auf „Auf einen Blick“ nutzen es.
+- [ ] **Live während des Spiels zu langsam** (Nutzer, 27.11.2026 – noch nicht anfangen): Die App liest pro Mitspieler
+  bis zu 50 Ranked-Spiele samt Timeline (`OTHERS_DETAILS`, `scout_loop` in `main.rs`, `PAR_IN_GAME` / `IN_GAME_GAP`),
+  im Spiel bewusst gedrosselt. Offen: bremst das den Client, oder lehnt er Anfragen ab? Das sieht man nur in einem
+  echten Spiel – dafür Log-Ausgaben der Scout-Runden (Zeit, Anzahl abgelehnt) sammeln und auswerten.
 - [ ] **Übersicht-Reiter neu ordnen, Performance als Startseite?** (Nutzer, 26.11.2026 – erst besprechen, nicht
   einfach bauen): Der Nutzer findet Performance inzwischen schöner und nützlicher als „Auf einen Blick“ – nur die
   Kennzahlen-Zeile von „Auf einen Blick“ (`sumFigs`: Ring für die Winrate, Trendpfeile) gefällt ihm besser als die
