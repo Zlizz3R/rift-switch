@@ -600,15 +600,32 @@ impl Matches {
             .collect()
     }
     /// Game ids of these players whose details are still to read, newest first.
+    /// The players in turn: everyone's newest missing game first, then everyone's second … – so every
+    /// player has something early; a game two of them played comes once.
     pub fn missing_for(&self, puuids: &[String]) -> Vec<String> {
-        let mut out: Vec<String> = puuids
+        let lists: Vec<Vec<&String>> = puuids
             .iter()
-            .flat_map(|p| self.detail_ids(p))
-            .filter(|id| self.index.get(*id).is_none_or(|e| e.v == 0))
-            .cloned()
+            .map(|p| {
+                let mut l: Vec<&String> = self
+                    .detail_ids(p)
+                    .into_iter()
+                    .filter(|id| self.index.get(*id).is_none_or(|e| e.v == 0))
+                    .collect();
+                l.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
+                l
+            })
             .collect();
-        out.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
-        out.dedup();
+        let mut seen = std::collections::HashSet::new();
+        let mut out = vec![];
+        for i in 0..lists.iter().map(Vec::len).max().unwrap_or(0) {
+            for l in &lists {
+                if let Some(id) = l.get(i) {
+                    if seen.insert(*id) {
+                        out.push((*id).clone());
+                    }
+                }
+            }
+        }
         out
     }
     /// The player page: every game of the player's list gets its details (all queues, up to 200),
@@ -1623,6 +1640,24 @@ mod tests {
         o.clear();
         assert!(dir.join("matches.json").exists());
         assert_eq!(o.count(), 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn missing_for_takes_the_players_in_turn() {
+        let dir = std::env::temp_dir().join(format!("rs-turn-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let now = crate::riot::now_ms();
+        let mut o = Matches::load_others(dir.join("matches-others"));
+        let g = |id: i64| json!({ "id": id, "t": now - (100 - id) * 1000, "q": 420 });
+        // a plays a lot (newest 20 … 16), b a little (9, 8); both were in game 20
+        o.note("a", &[g(20), g(19), g(18), g(17), g(16)]);
+        o.note("b", &[g(20), g(9), g(8)]);
+        // everyone's newest first, then everyone's second …; the shared game once
+        assert_eq!(
+            o.missing_for(&["a".into(), "b".into()]),
+            vec!["20", "19", "9", "18", "8", "17", "16"]
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 

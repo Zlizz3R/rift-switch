@@ -191,6 +191,27 @@ fn log_error(place: &str, e: &str) {
         let _ = f.write_all(line.as_bytes());
     }
 }
+/// Live's loading, round by round (scout.log, at most 400 KB): when a game's players came, how long
+/// their match lists, game details and timelines took, what the client refused, when all was done.
+/// No names – game ids and counts only. Read it after a game to tune the pace.
+fn scout_log(line: &str) {
+    use std::io::Write;
+    let file = data().join("scout.log");
+    trim_log(&file, 400_000);
+    let start = scout(|s| s.started_at);
+    let rel = if start > 0 {
+        format!(" +{:.1}s", (now_ms() - start) as f64 / 1000.0)
+    } else {
+        String::new()
+    };
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&file)
+    {
+        let _ = writeln!(f, "{}{rel} {line}", now_ms());
+    }
+}
 /// A log over `max` bytes keeps only its newer half (whole lines).
 fn trim_log(file: &Path, max: u64) {
     if std::fs::metadata(file).map_or(0, |m| m.len()) <= max {
@@ -1380,19 +1401,32 @@ async fn fill_games(max: usize) -> usize {
 /// One game from the client: its details, compacted, with the parts of its timeline we keep –
 /// and the client's raw answers (details, timeline) for the own games' archive.
 async fn fetch_game(id: String) -> Option<(Value, Value, Option<Value>)> {
+    fetch_game_timed(id).await.0
+}
+type Fetched = Option<(Value, Value, Option<Value>)>;
+/// fetch_game, plus how long the details and the timeline took (ms) – for the scout log.
+async fn fetch_game_timed(id: String) -> (Fetched, u64, u64) {
     // the game and its timeline at the same time (the timeline is only used when the game came)
-    let (gp, tp) = (
-        format!("/lol-match-history/v1/games/{id}"),
-        format!("/lol-match-history/v1/game-timelines/{id}"),
+    let timed = |path: String| async move {
+        let t = std::time::Instant::now();
+        let r = riot::lcu(&path, 10_000, "GET").await;
+        (r, t.elapsed().as_millis() as u64)
+    };
+    let ((g, g_ms), (tl, tl_ms)) = tokio::join!(
+        timed(format!("/lol-match-history/v1/games/{id}")),
+        timed(format!("/lol-match-history/v1/game-timelines/{id}"))
     );
-    let (g, tl) = tokio::join!(riot::lcu(&gp, 10_000, "GET"), riot::lcu(&tp, 10_000, "GET"));
-    let g = g?;
-    let mut c = matches::compact(&g)?;
+    let Some(g) = g else {
+        return (None, g_ms, tl_ms);
+    };
+    let Some(mut c) = matches::compact(&g) else {
+        return (None, g_ms, tl_ms);
+    };
     let pids = matches::participant_ids(&g);
     if let Some(tl) = &tl {
         matches::add_timeline(&mut c, tl, &pids);
     }
-    Some((c, g, tl))
+    (Some((c, g, tl)), g_ms, tl_ms)
 }
 /// The own games: one after the other, stopping when a game starts (Live's scouting has its own pace).
 async fn fetch_games(ids: Vec<String>) -> usize {
@@ -1423,15 +1457,36 @@ async fn fetch_games(ids: Vec<String>) -> usize {
 // Their match lists first (stage A, kept 30 minutes: the 200 newest games, each with that player's
 // own numbers – stored as "lite" games), then the details + timeline of their newest 50 ranked
 // games (stages B + C) – all into a store of their own (matches-others). As fast as the client
-// answers: every match list at once, then PAR_FAST games at a time, the next round right after the
-// last one. As soon as the game runs (game time > 0) a little gentler – PAR_IN_GAME at a time, one
-// round every IN_GAME_GAP – so the game stays smooth. When the client starts refusing (more than half
-// of a round failed) a short pause, BACK_OFF. After the game: the rest for the same players at full
-// speed. Only while the window is open, never in a test copy that mustn't talk to Riot.
+// answers: every match list at once, then always PAR_FAST games on their way (when one comes, the
+// next starts – no waiting for the slowest of a round), the players in turn: everyone's newest game
+// first, then everyone's second … – so every card has something within seconds. While the game runs
+// (game time > 0) PAR_IN_GAME at a time. When the client starts refusing (half a round's worth in a
+// row) a short pause, BACK_OFF. Goes on while the window is in the tray as long as a game is on (champion
+// select to the end screen); never in a test copy that mustn't talk to Riot. Every round goes into
+// scout.log (the times, what was refused, when all was there).
 const PAR_FAST: usize = 12;
-const PAR_IN_GAME: usize = 6;
-const IN_GAME_GAP: i64 = 700;
+const PAR_IN_GAME: usize = 10;
 const BACK_OFF: i64 = 3000;
+/// at most this many games per round (rounds stay short: a new phase or game is noticed)
+const ROUND_MAX: usize = 60;
+/// The phases Live loads in: champion select, the game, its end.
+const SCOUT_PHASES: [&str; 7] = [
+    "ChampSelect",
+    "GameStart",
+    "InProgress",
+    "Reconnect",
+    "WaitingForStats",
+    "PreEndOfGame",
+    "EndOfGame",
+];
+fn scout_phase_on() -> bool {
+    with(|c| {
+        c.live
+            .phase
+            .as_deref()
+            .is_some_and(|p| SCOUT_PHASES.contains(&p))
+    })
+}
 /// The lane table (lanes.rs): built again in a thread of its own from both stores – one at a time.
 static LANES_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 fn lanes_rebuild() {
@@ -1490,10 +1545,11 @@ struct Scout {
     /// game ids that couldn't be read (twice = given up)
     failed: HashMap<String, u8>,
     running: bool,
-    // the last round while the game runs (rounds are spaced IN_GAME_GAP apart then)
-    slow_at: i64,
     // no round before this (the client refused much of the last one)
     pause_until: i64,
+    /// when the players of this game came (scout.log counts from here), whether "all there" is logged
+    started_at: i64,
+    done_logged: bool,
 }
 static SCOUT: Mutex<Option<Scout>> = Mutex::new(None);
 fn scout<R>(f: impl FnOnce(&mut Scout) -> R) -> R {
@@ -1558,7 +1614,15 @@ async fn scout_loop() {
             _ = sleep(1500) => {}
             _ = LOOK_KICK.notified() => {}
         }
-        if riot::offline_test() || !win_shown() {
+        if riot::offline_test() {
+            continue;
+        }
+        // in the tray: only while a game is on (Live's cards are ready when the window opens);
+        // afterwards what Live kept in memory goes again
+        if !win_shown() && !scout_phase_on() {
+            if window().is_none() && OTHERS.lock().unwrap_or_else(|e| e.into_inner()).is_some() {
+                live_memory_free();
+            }
             continue;
         }
         // other players' games are kept 30 days: the older ones go, once an hour
@@ -1580,7 +1644,7 @@ async fn scout_loop() {
             } else {
                 break;
             }
-            if !win_shown() {
+            if !win_shown() && !scout_phase_on() {
                 break;
             }
             sleep(40).await;
@@ -1619,17 +1683,12 @@ async fn scout_round() -> bool {
             let running = scout(|s| s.running);
             if !running && riot::live_game_time().await.is_some_and(|t| t > 0.0) {
                 scout(|s| s.running = true);
+                scout_log("the game runs (game time > 0)");
                 return true;
-            }
-            if running && now_ms() - scout(|s| s.slow_at) < IN_GAME_GAP {
-                return false;
             }
             let Some(gs) = riot::lcu("/lol-gameflow/v1/session", 3000, "GET").await else {
                 return false;
             };
-            if running {
-                scout(|s| s.slow_at = now_ms());
-            }
             let gd = &gs["gameData"];
             (
                 puuids_of(&[&gd["teamOne"], &gd["teamTwo"]]),
@@ -1658,9 +1717,18 @@ async fn scout_round() -> bool {
             s.mastery.retain(|p, _| targets.contains(p));
             s.failed.clear();
             s.targets = targets.clone();
+            s.started_at = now_ms();
+            s.done_logged = false;
         }
         ch
     });
+    if new_targets {
+        scout_log(&format!(
+            "{} players ({phase}), window {}",
+            targets.len(),
+            if win_shown() { "open" } else { "in the tray" }
+        ));
+    }
     // stage A: match lists (and mastery) of everyone first
     let now = now_ms();
     let need: Vec<String> = scout(|s| {
@@ -1671,12 +1739,22 @@ async fn scout_round() -> bool {
             .collect()
     });
     if !need.is_empty() {
+        let t0 = std::time::Instant::now();
         let got = futures_util::future::join_all(need.iter().map(|p| async move {
+            let t = std::time::Instant::now();
             let (l, m) = tokio::join!(riot::match_games(p), riot::mastery_points_of(p));
-            (p.clone(), l, m)
+            (p.clone(), l, m, t.elapsed().as_millis() as u64)
         }))
         .await;
-        for (p, list, mast) in got {
+        let slowest = got.iter().map(|g| g.3).max().unwrap_or(0);
+        let ok = got.iter().filter(|g| g.1.is_some()).count();
+        let n_games: usize = got.iter().map(|g| g.1.as_ref().map_or(0, Vec::len)).sum();
+        scout_log(&format!(
+            "match lists: {ok}/{} in {} ms (slowest {slowest} ms), {n_games} games listed",
+            need.len(),
+            t0.elapsed().as_millis()
+        ));
+        for (p, list, mast, _) in got {
             if let Some(l) = list {
                 store_list(&p, &l);
             }
@@ -1689,23 +1767,83 @@ async fn scout_round() -> bool {
         }
         return true;
     }
-    // stages B + C: their games, newest first
+    // stages B + C: their games – the players in turn, newest first; always `par` on their way
     let failed = scout(|s| s.failed.clone());
-    let ids: Vec<String> = others(|o| o.missing_for(&targets))
+    let all: Vec<String> = others(|o| o.missing_for(&targets))
         .into_iter()
         .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
-        .take(par)
         .collect();
-    if ids.is_empty() {
+    if all.is_empty() {
+        if !scout(|s| std::mem::replace(&mut s.done_logged, true)) {
+            let (done, total) = others(|o| {
+                targets.iter().fold((0, 0), |(a, b), p| {
+                    let (d, n) = o.progress(p);
+                    (a + d, b + n)
+                })
+            });
+            scout_log(&format!("all there: {done} of {total} games with details"));
+        }
         return new_targets;
     }
+    let left = all.len();
+    let ids: Vec<String> = all.into_iter().take(ROUND_MAX).collect();
     let asked = ids.len();
-    let failed = fetch_into_others(ids).await;
-    if failed.len() * 2 > asked {
-        scout(|s| s.pause_until = now_ms() + BACK_OFF);
+    let t0 = std::time::Instant::now();
+    use futures_util::StreamExt;
+    let mut jobs = futures_util::stream::iter(ids.into_iter().map(|id| async move {
+        let r = fetch_one_into_others_timed(&id).await;
+        (id, r)
+    }))
+    .buffer_unordered(par);
+    let (mut ok, mut own, mut refused, mut run) = (0usize, 0usize, 0usize, 0usize);
+    let (mut g_ms, mut tl_ms, mut g_max, mut tl_max, mut n_timed) = (0u64, 0u64, 0u64, 0u64, 0u64);
+    let mut last_emit = now_ms();
+    while let Some((id, r)) = jobs.next().await {
+        match r {
+            Some((g, tl)) => {
+                ok += 1;
+                run = 0;
+                if g == 0 && tl == 0 {
+                    own += 1;
+                } else {
+                    n_timed += 1;
+                    (g_ms, tl_ms) = (g_ms + g, tl_ms + tl);
+                    (g_max, tl_max) = (g_max.max(g), tl_max.max(tl));
+                }
+            }
+            None => {
+                refused += 1;
+                run += 1;
+                scout(|s| *s.failed.entry(id).or_insert(0) += 1);
+            }
+        }
+        // a new phase, the window gone without a game, the client refusing: the next round decides
+        let phase_now = with(|c| c.live.phase.clone()).unwrap_or_default();
+        if phase_now != phase || (!win_shown() && !scout_phase_on()) || run >= par / 2 {
+            break;
+        }
+        if now_ms() - last_emit > 400 {
+            last_emit = now_ms();
+            emit("scout-changed", scout_snapshot());
+        }
     }
-    for id in failed {
-        scout(|s| *s.failed.entry(id).or_insert(0) += 1);
+    drop(jobs);
+    let limit = others_limit();
+    others(|o| o.prune_to(limit));
+    let avg = |sum: u64| sum.checked_div(n_timed).unwrap_or(0);
+    scout_log(&format!(
+        "games: {ok}/{asked} in {} ms (par {par}{}), {own} from own history · details avg {} max {g_max} ms · timelines avg {} max {tl_max} ms · refused {refused} · left {}",
+        t0.elapsed().as_millis(),
+        if scout(|s| s.running) { ", game runs" } else { "" },
+        avg(g_ms),
+        avg(tl_ms),
+        left.saturating_sub(ok)
+    ));
+    if run >= par / 2 {
+        scout(|s| s.pause_until = now_ms() + BACK_OFF);
+        scout_log(&format!(
+            "pause {BACK_OFF} ms: the client refused {run} in a row"
+        ));
     }
     true
 }
@@ -1724,35 +1862,6 @@ fn store_list(p: &str, l: &[Value]) {
         }
     });
 }
-/// These games' details into the others' store – copied from the own store where it has them
-/// (played together), else read from the client. Returns the ids that couldn't be read.
-async fn fetch_into_others(ids: Vec<String>) -> Vec<String> {
-    let (have, fetch): (Vec<String>, Vec<String>) =
-        with(|c| ids.into_iter().partition(|id| c.mh.has(id)));
-    if !have.is_empty() {
-        let games = with(|c| matches::read_entries(&c.mh.games_file(), &c.mh.entries(&have)));
-        others(|o| {
-            for g in &games {
-                o.insert(g);
-            }
-        });
-    }
-    let got = futures_util::future::join_all(fetch.iter().map(|id| fetch_game(id.clone()))).await;
-    let mut failed = vec![];
-    for (id, g) in fetch.iter().zip(got) {
-        match g {
-            Some((g, _, _)) => {
-                others(|o| o.insert(&g));
-            }
-            None => failed.push(id.clone()),
-        }
-    }
-    // the storage limit (Settings → Data, 1 GB): the oldest other players' games go
-    let limit = others_limit();
-    others(|o| o.prune_to(limit));
-    failed
-}
-
 // ---------- the player page: any player, looked at on their own ----------
 // Like Live's scouting, for one player: the match list (200 newest, lite) with mastery and ranks
 // first, then the details of every one of them (all queues), 4 at a time. Only when Live has nothing to
@@ -1856,6 +1965,17 @@ async fn look_round() -> bool {
         sleep(BACK_OFF as u64).await;
     }
     true
+}
+/// One game into the others' store, with the ms its details and its timeline took ((0, 0): it was in
+/// the own match history); None when the client didn't give it.
+async fn fetch_one_into_others_timed(id: &str) -> Option<(u64, u64)> {
+    if with(|c| c.mh.has(id)) {
+        return fetch_one_into_others(id).await.then_some((0, 0));
+    }
+    let (g, g_ms, tl_ms) = fetch_game_timed(id.to_string()).await;
+    let (g, _, _) = g?;
+    others(|o| o.insert(&g));
+    Some((g_ms, tl_ms))
 }
 /// One game into the others' store: from the own match history if it is there, else from the
 /// client (game and timeline). false when the client didn't give it.
@@ -2613,6 +2733,15 @@ async fn do_diagnostics() -> Value {
     for l in &lines[lines.len().saturating_sub(200)..] {
         out += &ops::redact(l, &home);
         out.push('\n');
+    }
+    let scout = std::fs::read_to_string(data().join("scout.log")).unwrap_or_default();
+    let lines: Vec<&str> = scout.lines().collect();
+    if !lines.is_empty() {
+        out += "\n## scout.log (Live's loading, last 120 lines)\n";
+        for l in &lines[lines.len().saturating_sub(120)..] {
+            out += &ops::redact(l, &home);
+            out.push('\n');
+        }
     }
     let out = ops::redact(&out, &home);
     // the names of the saved accounts too (a Riot ID with spaces would otherwise keep its first words)
