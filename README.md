@@ -53,8 +53,10 @@ anyway**. The full source is right here.
   without a restart; otherwise it leaves your lobby, closes League, swaps the session and presses *Play* for you.
 - **Every tile** shows Riot ID, icon, level, server and ranks (Solo/Duo, Flex, Ranked 5v5, Classic 5v5) with win
   rate – which of these you see is up to you (the slider button).
-- **The panel** on the right: ranks, last played, decay warning, LP chart, profile, saved login, *Open with* (op.gg,
-  Porofessor, League of Graphs, Mobalytics, u.gg), note, move and remove.
+- **The panel** on the right: ranks, last played, decay warning, Blue Essence, RP, champions, skins, honor and mastery
+  score, LP chart, the last game, *Overview* (this account alone in the Overview), *Login* (edit the saved login,
+  copy its name or password), *Open with* (op.gg, Porofessor, League of Graphs, Mobalytics, u.gg), note, move and
+  remove.
 - **Penalties on the tile** – leaver locks and dodge timers with the time left; a low priority queue with the games
   left and the wait per game.
 - **Ranked readiness** – what a fresh account still needs (level 30, 20 champions, 10 normal games) plus Riot's own
@@ -101,11 +103,13 @@ into one category.
 <img src="docs/screens/performance.png" alt="Overview: Performance – the key figures with the traits, champions and roles">
 
 - **One page for your accounts and for anyone else**: a head with the splash art of the champion played most,
-  the avatar(s), Solo/Duo and Flex with their crest, the account chips – and the **player search** (Ctrl+K).
-  The same tabs for everyone: **Performance**, **Traits**, **Mastery**, **Match history**, **LP history** and
-  **Seasons** – another player's page has all of them but the LP history, plus *Open with* and the games with you.
+  the avatar(s), Solo/Duo and Flex with their crest, *Open with* (op.gg's multi-search for several accounts), the
+  account chips – and the **player search** (Ctrl+K). The same tabs for everyone, in a bar right under the pages:
+  **Performance**, **Traits**, **Mastery**, **Match history**, **LP history** and **Seasons** – another player's page
+  has all of them but the LP history, plus the games with you.
 - **Showcase** – your favourite skins, icons, ward skins and emotes from all your accounts in the Overview's head,
-  over the splash art: any mix, your order, small, medium or large (*★ Showcase* next to the search). Only you see it.
+  over the splash art: any mix, your order, small, medium or large (*★ Showcase* next to the search); skins can be
+  picked by rarity, Legacy and the year you got them. Only you see it.
 - **Performance** – the start page: one strip with the key figures (games with wins and losses, win rate, KDA, CS,
   damage, kill participation, vision), each with its trend – the last 10 games against the 10 before – and your
   traits right next to them (*Traits →* opens them all). Then the champions, the roles, the play style and the map.
@@ -128,7 +132,8 @@ into one category.
 
 - **Performance** – one page with one filter (account, queue, season, last 7 / 30 / 90 days or your own dates, role –
   and **only the newest games**: last 10, 20, 50, 100, 200 or a number of your own): the strip with the key figures
-  and the traits on top, then four cards – Champions left of the others on a medium window, three columns on a wide one:
+  and the traits on top – **the traits follow the filter too** – then four cards: Champions on the left, the map, the
+  play style and the roles beside them:
 - **Champions** – the op.gg-style list: KDA, CS, win rate and games per champion. **A click on a champion** shows only
   its games on every other card – figures, traits, map, roles, play style (again, or ✕: every champion); its ↗ opens
   those games in the match history.
@@ -137,25 +142,32 @@ into one category.
 <img src="docs/screens/play-style.png" alt="Play style: a radar against the lane opponent">
 
 - **Play style** – a radar of you against your lane opponent in the same games (farm, damage, gold, kill
-  participation, vision, survival, lane phase, towers); 100 % = as good as him. No total score.
+  participation, vision, survival, lane phase, towers); 100 % = as good as him; from one game on. No total score.
+  **Another player** (Live, the player page) gets a *play profile* instead: eight areas – fighting, farming, vision,
+  survival, objectives, aggression, consistency, versatility – each weighed against what is usual for the role, the
+  shape only: no figures and never against one opponent (Riot's policies: no player shown up by their performance).
 - **Mastery** – every champion's points over all accounts, milestones, and the play time behind them
-  (points ÷ points per game × game length + 7 minutes around each game). Riot changed the points in May 2024 (~500 a
-  game before, ~1,200 after): a slider says how many of your games were played before – 50 % means 850.
+  (points ÷ points per game × game length + 7 minutes around each game). Riot changed the points in May 2024 (an
+  estimate: ~500 a game before, ~1,200 after – Riot publishes no numbers): a slider says how many of your games were
+  played before – 50 % means 850. The mastery traits name every champion past a milestone.
 
 <img src="docs/screens/tags.png" alt="Tags: strengths and things to work on">
 
 - **Traits** – "Great farmer", "Lane tyrant", "Dies to ganks" …: your strengths and things to work on from your ranked
   games, per role – or *All roles* at once, each tag with its role and that role's share of your games – each with
   the numbers behind it. "Too little data" is never shown as "not met".
-  **ARAM** has traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
-  hunter, team carry, finisher, enabler, poke master, tower crusher, first blood hunter, never gives up, late or early
-  game …), measured against the ARAM games of the other players – also on Live's cards in an ARAM game.
+  **ARAM** has 32 traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
+  and quadra hunter, team carry, finisher, enabler, poke master, tower crusher, gold machine, iron skin, spell slinger
+  or weapon master, never gives up, late or early game …) and **Arena** 19 (podium regular, crown collector, Arena
+  veteran, damage dealer, survivor, wingman, frontliner, healing machine, champion collector …), each measured
+  against the games of the other players in that mode – also on Live's cards in an ARAM or Arena game.
   Other players (Live, the player page) only get what speaks for them – the things to work on are for your own accounts.
-- **Map** – Summoner's Rift or ARAM's map (its one lane from base to base: own base, own towers, the middle, enemy
-  towers, enemy base; a switch when the games are on both; Arena has no map) – where you die and where you kill (both at first, or deaths or kills; the same filter: account, queue, season,
-  role), for a game phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart
-  under the map (kills up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min:
-  45 % of the deaths: top river") and every zone's share, deaths and kills side by side.
+- **Map** – Summoner's Rift, ARAM's map (its one lane from base to base: own base, own towers, the middle, enemy
+  towers, enemy base) or Arena's seven arenas (a switch when the games are on more than one) – where you kill, die
+  and help: **Kills, Deaths and Assists**, each on or off (the same filter: account, queue, season, role), for a game
+  phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart under the map (kills and
+  assists up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min: 45 % of the
+  deaths: top river") and every zone with each kind's number and bar.
 - **Seasons** – what the client tells about the last season, your stored games per year, and earlier seasons you
   paste in yourself – three sources, never added up.
 </details>
@@ -166,7 +178,10 @@ into one category.
 
 Owned champions, skins and loot shards of every account – and **one search across all of them**: which account has
 Ahri, a K/DA skin or an Ashe shard? Without a search: champions, skins, chromas, ward skins, icons, emotes, finishers,
-rune pages and Blue Essence per account, and all accounts together. (Read while you are logged in to that account.)
+rune pages and Blue Essence per account, and all accounts together. The second tab, **By rarity**: skins, chromas,
+ward skins and icons by rarity – and **Legacy** (no longer sold) in a column of its own, since a skin can be Legacy
+and Mythic at once. "Rare" skins are the ones never sold in the shop (Victorious, the Arcane skins …). (Read while
+you are logged in to that account.)
 
 ### 📊 Match history
 
@@ -186,14 +201,15 @@ A tab of the Overview – its accounts are the Overview's chips.
 - **Most played**: your top five champions, games and **play time per account**, and the teammates you played with
   most – each with its win rate. **Clash** and **Custom** games have their own filters.
 - **Click a name** (here, on Live or after a game): the **player page** – the same page as your own Overview for any
-  player, from their 200 newest games (the newest ranked ones read in detail): *Performance* (key figures, traits,
-  champions, roles, play style, map – by queue and role), *Traits*, *Mastery* (their points and the play time behind
-  them), *Match history* (the games with you on top) and *Seasons* – with *Open with* (op.gg …). **Back / forward** arrows in the title
+  player, from their 200 newest games (first every game's details, then the timelines): *Performance* (key figures,
+  traits, champions, roles, play profile, map – by queue and role), *Traits*, *Mastery* (their points and the play
+  time behind them), *Match history* (the games with you on top) and *Seasons* – with *Open with* (op.gg …). League
+  seemed closed? *Try again* asks at once. **Back / forward** arrows in the title
   bar (also Alt+← / Alt+→ and the mouse's side buttons) go through the pages like a browser. The **search** in the
   Overview's head (Ctrl+K) finds anyone: suggestions from everyone in your games, any other Riot ID looked up through
   the client (without a tag: your server's, like EUW). League closed? The page says so instead of waiting.
 - **Open a game**: every player's stats, items, runes and ranks (and in Arena and ARAM: Mayhem every player's
-  augments, right of the gold), team gold over time (hover for the lead at each
+  augments, right of the gold; Arena's six teams by their placing), team gold over time (hover for the lead at each
   minute), any two players side by side – and its **replay**: download it and watch it in League (games of the
   current patch on the server League runs on).
 
@@ -210,14 +226,16 @@ A tab of the Overview – its accounts are the Overview's chips.
 <img src="docs/screens/live-game.png" alt="Live: the ten players of a game as cards">
 
 - **The ten players of your game** from the loading screen on: two rows, lane opponents face to face, rank, win rate
-  on this champion, main role, mastery and traits in three tiers (*Key*: what you can act on, *More*, *All* – the rest of a card behind
-  "+n") – from each player's 200 newest games (all ten players' details
-  for the newest 50 ranked ones), loaded from the client as fast as it answers – every match list at once, then 12
-  games on their way at all times (when one comes, the next starts), the players in turn – everyone's newest game
-  first – each game and its timeline together, with a progress bar; during the game 10 at a time, also while the
-  window is in the tray, and a short pause when the client starts refusing. Every round goes into `scout.log` (how
-  long the lists, details and timelines took, what was refused, when all was there). **Premades** (your own lobby, and others who played together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each
-  team's **damage mix** (AD / AP / True) shows what to build against.
+  on this champion, main role, mastery and traits in three tiers (*Key*: what you can act on, *More*, *All* – the rest
+  of a card behind "+n") – from each player's newest games (all ten players' details for the newest 50 ranked ones).
+  The League client hands out **one match list at a time** (200 games take ~12 s, every other request waits), so Live
+  reads them one by one – the enemies first, 200 games in champion select, 50 once the game loads (~4 s each) – and
+  asks again for a list that didn't come; then 12 games on their way at all times, the players in turn, **first every
+  game's details, then the timelines**, with a progress bar; also while the window is in the tray. A game only counts
+  as failed when the client says no. Every round goes into `scout.log`. A player the game hides (**streamer mode**)
+  gets a card with the champion and a note – never looked up. **Premades** (your own lobby, and others who played
+  together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each team's
+  **damage mix** (AD / AP / True) shows what to build against.
 - **After the game**: the overview of both teams stands the moment the end screen opens – while you still honor –
   from the client's end-of-game numbers: K/D/A, CS, items, damage, taken, gold, MVP / ACE. When the match history
   has the game it takes over (with what changed in your tags, ▲ / ▼); lane against lane, the gold lead and the replay
@@ -247,8 +265,9 @@ site in your browser if you want a second opinion.
   open the logs or the app's data folder, **save a diagnostics file** for a bug report (names, ids and your user
   folder are taken out).
 - **Keyboard** – Ctrl+F search, Ctrl+1…6 pages (Ctrl+5: the match history), Ctrl+N add (Ctrl+Shift+N many), arrow keys + Enter to log in,
-  E note, P profile, Del remove, Ctrl+A pick all – `?` shows them all.
-- **Auto-accept** in the title bar, **streamer mode** (hide names, ranks … – you choose), system / light / dark,
+  E note, P the account's Overview, Del remove, Ctrl+A pick all – `?` shows them all.
+- **Auto-accept** in the title bar, **streamer mode** – in the app (hide names, ranks … – you choose) and **in the
+  game** (League's own "Hide player names" for every account you log in with), system / light / dark,
   interface size, app lock with a password (and Windows Hello to show a saved password).
 - **Export / import** – without logins (a safe backup), or with logins encrypted by a password of their own
   (scrypt + AES-256). Riot Client sign-ins, the app password and the match history are never in the file.

@@ -6,12 +6,13 @@
     python tools/screens/capture.py film       # only the video
 
 Headless Edge (no window), driven over the DevTools protocol (cdp.py). ffmpeg is needed for the
-video: on PATH, in FFMPEG, or Pinokio's copy (with libwebp); Pillow for the cross-fades. The README
+video: on PATH, in FFMPEG, or Pinokio's copy (with libwebp). The README
 shows the animated WebP (a GIF of the same video would be four times the size); the MP4 is the sharp
 version for the release page.
 
 The video is a short promo: a title card, then one scene per feature – each with a caption, a mouse
-pointer that moves and clicks, zooms and cross-fades – and an end card. Every frame is a screenshot
+pointer that moves and clicks – and an end card; hard cuts, flat colours, no zooms or glows (fades,
+zooms and soft glows change every pixel and were what the compression smeared). Every frame is a screenshot
 of the real window (demo data), the captions and the pointer are laid over it.
 """
 import os
@@ -149,37 +150,30 @@ def screenshots(page):
 PROMO = r"""
 const st = document.createElement('style');
 st.textContent = `
-#pmCur { position: fixed; left: 0; top: 0; width: 30px; height: 30px; z-index: 100003; pointer-events: none; display: none;
-  filter: drop-shadow(0 3px 6px rgba(0,0,0,.65)); }
+#pmCur { position: fixed; left: 0; top: 0; width: 30px; height: 30px; z-index: 100003; pointer-events: none; display: none; }
 #pmRing { position: fixed; z-index: 100002; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; pointer-events: none; display: none;
-  border: 3px solid #f0e6d2; box-shadow: 0 0 22px rgba(200,170,110,.9), inset 0 0 14px rgba(200,170,110,.6); }
-#pmCap { position: fixed; left: 44px; bottom: 44px; z-index: 100001; max-width: 720px; padding: 20px 30px 22px 30px; border-radius: 18px; display: none;
-  background: linear-gradient(135deg, rgba(16,22,35,.95), rgba(9,12,19,.93)); border: 1px solid rgba(200,170,110,.5);
-  box-shadow: 0 30px 70px -12px rgba(0,0,0,.9), 0 0 40px -10px rgba(200,170,110,.35), inset 0 1px 0 rgba(255,255,255,.06); overflow: hidden; }
-#pmCap::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, #f0e6d2, #c8aa6e 50%, #7a5c29); }
-#pmCap::after { content: ""; position: absolute; right: -80px; top: -80px; width: 240px; height: 240px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(200,170,110,.16), transparent 70%); }
+  border: 3px solid #f0e6d2; }
+#pmCap { position: fixed; left: 44px; bottom: 44px; z-index: 100001; max-width: 720px; padding: 20px 30px 22px 30px; border-radius: 14px; display: none;
+  background: #0c111b; border: 1px solid rgba(200,170,110,.55); overflow: hidden; }
+#pmCap::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: #c8aa6e; }
 #pmCap .k { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 800; letter-spacing: 3.2px; text-transform: uppercase; color: #c8aa6e; }
-#pmCap .k i { width: 8px; height: 8px; transform: rotate(45deg); background: linear-gradient(135deg, #f0e6d2, #c8aa6e); box-shadow: 0 0 12px rgba(200,170,110,.8); }
-#pmCap .t { margin-top: 9px; font-size: 38px; font-weight: 800; line-height: 1.1; letter-spacing: .2px;
-  background: linear-gradient(180deg, #fff8e8, #e2c68c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#pmCap .k i { width: 8px; height: 8px; transform: rotate(45deg); background: #c8aa6e; }
+#pmCap .t { margin-top: 9px; font-size: 38px; font-weight: 800; line-height: 1.1; letter-spacing: .2px; color: #f3e7cc; }
 #pmCap .s { margin-top: 9px; font-size: 17px; line-height: 1.45; color: #b8c0cf; }
 #pmCard { position: fixed; inset: 0; z-index: 100000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-  background: radial-gradient(760px 420px at 50% 42%, rgba(200,170,110,.17), transparent 62%), radial-gradient(1100px 600px at 50% 118%, rgba(10,200,185,.13), transparent 60%), #080b12; }
-#pmCard::before { content: ""; position: absolute; inset: 0; opacity: .9;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='48' viewBox='0 0 56 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8zM42 24l14 8v16l-14 8-14-8V32z' fill='none' stroke='%23c8aa6e' stroke-opacity='.06' stroke-width='1'/%3E%3C/svg%3E"); }
+  background: #080b12; }
 #pmCard > * { position: relative; }
-#pmCard img { width: 118px; height: 118px; filter: drop-shadow(0 0 34px rgba(200,170,110,.5)); }
-#pmCard h1 { font-size: 82px; font-weight: 800; letter-spacing: 1px; line-height: 1; margin: 6px 0 0;
-  background: linear-gradient(180deg, #fff8e8 10%, #c8aa6e 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#pmCard img { width: 118px; height: 118px; }
+#pmCard h1 { font-size: 82px; font-weight: 800; letter-spacing: 1px; line-height: 1; margin: 6px 0 0; color: #e8d3a4; }
 #pmCard p { font-size: 24px; color: #b8c0cf; letter-spacing: .3px; }
-#pmCard .line { width: 220px; height: 1px; background: linear-gradient(90deg, transparent, #c8aa6e, transparent); margin: 6px 0; }
+#pmCard .line { width: 220px; height: 1px; background: #c8aa6e; margin: 6px 0; }
 #pmCard .chips { display: flex; gap: 12px; margin-top: 8px; }
 #pmCard .chips span { padding: 8px 18px; border-radius: 999px; font-size: 16px; font-weight: 600; color: #f0e6d2;
   border: 1px solid rgba(200,170,110,.45); background: rgba(200,170,110,.08); }
 #pmCard small { margin-top: 18px; font-size: 17px; color: #8b94a7; letter-spacing: .4px; }
 #pmCard small b { color: #e2c68c; font-weight: 600; }
 `;
+st.textContent += `main { background-image: none !important; } .ov-art { filter: none !important; }`;
 document.head.appendChild(st);
 const el = (id, html) => { const e = document.createElement('div'); e.id = id; e.innerHTML = html || ''; document.body.appendChild(e); return e; };
 const cur = el('pmCur', '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M4 2.5l15.5 11.2-6.6 1.2 3.9 7.4-3 1.5-3.9-7.4L5 21z" fill="#fff" stroke="#0b0e14" stroke-width="1.4" stroke-linejoin="round"/></svg>');
@@ -205,7 +199,7 @@ window.__pm = {
     card.style.display = 'flex';
     if (html != null) card.innerHTML = html;
     card.style.opacity = String(Math.min(1, p));
-    for (const c of card.children) c.style.transform = scale ? `scale(${0.94 + 0.06 * p}) translateY(${(1 - p) * 14}px)` : '';
+    for (const c of card.children) c.style.transform = '';
   },
   zoom(s, ox, oy) {
     frame.style.transformOrigin = `${ox}px ${oy}px`;
@@ -260,8 +254,8 @@ class Film:
         self.frame(s)
 
     def crossfade(self, n=12):
-        """the next frame fades in over the last one"""
-        self.xf = n
+        """was: the next frame fades in over the last one – now a hard cut (fades compress badly)"""
+        self.xf = 0
 
 
 class Pointer:
@@ -297,7 +291,7 @@ class Pointer:
         js(self.page, "__pm.ring(0, 0, -1);")
 
 
-def caption(page, fm, k, title, sub, frames=9, out=False, right=False):
+def caption(page, fm, k, title, sub, frames=5, out=False, right=False):
     for i in range(1, frames + 1):
         p = ease(i / frames)
         js(page, f"__pm.cap({k!r}, {title!r}, {sub!r}, {1 - p if out else p}, {str(right).lower()});")
@@ -313,10 +307,8 @@ def card(page, fm, html, frames=12, out=False):
 
 
 def zoom(page, fm, s0, s1, ox, oy, frames=14):
-    for i in range(1, frames + 1):
-        t = ease(i / frames)
-        js(page, f"__pm.zoom({s0 + (s1 - s0) * t}, {ox}, {oy});")
-        fm.frame()
+    # no zooming any more (it compressed badly): the scene stays as it is
+    return
 
 
 def scroll(page, fm, to, frames=36, sel="main"):
@@ -341,7 +333,7 @@ def film(page):
     js(page, f"__pm.card({CARD_TITLE!r}, 1);")
     settle(page, 0.6)
     js(page, f"__pm.card(null, 0.001);")
-    card(page, fm, CARD_TITLE, frames=16)
+    card(page, fm, CARD_TITLE, frames=6)
     fm.hold(1.6)
     js(page, "__pm.card(null, 0);")
     fm.crossfade(14)
@@ -464,7 +456,7 @@ def film(page):
     cur.hide()
 
     # ---- end card ----
-    card(page, fm, CARD_END, frames=16)
+    card(page, fm, CARD_END, frames=6)
     fm.hold(3.0)
 
     lst = tmp / "list.txt"
@@ -476,9 +468,10 @@ def film(page):
     out = ROOT / "docs"
     ff = ffmpeg()
     common = [ff, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(lst)]
-    subprocess.run(common + ["-vf", f"fps={FPS},format=yuv420p", "-c:v", "libx264", "-crf", "20", "-preset", "slow", "-movflags", "+faststart", str(out / "demo.mp4")], check=True, cwd=tmp)
-    subprocess.run(common + ["-vf", "fps=15,scale=1100:-1:flags=lanczos", "-c:v", "libwebp_anim", "-lossless", "0", "-quality", "62",
-                             "-compression_level", "4", "-loop", "0", "-an", str(out / "demo.webp")], check=True, cwd=tmp)
+    subprocess.run(common + ["-vf", f"fps={FPS},format=yuv420p", "-c:v", "libx264", "-crf", "16", "-preset", "slow", "-tune", "stillimage",
+                             "-movflags", "+faststart", str(out / "demo.mp4")], check=True, cwd=tmp)
+    subprocess.run(common + ["-vf", "fps=15,scale=1280:-1:flags=lanczos", "-c:v", "libwebp_anim", "-lossless", "0", "-quality", "85",
+                             "-compression_level", "6", "-loop", "0", "-an", str(out / "demo.webp")], check=True, cwd=tmp)
     total = sum(d for _, d in fm.list)
     shutil.rmtree(tmp, ignore_errors=True)
     print(f"video: {len(fm.list)} frames, {total:.1f} s")

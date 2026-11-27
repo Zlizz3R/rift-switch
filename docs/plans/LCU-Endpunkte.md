@@ -1,7 +1,7 @@
 # Genutzte Client-Endpunkte (für die Registrierung im Riot Developer Portal)
 
 Riot verlangt bei Produkten, die die League Client API nutzen: „We need to know which endpoints you're using and
-how you're using them.“ Stand 26.11.2026 (Version 1.3.2). Alles läuft nur lokal über `127.0.0.1`; Rift Switch nutzt
+how you're using them.“ Stand 27.11.2026 (Version 1.3.4). Alles läuft nur lokal über `127.0.0.1`; Rift Switch nutzt
 keinen Riot-API-Key und keinen eigenen Server.
 
 ## League Client (LCU)
@@ -22,6 +22,7 @@ keinen Riot-API-Key und keinen eigenen Server.
 | `/lol-clash/v1/tournament-summary`, `/lol-clash/v1/bracket/{id}`, `/lol-clash/v1/roster/{id}` | Clash-Gegner, sobald das Bracket steht |
 | `/lol-end-of-game/v1/eog-stats-block` | Das gerade beendete Spiel |
 | `/lol-replays/v1/configuration`, `/lol-replays/v1/metadata/{id}`, `/lol-replays/v2/metadata/{id}/create-gameversion`, `/lol-replays/v1/rofls/{id}/download`, `/lol-replays/v1/rofls/{id}/watch` | Replays herunterladen und ansehen (auf Knopfdruck) |
+| `/lol-game-settings/v1/game-settings` (GET, PATCH `HUD.HidePlayerNames`) | Nur mit der Einstellung „Streamer-Modus – im Spiel“: League's eigene Option „Spielernamen verbergen“ ein- bzw. beim Ausschalten wieder aus (seit 1.3.4) |
 | `/lol-chat/v1/me` | Nur noch einmalig: wer „Offline erscheinen“ (entfernt) an hatte, wird wieder online gesetzt |
 
 ## Riot Client (lokal)
@@ -34,7 +35,7 @@ keinen Riot-API-Key und keinen eigenen Server.
 
 ## Nicht genutzt
 
-Kein Riot-API-Key, keine Riot-Server direkt, kein Chat (außer dem einmaligen Online-Setzen oben), keine Ingame-API
-(Live Client Data), kein Overlay, keine Daten von Webseiten Dritter (counterstats.net nur als Link, den der Nutzer
+Kein Riot-API-Key, keine Riot-Server direkt, kein Chat (außer dem einmaligen Online-Setzen oben), von der Ingame-API
+(Live Client Data, Port 2999) nur `/liveclientdata/gamestats` – die Spielzeit, um zu merken, dass das Spiel läuft –, kein Overlay, keine Daten von Webseiten Dritter (counterstats.net nur als Link, den der Nutzer
 selbst öffnet). Die Anmeldung beim Account-Wechsel tippt ein gespeichertes Passwort in das Login-Fenster des Riot
 Clients (UI Automation), nur wenn der Nutzer es so eingerichtet hat.
