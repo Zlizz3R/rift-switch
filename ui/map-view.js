@@ -9,6 +9,8 @@
 const mv = { kind: 'both', from: 0, to: null, preset: 'all', map: '' };
 const MV_PRESETS = { all: [0, null], early: [0, 10], mid: [10, 20], late: [20, null] };
 
+// a dot's radius: smaller the more places there are (hundreds of dots would cover the whole map)
+const mvDotR = n => (n > 1200 ? 1.6 : n > 600 ? 2.2 : n > 200 ? 3 : 4.5);
 // Summoner's Rift as a sketch (0–148, blue base bottom left; SVG y runs down) – or ARAM's map
 // (0–128): one lane from base to base, two towers on each side
 function mapSvg(list, map = 'sr') {
@@ -16,8 +18,9 @@ function mapSvg(list, map = 'sr') {
   const S = MapMath.SIZE, Y = y => (S - y).toFixed(1);
   const line = pts => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${Y(y)}`).join(' ');
   const lanes = [line([[10, 40], [10, 138], [108, 138]]), line([[40, 10], [138, 10], [138, 108]]), line([[30, 30], [118, 118]])];
-  const dots = kind => list.filter(e => e.kind === kind).map(e => `<circle cx="${e.x.toFixed(1)}" cy="${Y(e.y)}" r="4.5"/>`).join('');
-  return `<svg class="dm-map" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(t('dash.tabMap'))}">
+  const r = mvDotR(list.length);
+  const dots = kind => list.filter(e => e.kind === kind).map(e => `<circle cx="${e.x.toFixed(1)}" cy="${Y(e.y)}" r="${r}"/>`).join('');
+  return `<svg class="dm-map${list.length > 300 ? ' dense' : ''}" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(t('dash.tabMap'))}">
     <rect class="dm-bg" width="${S}" height="${S}" rx="6"/>
     <path class="dm-river" d="${line([[18, 130], [130, 18]])}"/>
     ${lanes.map(d => `<path class="dm-lane" d="${d}"/>`).join('')}
@@ -31,8 +34,9 @@ function mapSvgAram(list) {
   const o = 12 / Math.SQRT2, a = 12, b = S - 12;
   const band = [[a - o, a + o], [b - o, b + o], [b + o, b - o], [a + o, a - o]].map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${Y(y)}`).join(' ') + 'Z';
   const tower = (p, cls) => { const v = p * S; return `<rect class="dm-tower ${cls}" x="${(v - 2.5).toFixed(1)}" y="${(S - v - 2.5).toFixed(1)}" width="5" height="5" rx="1" transform="rotate(45 ${v.toFixed(1)} ${(S - v).toFixed(1)})"/>`; };
-  const dots = kind => list.filter(e => e.kind === kind).map(e => `<circle cx="${e.x.toFixed(1)}" cy="${Y(e.y)}" r="4"/>`).join('');
-  return `<svg class="dm-map aram" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(t('dash.tabMap'))} – ARAM">
+  const r = mvDotR(list.length);
+  const dots = kind => list.filter(e => e.kind === kind).map(e => `<circle cx="${e.x.toFixed(1)}" cy="${Y(e.y)}" r="${r}"/>`).join('');
+  return `<svg class="dm-map aram${list.length > 300 ? ' dense' : ''}" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(t('dash.tabMap'))} – ARAM">
     <rect class="dm-bg" width="${S}" height="${S}" rx="6"/>
     <path class="dm-bridge" d="${band}"/>
     <circle class="dm-base own" cx="10" cy="${Y(10)}" r="22"/><circle class="dm-base enemy" cx="${S - 10}" cy="${Y(S - 10)}" r="22"/>

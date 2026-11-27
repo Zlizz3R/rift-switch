@@ -281,7 +281,7 @@
     'perf.more': "Mostrar los {n} campeones",
     'perf.less': "Solo los 8 primeros",
     'perf.sort': "Ordenar:",
-    'perf.open': "Clic: estas partidas en el historial",
+    'perf.open': "Estas partidas en el historial",
     'perf.qAll': "Todas las colas",
     'perf.game1': "1 partida",
     'dash.tabTags': "Rasgos",
@@ -869,6 +869,11 @@
     'tag.arEarly': "Fuerte en partida temprana",
     'tag.arEarly.t': "Victorias {s} % en partidas de ARAM de menos de 17 min ({ns}), {l} % de 21 min o más ({nl})",
     'tag.arEarly.d': "Victorias en partidas de ARAM de menos de 17 minutos frente a las de 21 minutos o más. Tu valor: la diferencia; solo cuenta una clara.",
+    'perf.champT': "Clic: solo las partidas de este campeón en las demás tarjetas (otra vez: todos)",
+    'mast.before': "Jugadas antes de mayo de 2024",
+    'mast.beforeT': "Riot cambió los puntos de maestría en mayo de 2024: unos 500 por partida antes, unos 1.200 después. Indica cuántas de tus partidas fueron antes: los mismos puntos significan entonces más partidas y horas.",
+    'mast.tipRate2': "{pct} % de las partidas antes del cambio de maestría de mayo de 2024 (~500 puntos por partida), el resto después (~1.200) – el control sobre la tabla",
+    'pg.augs': "Aumentos",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

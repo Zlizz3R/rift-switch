@@ -14,6 +14,9 @@
         'ARAM: a map of its own (own base, own towers, the middle, enemy towers, enemy base) and nine more traits – finisher, enabler, poke master, tower crusher, first blood hunter, never gives up, throws leads, late and early game.',
         'Performance starts on "All ranked" (Solo/Duo, Flex, Ranked 5v5, Clash); the activity (usual game length, days played, busiest day) is in the match history now.',
         'Play style: every axis says what it measures – CS per minute, gold at minute 15 for the lane phase, deaths per game … – and the note under it is one line.',
+        'Performance: click a champion and every other card shows only its games – the figures, traits, map, roles and play style (again, or ✕: all champions); ↗ on its row opens those games in the match history. The map sits at the top next to the champions, its zone bars stay inside the card, and many places get smaller dots.',
+        'Mastery: a slider for how many of your games were played before Riot\'s mastery rework of May 2024 (~500 points a game before, ~1,200 after) – the play time follows.',
+        'Match details: every player\'s augments (ARAM: Mayhem, Arena) in a column of their own, right of the gold.',
       ],
       de: [
         'Übersicht: Leistung ist die Startseite. Die Kennzahlen sind jetzt eine Leiste – Siege grün, Niederlagen rot, die Winrate als Ring, an jeder Zahl der Trend deiner letzten 10 Spiele – mit deinen Traits rechts daneben; „Traits →“ öffnet alle. Dazu eine Rollen-Kachel neben Champions, Spielstil und Karte.',
@@ -25,6 +28,9 @@
         'ARAM: eine eigene Karte (eigene Basis, eigene Türme, Mitte, gegnerische Türme, gegnerische Basis) und neun weitere Traits – Vollstrecker, Vorbereiter, Poke-Meister, Turmbrecher, First-Blood-Jäger, Gibt nie auf, Wirft Führungen weg, Spät- und Frühspiel-Stärke.',
         'Leistung startet auf „Alle Ranked“ (Solo/Duo, Flex, Ranked 5v5, Clash); die Aktivität (übliche Spieldauer, Spieltage, häufigster Wochentag) steht jetzt im Spielverlauf.',
         'Spielstil: Jede Achse sagt, was sie misst – CS pro Minute, Gold bei Minute 15 für die Lane-Phase, Tode pro Spiel … – und der Hinweis darunter ist ein Satz.',
+        'Leistung: Ein Klick auf einen Champion, und alle anderen Kacheln zeigen nur seine Spiele – Kennzahlen, Traits, Karte, Rollen und Spielstil (noch einmal oder ✕: alle Champions); ↗ in seiner Zeile öffnet diese Spiele im Spielverlauf. Die Karte steht oben neben den Champions, ihre Zonen-Balken bleiben in der Kachel, und bei vielen Orten werden die Punkte kleiner.',
+        'Mastery: ein Regler, wie viele deiner Spiele vor Riots Mastery-Umbau im Mai 2024 lagen (vorher ~500 Punkte pro Spiel, danach ~1.200) – die Spielzeit rechnet mit.',
+        'Spieldetails: die Augments jedes Spielers (ARAM: Mayhem, Arena) in einer eigenen Spalte rechts neben dem Gold.',
       ],
     },
     {

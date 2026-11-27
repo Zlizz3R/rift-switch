@@ -277,7 +277,7 @@
     'perf.more': "显示全部 {n} 个英雄",
     'perf.less': "只看前 8",
     'perf.sort': "排序：",
-    'perf.open': "点击：在对局记录中查看这些对局",
+    'perf.open': "在对局记录中查看这些对局",
     'perf.qAll': "所有队列",
     'perf.game1': "1 局",
     'dash.tabTags': "特质",
@@ -865,6 +865,11 @@
     'tag.arEarly': "前期型",
     'tag.arEarly.t': "17 分钟以下的 ARAM 胜率 {s}%（{ns}），21 分钟以上 {l}%（{nl}）",
     'tag.arEarly.d': "17 分钟以下 ARAM 对局的胜率对比 21 分钟以上的对局。你的数值：差距；只有明显的差距才算。",
+    'perf.champT': "点击：其他所有卡片只显示该英雄的对局（再次点击：所有英雄）",
+    'mast.before': "2024 年 5 月前的对局",
+    'mast.beforeT': "Riot 在 2024 年 5 月调整了专精点数：之前每局约 500 点，之后约 1200 点。设置你有多少对局是在此之前——同样的点数就意味着更多对局和时长。",
+    'mast.tipRate2': "{pct}% 的对局在 Riot 2024 年 5 月专精改版之前（每局约 500 点），其余在之后（约 1200）——见表格上方的滑块",
+    'pg.augs': "强化",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

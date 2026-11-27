@@ -9,14 +9,14 @@
 // tab: one of PL_TABS; role: '' or a position (Performance, Traits); queue: 'ranked' | 'aram' |
 // 'arena' | 'all', '' = the one with the most games; show: rows of the match list; withYou: only
 // the games with one of your accounts
-const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: '', tab: 'stats', role: '', show: 40, withYou: false, timer: 0, loading: false };
+const plv = { p: null, games: new Map(), ids: [], info: null, mastery: null, progress: null, queue: '', tab: 'stats', role: '', champ: 0, show: 40, withYou: false, timer: 0, loading: false };
 const PL_TABS = [['stats', 'dash.tabStats'], ['tags', 'dash.tabTags'], ['mast', 'dash.tabMast'], ['matches', 'mh.title'], ['seasons', 'dash.tabSeasons']];
 
 // open a player: { puuid, gameName, tagLine, region }; back: from the arrows (no new history step)
 function openPlayer(p, back = false) {
   if (!p || !p.puuid) return;
   if (!plv.p || plv.p.puuid !== p.puuid) {
-    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: '', role: '', show: 40, withYou: false });
+    Object.assign(plv, { p, ids: [], info: null, mastery: null, progress: null, queue: '', role: '', champ: 0, show: 40, withYou: false });
     // the games of the last player stay only if this one was in them too (the next load says)
   }
   showView('player', { p, back });
@@ -140,9 +140,10 @@ function renderPlayer() {
   const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t(plv.tab === 'tags' ? 'tags.allRoles' : 'perf.allRoles')}</button>` +
     Stats.POSITIONS.map(r => `<button data-plrole="${r}" title="${esc(t('pos.' + r))}"${plv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('') + '</div>';
   // the traits of the scope (another player: only what speaks for them)
-  const traitsOf = role => {
-    const ctx = { games: all, own: [p.puuid], level, mastery: mastRows, now: Date.now() };
-    const res = scope === 'aram' || scope === 'arena' ? sumRes(all, [p.puuid], level, mastRows, scope) : role ? Tags.evaluate({ ...ctx, role }) : Tags.evaluateAll(ctx);
+  const traitsOf = (role, champ = 0) => {
+    const games = champ ? all.filter(g => g.players.some(x => x.puuid === p.puuid && x.champ === champ)) : all;
+    const ctx = { games, own: [p.puuid], level, mastery: mastRows, now: Date.now() };
+    const res = scope === 'aram' || scope === 'arena' ? sumRes(games, [p.puuid], level, mastRows, scope) : role ? Tags.evaluate({ ...ctx, role }) : Tags.evaluateAll(ctx);
     return res && !own ? plOthers(res) : res;
   };
   let body, head = `${bar}${basis}`;
@@ -163,8 +164,9 @@ function renderPlayer() {
     // Performance: the same page as the own Overview's, for a role to look at
     const parts = plv.role ? rows.filter(x => PerfMath.roleOf(x) === plv.role) : rows;
     const agR = Stats.aggregate(parts);
+    if (plv.champ && !parts.some(x => x.p.champ === plv.champ)) plv.champ = 0;
     body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
-      : perfAllHtml(parts, agR, { player: true, role: plv.role, traits: { res: traitsOf(''), scope, player: true, role: plv.role } });
+      : perfAllHtml(parts, agR, { player: true, role: plv.role, champ: plv.champ, traits: { res: traitsOf('', plv.champ), scope, player: true, role: plv.role, champ: plv.champ } });
     head = `${bar}${roleSeg}${basis}`;
   }
   el.innerHTML = `<div class="pl-bar">${head}</div><div class="pl-tabbody">${body}</div>`;
@@ -253,6 +255,9 @@ $('viewPlayer').addEventListener('click', e => {
   if (tg) { tagv.open = tagv.open === tg.dataset.tag ? '' : tg.dataset.tag; return renderPlayer(); }
   const ro = e.target.closest('[data-plrole]');
   if (ro) { plv.role = ro.dataset.plrole; return renderPlayer(); }
+  // a champion of the list: only its games on the other cards (again: every champion)
+  const pc = e.target.closest('[data-pchamp]');
+  if (pc) { const c = +pc.dataset.pchamp; plv.champ = c && c !== plv.champ ? c : 0; return renderPlayer(); }
   // the Overview's own controls inside the tabs (sorting, unfolding, more champions)
   const cs = e.target.closest('[data-csort]');
   if (cs) { perf.cSort = cs.dataset.csort; return renderPlayer(); }

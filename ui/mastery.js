@@ -66,10 +66,16 @@ const mastCompact = n => new Intl.NumberFormat(locale(), { notation: 'compact', 
 const MS_LABEL = { 100000: '100k', 500000: '500k', 1000000: '1M', 2000000: '2M' };
 const mastHours = e => t('mast.hours', { h: num(MastMath.roundNice(e.hours)) });
 
+// the share of the games played before Riot's mastery rework (May 2024), set with the slider in
+// the Mastery tab – 50 % until moved (kept in this browser profile)
+function mastBefore() {
+  try { const v = localStorage.getItem('rs.mastBefore'); if (v != null && v !== '') return Math.max(0, Math.min(100, Number(v))) / 100; } catch { /* default */ }
+  return 0.5;
+}
 // the estimate of one account on one champion: its own game length and ARAM share where known
 const mastLen = puuid => MastMath.avgMinutes((mast.games || {})[puuid] || []);
 function mastEstimate(puuid, id, pts) {
-  return MastMath.estimate(pts, { min: MastMath.gameMinutes(mastLen(puuid)), aram: MastMath.aramShare((mast.games || {})[puuid], id) });
+  return MastMath.estimate(pts, { min: MastMath.gameMinutes(mastLen(puuid)), aram: MastMath.aramShare((mast.games || {})[puuid], id), before: mastBefore() });
 }
 // a sum of estimates (accounts or champions)
 function mastSum(list) {
@@ -80,7 +86,9 @@ function mastSum(list) {
 // how the number comes about – the tooltip of every play time
 function mastTimeTip(e, puuids) {
   const R = PLAYTIME_RULES;
-  const lines = [t('mast.tipGames', { n: num(MastMath.roundNice(e.games)), ppg: num(R.pointsPerGame) }), t('mast.tipRate')];
+  const before = Math.round(mastBefore() * 100);
+  const lines = [t('mast.tipGames', { n: num(MastMath.roundNice(e.games)), ppg: num(Math.round(MastMath.pointsPerGame(before / 100))) }),
+    t('mast.tipRate2', { pct: before })];
   const len = MastMath.avgMinutes([].concat(...(puuids || []).map(p => (mast.games || {})[p] || [])));
   const m = MastMath.gameMinutes(len);
   lines.push(m.sr !== R.minutes.sr ? t('mast.tipOwnLen', { min: Math.round(m.sr), n: len.srN }) : t('mast.tipMin', { min: R.minutes.sr, aram: R.minutes.aram }));
@@ -100,6 +108,7 @@ function renderMast() {
   const read = accs.filter(a => by.has(a.puuid));
   const rows = MastMath.masteryTable(read.map(a => by.get(a.puuid)));
   $('mastSub').textContent = rows.length ? t('mast.sub', { champs: rows.length, read: read.length, all: accs.length }) : '';
+  mastBeforeBox();
   if (!rows.length) { el.innerHTML = `<div class="chart-empty">${t('mast.none')}</div>`; return; }
   // play time per row: the sum of each account's estimate
   for (const r of rows) {
@@ -185,6 +194,16 @@ function mastPlayerHtml(list, puuid, games) {
     ${rows.length > shown.length ? `<button class="btn mast-more" data-mast-all>${t('mast.showAll', { n: rows.length - shown.length })}</button>` : ''}`;
 }
 
+// the slider: how many of the games were played before the rework – the play time follows at once
+function mastBeforeBox() {
+  const pct = Math.round(mastBefore() * 100);
+  if (document.activeElement !== $('mastBefore')) $('mastBefore').value = String(pct);
+  $('mastBeforeV').textContent = `${pct} %`;
+}
+$('mastBefore').addEventListener('input', () => {
+  try { localStorage.setItem('rs.mastBefore', $('mastBefore').value); } catch { /* only for now */ }
+  renderMast();
+});
 $('mastSearch').addEventListener('input', () => { mast.q = $('mastSearch').value; renderMast(); });
 $('dashMast').addEventListener('click', e => {
   const s = e.target.closest('[data-ms]');

@@ -52,12 +52,16 @@
     const own = (v, n) => (v != null && n >= R.minOwnGames ? v : null);
     return { sr: own(len && len.sr, len && len.srN) ?? R.minutes.sr, aram: own(len && len.aram, len && len.aramN) ?? R.minutes.aram };
   }
-  // Points → games → hours: points ÷ 850 × (minutes per game + 7 for queue, champ select, loading
-  // and the post-game screen). One number ("approx."), no range.
-  // o: { aram: share 0..1 of ARAM on this champion, min: gameMinutes() of the account }
+  // points per game when this share (0..1) of the games was played before the mastery rework of May
+  // 2024: ~500 then, ~1,200 after; half and half = 850
+  const pointsPerGame = before => (before == null ? R.pointsPerGame : before * R.pointsBefore + (1 - before) * R.pointsAfter);
+  // Points → games → hours: points ÷ points per game × (minutes per game + 7 for queue, champ select,
+  // loading and the post-game screen). One number ("approx."), no range.
+  // o: { aram: share 0..1 of ARAM on this champion, min: gameMinutes() of the account, before: share
+  //      0..1 of the games played before the rework (none: 850 points per game) }
   function estimate(points, o = {}) {
     const s = o.aram || 0, m = o.min || gameMinutes(null);
-    const games = points / R.pointsPerGame;
+    const games = points / pointsPerGame(o.before);
     const mins = (1 - s) * m.sr + s * m.aram + R.extraMinutes;
     return { games, hours: games * mins / 60, mins, aram: s };
   }
@@ -69,7 +73,7 @@
     return Math.round(x / p) * p;
   }
 
-  const api = { MILESTONES, ARAM_QUEUES, milestone, masteryTable, aramShare, avgMinutes, gameMinutes, estimate, roundNice };
+  const api = { MILESTONES, ARAM_QUEUES, milestone, masteryTable, aramShare, avgMinutes, gameMinutes, estimate, roundNice, pointsPerGame };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MastMath = api;
 })(typeof window !== 'undefined' ? window : this);

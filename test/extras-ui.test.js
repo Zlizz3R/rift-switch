@@ -182,3 +182,27 @@ test('panel: copying with the app password – a wrong one says so, any other fa
     assert.match(app.$('#toast').textContent, /Couldn't copy it/);
   });
 });
+
+test('match details: every player\'s augments (ARAM: Mayhem, Arena) in a column of their own, right of the gold', () => {
+  const g = mhGame(5, 2400, { v: 7 });
+  g.players.forEach((p, i) => { p.aug = [100 + i, 200 + i]; });
+  const augments = {};
+  for (let i = 0; i < 10; i++) { augments[100 + i] = ['/a.png', 'Aug A' + i, 'gold']; augments[200 + i] = ['/b.png', 'Aug B' + i, 'prismatic']; }
+  const replies = {
+    matches: { index: [[g.id, g.t, g.q, P(1)]], waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': [g],
+    'mh-assets': { items: {}, spells: {}, perks: {}, styles: {}, augments },
+  };
+  return withApp({ replies }, async (app) => {
+    await app.openMatches();
+    await app.click(app.$('.mh-row .mh-meta'));
+    await app.settle();
+    assert.ok(app.$('.pg-table.with-aug'), 'the table gets the column');
+    assert.match(app.$('.pg-cols').textContent, /Gold\s*Augments/);
+    const rows = app.$$('.pg-row');
+    assert.equal(rows.length, 10);
+    for (const r of rows) assert.equal(r.querySelectorAll('.pg-aug .aug').length, 2);
+    assert.equal(rows[6].querySelector('.pg-aug .aug').title, 'Aug A6', 'the other players\' augments too');
+    assert.equal(app.$('.pg-items .aug'), null, 'not under the items any more');
+  });
+});

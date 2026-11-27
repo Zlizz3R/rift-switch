@@ -1032,8 +1032,10 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .dm-hots li.kill { background: rgba(47, 196, 178, .08); border-color: rgba(47, 196, 178, .28); }
 .dm-hots b { color: var(--gold2); margin-right: 6px; }
 .mp-rows { display: flex; flex-direction: column; gap: 6px; }
-.mp-row { display: grid; grid-template-columns: 150px minmax(80px, 1fr) 46px 32px; align-items: center; gap: 10px; font-size: 12.5px; }
-.mp-rows.both .mp-row { grid-template-columns: 150px minmax(60px, 1fr) 32px minmax(60px, 1fr) 32px; }
+.mp-row { display: grid; grid-template-columns: minmax(0, 150px) minmax(40px, 1fr) 46px 32px; align-items: center; gap: 10px; font-size: 12.5px; }
+.mp-rows.both .mp-row { grid-template-columns: minmax(0, 150px) minmax(30px, 1fr) 32px minmax(30px, 1fr) 32px; }
+.mp-row > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-row.head > span { overflow: visible; }
 .mp-row.head { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .mp-row b { text-align: right; font-variant-numeric: tabular-nums; }
 .mp-row small { opacity: .6; text-align: right; font-variant-numeric: tabular-nums; }
@@ -1364,6 +1366,12 @@ span.mh-ch { cursor: default; }
 .mh-augs, .pg-augs { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
 .mh-augs { margin-top: 4px; }
 .pg-augs { flex-basis: 100%; margin-top: 2px; }
+/* the augments' column (Arena, ARAM: Mayhem) right of the gold */
+.pg-table.with-aug { min-width: 1040px; }
+.pg-table.with-aug .pg-cols, .pg-table.with-aug .pg-row { grid-template-columns: 40px 48px minmax(96px, 190px) 50px 186px 112px 104px minmax(70px, 110px) minmax(76px, 110px) minmax(76px, 110px) minmax(116px, 170px); }
+.pg-aug { padding-left: 10px; }
+.pg-aug .pg-augs { margin-top: 0; gap: 4px; }
+.pg-aug .aug { width: 25px; height: 25px; border-radius: 7px; }
 .aug { width: 22px; height: 22px; border-radius: 6px; background: #0b0e14; border: 1px solid #59647a; box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
 .pg-augs .aug { width: 17px; height: 17px; border-radius: 5px; }
 .aug.r-silver { border-color: #b8c4d0; } .aug.r-gold { border-color: #e0b85c; box-shadow: 0 0 6px rgba(224,184,92,.35); }
@@ -1729,6 +1737,16 @@ div.mh-more { gap: 10px; }
 .pl-tabs { margin-bottom: 12px; }
 .pl-tabbody { display: flex; flex-direction: column; gap: 12px; }
 .oc-row.plain, .pr-champ.plain { cursor: default; }
+/* a champion picked: its row lit, the others' numbers stay for comparison */
+.oc-row { position: relative; cursor: pointer; }
+.oc-row.on { background: linear-gradient(90deg, rgba(200,170,110,.16), rgba(200,170,110,.04)); box-shadow: inset 3px 0 0 var(--gold); }
+.oc-mh { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center;
+  font-size: 13px; color: var(--muted); opacity: 0; transition: opacity .12s; background: rgba(10,13,20,.8); border: 1px solid var(--line); }
+.oc-row:hover .oc-mh { opacity: 1; }
+.oc-mh:hover { color: var(--gold2); border-color: var(--gold); }
+.oc-clear { margin-left: 10px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: var(--gold2); border: 1px solid rgba(200,170,110,.5); background: rgba(200,170,110,.1); }
+.oc-clear:hover { color: #f0e6d2; border-color: var(--gold); }
 .pl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
 .pl-card.wide { grid-column: 1 / -1; }
 .pl-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
@@ -1911,6 +1929,11 @@ span.ov-crest { border-radius: 50%; border: 2px dashed #3a4560; width: 40px; hei
 .perf-card .muted { color: var(--muted); font-size: 12.5px; }
 .perf-card-h small { margin-left: 10px; font-size: 10.5px; font-weight: 500; letter-spacing: .2px; text-transform: none; color: var(--muted); }
 
+/* Mastery: the share of the games played before the mastery rework */
+.mast-before { display: inline-flex; align-items: center; gap: 10px; height: 32px; padding: 0 12px; border-radius: 8px; font-size: 12.5px;
+  color: var(--muted); background: var(--panel); border: 1px solid var(--line); cursor: help; }
+.mast-before input { width: 140px; accent-color: var(--gold); cursor: pointer; }
+.mast-before b { min-width: 40px; text-align: right; color: var(--gold2); font-variant-numeric: tabular-nums; }
 /* the match history: the activity under the totals */
 .mh-act { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 8px; font-size: 12.5px; }
 .mh-act .muted { color: var(--muted); }
@@ -2020,23 +2043,27 @@ main { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org
 .perf-card-h { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--gold2); }
 .perf-card-h::before { content: "◆"; font-size: 8px; margin-right: 7px; vertical-align: 2px; color: var(--gold); }
 .perf-card .mp-left { width: min(340px, 100%); }
-.perf-card .dm-side { min-width: 0; max-width: none; }
+.perf-card .dm-side { min-width: 250px; max-width: none; }
+.perf-card .dm-wrap > * { min-width: 0; }
+@container (max-width: 620px) { .perf-card .dm-side { flex-basis: 100%; } }
+/* many places: smaller dots, so the map stays readable */
+.dm-map.dense .dm-dots circle { opacity: .22; }
 .perf-card .rd-wrap { justify-content: center; gap: 20px; }
 .perf-card .rd-bars { min-width: 0; flex: 1 1 240px; }
 .perf-card .radar { max-width: 100%; height: auto; }
-/* medium: champions left, roles, play style and map stacked on the right (ARAM / Arena: the share of
-   the team and the activity) */
+/* medium: champions and roles left, the map right at the top, the play style under it (ARAM / Arena:
+   the share of the team under the champions) – the map never slides down under a long list */
 @media (min-width: 1100px) {
-  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "champs roles" "champs style" "champs map"; align-items: start; }
-  .perf-grid.one-role { grid-template-areas: "champs style" "champs map"; }
-  .perf-grid.off { grid-template-areas: "champs share" "champs map"; }
+  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "champs map" "roles map" "roles style"; align-items: start; }
+  .perf-grid.one-role { grid-template-areas: "champs map" "style map"; }
+  .perf-grid.off { grid-template-areas: "champs map" "share map"; }
   .pc-champs { grid-area: champs; } .pc-roles { grid-area: roles; } .pc-style { grid-area: style; } .pc-map { grid-area: map; }
   .pc-share { grid-area: share; }
 }
-/* wide: three side by side */
+/* wide: champions and roles, the map, the play style side by side */
 @media (min-width: 1700px) {
-  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr); grid-template-areas: "champs roles map" "champs style map"; }
-  .perf-grid.one-role { grid-template-areas: "champs style map"; }
-  .perf-grid.off { grid-template-areas: "champs share map"; }
+  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "champs map style" "roles map style";
+    grid-template-rows: auto 1fr; }
+  .perf-grid.one-role { grid-template-areas: "champs map style"; }
+  .perf-grid.off { grid-template-areas: "champs map share"; }
 }
-.pc-champs, .pc-map { align-self: stretch; }

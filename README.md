@@ -129,7 +129,9 @@ into one category.
 - **Performance** – one page with one filter (account, queue, season, last 7 / 30 / 90 days or your own dates, role –
   and **only the newest games**: last 10, 20, 50, 100, 200 or a number of your own): the strip with the key figures
   and the traits on top, then four cards – Champions left of the others on a medium window, three columns on a wide one:
-- **Champions** – the op.gg-style list: KDA, CS, win rate and games per champion; a click opens those games.
+- **Champions** – the op.gg-style list: KDA, CS, win rate and games per champion. **A click on a champion** shows only
+  its games on every other card – figures, traits, map, roles, play style (again, or ✕: every champion); its ↗ opens
+  those games in the match history.
 - **Roles** – each position's share of your games, with its win rate.
 
 <img src="docs/screens/play-style.png" alt="Play style: a radar against the lane opponent">
@@ -137,7 +139,8 @@ into one category.
 - **Play style** – a radar of you against your lane opponent in the same games (farm, damage, gold, kill
   participation, vision, survival, lane phase, towers); 100 % = as good as him. No total score.
 - **Mastery** – every champion's points over all accounts, milestones, and the play time behind them
-  (points ÷ 850 × game length + 7 minutes around each game).
+  (points ÷ points per game × game length + 7 minutes around each game). Riot changed the points in May 2024 (~500 a
+  game before, ~1,200 after): a slider says how many of your games were played before – 50 % means 850.
 
 <img src="docs/screens/tags.png" alt="Tags: strengths and things to work on">
 
@@ -189,7 +192,8 @@ A tab of the Overview – its accounts are the Overview's chips.
   bar (also Alt+← / Alt+→ and the mouse's side buttons) go through the pages like a browser. The **search** in the
   Overview's head (Ctrl+K) finds anyone: suggestions from everyone in your games, any other Riot ID looked up through
   the client (without a tag: your server's, like EUW). League closed? The page says so instead of waiting.
-- **Open a game**: every player's stats, items, runes and ranks, team gold over time (hover for the lead at each
+- **Open a game**: every player's stats, items, runes and ranks (and in Arena and ARAM: Mayhem every player's
+  augments, right of the gold), team gold over time (hover for the lead at each
   minute), any two players side by side – and its **replay**: download it and watch it in League (games of the
   current patch on the server League runs on).
 

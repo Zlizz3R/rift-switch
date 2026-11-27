@@ -42,15 +42,27 @@ test('performance: one page – key figures, then champions, roles, play style a
     assert.match(app.$('.perf-strip .pf').textContent, /Games\s*14/);
     // no role table any more; the four cards
     assert.equal(app.$('.perf-table'), null);
-    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-roles', 'perfSec-style', 'perfSec-map']);
+    // the map right after the champions (top right on a wider window), then roles and play style
+    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-map', 'perfSec-roles', 'perfSec-style']);
     assert.match(app.$('.pc-roles').textContent, /Mid ★/);
     // the role filter: one role – no roles card
     await app.click('[data-prole="jungle"]');
     assert.match(app.$('#perfLine').textContent, /^1 game · .*Jungle/);
     assert.equal(app.$('.pc-roles'), null);
     await app.click('[data-prole=""]');
-    // a champion: the match history with this champion
+    // a champion: every other card shows only its games – the list keeps all champions
     await app.click('.oc-row[data-pchamp="103"]');
+    assert.ok(app.$('.oc-row[data-pchamp="103"]').classList.contains('on'));
+    assert.match(app.$('#perfLine').textContent, /^4 games · .*Ahri/);
+    assert.match(app.$('.perf-strip .pf.games').textContent, /Games\s*4/);
+    assert.ok(app.$$('.oc-row').length > 2, 'the other champions stay in the list');
+    assert.match(app.$('.pc-champs .oc-clear').textContent, /Ahri/);
+    // again (or ✕): every champion
+    await app.click('.pc-champs .oc-clear');
+    assert.equal(app.$('.oc-row.on'), null);
+    assert.match(app.$('#perfLine').textContent, /^14 games/);
+    // ↗ on a row: those games in the match history
+    await app.click('[data-pchampmh="103"]');
     await app.settle();
     assert.ok(app.visible('#viewMatches'));
     assert.equal(Number(app.w.eval('mh.f.champ')), 103);
@@ -254,7 +266,7 @@ test('performance: the key figures in one strip – wins and losses in colour, t
     // the damage share
     await app.click('[data-dt="stats"]');
     await app.click('[data-pq="aram"]');
-    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-share', 'perfSec-map']);
+    assert.deepEqual(app.$$('#perfBody .perf-card').map(c => c.id), ['perfSec-champs', 'perfSec-map', 'perfSec-share']);
     assert.equal(app.$('.pf.cs'), null);
     assert.ok(app.$('.pf.share'));
     assert.deepEqual(app.errors.map(String), []);

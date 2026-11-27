@@ -281,7 +281,7 @@
     'perf.more': "Afficher les {n} champions",
     'perf.less': "Seulement le top 8",
     'perf.sort': "Trier :",
-    'perf.open': "Clic : ces parties dans l'historique",
+    'perf.open': "Ces parties dans l'historique",
     'perf.qAll': "Toutes les files",
     'perf.game1': "1 partie",
     'dash.tabTags': "Traits",
@@ -869,6 +869,11 @@
     'tag.arEarly': "Fort en début de partie",
     'tag.arEarly.t': "Victoires {s} % en parties ARAM de moins de 17 min ({ns}), {l} % de 21 min ou plus ({nl})",
     'tag.arEarly.d': "Taux de victoire en parties ARAM de moins de 17 minutes face aux parties de 21 minutes ou plus. Ta valeur : l'écart ; seul un écart net compte.",
+    'perf.champT': "Clic : seulement les parties de ce champion sur les autres cartes (à nouveau : tous)",
+    'mast.before': "Jouées avant mai 2024",
+    'mast.beforeT': "Riot a changé les points de maîtrise en mai 2024 : environ 500 par partie avant, environ 1 200 après. Indique combien de tes parties ont eu lieu avant – les mêmes points représentent alors plus de parties et d'heures.",
+    'mast.tipRate2': "{pct} % des parties avant la refonte de la maîtrise de mai 2024 (~500 points par partie), le reste après (~1 200) – le curseur au-dessus du tableau",
+    'pg.augs': "Augments",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

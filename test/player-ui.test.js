@@ -45,7 +45,13 @@ test('player page: rank, then the Overview tabs for any player – performance, 
     assert.match(app.$$('#plBody .pc-roles .sro')[0].textContent, /Mid[\s\S]*100 %/);
     assert.equal(app.$('#plBody [data-ppin]'), null);
     assert.match(app.$('#plBody .pc-champs .oc-list').textContent, /Ahri[\s\S]*75 %/);
-    assert.equal(app.$('#plBody [data-pchamp]'), null);
+    // a champion picks only its games here too – never a jump into the own match history
+    assert.equal(app.$('#plBody [data-pchampmh]'), null);
+    await app.click('#plBody .oc-row[data-pchamp="103"]');
+    assert.ok(app.$('#plBody .oc-row[data-pchamp="103"]').classList.contains('on'));
+    assert.match(app.$('#plBody .pf.games').textContent, /Games\s*12/);
+    await app.click('#plBody .oc-row[data-pchamp="103"]');
+    assert.equal(app.$('#plBody .oc-row.on'), null);
     assert.ok(app.$('#plBody .pc-style .rd-head'));
     assert.match(app.$('#plBody .pc-map').textContent, /No deaths or kills with a place yet/, 'lite games have no timeline');
     // the splash art of the champion played most (Ahri)

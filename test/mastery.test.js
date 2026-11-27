@@ -58,3 +58,12 @@ test('ARAM share and own game length', () => {
   assert.equal(len.aram, 20);
   assert.equal(len.n, 3);
 });
+
+test('points per game by the share of games before the rework of May 2024: 500 before, 1,200 after', () => {
+  assert.equal(M.pointsPerGame(1), 500);
+  assert.equal(M.pointsPerGame(0), 1200);
+  assert.equal(M.pointsPerGame(0.5), 850);
+  assert.equal(M.pointsPerGame(null), 850);
+  assert.equal(M.estimate(120000, { before: 0 }).games, 100);
+  assert.equal(M.estimate(50000, { before: 1 }).games, 100);
+});

@@ -327,7 +327,7 @@
     'perf.more': "Show all {n} champions",
     'perf.less': "Only the top 8",
     'perf.sort': "Sort:",
-    'perf.open': "Click: these games in the match history",
+    'perf.open': "These games in the match history",
     'perf.qAll': "All queues",
     'perf.game1': "1 game",
     'dash.tabTags': "Traits",
@@ -915,6 +915,11 @@
     'tag.arEarly': "Early-game team",
     'tag.arEarly.t': "Win rate {s} % in ARAM games under 17 min ({ns}), {l} % of 21 min or more ({nl})",
     'tag.arEarly.d': "Win rate in ARAM games under 17 minutes compared to games of 21 minutes or more. Your value: the difference; only a clear one counts.",
+    'perf.champT': "Click: only this champion's games on every other card (again: all champions)",
+    'mast.before': "Played before May 2024",
+    'mast.beforeT': "Riot changed mastery points in May 2024: about 500 points per game before, about 1,200 after. Set how many of your games were played before – the same points then mean more games and hours.",
+    'mast.tipRate2': "{pct} % of the games before Riot's mastery rework of May 2024 (~500 points per game), the rest after (~1,200) – the slider above the table",
+    'pg.augs': "Augments",
   };
 
   const de = {
@@ -1225,7 +1230,7 @@
     'perf.more': "Alle {n} Champions zeigen",
     'perf.less': "Nur die Top 8",
     'perf.sort': "Sortieren:",
-    'perf.open': "Klick: diese Spiele in der Match history",
+    'perf.open': "Diese Spiele im Spielverlauf",
     'perf.qAll': "Alle Queues",
     'perf.game1': "1 Spiel",
     'dash.tabTags': "Traits",
@@ -1813,6 +1818,11 @@
     'tag.arEarly': "Frühspiel-Stärke",
     'tag.arEarly.t': "Winrate {s} % in ARAM-Spielen unter 17 Min. ({ns}), {l} % ab 21 Min. ({nl})",
     'tag.arEarly.d': "Winrate in ARAM-Spielen unter 17 Minuten im Vergleich zu Spielen ab 21 Minuten. Dein Wert: der Unterschied; nur ein klarer zählt.",
+    'perf.champT': "Klick: nur die Spiele dieses Champions auf allen anderen Kacheln (noch einmal: alle Champions)",
+    'mast.before': "Vor Mai 2024 gespielt",
+    'mast.beforeT': "Riot hat die Mastery-Punkte im Mai 2024 umgestellt: vorher etwa 500 Punkte pro Spiel, danach etwa 1.200. Stell ein, wie viele deiner Spiele davor lagen – dieselben Punkte bedeuten dann mehr Spiele und Stunden.",
+    'mast.tipRate2': "{pct} % der Spiele vor Riots Mastery-Umbau im Mai 2024 (~500 Punkte pro Spiel), der Rest danach (~1.200) – der Regler über der Tabelle",
+    'pg.augs': "Augments",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

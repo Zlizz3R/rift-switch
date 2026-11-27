@@ -119,6 +119,8 @@ function pgTableHtml(g, as, mine) {
   const all = g.players;
   const max = k => Math.max(1, ...all.map(k));
   const maxDmg = max(p => p.dmg || 0), maxTaken = max(p => (p.x && p.x.taken) || 0), maxGold = max(p => p.gold || 0);
+  // Arena, ARAM: Mayhem: every player's augments in a column of their own, right of the gold
+  const augs = all.some(p => p.aug && p.aug.length);
   const teams = [...new Set(all.map(p => p.team))].sort((a, b) => (a === 100 ? -1 : b === 100 ? 1 : a - b));
   const bar = (v, m, cls) => `<span class="pg-bar ${cls}"><i style="width:${Math.max(2, Math.round((100 * v) / m))}%"></i></span>`;
   // ×1.15 under the placement: green better than the lane opponent, red worse
@@ -154,18 +156,19 @@ function pgTableHtml(g, as, mine) {
         <span class="pg-sp">${icon(as.spells, p.spells && p.spells[0], 'pg-s')}${icon(as.perks, p.keystone, 'pg-s')}${icon(as.spells, p.spells && p.spells[1], 'pg-s')}${icon(as.styles, p.sub, 'pg-s')}</span>
         <span class="pg-who"><span class="pg-name" data-player="${esc(JSON.stringify({ puuid: p.puuid, gameName: p.name, tagLine: p.tag }))}" title="${esc(p.name + (p.tag ? '#' + p.tag : ''))}">${esc(p.name || '?')}</span>${r.s ? rankChip(r.s, 'solo') : ''}</span>
         <span class="pg-place" title="${esc(t('pg.placeT'))}">${badge}${laneChip(lane(i))}</span>
-        <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}${augIcons(p, as, 'pg-augs')}</span>
+        <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}</span>
         <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${st.kp == null ? '–' : Math.round(100 * st.kp) + '%'} KP</small></span>
         <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${st.csMin.toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
         <span class="pg-b"><b>${k1(p.dmg)}</b>${bar(p.dmg, maxDmg, team === 100 ? 'blue' : 'red')}</span>
         <span class="pg-b"><b>${x.taken != null ? k1(x.taken) : '–'}</b>${bar(x.taken || 0, maxTaken, 'taken')}</span>
         <span class="pg-b"><b>${k1(p.gold)}</b>${bar(p.gold, maxGold, 'gold')}</span>
+        ${augs ? `<span class="pg-aug">${augIcons(p, as, 'pg-augs')}</span>` : ''}
       </div>`;
     }).join('');
     return head + rows;
   };
-  const cols = `<div class="pg-cols"><span></span><span></span><span></span><span></span><span></span><span>K / D / A · KP</span><span>CS · ${t('det.vision')}</span><span>${t('pg.dealt')}</span><span>${t('pg.taken')}</span><span>${t('mh.gold')}</span></div>`;
-  return `<div class="pg-wrap"><div class="pg-table">${cols}${teams.map(teamHtml).join('')}</div></div>`;
+  const cols = `<div class="pg-cols"><span></span><span></span><span></span><span></span><span></span><span>K / D / A · KP</span><span>CS · ${t('det.vision')}</span><span>${t('pg.dealt')}</span><span>${t('pg.taken')}</span><span>${t('mh.gold')}</span>${augs ? `<span>${t('pg.augs')}</span>` : ''}</div>`;
+  return `<div class="pg-wrap"><div class="pg-table${augs ? ' with-aug' : ''}">${cols}${teams.map(teamHtml).join('')}</div></div>`;
 }
 
 function postgameHtml() {

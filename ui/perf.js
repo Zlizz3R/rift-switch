@@ -24,6 +24,8 @@ const perf = {
   qAuto: !perfQueuesKept(),
   lastOwn: false,
   all: false, cSort: 'n', games: null, mast: null, loading: false,
+  // a champion picked in the list: every other card shows only its games (0 = all champions)
+  champ: 0,
 };
 perf.lastOwn = perf.f.last > 0 && !PERF_LAST.includes(perf.f.last);
 
@@ -103,6 +105,7 @@ function perfLine(ag) {
   parts.push(f.range === 'custom' ? [f.from, f.to].map(d => (d ? fmtDate(new Date(d + 'T00:00').getTime()) : '…')).join(' – ') : $('perfRange').selectedOptions[0] ? $('perfRange').selectedOptions[0].textContent : '');
   if (f.last) parts.push(t('perf.last', { n: num(f.last) }));
   if (f.role) parts.push(t('pos.' + f.role));
+  if (perf.champ) parts.push(perfChamp(perf.champ));
   const chosen = ovChosen();
   parts.push(chosen.length === 1 ? dispName(chosen[0]) : ag && ag.accounts === 1 ? t('mast.account1') : t('mast.accounts', { n: ag ? ag.accounts : 0 }));
   return parts.filter(Boolean).join(' · ');
@@ -124,36 +127,47 @@ function renderPerf() {
   const ag = Stats.aggregate(parts);
   $('perfLine').textContent = perfLine(ag);
   if (!ag) { el.innerHTML = `<div class="chart-empty">${t('mh.noMatch')}</div>`; return; }
-  el.innerHTML = perfAllHtml(parts, ag, { role: perf.f.role, traits: perfOwnTraits() });
+  // a champion no longer among these games: all champions again
+  if (perf.champ && !parts.some(x => x.p.champ === perf.champ)) perf.champ = 0;
+  if (perf.champ) $('perfLine').textContent = perfLine(Stats.aggregate(parts.filter(x => x.p.champ === perf.champ)));
+  el.innerHTML = perfAllHtml(parts, ag, { role: perf.f.role, champ: perf.champ, traits: perfOwnTraits(perf.champ) });
 }
-// the own accounts' traits for the strip: ranked (or ARAM when only ARAM is chosen), every role
-function perfOwnTraits() {
+// the own accounts' traits for the strip: ranked (or ARAM when only ARAM is chosen), every role –
+// with a champion picked, from that champion's games only
+function perfOwnTraits(champ = 0) {
   const chosen = ovChosen(), ids = chosen.map(a => a.puuid);
   const q = perf.f.queues;
   const scope = q.length && q.every(x => x === 'aram') ? 'aram' : q.length && q.every(x => x === 'arena') ? 'arena' : 'ranked';
   const read = (perf.mast || []).filter(m => ids.includes(m.puuid));
   const table = read.length ? MastMath.masteryTable(read) : null;
   const acc = chosen.length === 1 ? chosen[0] : null;
-  return { res: sumRes(perf.games, ids, acc && acc.level != null ? acc.level : null, table, scope), scope };
+  const games = champ ? perf.games.filter(g => g.players.some(p => ids.includes(p.puuid) && p.champ === champ)) : perf.games;
+  return { res: sumRes(games, ids, acc && acc.level != null ? acc.level : null, table, scope), scope, champ };
 }
 // one page: the key figures and the traits on top, then the champions, the roles, the play style and
 // the map as cards – champions left of the others on a medium window, three columns on a wide one, one
 // under the other on a narrow one. ARAM and Arena only: the share of the team instead of the roles and
 // the play style (no lanes there); ARAM's own map.
-// opts: { player: the player page, role: the role filter, traits: { res, scope, others } }
+// opts: { player: the player page, role: the role filter, champ: a champion picked in the list (every
+//   other card shows only its games; the list keeps all champions), traits: { res, scope, others } }
 function perfAllHtml(parts, ag, opts = {}) {
   const card = (id, title, body, sub = '') => `<section class="perf-card pc-${id}" id="perfSec-${id}"><h3 class="perf-card-h">${esc(title)}${sub ? `<small>${sub}</small>` : ''}</h3>${body}</section>`;
-  const off = parts.length > 0 && parts.every(x => Stats.offRift(x.g));
+  const champ = opts.champ && parts.some(x => x.p.champ === opts.champ) ? opts.champ : 0;
+  const sel = champ ? parts.filter(x => x.p.champ === champ) : parts;
+  const agS = champ ? Stats.aggregate(sel) : ag;
+  const off = sel.length > 0 && sel.every(x => Stats.offRift(x.g));
+  const champsCard = card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, { ...opts, champ }),
+    champ ? `<button class="oc-clear" data-pchamp="0">${esc(perfChamp(champ))} ✕</button>` : '');
   // ARAM and Arena: no lanes – the share of the team instead of roles and play style; ARAM keeps its map
   const cards = off
-    ? [card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts)),
-      card('share', t('ov.teamShare'), perfShareHtml(parts), esc(t('ov.fair'))),
-      parts.some(x => MapMath.mapOf(x.g) === 'aram') ? card('map', t('dash.tabMap'), perfMapHtml(parts, opts.player ? { foot: false } : {})) : '']
-    : [card('champs', t('dash.tabChamps'), perfChampsHtml(parts, ag, opts)),
-      opts.role ? '' : card('roles', t('ov.roles'), perfRolesHtml(parts)),
-      card('style', t('dash.tabStyle'), perfStyleHtml(parts, opts.role)),
-      card('map', t('dash.tabMap'), perfMapHtml(parts, opts.player ? { foot: false } : {}))];
-  return `${perfStripHtml(parts, ag, opts.traits)}<div class="perf-grid${off ? ' off' : opts.role ? ' one-role' : ''}">${cards.join('')}</div>`;
+    ? [champsCard,
+      sel.some(x => MapMath.mapOf(x.g) === 'aram') ? card('map', t('dash.tabMap'), perfMapHtml(sel, opts.player ? { foot: false } : {})) : '',
+      card('share', t('ov.teamShare'), perfShareHtml(sel), esc(t('ov.fair')))]
+    : [champsCard,
+      card('map', t('dash.tabMap'), perfMapHtml(sel, opts.player ? { foot: false } : {})),
+      opts.role ? '' : card('roles', t('ov.roles'), perfRolesHtml(sel)),
+      card('style', t('dash.tabStyle'), perfStyleHtml(sel, opts.role))];
+  return `${perfStripHtml(sel, agS, opts.traits)}<div class="perf-grid${off ? ' off' : opts.role ? ' one-role' : ''}">${cards.join('')}</div>`;
 }
 // a way into a section ("Champions →" on At a glance): Performance, scrolled to it
 function perfScrollTo(sec) {
@@ -200,7 +214,7 @@ function perfTraitsHtml(tr) {
   const res = tr.res;
   const role = perf.f.role && !tr.player ? perf.f.role : tr.role || '';
   const main = res && !res.aram ? role || res.main || res.most : '';
-  const picked = res ? Tags.pick(res.results).filter(x => !x.role || !main || x.role === main) : [];
+  const picked = res ? Tags.pick(res.results).filter(x => (!x.role || !main || x.role === main) && !(tr.champ && (x.group === 'pool' || x.group === 'mastery'))) : [];
   const order = x => (Tags.isStrength(x) ? 0 : Tags.isWeakness(x) ? 1 : 2);
   const sorted = [...picked].sort((a, b) => order(a) - order(b));
   const MAX = 7;
@@ -245,19 +259,25 @@ function perfShareHtml(parts) {
 // the Performance views are drawn on the Overview and on the player page: draw again where they are
 const perfRerender = () => (view === 'player' && typeof renderPlayer === 'function' ? renderPlayer() : renderPerf());
 
-// the champion list in the style of op.gg: "All" first, then the champions by games
+// the champion list in the style of op.gg: "All" first, then the champions by games. A click on a
+// champion shows only its games on every other card (again, or "All": every champion); the ↗ of a row
+// opens those games in the match history (own accounts only)
 function perfChampsHtml(parts, ag, opts = {}) {
   let rows = PerfMath.champRows(parts);
   const total = rows.length;
   if (perf.all) rows = PerfMath.sortRows(rows, perf.cSort, -1); else rows = rows.slice(0, 8);
-  // the player page: rows to read, not to click (they would open the own match history)
-  const tag = opts.player ? 'div' : 'button';
-  const row = (r, all) => `<${tag} class="oc-row${all ? ' all' : ''}${opts.player ? ' plain' : ''}"${all || opts.player ? '' : ` data-pchamp="${r.champ}"`}${opts.player ? '' : ` title="${esc(t('perf.open'))}"`}>
+  // the picked champion stays in the list even when it isn't among the first eight
+  if (opts.champ && !rows.some(r => r.champ === opts.champ)) rows.push(PerfMath.champRows(parts).find(r => r.champ === opts.champ));
+  const row = (r, all) => {
+    const on = all ? !opts.champ : r.champ === opts.champ;
+    const mh = all || opts.player ? '' : `<button class="oc-mh" data-pchampmh="${r.champ}" title="${esc(t('perf.open'))}">↗</button>`;
+    return `<div class="oc-row${all ? ' all' : ''}${on && opts.champ ? ' on' : ''}" data-pchamp="${all ? 0 : r.champ}" title="${esc(t(all ? 'rad.allChamps' : 'perf.champT'))}">
       ${all ? `<span class="oc-ic all">${esc(t('perf.all').slice(0, 1))}</span>` : `<img class="oc-ic" src="${CHAMP_ICON(r.champ)}" alt="" loading="lazy">`}
       <span class="oc-name"><b title="${esc(all ? t('perf.all') : perfChamp(r.champ))}">${esc(all ? t('perf.all') : perfChamp(r.champ))}</b><small>${esc(t('perf.cs', { cs: num(Math.round(r.cs)), m: perfDec(r.csMin) }))}</small></span>
       <span class="oc-kda"><b class="${r.n >= PerfMath.MARK.minGames ? PerfMath.markKda(r) : ''}">${r.perfect ? esc(t('perf.perfect')) : esc(t('perf.kdaRatio', { v: perfDec(r.kda, 2) }))}</b><small>${perfAvg(r)}</small></span>
-      <span class="oc-wr"><b class="${r.n >= PerfMath.MARK.minGames ? PerfMath.markWinrate(r) : 'muted'}">${perfPct(r.winrate)}</b><small>${esc(perfGames(r.n))}</small></span>
-    </${tag}>`;
+      <span class="oc-wr"><b class="${r.n >= PerfMath.MARK.minGames ? PerfMath.markWinrate(r) : 'muted'}">${perfPct(r.winrate)}</b><small>${esc(perfGames(r.n))}</small></span>${mh}
+    </div>`;
+  };
   const sorts = perf.all ? `<div class="seg oc-sort"><span>${t('perf.sort')}</span>${[['n', 'perf.games'], ['winrate', 'dash.wr'], ['kda', 'mh.kda'], ['csMin', 'det.csMin']]
     .map(([k, l]) => `<button data-csort="${k}"${perf.cSort === k ? ' class="on"' : ''}>${t(l)}</button>`).join('')}</div>` : '';
   const more = total > 8 ? `<button class="btn oc-more" data-pall>${perf.all ? t('perf.less') : t('perf.more', { n: total })}</button>` : '';
@@ -305,7 +325,8 @@ $('dashPerf').addEventListener('click', e => {
   const cs = e.target.closest('[data-csort]');
   if (cs) { perf.cSort = cs.dataset.csort; return renderPerf(); }
   if (e.target.closest('[data-pall]')) { perf.all = !perf.all; return renderPerf(); }
+  const mh = e.target.closest('[data-pchampmh]');
+  if (mh) return perfOpen(+mh.dataset.pchampmh);
   const ch = e.target.closest('[data-pchamp]');
-  if (ch) return perfOpen(+ch.dataset.pchamp);
-  if (e.target.closest('.oc-row.all')) return perfOpen(0);
+  if (ch) { const c = +ch.dataset.pchamp; perf.champ = c && c !== perf.champ ? c : 0; return renderPerf(); }
 });

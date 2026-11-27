@@ -4,7 +4,10 @@
 (function (root) {
   const PLAYTIME_RULES = {
     // Points per game at a 50 % win rate: ~500 before Riot's mastery rework (patch 14.10, May 2024),
-    // ~1,200 after. The points can't be split into before / after, so the middle of both: 850.
+    // ~1,200 after. The points can't be split into before / after: the share of games played before
+    // the rework is the user's to set (Mastery, a slider; 50 % by default = 850 points per game).
+    pointsBefore: 500,
+    pointsAfter: 1200,
     pointsPerGame: 850,
     pointsSrc: 'Jack J Gaming 2023 (before: win ~900–1,100, loss ~100–300); lolvalue.com 2026 (after: median 1,219)',
     // average game length in minutes when an account has too few stored games of its own
