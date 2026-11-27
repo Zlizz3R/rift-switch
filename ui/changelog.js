@@ -13,6 +13,7 @@
         "Arena's map: one arena – all seven on top of each other, or one of them (its number, or a click on its row).",
         "Mastery: the play time at ~600 points per game (a win gives much more, a loss much less – about the same before and after Riot's 2024 rework); the slider is gone. Traits and milestones for 5 and 10 million points on a champion.",
         "Clash sits next to the ranked queues, before Classic 5v5. A full screen button in the title bar.",
+        "Match history: every game's row shows your placement in it (MVP, ACE or #n); items, augments and badges each have a place of their own – augments no longer push the items aside.",
       ],
       de: [
         "MVP und ACE: Jeder Spieler wird mit Spielern auf derselben Rolle mit demselben Ergebnis verglichen (Gewinner mit Gewinnern) – Kill-Beteiligung, Kills und Schaden des Teams, Tode, Farm, Sicht, erlittener Schaden, Objectives, Crowd Control, die Lane und KDA. Abgestimmt an 2.600 gespeicherten Spielen anderer Spieler: Jede Rolle wird jetzt gleich oft MVP (Supporter waren in 8 % der Spiele MVP, jetzt 20 %), und KDA zählt weniger als Kill-Beteiligung und Kills.",
@@ -23,6 +24,7 @@
         "Arena-Karte: eine Arena – alle sieben übereinander oder eine davon (ihre Nummer oder ein Klick auf ihre Zeile).",
         "Mastery: Die Spielzeit mit ~600 Punkten pro Spiel (ein Sieg bringt deutlich mehr, eine Niederlage viel weniger – vor und nach Riots Umbau 2024 etwa gleich); der Regler ist weg. Traits und Meilensteine für 5 und 10 Millionen Punkte auf einem Champion.",
         "Clash steht bei den Ranked-Queues, vor Classic 5v5. Ein Vollbild-Knopf in der Titelleiste.",
+        "Spielverlauf: Jede Zeile zeigt deine Platzierung im Spiel (MVP, ACE oder #n); Items, Augments und Abzeichen haben je einen festen Platz – Augments schieben die Items nicht mehr zur Seite.",
       ],
     },
     {

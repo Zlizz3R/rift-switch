@@ -562,6 +562,15 @@ function icon(map, id, cls) {
   return x && x[0] ? `<img class="${cls}" src="${esc(x[0])}" title="${esc(x[1] || '')}" alt="">` : `<span class="${cls} none"></span>`;
 }
 
+// the placement of a game's player among all of them – MVP, ACE or #n, the same as in its details
+// (ui/mvp.js); none without every player's numbers (a game read from a list only) or in a remake
+function mhPlaceChip(g, p) {
+  if (g.lite || Stats.isRemake(g) || !g.players || g.players.length < 2) return '';
+  const r = Mvp.placements(g), i = g.players.indexOf(p);
+  if (i < 0) return '';
+  const k = i === r.mvp ? 'mvp' : i === r.ace ? 'ace' : '';
+  return `<span class="mh-pl ${k}" title="${esc(t('pg.placeT'))}">${k ? k.toUpperCase() : '#' + r.place(i)}</span>`;
+}
 function gameRow(g, as) {
   const ownerId = g.owners[0];
   const me = g.players.find(p => p.puuid === ownerId) || g.players[0];
@@ -602,9 +611,9 @@ function gameRow(g, as) {
           <span>${t('mh.gold')} <b>${short(me.gold)}</b></span>
         </div>
       </div>
-      <div class="mh-items">${(me.items || [0, 0, 0, 0, 0, 0, 0]).map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}
-        ${MULTI[me.multi] ? `<span class="mh-badge">${t(MULTI[me.multi])}</span>` : ''}${me.place ? `<span class="mh-badge place p${me.place}">${t('mh.place', { n: me.place })}</span>` : ''}</div>
-      ${augIcons(me, as, 'mh-augs')}
+      <div class="mh-items">${(me.items || [0, 0, 0, 0, 0, 0, 0]).map((id, i) => (id ? icon(as.items, id, 'mh-it' + (i === 6 ? ' trinket' : '')) : `<span class="mh-it none${i === 6 ? ' trinket' : ''}"></span>`)).join('')}</div>
+      <div class="mh-aug-col">${augIcons(me, as, 'mh-augs')}</div>
+      <div class="mh-badges">${mhPlaceChip(g, me)}${me.place ? `<span class="mh-badge place p${me.place}">${t('mh.place', { n: me.place })}</span>` : ''}${MULTI[me.multi] ? `<span class="mh-badge">${t(MULTI[me.multi])}</span>` : ''}</div>
     </div>
     <div class="mh-teams">${teamsTable(g, mine)}</div>
     ${mh.open.has(String(g.id)) && !g.lite ? detailsHtml(g, as, mine) : ''}

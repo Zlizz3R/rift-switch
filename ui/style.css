@@ -639,8 +639,10 @@ body.locked #passBox { background: var(--bg); }
 .mh-q { color: #5383e8; font-size: 12px; } .loss .mh-q { color: #e84057; } .remake .mh-q { color: var(--muted); }
 .mh-res { color: var(--text); font-size: 12px; }
 .mh-owner { margin-top: 4px; color: var(--gold); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mh-main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.mh-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+/* the game: champion … stats on top, then items, augments and badges – each in a place of its own,
+   so augments never push the items aside */
+.mh-main { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.mh-top { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 0 100%; }
 .mh-champ { position: relative; width: 48px; height: 48px; flex: none; }
 .mh-champ img { width: 48px; height: 48px; border-radius: 50%; }
 .mh-champ span { position: absolute; right: -3px; bottom: -3px; font-size: 10px; font-weight: 600; padding: 0 4px; border-radius: 8px;
@@ -653,7 +655,15 @@ body.locked #passBox { background: var(--bg); }
 .mh-ratio { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
 .mh-stats { margin-left: 8px; display: grid; grid-template-columns: auto auto; gap: 1px 12px; font-size: 11px; color: var(--muted); min-width: 0; }
 .mh-stats span { white-space: nowrap; } .mh-stats b { color: var(--text); font-weight: 600; }
-.mh-items { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; }
+.mh-items { display: flex; gap: 2px; align-items: center; flex: none; width: 172px; }
+.mh-aug-col:empty { display: none; }
+.mh-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.mh-badges:empty { display: none; }
+.mh-badges .mh-badge { margin-left: 0; }
+/* the placement among all players of the game (MVP, ACE, #n) */
+.mh-pl { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,.08); color: var(--muted); cursor: help; }
+.mh-pl.mvp { background: rgba(200,170,110,.24); color: var(--gold2); }
+.mh-pl.ace { background: rgba(143,124,247,.24); color: #c4b8ff; }
 .mh-it { width: 22px; height: 22px; border-radius: 5px; background: rgba(0,0,0,.35); }
 .mh-it.trinket { border-radius: 50%; margin-left: 4px; }
 .mh-badge { margin-left: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #e84057; color: #fff; }
@@ -810,9 +820,15 @@ body.locked #passBox { background: var(--bg); }
 @container (min-width: 1650px) {
   /* the table keeps its natural width; the game itself (champion, KDA, stats, items) spreads over the rest */
   .mh-row { grid-template-columns: 96px minmax(0, 1fr) auto; }
-  .mh-main { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-evenly; gap: 8px 18px; min-width: 0; }
+  /* fixed places: the game's figures take the room left, then items, augments and badges in columns
+     of their own width – the same spot in every row, with or without augments */
+  .mh-main { display: grid; grid-template-columns: minmax(max-content, 1fr) 172px 150px 130px; align-items: center; column-gap: 20px; }
+  .mh-top { justify-self: center; }
+  .mh-aug-col:empty, .mh-badges:empty { display: block; }
+  .mh-badges { flex-direction: column; align-items: flex-start; }
+  /* the names in a fixed width too, so the table is as wide in every row */
   .mh-teams { font-size: 12px; column-gap: 8px;
-    grid-template-columns: 124px 124px minmax(0, 150px) 20px 22px 20px minmax(0, 150px) 124px 124px; }
+    grid-template-columns: 124px 124px 150px 20px 22px 20px 150px 124px 124px; }
   .mh-c.w { display: flex; }
   .mh-h.w { display: block; }
   .mh-c.n { display: none; }
@@ -1403,7 +1419,7 @@ span.mh-ch { cursor: default; }
 .pg-items { display: flex; gap: 2px; flex-wrap: wrap; }
 /* augments (Arena, ARAM: Mayhem): their rarity's colour around them */
 .mh-augs, .pg-augs { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
-.mh-augs { margin-top: 4px; }
+.mh-augs { margin-top: 0; }
 .pg-augs { flex-basis: 100%; margin-top: 2px; }
 /* the augments' column (Arena, ARAM: Mayhem) right of the gold */
 .pg-aug { padding-left: 10px; }

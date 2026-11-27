@@ -212,6 +212,34 @@ test('match details: every player\'s augments (ARAM: Mayhem, Arena) in a column 
   });
 });
 
+test('match history: the placement (MVP, ACE, #n) in the folded row; items and augments in places of their own', () => {
+  const won = mhGame(1, 2400, { v: 7 });
+  Object.assign(won.players[0], { k: 12, d: 0, a: 9, dmg: 45000, aug: [101, 102], multi: 2 });
+  const lost = mhGame(2, 420, { v: 7 });
+  lost.players.forEach((p) => { p.win = p.team === 200; });
+  Object.assign(lost.players[0], { k: 0, d: 9, a: 1, dmg: 4000, gold: 5000 });
+  const lite = { ...mhGame(3, 420), lite: true, players: [mhGame(3, 420).players[0]] };
+  const games = [won, lost, lite];
+  const replies = {
+    matches: { index: games.map((g) => [g.id, g.t, g.q, P(1)]), waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': (ids) => games.filter((g) => ids.includes(g.id)),
+  };
+  return withApp({ replies }, async (app) => {
+    await app.openMatches();
+    const row = (id) => app.$(`.mh-row[data-gid="${id}"]`);
+    assert.equal(row('1').querySelector('.mh-pl').textContent, 'MVP');
+    assert.ok(row('1').querySelector('.mh-pl').classList.contains('mvp'));
+    assert.match(row('2').querySelector('.mh-pl').textContent, /^#\d+$/, 'the worst of the losers: a number');
+    assert.equal(row('3').querySelector('.mh-pl'), null, 'a game from a list only: no placement');
+    // items, augments and badges each in a place of its own – the items hold only the seven items
+    const r1 = row('1');
+    assert.equal(r1.querySelectorAll('.mh-items > *').length, 7);
+    assert.equal(r1.querySelectorAll('.mh-aug-col .aug').length, 2);
+    assert.match(r1.querySelector('.mh-badges').textContent, /MVP\s*Double Kill/);
+    assert.equal(row('2').querySelector('.mh-aug-col').children.length, 0, 'no augments: the place stays empty');
+  });
+});
+
 test('match details: Columns – the figures of the table chosen by the user (up to five, kept)', () => {
   const g = mhGame(5, 420, { v: 7 });
   g.players.forEach((p, i) => { p.x = { taken: 10000 + i, heal: 1000 * i }; });

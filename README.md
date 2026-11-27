@@ -191,7 +191,8 @@ you are logged in to that account.)
 
 A tab of the Overview – its accounts are the Overview's chips.
 
-- **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed.
+- **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed. Each
+  row shows your **placement** in that game (MVP, ACE or #n) next to the items and augments.
   One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and the 200 newest
   games of every account – the most the League client hands out. Rift Switch keeps them all, so the history grows
   with every Load – and it **loads by itself** when an account signs in (Settings → Logging in; once per account in
