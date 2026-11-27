@@ -216,7 +216,7 @@ A tab of the Overview – its accounts are the Overview's chips.
   augments, right of the gold; Arena's six teams by their placing) – the table's figures are yours to choose
   (*Columns*: damage, taken, gold, per minute, mitigated, healing, objectives, towers, crowd control, wards; up to
   five) – the **placement** of all ten with MVP (the best of the losers keeps its number, in purple) and a **score**
-  from 0 to 10 (5 = an average game): every player against players on the same role with the same result, tuned on
+  from 0 to 10 (5 = an average game; hover it for that player's curve): every player against players on the same role with the same result, tuned on
   thousands of stored games so that every role is MVP equally often – the **score over the game**, minute by minute,
   for any two players (the game as if it had ended then) – team gold over time (hover for the lead at each
   minute), any two players side by side – and its **replay**: download it and watch it in League (games of the

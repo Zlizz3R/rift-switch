@@ -1066,6 +1066,13 @@
     'tag.arnBack': "Arena میں واپسی",
     'tag.arnBack.t': "{days} دن کے وقفے کے بعد واپسی",
     'tag.arnBack.d': "دو ہفتے یا زیادہ کے وقفے کے بعد پہلے Arena گیمز۔",
+    'sc.title': "Rift Switch اسکور",
+    'sc.of': "{all} میں سے #{n}",
+    'sc.early': "شروع",
+    'sc.mid': "درمیان",
+    'sc.late': "آخر",
+    'sc.noCurve': "اس گیم کی ابھی کوئی ٹائم لائن نہیں – صرف اس کا اسکور۔",
+    'sc.note': "0 سے 10، 5 = ایک اوسط گیم۔ خم: گیم جیسے اسی منٹ ختم ہوا ہو۔",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

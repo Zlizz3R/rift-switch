@@ -1065,6 +1065,13 @@
     'tag.arnBack': "Arena-তে ফিরে আসা",
     'tag.arnBack.t': "{days} দিনের বিরতির পর ফিরে",
     'tag.arnBack.d': "দুই সপ্তাহ বা তার বেশি বিরতির পর প্রথম Arena গেম।",
+    'sc.title': "Rift Switch স্কোর",
+    'sc.of': "{all} জনের মধ্যে #{n}",
+    'sc.early': "শুরু",
+    'sc.mid': "মাঝ",
+    'sc.late': "শেষ",
+    'sc.noCurve': "এই গেমের এখনও টাইমলাইন নেই – শুধু তার স্কোর।",
+    'sc.note': "0 থেকে 10, 5 = একটি গড় গেম। বক্ররেখা: যেন গেমটি সেই মিনিটে শেষ হয়েছিল।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

@@ -1064,6 +1064,13 @@
     'tag.arnBack': "重返斗魂竞技场",
     'tag.arnBack.t': "休息 {days} 天后回归",
     'tag.arnBack.d': "休息两周或更久后的首批斗魂竞技场对局。",
+    'sc.title': "Rift Switch 评分",
+    'sc.of': "{all} 人中第 {n}",
+    'sc.early': "前期",
+    'sc.mid': "中期",
+    'sc.late': "后期",
+    'sc.noCurve': "此对局暂无时间线——只有评分。",
+    'sc.note': "0 到 10，5 = 普通水平。曲线：假设对局在那一分钟结束。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

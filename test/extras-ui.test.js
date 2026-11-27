@@ -275,6 +275,23 @@ test('match details: the score over the game – two players\' curves from 0 to 
     await app.settle();
     assert.equal(app.$('.mh-det [data-sec="score"] + .det-body [data-cmp="0"]').value, '0', 'the first one stays');
     assert.equal(app.$('.mh-det [data-sec="score"] + .det-body [data-cmp="1"]').value, '2');
+    // hovering any player's number: a small window with that player's score and curve
+    const hover = (el, type = 'mouseover') => el.dispatchEvent(new app.w.MouseEvent(type, { bubbles: true }));
+    const pop = app.$('#scPop');
+    for (const k of [0, 5, 7]) {
+      const badge = app.$$('.mh-det .pg-row')[k].querySelector('.pg-pl');
+      hover(badge);
+      assert.equal(pop.hidden, false, 'every player');
+      assert.equal(pop.querySelector('.sp-head em').textContent, badge.querySelector('em').textContent, 'the same score');
+      assert.ok(pop.querySelector('.sp-plot polyline'), 'with the curve');
+      assert.ok(pop.querySelectorAll('.sp-phases span').length >= 2, 'early, mid game …');
+      hover(badge, 'mouseout');
+      assert.equal(pop.hidden, true);
+    }
+    // the number in the game's row too
+    hover(app.$('.mh-row .mh-pl'));
+    assert.equal(pop.hidden, false);
+    assert.match(pop.querySelector('.sp-foot').textContent, /MVP|#\d+ of 10/);
     assert.deepEqual(app.errors.map(String), []);
   });
 });

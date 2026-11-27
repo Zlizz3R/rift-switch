@@ -1065,6 +1065,13 @@
     'tag.arnBack': "العودة إلى Arena",
     'tag.arnBack.t': "العودة بعد استراحة {days} يومًا",
     'tag.arnBack.d': "أولى مباريات Arena بعد استراحة أسبوعين أو أكثر.",
+    'sc.title': "نتيجة Rift Switch",
+    'sc.of': "#{n} من {all}",
+    'sc.early': "البداية",
+    'sc.mid': "الوسط",
+    'sc.late': "النهاية",
+    'sc.noCurve': "لا يوجد خط زمني لهذه المباراة بعد – فقط نتيجتها.",
+    'sc.note': "من 0 إلى 10، و5 = مباراة متوسطة. المنحنى: المباراة كما لو انتهت في تلك الدقيقة.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

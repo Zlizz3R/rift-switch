@@ -1068,6 +1068,13 @@
     'tag.arnBack': "De retour en Arena",
     'tag.arnBack.t': "De retour après {days} jours de pause",
     'tag.arnBack.d': "Les premières parties d'Arena après une pause de deux semaines ou plus.",
+    'sc.title': "Score Rift Switch",
+    'sc.of': "#{n} sur {all}",
+    'sc.early': "Début",
+    'sc.mid': "Milieu",
+    'sc.late': "Fin",
+    'sc.noCurve': "Pas encore de chronologie pour cette partie – seulement son score.",
+    'sc.note': "De 0 à 10, 5 = une partie moyenne. La courbe : la partie comme si elle s'était terminée à cette minute.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

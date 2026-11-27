@@ -1067,6 +1067,13 @@
     'tag.arnBack': "Снова на Арене",
     'tag.arnBack.t': "Вернулся после перерыва в {days} дн.",
     'tag.arnBack.d': "Первые игры на Арене после перерыва в две недели и больше.",
+    'sc.title': "Оценка Rift Switch",
+    'sc.of': "#{n} из {all}",
+    'sc.early': "Начало",
+    'sc.mid': "Середина",
+    'sc.late': "Поздняя",
+    'sc.noCurve': "Для этой игры ещё нет хроники – только оценка.",
+    'sc.note': "От 0 до 10, 5 = средняя игра. Кривая: игра так, будто она закончилась в ту минуту.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

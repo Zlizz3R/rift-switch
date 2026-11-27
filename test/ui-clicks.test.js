@@ -419,6 +419,11 @@ test('live page after a game: the last game with both teams, MVP, the best loser
     assert.doesNotMatch(app.$('.pg-table').textContent, /ACE/);
     // every player's score from 0 to 10 under the placement
     for (const r of rows) assert.match(r.querySelector('.pg-pl em').textContent, /^(10|\d)\.\d$/);
+    // hovering it: the score's window – without a timeline only the score
+    rows[3].querySelector('.pg-pl').dispatchEvent(new app.w.MouseEvent('mouseover', { bubbles: true }));
+    assert.equal(app.$('#scPop').hidden, false);
+    assert.ok(app.$('#scPop .sp-none'), 'no curve without a timeline');
+    assert.equal(app.$('#scPop .sp-head em').textContent, rows[3].querySelector('.pg-pl em').textContent);
     assert.equal(app.$$('.pg-bans img').length, 2);
     assert.doesNotMatch(app.$('#liveBody').textContent, /Nothing going on/i);
     // the best damage (the last player) fills its bar

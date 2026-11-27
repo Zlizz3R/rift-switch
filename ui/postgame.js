@@ -116,6 +116,7 @@ function pgTableHtml(g, as, mine) {
   const key = String(g.id);
   pgTables.delete(key);
   pgTables.set(key, { g, as, mine });
+  pgscRegister(g);
   if (pgTables.size > 20) pgTables.delete(pgTables.keys().next().value);
   // the chosen columns: each value (0 for a figure left out while others have it), the best of the ten
   const cols = pgColsChosen();
@@ -173,14 +174,15 @@ function pgTableHtml(g, as, mine) {
       const kda = st.perfect ? null : st.kda;
       // MVP (the best winner) or the place; the best of the losers keeps its number, in colour; under
       // it the score (0–10)
-      const badge = `<b class="pg-pl${i === mvp ? ' mvp' : i === ace ? ' best-loss' : ''}"${i === ace ? ` title="${esc(t('pg.bestLossT'))}"` : ''}>${i === mvp ? 'MVP' : '#' + place(i)}<em>${pgRate(rating(i))}</em></b>`;
+      // hovering it: the score's window (scPop) – the curve over the game, for every player
+      const badge = `<b class="pg-pl${i === mvp ? ' mvp' : i === ace ? ' best-loss' : ''}" data-pgsc="${esc(key)}|${i}">${i === mvp ? 'MVP' : '#' + place(i)}<em>${pgRate(rating(i))}</em></b>`;
       const r = mh.ranks[p.puuid] || {};
       const wards = x.wards != null ? ` title="${esc(t('det.visionT'))}: ${x.wards} / ${x.wardsKilled || 0} / ${x.pinks || 0}"` : '';
       return `<div class="pg-row${mine.has(p.puuid) ? ' me' : ''}">
         <span class="pg-ch"><img src="${CHAMP_ICON(p.champ)}" alt=""><i>${p.lvl}</i></span>
         <span class="pg-sp">${icon(as.spells, p.spells && p.spells[0], 'pg-s')}${icon(as.perks, p.keystone, 'pg-s')}${icon(as.spells, p.spells && p.spells[1], 'pg-s')}${icon(as.styles, p.sub, 'pg-s')}</span>
         <span class="pg-who"><span class="pg-name" data-player="${esc(JSON.stringify({ puuid: p.puuid, gameName: p.name, tagLine: p.tag }))}" title="${esc(p.name + (p.tag ? '#' + p.tag : ''))}">${esc(p.name || '?')}</span>${r.s ? rankChip(r.s, 'solo') : ''}</span>
-        <span class="pg-place" title="${esc(t('pg.placeT'))}">${badge}${laneChip(lane(i))}</span>
+        <span class="pg-place">${badge}${laneChip(lane(i))}</span>
         <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}</span>
         <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${st.kp == null ? '–' : Math.round(100 * st.kp) + '%'} KP</small></span>
         <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${st.csMin.toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
@@ -239,6 +241,75 @@ document.addEventListener('click', e => {
   }
   if (!pgColMenu.hidden && !e.target.closest('#pgColMenu')) pgColMenu.hidden = true;
 });
+
+// ---------- the score on hover: a small window with a player's curve ----------
+// Every placement number (the players' table, the match history's rows, Live after a game) carries
+// data-pgsc="game id|player index"; hovering it opens this window: the score, the curve over the
+// game (Mvp.timeline – none without a timeline, e.g. the end screen's numbers), the phases, the
+// placement. The games are found by id (the newest 300 drawn).
+const pgscGames = new Map();
+function pgscRegister(g) {
+  const k = String(g.id);
+  pgscGames.delete(k);
+  pgscGames.set(k, g);
+  if (pgscGames.size > 300) pgscGames.delete(pgscGames.keys().next().value);
+  return k;
+}
+const pgscPlaced = new WeakMap();
+const pgscPlacements = g => { if (!pgscPlaced.has(g)) pgscPlaced.set(g, Mvp.placements(g)); return pgscPlaced.get(g); };
+const pgscPop = document.createElement('div');
+pgscPop.className = 'sc-pop'; pgscPop.id = 'scPop'; pgscPop.hidden = true;
+document.body.appendChild(pgscPop);
+function pgscPopHtml(g, i) {
+  const p = g.players[i];
+  if (!p) return '';
+  const pl = pgscPlacements(g);
+  const s = (scoreTimeline(g) || [])[i];
+  const best = i === pl.mvp ? 'mvp' : i === pl.ace ? 'best-loss' : '';
+  let chart = '', phases = '';
+  if (s && s.length > 1) {
+    const W = 260, H = 80, n = s.length;
+    const x = j => (j / (n - 1)) * W, y = v => H - 4 - (v / 10) * (H - 8);
+    const ms = [5, 10, 15, 20, 25, 30, 35, 40].filter(m => m - 1 < n - 1);
+    chart = `<div class="sp-plot"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+        ${ms.map(m => `<line class="gl" x1="${x(m - 1).toFixed(1)}" x2="${x(m - 1).toFixed(1)}" y1="0" y2="${H}"/>`).join('')}
+        <line class="mid" x1="0" x2="${W}" y1="${y(5)}" y2="${y(5)}"/>
+        <polyline class="ln ${best}" points="${s.map((v, j) => `${x(j).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}"/></svg>
+        <span class="sp-axis"><i>10</i><i>5</i><i>0</i></span></div>
+      <div class="det-mins">${ms.map(m => `<span style="left:${(100 * (m - 1) / (n - 1)).toFixed(2)}%">${m}′</span>`).join('')}</div>`;
+    // the phases: minute 1–14, 15–25, after that (point j is minute j + 1)
+    const avg = (a, b) => { const part = s.slice(a, Math.min(b, n)); return part.length ? part.reduce((x, y) => x + y, 0) / part.length : null; };
+    const ph = [['sc.early', 0, 14], ['sc.mid', 14, 25], ['sc.late', 25, n]].map(([k, a, b]) => [k, avg(a, b)]).filter(([, v]) => v != null);
+    phases = `<div class="sp-phases">${ph.map(([k, v]) => `<span class="${v >= 5.5 ? 'up' : v <= 4.5 ? 'down' : ''}">${esc(t(k))} <b>${pgRate(v)}</b></span>`).join('')}</div>`;
+  } else chart = `<p class="sp-none">${esc(t('sc.noCurve'))}</p>`;
+  const place = i === pl.mvp ? 'MVP' : t('sc.of', { n: pl.place(i), all: g.players.length });
+  return `<div class="sp-head"><img src="${CHAMP_ICON(p.champ)}" alt=""><span><b>${esc(p.name || '?')}</b><small>${esc(t('sc.title'))}</small></span><em class="${best}">${pgRate(pl.rating(i))}</em></div>
+    ${chart}${phases}
+    <div class="sp-foot"><span class="sp-pl ${best}">${esc(place)}</span><span class="${p.win ? 'win' : 'loss'}">${esc(t(p.win ? 'mh.win' : 'mh.loss'))}</span>${i === pl.ace ? `<small>${esc(t('pg.bestLossT'))}</small>` : ''}</div>
+    <p class="sp-note">${esc(t('sc.note'))}</p>`;
+}
+function pgscPopShow(el) {
+  const [id, idx] = el.dataset.pgsc.split('|');
+  const g = pgscGames.get(id);
+  if (!g) return;
+  pgscPop.innerHTML = pgscPopHtml(g, +idx);
+  pgscPop.hidden = false;
+  // right of the number, else left of it; never off the window
+  const r = el.getBoundingClientRect(), w = pgscPop.offsetWidth, h = pgscPop.offsetHeight;
+  let left = r.right + 10;
+  if (left + w > innerWidth - 8) left = Math.max(8, r.left - w - 10);
+  pgscPop.style.left = left + 'px';
+  pgscPop.style.top = Math.max(8, Math.min(r.top + r.height / 2 - h / 2, innerHeight - h - 8)) + 'px';
+}
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest && e.target.closest('[data-pgsc]');
+  if (el) pgscPopShow(el);
+});
+document.addEventListener('mouseout', e => {
+  const el = e.target.closest && e.target.closest('[data-pgsc]');
+  if (el && !(e.relatedTarget && el.contains(e.relatedTarget))) pgscPop.hidden = true;
+});
+document.addEventListener('scroll', () => { pgscPop.hidden = true; }, true);
 
 function postgameHtml() {
   if (pgWaiting()) return `<div class="live-card pg-card pg-wait"><div class="lc-head"><h3>${t('pg.title')}</h3></div>

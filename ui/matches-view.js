@@ -623,7 +623,8 @@ function mhPlaceChip(g, p) {
   const r = Mvp.placements(g), i = g.players.indexOf(p);
   if (i < 0) return '';
   const k = i === r.mvp ? 'mvp' : i === r.ace ? 'best-loss' : '';
-  return `<span class="mh-pl ${k}" title="${esc(t('pg.placeT'))}">${k === 'mvp' ? 'MVP' : '#' + r.place(i)}<b>${pgRate(r.rating(i))}</b></span>`;
+  // hovering it: the score's window with the curve (postgame.js pgscPop)
+  return `<span class="mh-pl ${k}" data-pgsc="${esc(pgscRegister(g))}|${i}">${k === 'mvp' ? 'MVP' : '#' + r.place(i)}<b>${pgRate(r.rating(i))}</b></span>`;
 }
 function gameRow(g, as) {
   const ownerId = g.owners[0];

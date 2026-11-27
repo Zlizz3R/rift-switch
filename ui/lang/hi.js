@@ -1066,6 +1066,13 @@
     'tag.arnBack': "Arena में वापसी",
     'tag.arnBack.t': "{days} दिन के ब्रेक के बाद वापसी",
     'tag.arnBack.d': "दो हफ़्ते या उससे ज़्यादा के ब्रेक के बाद पहले Arena गेम।",
+    'sc.title': "Rift Switch स्कोर",
+    'sc.of': "{all} में #{n}",
+    'sc.early': "शुरुआत",
+    'sc.mid': "बीच",
+    'sc.late': "अंत",
+    'sc.noCurve': "इस गेम की अभी कोई टाइमलाइन नहीं – सिर्फ़ उसका स्कोर।",
+    'sc.note': "0 से 10, 5 = एक औसत गेम। वक्र: गेम जैसे उसी मिनट खत्म हुआ हो।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).hi = L;

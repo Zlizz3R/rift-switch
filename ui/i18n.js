@@ -1114,6 +1114,13 @@
     'tag.arnBack': "Back in Arena",
     'tag.arnBack.t': "Back after a {days}-day break",
     'tag.arnBack.d': "The first Arena games after a break of two weeks or more.",
+    'sc.title': "Rift Switch score",
+    'sc.of': "#{n} of {all}",
+    'sc.early': "Early",
+    'sc.mid': "Mid game",
+    'sc.late': "Late",
+    'sc.noCurve': "No timeline for this game yet – only its score.",
+    'sc.note': "0 to 10, 5 = an average game. The curve: the game as if it had ended at that minute.",
   };
 
   const de = {
@@ -2211,6 +2218,13 @@
     'tag.arnBack': "Zurück in der Arena",
     'tag.arnBack.t': "Zurück nach {days} Tagen Pause",
     'tag.arnBack.d': "Die ersten Arena-Spiele nach einer Pause von zwei Wochen oder mehr.",
+    'sc.title': "Rift-Switch-Score",
+    'sc.of': "#{n} von {all}",
+    'sc.early': "Früh",
+    'sc.mid': "Mitte",
+    'sc.late': "Spät",
+    'sc.noCurve': "Für dieses Spiel gibt es noch keine Timeline – nur seinen Score.",
+    'sc.note': "0 bis 10, 5 = ein durchschnittliches Spiel. Die Kurve: das Spiel, als wäre es in dieser Minute zu Ende gewesen.",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)
