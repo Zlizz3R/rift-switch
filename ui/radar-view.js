@@ -77,10 +77,56 @@ document.addEventListener('change', e => {
   perfRerender();
 });
 
+// ---------- another player: the play profile (gpi.js) – eight areas against what is usual for the
+// role, the shape only (no figures, no lane opponent: Riot's policies) ----------
+// a word only for what stands out (never a weak word about another player)
+const gpiBand = v => (v == null ? '' : v >= 75 ? t('gpi.strong') : v >= 55 ? t('gpi.solid') : '');
+function gpiTip(a) {
+  const band = gpiBand(a.v);
+  return `${t('gpi.' + a.id)}${band ? ' – ' + band : ''}${a.v == null ? ' – ' + t('gpi.few') : ''}
+${t('gpi.d.' + a.id)}`;
+}
+function gpiSvg(areas, size = 220) {
+  const c = size / 2, R = size / 2 - 34, n = areas.length;
+  // 0 is not the middle: the shape never collapses into a point (it shows a profile, not a rank)
+  const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n, r = (0.18 + 0.82 * (v / 100)) * R; return [c + r * Math.cos(a), c + r * Math.sin(a)]; };
+  const ring = k => areas.map((_, i) => pt(i, k).map(v => v.toFixed(1)).join(',')).join(' ');
+  const rings = [25, 55, 80, 100].map(k => `<polygon class="rd-ring${k === 55 ? ' mid' : ''}" points="${ring(k)}"/>`).join('');
+  const spokes = areas.map((a, i) => { const [x, y] = pt(i, 100); return `<line class="rd-axis${a.v == null ? ' few' : ''}" x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
+  const known = areas.map((a, i) => (a.v == null ? null : pt(i, a.v))).filter(Boolean);
+  const shape = known.length >= 3 ? `<polygon class="rd-shape gpi" points="${known.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}"/>` : '';
+  const labels = areas.map((a, i) => {
+    const [x, y] = pt(i, 128);
+    return `<text class="rd-label${a.v == null ? ' few' : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${esc(t('gpi.' + a.id))}<title>${esc(gpiTip(a))}</title></text>`;
+  }).join('');
+  return `<svg class="radar gpi" viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px">${rings}${spokes}${shape}${labels}</svg>`;
+}
+// the areas as a list: what each means, a word for what stands out
+function gpiList(areas) {
+  return `<div class="gpi-list">${areas.map(a => {
+    const band = gpiBand(a.v);
+    return `<div class="gpi-row${a.v == null ? ' few' : ''}" title="${esc(gpiTip(a))}"><span>${esc(t('gpi.' + a.id))}</span>${band ? `<b class="${a.v >= 75 ? 'up' : ''}">${esc(band)}</b>` : ''}</div>`;
+  }).join('')}</div>`;
+}
+function gpiHtml(parts, chosenRole) {
+  const rows = parts.filter(x => !Stats.offRift(x.g));
+  const role = chosenRole || Gpi.roleOf(rows);
+  const areas = Gpi.profile(rows, role);
+  const note = role ? `<span class="muted">${esc(t('gpi.role', { role: t('pos.' + role) }))}</span>` : '';
+  if (!areas.some(a => a.v != null)) return `<div class="rd-head">${note}</div><div class="chart-empty">${t('rad.none')}</div>`;
+  return `<div class="rd-head">${note}</div><div class="rd-wrap">${gpiSvg(areas, 300)}${gpiList(areas)}</div><p class="coll-foot">${t('gpi.basis')}</p>`;
+}
+
 // ---------- Live: a card shows its radar when its champion is clicked ----------
+// an own account: the exact radar against the lane opponent; another player: the play profile
 function scRadarHtml(c) {
   const parts = Stats.byParticipation(scGames(c.p.puuid)).filter(x => x.p.puuid === c.p.puuid);
   const role = c.pos || c.roles.main || c.roles.most;
+  const mine = (S.accounts || []).some(a => a.puuid === c.p.puuid);
+  if (!mine) {
+    const areas = Gpi.profile(parts, role);
+    return `<div class="sc-radar">${areas.some(a => a.v != null) ? gpiSvg(areas, 170) : `<span class="muted">${esc(t('rad.none'))}</span>`}</div>`;
+  }
   const axes = Radar.radar(role ? parts.filter(x => Stats.role(x.g, x.p) === role) : parts);
   return `<div class="sc-radar">${axes.some(a => a.ratio != null) ? radarSvg(axes, 170) : `<span class="muted">${esc(t('rad.none'))}</span>`}</div>`;
 }

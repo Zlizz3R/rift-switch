@@ -1551,6 +1551,12 @@ div.mh-more { gap: 10px; }
 .sc-bar { position: absolute; left: 0; height: 2px; background: var(--teal); z-index: 1; }
 .sc-card.top .sc-bar { bottom: 6px; } .sc-card.bot .sc-bar { top: 6px; }
 .sc-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* a player the game hides (streamer mode): champion and position, a note – nothing looked up */
+.sc-card.sc-hidden { border-style: dashed; }
+.sc-eye { display: grid; place-items: center; color: var(--muted); }
+.sc-eye svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.sc-hidden .sc-name b { color: var(--muted); }
+.sc-hidnote { margin: 2px 0 0; font-size: 11px; line-height: 1.4; color: var(--muted); }
 .sc-ic { width: 30px; height: 30px; border-radius: 50%; flex: none; background: #0d1119; }
 .sc-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .sc-name b, .sc-name small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1677,6 +1683,13 @@ div.mh-more { gap: 10px; }
 .ov-accs button.in { color: var(--text); }
 
 .rd-bar b.up { color: #4cc38a; } .rd-bar b.down { color: #e5737a; }
+/* another player's play profile (gpi.js): the shape and the areas, a word only for what stands out */
+.rd-shape.gpi { fill: rgba(10,200,185,.16); stroke: #0ac8b9; }
+.gpi-list { display: grid; grid-template-columns: 1fr; gap: 6px; min-width: 200px; flex: 1 1 200px; }
+.gpi-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,.025); font-size: 12.5px; cursor: help; }
+.gpi-row b { font-size: 11px; font-weight: 600; color: var(--muted); }
+.gpi-row b.up { color: #4cc38a; }
+.gpi-row.few { opacity: .5; }
 .pr-role td:first-child { cursor: pointer; }
 
 /* ---------- collection by rarity ---------- */
@@ -2051,18 +2064,20 @@ main { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org
 .perf-card .rd-wrap { justify-content: center; gap: 20px; }
 .perf-card .rd-bars { min-width: 0; flex: 1 1 240px; }
 .perf-card .radar { max-width: 100%; height: auto; }
-/* medium: champions and roles left, the map right at the top, the play style under it (ARAM / Arena:
-   the share of the team under the champions) – the map never slides down under a long list */
+/* medium: the champions left, the map right at the top, the play style and the roles under it (the
+   short cards on the right – the roles never vanish under a long champion list; ARAM / Arena: the
+   share of the team under the champions) */
 @media (min-width: 1100px) {
-  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "champs map" "roles map" "roles style"; align-items: start; }
-  .perf-grid.one-role { grid-template-areas: "champs map" "style map"; }
+  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "champs map" "champs style" "champs roles";
+    grid-template-rows: auto auto 1fr; align-items: start; }
+  .perf-grid.one-role { grid-template-areas: "champs map" "champs style"; grid-template-rows: auto 1fr; }
   .perf-grid.off { grid-template-areas: "champs map" "share map"; }
   .pc-champs { grid-area: champs; } .pc-roles { grid-area: roles; } .pc-style { grid-area: style; } .pc-map { grid-area: map; }
   .pc-share { grid-area: share; }
 }
-/* wide: champions and roles, the map, the play style side by side */
+/* wide: the champions, the map, the play style with the roles under it side by side */
 @media (min-width: 1700px) {
-  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "champs map style" "roles map style";
+  .perf-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "champs map style" "champs map roles";
     grid-template-rows: auto 1fr; }
   .perf-grid.one-role { grid-template-areas: "champs map style"; }
   .perf-grid.off { grid-template-areas: "champs map share"; }

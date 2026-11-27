@@ -42,14 +42,6 @@ test('do I know them: the last meeting, as team or enemy, with wins', () => {
   assert.equal(I.daysAgo(Date.now()), 0);
 });
 
-test('record against the lane opponent\'s champion: on my champion, else all of them', () => {
-  const vs = (myChamp, win) => game({ 2: { puuid: 'me', champ: myChamp, win }, 7: { champ: 122 } });
-  const games = [vs(103, true), vs(103, true), vs(103, false), vs(238, false)];
-  assert.deepEqual(I.recordVs(games, ['me'], 103, 122), { w: 2, l: 1, n: 3, all: false });
-  assert.deepEqual(I.recordVs(games, ['me'], 1, 122), { w: 2, l: 2, n: 4, all: true });
-  assert.equal(I.recordVs(games, ['me'], 103, 999), null);
-});
-
 test('damage mix: the player\'s own games, else the champion, else its damage type', () => {
   const magic = { x: { phys: 0, magic: 2000, true: 0 } };
   const games = [1, 2, 3].map(() => game({ 0: { puuid: 'p1', champ: 7, ...magic } }));

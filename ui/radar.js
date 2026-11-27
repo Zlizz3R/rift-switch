@@ -6,7 +6,7 @@
 (function (root) {
   const node = typeof module !== 'undefined' && module.exports;
   const St = node ? require('./stats.js') : root.Stats;
-  const MIN = 10;
+  const MIN = 1;
   // id, the figure of a player in a game (null = unknown), invert: fewer is better
   const AXES = [
     { id: 'farm', of: (g, p) => St.csMin(g, p), unit: 'CS/min', dec: 1 },

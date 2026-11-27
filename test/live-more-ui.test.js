@@ -1,4 +1,4 @@
-// Live, more (live-more.js) in the real window: premade badges, "do I know them?", the own record
+// Live, more (live-more.js) in the real window: premade badges, "do I know them?"
 // against the lane opponent's champion, the damage mix, the helper by phase.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -24,7 +24,7 @@ const theirs = [game({ 0: { puuid: 'e1' }, 1: { puuid: 'e2' } }, 30), game({ 0: 
 // an own game 2 hours ago: e3 was my lane opponent on Zed (238), I won on Ahri (103)
 const own = game({ 2: { puuid: P(1), champ: 103, win: true }, 7: { puuid: 'e3', champ: 238, win: false } }, 2);
 
-test('live board: a party gets a badge, "do I know them?", my record, the damage mix', async () => {
+test('live board: a party gets a badge, "do I know them?", the damage mix', async () => {
   const app = await boot({ replies: {
     live: { clientUp: true, phase: 'InProgress', me: P(1), inGame },
     'scout-games': scoutReply({ e1: { games: theirs }, e2: { games: theirs } }),
@@ -53,8 +53,8 @@ test('live board: a party gets a badge, "do I know them?", my record, the damage
     const know = [...c('e3').querySelectorAll('.tchip')].find(x => /Last game: enemy \(Zed\)/.test(x.textContent));
     assert.ok(know, c('e3').querySelector('.sc-tags').textContent);
     assert.equal(know.dataset.opengame, own.id);
-    // my record against my lane opponent's champion
-    assert.match(c(P(1)).querySelector('.sc-tags').textContent, /Vs Zed: 1–0 · 100 %/);
+    // no record against the lane opponent's champion any more (user, 27.11.2026)
+    assert.doesNotMatch(c(P(1)).querySelector('.sc-tags').textContent, /Vs Zed/);
     // the damage mix of both teams, enemies first
     const mixes = app.$$('.mix');
     assert.equal(mixes.length, 2);
@@ -88,7 +88,7 @@ test('post-game: the own tags before / after this game; it stays until the next 
   } finally { app.close(); }
 });
 
-test('live board: blue on top even when I am on red; my record still against my lane opponent', async () => {
+test('live board: blue on top even when I am on red', async () => {
   const red = { queueId: 420, gameId: 1, teamOne: inGame.teamTwo, teamTwo: inGame.teamOne };
   const app = await boot({ replies: {
     live: { clientUp: true, phase: 'InProgress', me: P(1), inGame: red },
@@ -104,7 +104,7 @@ test('live board: blue on top even when I am on red; my record still against my 
     assert.deepEqual(rows[0], ['e1', 'e2', 'e3', 'e4', 'e5']);
     assert.ok(rows[1].includes(P(1)));
     assert.ok(app.$(`.sc-card.bot.me[data-sc="${P(1)}"]`));
-    assert.match(app.$(`.sc-card[data-sc="${P(1)}"] .sc-tags`).textContent, /Vs Zed: 1–0 · 100 %/);
+    assert.doesNotMatch(app.$(`.sc-card[data-sc="${P(1)}"] .sc-tags`).textContent, /Vs Zed/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
@@ -185,7 +185,7 @@ test('live board: two others met once before – when, the other by his champion
   } finally { app.close(); }
 });
 
-test('live board: no "do I know them?" on my own premades; without lanes the record shows its numbers', async () => {
+test('live board: no "do I know them?" on my own premades', async () => {
   // a2 queued with me (the client's lobby) and played with me 3 hours ago – no chip for that
   const withMate = game({ 2: { puuid: P(1), champ: 103, win: true }, 1: { puuid: 'a2', champ: 64 }, 7: { puuid: 'e3', champ: 238, win: false } }, 3);
   const aram = { ...inGame, queueId: 450, party: [P(1), 'a2'] };
@@ -204,8 +204,8 @@ test('live board: no "do I know them?" on my own premades; without lanes the rec
     assert.ok(![...c('a2').querySelectorAll('.tchip')].some(x => /Team|team/.test(x.textContent)), c('a2').querySelector('.sc-tags').textContent);
     // e3 (not a premade) still gets it
     assert.ok([...c('e3').querySelectorAll('.tchip')].some(x => /enemy \(Zed\)/.test(x.textContent)));
-    // no lanes: the chip itself says the record against each enemy champion
-    assert.match(c(P(1)).querySelector('.sc-tags').textContent, /Your record vs\. their champions: Zed 1–0/);
+    // no record chip without lanes either
+    assert.doesNotMatch(c(P(1)).querySelector('.sc-tags').textContent, /Your record/);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

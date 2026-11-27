@@ -317,7 +317,20 @@ async fn in_game() -> Option<Value> {
     if !gd["teamOne"].is_array() || !gd["teamTwo"].is_array() {
         return None;
     }
-    let (one, two) = tokio::join!(players(team(&gd["teamOne"])), players(team(&gd["teamTwo"])));
+    let (mut one, mut two) =
+        tokio::join!(players(team(&gd["teamOne"])), players(team(&gd["teamTwo"])));
+    // a player the game hides (streamer mode): a card with the champion and position only – never
+    // looked up (Riot's policies)
+    let hidden = |t: &Value| -> Vec<Value> {
+        t.as_array()
+            .into_iter()
+            .flatten()
+            .filter(|p| !has_id(p))
+            .map(|p| json!({ "hidden": true, "championId": p["championId"], "position": sv(p, "selectedPosition") }))
+            .collect()
+    };
+    one.extend(hidden(&gd["teamOne"]));
+    two.extend(hidden(&gd["teamTwo"]));
     Some(json!({ "queueId": gd["queue"]["id"], "teamOne": one, "teamTwo": two, "party": party() }))
 }
 

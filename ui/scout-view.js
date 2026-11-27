@@ -65,6 +65,8 @@ function scGames(puuid) {
 // everything a card shows about one player
 // queue: the game's – an ARAM game shows the ARAM traits (this season's ARAM games)
 function scCard(p, enemyChamps, queue) {
+  // hidden by the game (streamer mode): champion and position only, never looked up
+  if (p.hidden) return { p, hidden: true, n: 0, ag: null, pts: null, roles: { shares: new Map(), total: 0 }, pos: SC_POS[String(p.position || '').toUpperCase()] || '', live: [], tags: [] };
   const aram = [450, 2400].includes(queue);
   const key = `${p.puuid}|${p.championId}|${scIdsOf(p.puuid).length}|${aram ? 'a' : ''}`;
   if (scv.memo && scv.memo.has(key)) return scv.memo.get(key);
@@ -147,7 +149,21 @@ function scPeople(n) {
 }
 const scRing = (pct, inner, cls = '') => `<div class="sc-ring ${cls}" style="--p:${pct == null ? 0 : Math.round(pct)}">${inner}</div>`;
 
+// a player the game hides: the champion, the position and why there is nothing more
+function scHiddenHtml(c, side, slot, guess) {
+  const p = c.p;
+  const champName = (champById(p.championId) || {}).name || '';
+  return `<div class="sc-card ${side} sc-hidden">
+    <div class="sc-head"><span class="sc-ic sc-eye"><svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c5 0 9 4.5 10 7a13 13 0 0 1-3.2 4.3M6.6 6.6C4.3 8 2.7 10.2 2 12c1 2.5 5 7 10 7a9.6 9.6 0 0 0 4.4-1.1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></span>
+      <span class="sc-name"><b>${esc(t('scout.hidden'))}</b><small>${esc(t('scout.hiddenSub'))}</small></span>
+      ${slot ? `<img class="sc-pos${guess ? ' guess' : ''}" src="${posIcon(slot)}" alt="" title="${esc(t('pos.' + slot) + (guess ? ' – ' + t('scout.guessed') : ''))}">` : ''}</div>
+    <div class="sc-mid"><div class="sc-champ">${p.championId ? `<img src="${champIcon(p.championId)}" alt="">` : '<span></span>'}<span><b>${esc(champName)}</b></span></div></div>
+    <p class="sc-hidnote">${esc(t('scout.hiddenT'))}</p>
+  </div>`;
+}
+
 function scCardHtml(c, side, slot, guess, ex = {}) {
+  if (c.hidden) return scHiddenHtml(c, side, slot, guess);
   const p = c.p;
   // live tags first, then the hints about this game (premades, met before, record), then the traits
   // by how much they matter (Tags.tierOf) – up to the chosen tier, the rest behind "+n"
@@ -209,9 +225,13 @@ function scoutBoardHtml(d) {
   let prog = '';
   if (sc && sc.of) {
     // first everyone's match list, then their games; while the game runs it goes on, slower
+    // then their timelines (the cards have every figure meanwhile; some traits come with them)
+    const tl = sc.tl == null ? sc.total : sc.tl;
     const base = sc.listed < sc.of ? t('scout.lists', { n: sc.listed, of: sc.of })
-      : sc.done < sc.total ? t('scout.games', { done: sc.done, total: sc.total }) : '';
-    const pct = Math.round(sc.listed < sc.of ? (100 * sc.listed) / sc.of : sc.total ? (100 * sc.done) / sc.total : 100);
+      : sc.done < sc.total ? t('scout.games', { done: sc.done, total: sc.total })
+        : tl < sc.total ? t('scout.timelines', { done: tl, total: sc.total }) : '';
+    const pct = Math.round(sc.listed < sc.of ? (100 * sc.listed) / sc.of : !sc.total ? 100
+      : sc.done < sc.total ? (100 * sc.done) / sc.total : (100 * tl) / sc.total);
     if (base) prog = `<div class="sc-prog${sc.running ? ' slow' : ''}"><span>${esc(sc.running ? `${t('scout.slow')} · ${base}` : base)}</span><b>${pct} %</b>
       <span class="bar"><i style="width:${pct}%"></i></span></div>`;
   }

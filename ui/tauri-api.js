@@ -59,6 +59,7 @@
     othersClear: () => call('others-clear'),
     scoutGames: (puuids, have) => call('scout-games', puuids, have || []),
     playerGames: (puuid, have) => call('player-games', puuid, have || []),
+    playerRetry: (puuid) => call('player-retry', puuid),
     laneStats: () => call('lane-stats'),
     findPlayer: q => call('find-player', q),
     champDamage: ids => call('champ-damage', ids),

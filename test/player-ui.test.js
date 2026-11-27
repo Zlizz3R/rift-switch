@@ -53,6 +53,10 @@ test('player page: rank, then the Overview tabs for any player – performance, 
     await app.click('#plBody .oc-row[data-pchamp="103"]');
     assert.equal(app.$('#plBody .oc-row.on'), null);
     assert.ok(app.$('#plBody .pc-style .rd-head'));
+    // another player: the play profile – areas without figures, never against the lane opponent
+    assert.ok(app.$('#plBody .pc-style svg.radar.gpi'));
+    assert.match(app.$('#plBody .pc-style').textContent, /Fighting[\s\S]*Versatility/);
+    assert.doesNotMatch(app.$('#plBody .pc-style').textContent, /lane opponent/);
     assert.match(app.$('#plBody .pc-map').textContent, /No deaths or kills with a place yet/, 'lite games have no timeline');
     // the splash art of the champion played most (Ahri)
     assert.equal(app.$('#plArt').dataset.alias, 'ahri');

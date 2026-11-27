@@ -15,7 +15,7 @@ function game(me = {}, opp = {}, o = {}) {
 }
 const rows = games => St.byParticipation(games).filter(x => x.p.puuid === 'me');
 
-test('radar: own value ÷ lane opponent, averaged; deaths the other way round; too few games = no value', () => {
+test('radar: own value ÷ lane opponent, averaged; deaths the other way round; one game is enough', () => {
   const games = Array.from({ length: 10 }, () => game({ cs: 240, d: 2 }, { cs: 200, d: 4 }));
   const r = Object.fromEntries(Rd.radar(rows(games)).map(a => [a.id, a]));
   assert.ok(Math.abs(r.farm.ratio - 1.2) < 1e-9);
@@ -24,9 +24,31 @@ test('radar: own value ÷ lane opponent, averaged; deaths the other way round; t
   assert.ok(Math.abs(r.farm.mine - 8) < 1e-9 && Math.abs(r.farm.theirs - 200 / 30) < 1e-9);
   assert.equal(r.lane.ratio, null);                   // no gold per minute stored
   assert.equal(r.lane.n, 0);
-  // 9 games: no value, not 0
-  assert.equal(Rd.radar(rows(games.slice(0, 9)))[0].ratio, null);
+  // one game is enough (user, 27.11.2026); none: no value, not 0
+  assert.ok(Math.abs(Rd.radar(rows(games.slice(0, 1)))[0].ratio - 1.2) < 1e-9);
+  assert.equal(Rd.radar([])[0].ratio, null);
   // ARAM (no lanes) doesn't count
   const aram = Array.from({ length: 12 }, () => game({}, {}, { mode: 'ARAM', q: 450 }));
   assert.equal(Rd.radar(rows(aram))[0].n, 0);
+});
+
+// another player's play profile (ui/gpi.js): areas 0–100 against the role's thresholds
+const Gpi = require('../ui/gpi');
+test('play profile: eight areas, more farm = a higher farming score, never below 4 or above 99', () => {
+  const lo = Array.from({ length: 6 }, () => game({ cs: 150, d: 7 }));
+  const hi = Array.from({ length: 6 }, () => game({ cs: 270, d: 2 }));
+  const a = Object.fromEntries(Gpi.profile(rows(lo)).map(x => [x.id, x]));
+  const b = Object.fromEntries(Gpi.profile(rows(hi)).map(x => [x.id, x]));
+  assert.deepEqual(Object.keys(a), ['fight', 'farm', 'vision', 'surv', 'obj', 'aggr', 'cons', 'vers']);
+  assert.ok(b.farm.v > a.farm.v);
+  assert.ok(b.surv.v > a.surv.v);
+  for (const x of [...Object.values(a), ...Object.values(b)]) assert.ok(x.v == null || (x.v >= 4 && x.v <= 99));
+  // the middle of a role's thresholds is about 55
+  const L = Gpi.levelsOf('csMin', 'mid');
+  assert.equal(Math.round(Gpi.scoreOf((L.weak + L.great) / 2, L)), 55);
+  // fewer deaths is better
+  const D = Gpi.levelsOf('deaths', 'mid');
+  assert.ok(Gpi.scoreOf(2, D) > Gpi.scoreOf(8, D));
+  // ARAM doesn't count
+  assert.ok(Gpi.profile(rows(Array.from({ length: 4 }, () => game({}, {}, { mode: 'ARAM', q: 450 })))).every(x => x.v == null));
 });

@@ -110,10 +110,14 @@ function renderPlayer() {
   const pr = plv.progress;
   const halt = plHalt(own);
   let load = '';
-  if (halt) load = `<div class="pl-note${halt === 'pl.noClient' ? ' warn' : ''}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg><span>${esc(t(halt))}</span></div>`;
+  // League seemed closed: "Try again" asks at once (a busy client can look closed for a moment)
+  if (halt) load = `<div class="pl-note${halt === 'pl.noClient' ? ' warn' : ''}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg><span>${esc(t(halt))}</span>${halt === 'pl.noClient' ? `<button class="btn" data-plretry>${esc(t('pl.retry'))}</button>` : ''}</div>`;
   else if (!own && pr) {
-    const txt = !pr.listed ? t('pl.reading') : pr.done < pr.total ? t('scout.games', { done: pr.done, total: pr.total }) : '';
-    const pct = !pr.listed ? 5 : pr.total ? Math.round((100 * pr.done) / pr.total) : 100;
+    // first every game's details (all figures), then their timelines (some traits come with them)
+    const tl = pr.tl == null ? pr.total : pr.tl;
+    const txt = !pr.listed ? t('pl.reading') : pr.done < pr.total ? t('scout.games', { done: pr.done, total: pr.total })
+      : tl < pr.total ? t('scout.timelines', { done: tl, total: pr.total }) : '';
+    const pct = !pr.listed ? 5 : !pr.total ? 100 : Math.round((100 * (pr.done < pr.total ? pr.done : tl)) / pr.total);
     if (txt) load = `<div class="sc-prog pl-prog"><span>${esc(txt)}</span><b>${pct} %</b><span class="bar"><i style="width:${pct}%"></i></span></div>`;
   }
   const all = plGames();
@@ -166,7 +170,7 @@ function renderPlayer() {
     const agR = Stats.aggregate(parts);
     if (plv.champ && !parts.some(x => x.p.champ === plv.champ)) plv.champ = 0;
     body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
-      : perfAllHtml(parts, agR, { player: true, role: plv.role, champ: plv.champ, traits: { res: traitsOf('', plv.champ), scope, player: true, role: plv.role, champ: plv.champ } });
+      : perfAllHtml(parts, agR, { player: true, others: !own, role: plv.role, champ: plv.champ, traits: { res: traitsOf('', plv.champ), scope, player: true, role: plv.role, champ: plv.champ } });
     head = `${bar}${roleSeg}${basis}`;
   }
   el.innerHTML = `<div class="pl-bar">${head}</div><div class="pl-tabbody">${body}</div>`;
@@ -210,6 +214,12 @@ $('viewPlayer').addEventListener('change', e => {
 $('viewPlayer').addEventListener('click', e => {
   const s = e.target.closest('[data-plsite]');
   if (s) return openSite(plSiteOf(), s.dataset.plsite);
+  if (e.target.closest('[data-plretry]')) {
+    plLive = '';
+    api.playerRetry(plv.p.puuid);
+    setTimeout(loadPlayer, 1500);
+    return loadPlayer();
+  }
   const q = e.target.closest('[data-plq]');
   if (q && !q.disabled) { plv.queue = q.dataset.plq; return renderPlayer(); }
   const tb = e.target.closest('[data-pltab]');

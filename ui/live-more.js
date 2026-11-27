@@ -57,7 +57,7 @@ function dmgMixHtml(teams) {
   return rows.length ? `<div class="mixes">${rows.join('')}</div>` : '';
 }
 
-// ---------- the board's extras: parties, hints, meetings, record ----------
+// ---------- the board's extras: parties, hints, meetings ----------
 // g: liveData.inGame; rows: [[{c, slot}], [{c, slot}]] as laid out (blue side first)
 function lmBoardExtras(g, rows) {
   lmNeedOwn();
@@ -142,28 +142,6 @@ function lmBoardExtras(g, rows) {
       res: t(L.win ? 'hint.won' : 'hint.lost'), when: new Date(L.g.t).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }), acc: acc ? dispName(acc) : '?' })];
     if (m.n > 1) tip.push(t('know.total', { n: m.n, e: m.against.n, ew: m.against.w, el: m.against.n - m.against.w, tm: m.same.n, tw: m.same.w }));
     add(p.puuid, `<button class="tchip tc-info" data-opengame="${esc(L.g.id)}" title="${esc(tip.join('\n'))}">${esc(t(L.same ? 'know.team' : 'know.enemy', { when, champ: champName(L.them.champ) }))}</button>`);
-  }
-  // my record against my lane opponent's champion (on my card)
-  const myRow = rows.find(r => r.some(x => x.c.p.puuid === liveData.me));
-  const oppRow = myRow && rows.find(r => r !== myRow);
-  if (myRow && oppRow) {
-    const meX = myRow.find(x => x.c.p.puuid === liveData.me);
-    const mine = meX.c.p, opp = meX.slot && oppRow.find(x => x.slot === meX.slot);
-    const fmt = (r, champ) => t(r.all ? 'rec.lineAll' : 'rec.line', { champ: champName(champ), w: r.w, l: r.l, pct: Math.round((100 * r.w) / r.n) });
-    if (opp) {
-      const r = Insights.recordVs(scv.own || [], own, mine.championId, opp.c.p.championId);
-      if (r) add(mine.puuid, `<span class="tchip tc-info" title="${esc(t('rec.tip'))}">${esc(fmt(r, opp.c.p.championId))}</span>`);
-    } else {
-      // the lane opponent is unknown: the record against each enemy champion on the chip itself
-      // (Ahri 3–1 · Zed 0–2, the most played first; * = over all your champions), in full when hovering
-      const recs = oppRow.map(x => ({ champ: x.c.p.championId, r: Insights.recordVs(scv.own || [], own, mine.championId, x.c.p.championId) }))
-        .filter(x => x.r).sort((a, b) => (a.r.all - b.r.all) || (b.r.n - a.r.n));
-      if (recs.length) {
-        const short = recs.slice(0, 3).map(x => `${champName(x.champ)} ${x.r.w}–${x.r.l}${x.r.all ? '*' : ''}`).join(' · ') + (recs.length > 3 ? ` · +${recs.length - 3}` : '');
-        const tip = [t('rec.tip'), ...recs.map(x => fmt(x.r, x.champ))].join('\n');
-        add(mine.puuid, `<span class="tchip tc-info" title="${esc(tip)}">${esc(`${t('rec.vsAll')}: ${short}`)}</span>`);
-      }
-    }
   }
   return out;
 }

@@ -61,6 +61,9 @@ pub struct Entry {
 /// 7 = the augments of Arena and ARAM: Mayhem ("aug") and Arena's placing ("place") – only games
 /// of those queues are fetched again for it (AUG_QUEUES).
 pub const GAME_VERSION: u8 = 7;
+/// Other players' games in two passes (Live, the player page): first the details alone, stored
+/// with this format (every figure, no timeline), then the timeline – the full game replaces it.
+pub const DETAILS_ONLY: u8 = 1;
 /// Queues with augments: Arena (1700, 1710), ARAM: Mayhem (2400; 3270 as a custom game)
 pub const AUG_QUEUES: [i64; 4] = [1700, 1710, 2400, 3270];
 /// A stored game that needs its details again: an older format – format 6 only in a queue with augments
@@ -628,6 +631,47 @@ impl Matches {
         }
         out
     }
+    /// Games of these players that have their details but not yet their timeline (format
+    /// DETAILS_ONLY), the players in turn like `missing_for`.
+    pub fn timelines_for(&self, puuids: &[String]) -> Vec<String> {
+        let lists: Vec<Vec<&String>> = puuids
+            .iter()
+            .map(|p| {
+                let mut l: Vec<&String> = self
+                    .detail_ids(p)
+                    .into_iter()
+                    .filter(|id| self.index.get(*id).is_some_and(|e| e.v == DETAILS_ONLY))
+                    .collect();
+                l.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
+                l
+            })
+            .collect();
+        let mut seen = std::collections::HashSet::new();
+        let mut out = vec![];
+        for i in 0..lists.iter().map(Vec::len).max().unwrap_or(0) {
+            for l in &lists {
+                if let Some(id) = l.get(i) {
+                    if seen.insert(*id) {
+                        out.push((*id).clone());
+                    }
+                }
+            }
+        }
+        out
+    }
+    /// The player page: its games with details but no timeline yet, newest first.
+    pub fn timelines_all(&self, puuid: &str) -> Vec<String> {
+        let Some((_, ids)) = self.by.iter().find(|(p, _)| p == puuid) else {
+            return vec![];
+        };
+        let mut out: Vec<String> = ids
+            .iter()
+            .filter(|id| self.index.get(*id).is_some_and(|e| e.v == DETAILS_ONLY))
+            .cloned()
+            .collect();
+        out.sort_by_key(|id| std::cmp::Reverse(id_num(id)));
+        out
+    }
     /// The player page: every game of the player's list gets its details (all queues, up to 200),
     /// newest first.
     pub fn missing_all(&self, puuid: &str) -> Vec<String> {
@@ -652,6 +696,21 @@ impl Matches {
             .filter(|id| self.index.get(*id).is_some_and(|e| e.v > 0))
             .count();
         (done, ids.len())
+    }
+    /// Games of a player with their timeline too: (Live's games, the player page's games).
+    pub fn timeline_done(&self, puuid: &str) -> (usize, usize) {
+        let full = |id: &String| self.index.get(id).is_some_and(|e| e.v > DETAILS_ONLY);
+        let live = self
+            .detail_ids(puuid)
+            .into_iter()
+            .filter(|id| full(id))
+            .count();
+        let all = self
+            .by
+            .iter()
+            .find(|(p, _)| p == puuid)
+            .map_or(0, |(_, ids)| ids.iter().filter(|id| full(id)).count());
+        (live, all)
     }
     /// (games with details, games that get details) of a player.
     pub fn progress(&self, puuid: &str) -> (usize, usize) {
@@ -1658,6 +1717,33 @@ mod tests {
             o.missing_for(&["a".into(), "b".into()]),
             vec!["20", "19", "9", "18", "8", "17", "16"]
         );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn details_first_then_the_timelines() {
+        let dir = std::env::temp_dir().join(format!("rs-two-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let now = crate::riot::now_ms();
+        let mut o = Matches::load_others(dir.join("matches-others"));
+        let mut d = compact(&detail(2)).unwrap();
+        d["t"] = json!(now);
+        let p = d["players"][0]["puuid"].as_str().unwrap().to_string();
+        o.note(&p, &[json!({ "id": 2, "t": now, "q": 420 })]);
+        assert_eq!(o.missing_for(std::slice::from_ref(&p)), vec!["2"]);
+        // the first pass: the details alone – no longer missing, but its timeline is
+        let mut first = d.clone();
+        first["v"] = json!(DETAILS_ONLY);
+        assert!(o.insert(&first));
+        assert!(o.missing_for(std::slice::from_ref(&p)).is_empty());
+        assert_eq!(o.timelines_for(std::slice::from_ref(&p)), vec!["2"]);
+        assert_eq!(o.timelines_all(&p), vec!["2"]);
+        assert_eq!(o.progress(&p), (1, 1));
+        assert_eq!(o.timeline_done(&p), (0, 0));
+        // the second pass: the full game replaces it
+        assert!(o.insert(&d));
+        assert!(o.timelines_for(std::slice::from_ref(&p)).is_empty());
+        assert_eq!(o.timeline_done(&p), (1, 1));
         let _ = fs::remove_dir_all(&dir);
     }
 

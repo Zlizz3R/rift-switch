@@ -166,7 +166,8 @@ function perfAllHtml(parts, ag, opts = {}) {
     : [champsCard,
       card('map', t('dash.tabMap'), perfMapHtml(sel, opts.player ? { foot: false } : {})),
       opts.role ? '' : card('roles', t('ov.roles'), perfRolesHtml(sel)),
-      card('style', t('dash.tabStyle'), perfStyleHtml(sel, opts.role))];
+      // another player: the play profile (no figures, no lane opponent); own accounts: the exact radar
+      card('style', t('dash.tabStyle'), opts.others ? gpiHtml(sel, opts.role) : perfStyleHtml(sel, opts.role))];
   return `${perfStripHtml(sel, agS, opts.traits)}<div class="perf-grid${off ? ' off' : opts.role ? ' one-role' : ''}">${cards.join('')}</div>`;
 }
 // a way into a section ("Champions →" on At a glance): Performance, scrolled to it

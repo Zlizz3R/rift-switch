@@ -81,27 +81,6 @@
     return Math.ceil((d0.getTime() - t) / DAY);
   }
 
-  // ---------- the own record against a champion ----------
-  // In own games where the lane opponent played `enemy`: wins / games – on `champ` if there are
-  // any, else over all own champions (all: true).
-  function recordVs(ownGames, own, champ, enemy) {
-    const mine = new Set(own);
-    const rows = [];
-    for (const g of ownGames) {
-      if (St.isRemake(g)) continue;
-      for (const p of g.players) {
-        if (!mine.has(p.puuid)) continue;
-        const o = St.laneOpponent(g, p);
-        if (o && o.champ === enemy) rows.push({ p, champ: p.champ });
-      }
-    }
-    const on = rows.filter(r => r.champ === champ);
-    const use = on.length ? on : rows;
-    if (!use.length) return null;
-    const w = use.filter(r => r.p.win).length;
-    return { w, l: use.length - w, n: use.length, all: !on.length };
-  }
-
   // ---------- damage mix of a team ----------
   // champs: [{ puuid, champ }]; games: every known game; types: { champ: 'kPhysical'|'kMagic'|'kMixed' }
   // → { ad, ap, tru (0..1), per: [{ champ, src: 'player'|'champ'|'type'|null }] }
@@ -207,7 +186,7 @@
     });
   }
 
-  const api = { together, parties, onceMet, meetings, daysAgo, recordVs, damageMix, tagDiff, roleCounts, guessLanes };
+  const api = { together, parties, onceMet, meetings, daysAgo, damageMix, tagDiff, roleCounts, guessLanes };
   if (node) module.exports = api;
   else root.Insights = api;
 })(typeof window !== 'undefined' ? window : this);

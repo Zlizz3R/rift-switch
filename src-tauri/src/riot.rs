@@ -229,6 +229,35 @@ pub async fn lcu(path: &str, timeout_ms: u64, method: &str) -> Option<Value> {
     let lf = lockfile()?;
     api(&lf, path, timeout_ms, method).await
 }
+/// A GET that tells a refusal from a busy client: Ok(answer); Err(true) = the client answered "no"
+/// (an error status – the game isn't there); Err(false) = no answer in time (busy, or League closed).
+pub async fn lcu_try(path: &str, timeout_ms: u64) -> Result<Value, bool> {
+    let Some(lf) = lockfile() else {
+        return Err(false);
+    };
+    let r = api_raw(&lf, path, timeout_ms, "GET").await;
+    if r.up && (200..300).contains(&r.status) {
+        Ok(r.body.unwrap_or(Value::Bool(true)))
+    } else {
+        Err(r.up && r.status >= 400)
+    }
+}
+
+/// League's own game option "Hide player names" (Interface; the game shows champion names instead –
+/// what streamers use). Stored per account by the client. None: League isn't open.
+pub async fn hide_names() -> Option<bool> {
+    let s = lcu("/lol-game-settings/v1/game-settings", 4000, "GET").await?;
+    s["HUD"]["HidePlayerNames"].as_bool()
+}
+pub async fn set_hide_names(on: bool) -> bool {
+    lcu_json(
+        "/lol-game-settings/v1/game-settings",
+        "PATCH",
+        &json!({ "HUD": { "HidePlayerNames": on } }),
+    )
+    .await
+    .is_some()
+}
 pub async fn get(path: &str) -> Option<Value> {
     lcu(path, 4000, "GET").await
 }
@@ -1554,9 +1583,12 @@ async fn match_page(puuid: &str, beg: usize, end: usize, timeout: u64) -> Option
     mh["games"]["games"].as_array().cloned()
 }
 /// The League client hands out one page per player and client session: the FIRST request decides
-/// its size (later ones get the same answer, whatever range they ask for – checked 25.11.2026).
-/// At most 200 games come back (0–199; asking for more still gives 200), about 800 KB and 12–14 s
-/// the first time, then about 0.2 s. So the own accounts always ask for all 200 at once.
+/// its size (later ones get the same answer, whatever range they ask for – checked 25.11.2026 and
+/// 27.11.2026). At most 200 games come back (0–199; asking for more still gives 200). The first time
+/// it takes about 1.5 s for 20 games, 4 s for 50, 8.6 s for 100, 12 s for 200 – and the client
+/// reads ONE list at a time: four asked at once come after 12, 25, 38 and 50 s, and every game asked
+/// meanwhile waits for the list (measured 27.11.2026 with tools/lcu-speed.js). So the own accounts
+/// ask for all 200 at once; Live asks for fewer during a game (SCOUT_LIST_IN_GAME in main.rs).
 pub const HISTORY_MAX: usize = 200;
 pub async fn history_summary(puuid: &str) -> Option<HistorySummary> {
     Some(summarize_games(
@@ -1567,7 +1599,12 @@ pub async fn history_summary(puuid: &str) -> Option<HistorySummary> {
 /// A player's whole match list as the client sends it (each game with that player's own numbers):
 /// the 200 newest (see HISTORY_MAX).
 pub async fn match_games(puuid: &str) -> Option<Vec<Value>> {
-    match_page(puuid, 0, HISTORY_MAX - 1, 30_000).await
+    match_games_n(puuid, HISTORY_MAX).await
+}
+/// The n newest (n ≤ 200; see HISTORY_MAX – whatever is asked first stays the size for this player
+/// until League restarts). A long timeout: the client reads one list after the other.
+pub async fn match_games_n(puuid: &str, n: usize) -> Option<Vec<Value>> {
+    match_page(puuid, 0, n.clamp(1, HISTORY_MAX) - 1, 60_000).await
 }
 /// A player's match list -> [{ id, t, q }] (see HISTORY_MAX: the first request per client session
 /// sets how many games every later one gets).

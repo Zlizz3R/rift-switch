@@ -73,8 +73,16 @@ test('live board: ten cards on their positions, tags from the player\'s games, s
     app.w.eval('renderLive(true)');
     await app.settle();
     assert.ok(app.$('.sc-prog.slow'));
-    assert.match(app.$('.sc-prog').textContent, /loading slower so it stays smooth · Game details · 60 \/ 120 games/);
+    assert.match(app.$('.sc-prog').textContent, /League answers slower now · Game details · 60 \/ 120 games/);
     assert.equal(app.$('.sc-prog .bar i').style.width, '50%');
+    // every game's details there: then the timelines (second pass)
+    progress = { ...progress, done: 120, tl: 30 };
+    await app.emit('scout-changed', progress);
+    await new Promise((r) => setTimeout(r, 50));
+    app.w.eval('renderLive(true)');
+    await app.settle();
+    assert.match(app.$('.sc-prog').textContent, /Timelines · 30 \/ 120 games/);
+    assert.equal(app.$('.sc-prog .bar i').style.width, '25%');
     // tags: exact – the numbers in the chip, kept as a setting
     await app.click('[data-sctags="1"]');
     assert.deepEqual(app.called('set-setting').map(c => c.args).pop(), ['tagsLong', true]);
@@ -150,6 +158,30 @@ test('live board: traits in tiers – key / more / all, the rest of a card behin
     await app.click(more);
     assert.equal(chips(), three, '"+n" shows the rest of this card');
     assert.equal(e1().querySelector('.tc-more').textContent, '−');
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('live board: a player the game hides (streamer mode) gets a card with the champion and a note', async () => {
+  const hiddenGame = { ...inGame, teamTwo: [...inGame.teamTwo.slice(0, 4), { hidden: true, championId: 117, position: 'UTILITY' }] };
+  const app = await boot({ replies: {
+    live: { clientUp: true, phase: 'InProgress', me: P(1), inGame: hiddenGame },
+    'scout-games': () => scoutReply({}),
+    champions: [{ id: 117, name: 'Lulu' }],
+  } });
+  try {
+    await app.click('#navLive');
+    await app.settle();
+    const rows = app.$$('.sc-row');
+    assert.equal(rows[1].querySelectorAll('.sc-card').length, 5);
+    const h = app.$('.sc-card.sc-hidden');
+    assert.ok(h);
+    assert.match(h.textContent, /Name hidden/);
+    assert.match(h.textContent, /Lulu/);
+    assert.match(h.textContent, /streamer mode on/);
+    // never looked up: only the players with an id are asked for
+    const asked = app.called('scout-games').map(c => JSON.stringify(c.args));
+    assert.ok(asked.every(a => !a.includes('undefined') && !a.includes('null')));
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

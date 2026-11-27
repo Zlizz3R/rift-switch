@@ -906,6 +906,19 @@ async fn tick_inner(my_gen: u64) {
     // While a game runs, the League client is asked one single thing (the phase) – nothing that
     // could cost a frame. Ranks, history and the other accounts follow when the game is over.
     let first = riot::gameflow_phase().await;
+    // League is open but didn't answer in time (busy – a long match list …): not "closed" at once;
+    // only after a few ticks in a row (the player page said "League isn't open" while it was)
+    {
+        static MISSES: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+        use std::sync::atomic::Ordering;
+        if first.is_none() && riot::lockfile().is_some() && with(|c| c.live.client_up) {
+            if MISSES.fetch_add(1, Ordering::SeqCst) < 3 {
+                return;
+            }
+        } else {
+            MISSES.store(0, Ordering::SeqCst);
+        }
+    }
     if let Some(p) = first.as_deref().filter(|p| IN_GAME.contains(p)) {
         // also right after the app started (account not known yet): it is learnt after the game
         let changed = with(|c| {
@@ -968,6 +981,7 @@ async fn tick_inner(my_gen: u64) {
     };
     let id = cur_id.unwrap();
     undo_offline().await;
+    streamer_game(&id, false).await;
     let now = now_ms();
     // first login of an account that was only saved so far; and: is it the one that was picked?
     let wrong = with(|c| {
@@ -1401,32 +1415,38 @@ async fn fill_games(max: usize) -> usize {
 /// One game from the client: its details, compacted, with the parts of its timeline we keep –
 /// and the client's raw answers (details, timeline) for the own games' archive.
 async fn fetch_game(id: String) -> Option<(Value, Value, Option<Value>)> {
-    fetch_game_timed(id).await.0
+    fetch_game_full(id).await.0
 }
 type Fetched = Option<(Value, Value, Option<Value>)>;
-/// fetch_game, plus how long the details and the timeline took (ms) – for the scout log.
-async fn fetch_game_timed(id: String) -> (Fetched, u64, u64) {
+/// fetch_game, plus how long the details and the timeline took (ms) – for the scout log – whether
+/// the client really said no to the game (an error status), and whether the timeline didn't come in
+/// time. No answer in time is no "no": during a game the client answers slowly and reads match lists
+/// one at a time, everything else waits meanwhile.
+async fn fetch_game_full(id: String) -> (Fetched, u64, u64, bool, bool) {
     // the game and its timeline at the same time (the timeline is only used when the game came)
     let timed = |path: String| async move {
         let t = std::time::Instant::now();
-        let r = riot::lcu(&path, 10_000, "GET").await;
+        let r = riot::lcu_try(&path, 20_000).await;
         (r, t.elapsed().as_millis() as u64)
     };
     let ((g, g_ms), (tl, tl_ms)) = tokio::join!(
         timed(format!("/lol-match-history/v1/games/{id}")),
         timed(format!("/lol-match-history/v1/game-timelines/{id}"))
     );
-    let Some(g) = g else {
-        return (None, g_ms, tl_ms);
+    let tl_busy = tl == Err(false);
+    let g = match g {
+        Ok(g) => g,
+        Err(refused) => return (None, g_ms, tl_ms, refused, tl_busy),
     };
     let Some(mut c) = matches::compact(&g) else {
-        return (None, g_ms, tl_ms);
+        return (None, g_ms, tl_ms, true, tl_busy);
     };
     let pids = matches::participant_ids(&g);
+    let tl = tl.ok();
     if let Some(tl) = &tl {
         matches::add_timeline(&mut c, tl, &pids);
     }
-    (Some((c, g, tl)), g_ms, tl_ms)
+    (Some((c, g, tl)), g_ms, tl_ms, false, tl_busy)
 }
 /// The own games: one after the other, stopping when a game starts (Live's scouting has its own pace).
 async fn fetch_games(ids: Vec<String>) -> usize {
@@ -1454,19 +1474,28 @@ async fn fetch_games(ids: Vec<String>) -> usize {
 }
 
 // ---------- scouting: the other players of the current game (Live) ----------
-// Their match lists first (stage A, kept 30 minutes: the 200 newest games, each with that player's
-// own numbers – stored as "lite" games), then the details + timeline of their newest 50 ranked
-// games (stages B + C) – all into a store of their own (matches-others). As fast as the client
-// answers: every match list at once, then always PAR_FAST games on their way (when one comes, the
-// next starts – no waiting for the slowest of a round), the players in turn: everyone's newest game
-// first, then everyone's second … – so every card has something within seconds. While the game runs
-// (game time > 0) PAR_IN_GAME at a time. When the client starts refusing (half a round's worth in a
-// row) a short pause, BACK_OFF. Goes on while the window is in the tray as long as a game is on (champion
-// select to the end screen); never in a test copy that mustn't talk to Riot. Every round goes into
-// scout.log (the times, what was refused, when all was there).
+// Their match lists first (stage A, kept 30 minutes: the newest games, each with that player's own
+// numbers – stored as "lite" games), then the details + timeline of their newest 50 ranked games
+// (stages B + C) – all into a store of their own (matches-others). The client reads ONE match list at
+// a time and holds every other match history request meanwhile (riot.rs HISTORY_MAX), so: one list
+// per round, the enemies first (the own team was mostly read in champion select), each list asked
+// until it comes (a list that didn't come is asked again, never given up after one try); in champion
+// select the 200 newest, once the game is loading only SCOUT_LIST_IN_GAME (50: ~4 s instead of 12 s
+// per player). Then always PAR_FAST games on their way (when one comes, the next starts – no waiting
+// for the slowest of a round), the players in turn: everyone's newest game first, then everyone's
+// second … – so every card has something within seconds. The same pace while the game runs: the
+// client itself is the limit then (~2.5 s per game instead of 40 ms in the lobby, measured
+// 27.11.2026), more at once wouldn't be faster. A game counts as failed only when the client says
+// no; no answer in time means busy – a short pause, BACK_OFF, and it is asked again. Goes on while
+// the window is in the tray as long as a game is on (champion select to the end screen); never in a
+// test copy that mustn't talk to Riot. Every round goes into scout.log (the times, what was refused,
+// when all was there).
 const PAR_FAST: usize = 12;
-const PAR_IN_GAME: usize = 10;
 const BACK_OFF: i64 = 3000;
+/// match list length per player once the game loads (champion select and the player page: 200)
+const SCOUT_LIST_IN_GAME: usize = 50;
+/// a match list that didn't come is asked again this often (then the card stays without games)
+const LIST_TRIES: u8 = 4;
 /// at most this many games per round (rounds stay short: a new phase or game is noticed)
 const ROUND_MAX: usize = 60;
 /// The phases Live loads in: champion select, the game, its end.
@@ -1542,6 +1571,8 @@ struct Scout {
     /// per player of this game: when the match list was read, the mastery (cleared with a new game)
     listed: HashMap<String, i64>,
     mastery: HashMap<String, Value>,
+    /// per player: lists that didn't come (tries, not again before)
+    list_failed: HashMap<String, (u8, i64)>,
     /// game ids that couldn't be read (twice = given up)
     failed: HashMap<String, u8>,
     running: bool,
@@ -1578,17 +1609,19 @@ fn scout_snapshot() -> Value {
             .iter()
             .map(|p| {
                 let (d, n) = o.progress(p);
-                (p.clone(), json!([d, n]))
+                (p.clone(), json!([d, n, o.timeline_done(p).0]))
             })
             .collect()
     });
-    let (done, total) = per.values().fold((0, 0), |(a, b), v| {
+    let (done, total, tl) = per.values().fold((0, 0, 0), |(a, b, c), v| {
         (
             a + v[0].as_u64().unwrap_or(0),
             b + v[1].as_u64().unwrap_or(0),
+            c + v[2].as_u64().unwrap_or(0),
         )
     });
-    json!({ "players": per, "done": done, "total": total, "running": running, "listed": listed, "of": targets.len() })
+    // tl: games with their timeline too (the second pass)
+    json!({ "players": per, "done": done, "total": total, "tl": tl, "running": running, "listed": listed, "of": targets.len() })
 }
 /// Own games by id, read from disk outside the lock; once more with fresh places when a rewrite
 /// (removed account, shrinking) moved the lines in between.
@@ -1671,13 +1704,14 @@ async fn scout_round() -> bool {
     if now_ms() < scout(|s| s.pause_until) {
         return false;
     }
-    let (mut targets, par) = match phase.as_str() {
+    let par = PAR_FAST;
+    let (mut targets, list_len) = match phase.as_str() {
         "ChampSelect" => {
             scout(|s| s.running = false);
             let Some(cs) = riot::lcu("/lol-champ-select/v1/session", 3000, "GET").await else {
                 return false;
             };
-            (puuids_of(&[&cs["myTeam"]]), PAR_FAST)
+            (puuids_of(&[&cs["myTeam"]]), riot::HISTORY_MAX)
         }
         "GameStart" | "InProgress" | "Reconnect" => {
             let running = scout(|s| s.running);
@@ -1690,14 +1724,19 @@ async fn scout_round() -> bool {
                 return false;
             };
             let gd = &gs["gameData"];
+            // the enemies first: the own team's lists mostly came in champion select
+            let one = puuids_of(&[&gd["teamOne"]]);
+            let two = puuids_of(&[&gd["teamTwo"]]);
+            let mine_one = one.iter().any(|p| own.contains(p));
+            let (enemies, allies) = if mine_one { (two, one) } else { (one, two) };
             (
-                puuids_of(&[&gd["teamOne"], &gd["teamTwo"]]),
-                if running { PAR_IN_GAME } else { PAR_FAST },
+                enemies.into_iter().chain(allies).collect(),
+                SCOUT_LIST_IN_GAME,
             )
         }
         "WaitingForStats" | "PreEndOfGame" | "EndOfGame" => {
             scout(|s| s.running = false);
-            (scout(|s| s.targets.clone()), PAR_FAST)
+            (scout(|s| s.targets.clone()), riot::HISTORY_MAX)
         }
         _ => {
             scout(|s| s.running = false);
@@ -1705,7 +1744,8 @@ async fn scout_round() -> bool {
         }
     };
     targets.retain(|p| !own.contains(p));
-    targets.dedup();
+    let mut seen = std::collections::HashSet::new();
+    targets.retain(|p| seen.insert(p.clone()));
     if targets.is_empty() {
         return false;
     }
@@ -1715,6 +1755,7 @@ async fn scout_round() -> bool {
             // another game: what was noted about players no longer in it goes
             s.listed.retain(|p, _| targets.contains(p));
             s.mastery.retain(|p, _| targets.contains(p));
+            s.list_failed.retain(|p, _| targets.contains(p));
             s.failed.clear();
             s.targets = targets.clone();
             s.started_at = now_ms();
@@ -1729,59 +1770,77 @@ async fn scout_round() -> bool {
             if win_shown() { "open" } else { "in the tray" }
         ));
     }
-    // stage A: match lists (and mastery) of everyone first
+    // stage A: match lists (and mastery) of everyone first – one list per round (the client reads
+    // them one after the other anyway; a new phase is noticed between two lists)
     let now = now_ms();
-    let need: Vec<String> = scout(|s| {
-        targets
+    let next: Option<(String, usize)> = scout(|s| {
+        let need: Vec<&String> = targets
             .iter()
             .filter(|p| s.listed.get(*p).is_none_or(|t| now - t > 1_800_000))
-            .cloned()
-            .collect()
+            .collect();
+        let waiting = need.len();
+        need.into_iter()
+            .find(|p| s.list_failed.get(*p).is_none_or(|(_, at)| now >= *at))
+            .map(|p| (p.clone(), waiting))
     });
-    if !need.is_empty() {
+    if let Some((p, waiting)) = next {
         let t0 = std::time::Instant::now();
-        let got = futures_util::future::join_all(need.iter().map(|p| async move {
-            let t = std::time::Instant::now();
-            let (l, m) = tokio::join!(riot::match_games(p), riot::mastery_points_of(p));
-            (p.clone(), l, m, t.elapsed().as_millis() as u64)
-        }))
-        .await;
-        let slowest = got.iter().map(|g| g.3).max().unwrap_or(0);
-        let ok = got.iter().filter(|g| g.1.is_some()).count();
-        let n_games: usize = got.iter().map(|g| g.1.as_ref().map_or(0, Vec::len)).sum();
+        let (list, mast) = tokio::join!(
+            riot::match_games_n(&p, list_len),
+            riot::mastery_points_of(&p)
+        );
+        let n_games = list.as_ref().map_or(0, Vec::len);
+        let tries = scout(|s| s.list_failed.get(&p).map_or(0, |f| f.0)) + 1;
         scout_log(&format!(
-            "match lists: {ok}/{} in {} ms (slowest {slowest} ms), {n_games} games listed",
-            need.len(),
-            t0.elapsed().as_millis()
+            "match list {}: {} in {} ms ({n_games} games, asked {list_len}{}) · lists left {}",
+            targets.iter().position(|x| *x == p).map_or(0, |i| i + 1),
+            if list.is_some() { "ok" } else { "no answer" },
+            t0.elapsed().as_millis(),
+            if tries > 1 {
+                format!(", try {tries}")
+            } else {
+                String::new()
+            },
+            waiting - usize::from(list.is_some())
         ));
-        for (p, list, mast, _) in got {
-            if let Some(l) = list {
-                store_list(&p, &l);
-            }
-            scout(|s| {
-                s.listed.insert(p.clone(), now);
-                if let Some(m) = mast {
-                    s.mastery.insert(p.clone(), m);
-                }
-            });
+        if let Some(l) = &list {
+            store_list(&p, l);
         }
+        scout(|s| {
+            if let Some(m) = mast {
+                s.mastery.insert(p.clone(), m);
+            }
+            if list.is_some() || tries >= LIST_TRIES {
+                s.listed.insert(p.clone(), now);
+                s.list_failed.remove(&p);
+            } else {
+                // again a little later (the others first)
+                s.list_failed
+                    .insert(p.clone(), (tries, now_ms() + 2000 * i64::from(tries)));
+            }
+        });
         return true;
     }
-    // stages B + C: their games – the players in turn, newest first; always `par` on their way
+    // stage B: their games' details – the players in turn, newest first; always `par` on their way;
+    // stage C: then the timelines of the same games (the cards have every figure meanwhile)
     let failed = scout(|s| s.failed.clone());
-    let all: Vec<String> = others(|o| o.missing_for(&targets))
-        .into_iter()
-        .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
-        .collect();
+    let ok_id = |id: &String| failed.get(id).copied().unwrap_or(0) < 2;
+    let (details, timelines) = others(|o| (o.missing_for(&targets), o.timelines_for(&targets)));
+    let details: Vec<String> = details.into_iter().filter(ok_id).collect();
+    let timelines: Vec<String> = timelines.into_iter().filter(ok_id).collect();
+    let stage_c = details.is_empty();
+    let all = if stage_c { timelines } else { details };
     if all.is_empty() {
         if !scout(|s| std::mem::replace(&mut s.done_logged, true)) {
-            let (done, total) = others(|o| {
-                targets.iter().fold((0, 0), |(a, b), p| {
+            let (done, total, tl) = others(|o| {
+                targets.iter().fold((0, 0, 0), |(a, b, c), p| {
                     let (d, n) = o.progress(p);
-                    (a + d, b + n)
+                    (a + d, b + n, c + o.timeline_done(p).0)
                 })
             });
-            scout_log(&format!("all there: {done} of {total} games with details"));
+            scout_log(&format!(
+                "all there: {done} of {total} games with details, {tl} with their timeline"
+            ));
         }
         return new_targets;
     }
@@ -1791,16 +1850,17 @@ async fn scout_round() -> bool {
     let t0 = std::time::Instant::now();
     use futures_util::StreamExt;
     let mut jobs = futures_util::stream::iter(ids.into_iter().map(|id| async move {
-        let r = fetch_one_into_others_timed(&id).await;
+        let r = into_others_timed(&id, stage_c).await;
         (id, r)
     }))
     .buffer_unordered(par);
-    let (mut ok, mut own, mut refused, mut run) = (0usize, 0usize, 0usize, 0usize);
+    let (mut ok, mut own, mut refused, mut busy, mut run) =
+        (0usize, 0usize, 0usize, 0usize, 0usize);
     let (mut g_ms, mut tl_ms, mut g_max, mut tl_max, mut n_timed) = (0u64, 0u64, 0u64, 0u64, 0u64);
     let mut last_emit = now_ms();
     while let Some((id, r)) = jobs.next().await {
         match r {
-            Some((g, tl)) => {
+            Ok((g, tl)) => {
                 ok += 1;
                 run = 0;
                 if g == 0 && tl == 0 {
@@ -1811,10 +1871,16 @@ async fn scout_round() -> bool {
                     (g_max, tl_max) = (g_max.max(g), tl_max.max(tl));
                 }
             }
-            None => {
+            // the client said no: twice and the game is given up
+            Err(true) => {
                 refused += 1;
                 run += 1;
                 scout(|s| *s.failed.entry(id).or_insert(0) += 1);
+            }
+            // no answer in time: busy – asked again later
+            Err(false) => {
+                busy += 1;
+                run += 1;
             }
         }
         // a new phase, the window gone without a game, the client refusing: the next round decides
@@ -1832,7 +1898,8 @@ async fn scout_round() -> bool {
     others(|o| o.prune_to(limit));
     let avg = |sum: u64| sum.checked_div(n_timed).unwrap_or(0);
     scout_log(&format!(
-        "games: {ok}/{asked} in {} ms (par {par}{}), {own} from own history · details avg {} max {g_max} ms · timelines avg {} max {tl_max} ms · refused {refused} · left {}",
+        "{}: {ok}/{asked} in {} ms (par {par}{}), {own} from own history · details avg {} max {g_max} ms · timelines avg {} max {tl_max} ms · refused {refused} · no answer {busy} · left {}",
+        if stage_c { "timelines" } else { "details" },
         t0.elapsed().as_millis(),
         if scout(|s| s.running) { ", game runs" } else { "" },
         avg(g_ms),
@@ -1841,9 +1908,7 @@ async fn scout_round() -> bool {
     ));
     if run >= par / 2 {
         scout(|s| s.pause_until = now_ms() + BACK_OFF);
-        scout_log(&format!(
-            "pause {BACK_OFF} ms: the client refused {run} in a row"
-        ));
+        scout_log(&format!("pause {BACK_OFF} ms: {run} in a row didn't come"));
     }
     true
 }
@@ -1885,8 +1950,11 @@ fn look<R>(f: impl FnOnce(&mut Look) -> R) -> R {
 /// The player page's progress: whether the list is read, (games with details, games that get them).
 fn look_snapshot(p: &str) -> Value {
     let listed = look(|l| l.puuid == p && l.listed);
-    let (done, total) = others(|o| o.progress_all(p));
-    json!({ "listed": listed, "done": done, "total": total })
+    let (done, total, tl) = others(|o| {
+        let (d, n) = o.progress_all(p);
+        (d, n, o.timeline_done(p).1)
+    });
+    json!({ "listed": listed, "done": done, "total": total, "tl": tl })
 }
 /// One step for the player page; true when something changed.
 async fn look_round() -> bool {
@@ -1922,11 +1990,17 @@ async fn look_round() -> bool {
         });
         return ok;
     }
+    // first every game's details (the page has every figure soon), then their timelines
     let failed = look(|l| l.failed.clone());
-    let ids: Vec<String> = others(|o| o.missing_all(&p))
-        .into_iter()
-        .filter(|id| failed.get(id).copied().unwrap_or(0) < 2)
-        .collect();
+    let ok_id = |id: &String| failed.get(id).copied().unwrap_or(0) < 2;
+    let (details, timelines) = others(|o| (o.missing_all(&p), o.timelines_all(&p)));
+    let details: Vec<String> = details.into_iter().filter(ok_id).collect();
+    let full = details.is_empty();
+    let ids: Vec<String> = if full {
+        timelines.into_iter().filter(ok_id).collect()
+    } else {
+        details
+    };
     if ids.is_empty() {
         return false;
     }
@@ -1935,17 +2009,20 @@ async fn look_round() -> bool {
     // Live's own work, or when the client keeps refusing (the loop tries again after a pause).
     use futures_util::StreamExt;
     let mut jobs = futures_util::stream::iter(ids.into_iter().map(|id| async move {
-        let ok = fetch_one_into_others(&id).await;
+        let ok = fetch_one_into_others(&id, full).await;
         (id, ok)
     }))
     .buffer_unordered(PAR_FAST);
     let (mut last_emit, mut refused) = (now_ms(), 0usize);
     while let Some((id, ok)) = jobs.next().await {
-        if ok {
-            refused = 0;
-        } else {
-            refused += 1;
-            look(|l| *l.failed.entry(id).or_insert(0) += 1);
+        match ok {
+            Ok(()) => refused = 0,
+            Err(no) => {
+                refused += 1;
+                if no {
+                    look(|l| *l.failed.entry(id).or_insert(0) += 1);
+                }
+            }
         }
         let stop = look(|l| l.puuid != p) || game_on() || champ_select() || !win_shown();
         if stop || refused >= PAR_FAST / 2 {
@@ -1966,22 +2043,12 @@ async fn look_round() -> bool {
     }
     true
 }
-/// One game into the others' store, with the ms its details and its timeline took ((0, 0): it was in
-/// the own match history); None when the client didn't give it.
-async fn fetch_one_into_others_timed(id: &str) -> Option<(u64, u64)> {
+/// One game into the others' store – from the own match history if it is there ((0, 0) ms), else
+/// from the client: `full` false = the details alone (DETAILS_ONLY, the first pass), true = details
+/// and timeline (the full game replaces the details). Ok: the ms the details and the timeline took;
+/// Err(true): the client said no; Err(false): no answer in time (busy – asked again later).
+async fn into_others_timed(id: &str, full: bool) -> Result<(u64, u64), bool> {
     if with(|c| c.mh.has(id)) {
-        return fetch_one_into_others(id).await.then_some((0, 0));
-    }
-    let (g, g_ms, tl_ms) = fetch_game_timed(id.to_string()).await;
-    let (g, _, _) = g?;
-    others(|o| o.insert(&g));
-    Some((g_ms, tl_ms))
-}
-/// One game into the others' store: from the own match history if it is there, else from the
-/// client (game and timeline). false when the client didn't give it.
-async fn fetch_one_into_others(id: &str) -> bool {
-    let own = with(|c| c.mh.has(id));
-    if own {
         let ids = [id.to_string()];
         let games = with(|c| matches::read_entries(&c.mh.games_file(), &c.mh.entries(&ids)));
         others(|o| {
@@ -1989,15 +2056,36 @@ async fn fetch_one_into_others(id: &str) -> bool {
                 o.insert(g);
             }
         });
-        return !games.is_empty();
+        return if games.is_empty() {
+            Err(true)
+        } else {
+            Ok((0, 0))
+        };
     }
-    match fetch_game(id.to_string()).await {
-        Some((g, _, _)) => {
-            others(|o| o.insert(&g));
-            true
-        }
-        None => false,
+    if !full {
+        let t = std::time::Instant::now();
+        let g = riot::lcu_try(&format!("/lol-match-history/v1/games/{id}"), 20_000).await?;
+        let ms = t.elapsed().as_millis() as u64;
+        let mut c = matches::compact(&g).ok_or(true)?;
+        c["v"] = json!(matches::DETAILS_ONLY);
+        others(|o| o.insert(&c));
+        return Ok((ms.max(1), 0));
     }
+    let (g, g_ms, tl_ms, refused, tl_busy) = fetch_game_full(id.to_string()).await;
+    if tl_busy {
+        // the details stay; the timeline is asked again
+        return Err(false);
+    }
+    let Some((g, _, _)) = g else {
+        return Err(refused);
+    };
+    others(|o| o.insert(&g));
+    Ok((g_ms.max(1), tl_ms))
+}
+/// One game into the others' store, the details only when `full` is false. Err(true): the client
+/// said no; Err(false): no answer in time.
+async fn fetch_one_into_others(id: &str, full: bool) -> Result<(), bool> {
+    into_others_timed(id, full).await.map(|_| ())
 }
 
 // ---------- auto-login ----------
@@ -2830,6 +2918,33 @@ fn clear_copied(only: Option<u32>) {
             winsys::clear_clipboard_if(seq);
             *c = None;
         }
+    }
+}
+
+/// Streamer mode in the game (setting "streamerGame"): League's own option "Hide player names"
+/// (the client keeps it per account) – checked once per signed-in account; switching the setting
+/// sets it at once for the account signed in now (on or off), never during a game.
+static STREAMER_SEEN: Mutex<Option<String>> = Mutex::new(None);
+async fn streamer_game(id: &str, now: bool) {
+    let on = with(|c| c.st.set_bool("streamerGame"));
+    if (!on && !now) || game_on() {
+        return;
+    }
+    let key = format!("{id}|{on}");
+    if !now
+        && STREAMER_SEEN
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_deref()
+            == Some(&key)
+    {
+        return;
+    }
+    let Some(has) = riot::hide_names().await else {
+        return;
+    };
+    if has == on || riot::set_hide_names(on).await {
+        *STREAMER_SEEN.lock().unwrap_or_else(|e| e.into_inner()) = Some(key);
     }
 }
 
@@ -3696,6 +3811,22 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
             }
             json!({ "ids": ids, "games": games, "info": info, "mastery": look(|l| l.mastery.clone()), "progress": look_snapshot(&p) })
         }
+        // "Try again" on the player page: the list once more if it didn't come, the games given up
+        // asked again, at once
+        "player-retry" => {
+            let p = s(0);
+            look(|l| {
+                if l.puuid == p {
+                    if !l.listed {
+                        l.listed_at = 0;
+                    }
+                    l.failed.clear();
+                }
+            });
+            LOOK_KICK.notify_one();
+            soon_tick(0);
+            Value::Null
+        }
         // the search for the player page: "Name#Tag" (without a tag: the server's own, like EUW) →
         // { puuid, gameName, tagLine, region, … } or null – through the client, like adding an account
         // the lane table for the champ select helper (lanes.rs); null before the first build
@@ -3885,6 +4016,11 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                 }
                 if k == "autostart" {
                     apply_autostart();
+                }
+                if k == "streamerGame" {
+                    if let Some(id) = with(|c| c.live.puuid.clone()) {
+                        tauri::async_runtime::spawn(async move { streamer_game(&id, true).await });
+                    }
                 }
                 save();
             }
@@ -4330,6 +4466,8 @@ fn on_lcu_event(ev: events::Event) {
                         match_found();
                         tauri::async_runtime::spawn(try_accept());
                     }
+                    // Live's loading: a new phase (the loading screen …) is taken up at once
+                    LOOK_KICK.notify_one();
                 }
             }
             soon_tick(300);
