@@ -228,6 +228,18 @@ async function loadDetailChart(a) {
   detailData = { id: a.puuid, key, hist, est: lpEstimate(a, games, hist) };
   renderDetail();
 }
+// what the profile window showed about the account, now in the panel: Blue Essence, RP, honor,
+// champions, skins, mastery score (from the last Load; the wallet hidden in streamer mode)
+function detailAccountHtml(a) {
+  const p = a.profile || {};
+  if (a.placeholder || !p.at) return '';
+  const cell = (label, v) => (v == null ? '' : `<div><b>${v}</b><span>${esc(label)}</span></div>`);
+  const wallet = v => (v == null ? null : hides('wallet') ? '•••' : num(v));
+  const cells = [cell(t('p.be'), wallet(p.be)), cell(t('p.rp'), wallet(p.rp)), cell(t('p.champs'), p.champs == null ? null : num(p.champs)),
+    cell(t('p.skins'), p.skins == null ? null : num(p.skins)), cell(t('p.honor'), p.honor == null ? null : t('p.honorLvl', { n: p.honor })),
+    cell(t('p.mastery'), p.masteryScore == null ? null : num(p.masteryScore))].filter(Boolean);
+  return cells.length ? `<div class="d-acct" title="${esc(t('p.asOf', { date: fmtDate(p.at) }))}">${cells.join('')}</div>` : '';
+}
 function renderDetail() {
   // picked tiles that no longer exist (removed) drop out
   for (const id of [...picked]) if (!S.accounts.some(a => a.puuid === id)) picked.delete(id);
@@ -259,13 +271,15 @@ function renderDetail() {
       <div>${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}${t('p.lastPlayed', { ago: ago(a.lastPlayed) })}</div>
       ${dec ? `<div class="${decClose ? 'warn' : ''}">${ic('<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h0"/>')}${esc(dec)}</div>` : ''}
       ${st && st.ready === false ? `<div class="warn">${ic('<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/>')}${t('rk.notReady')}</div>` : ''}
+      ${(a.oldNames || []).length && !hides('name') ? `<div title="${esc(a.oldNames.map(o => `${o.n} · ${fmtDate(o.t)}`).join('\n'))}">${ic('<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>')}${esc(t('p.oldNames', { names: a.oldNames.slice(0, 3).map(o => o.n).join(', ') }))}</div>` : ''}
     </div>
+    ${detailAccountHtml(a)}
     ${hides('ranks') ? '' : `<div class="d-chart">${detailData.id === a.puuid ? historyChart(detailData.hist, detailData.est, true) : ''}</div>`}
     <div class="d-last" data-last="${esc(a.puuid)}">${lastOf.has(a.puuid) && lastOf.get(a.puuid).g ? `<span class="d-sec-t">${t('last.title')}</span>${gameRowShort(lastOf.get(a.puuid).g)}` : ''}</div>`}
     ${a.placeholder ? '' : `<div class="d-load"><button class="btn load-btn" data-loadall="${esc(a.puuid)}"></button></div>`}
     <button class="btn gold d-switch" id="dSwitch" title="${esc(t('d.hint'))}" ${signedIn ? 'disabled' : ''}>${ic('<path d="M7 4l12 8-12 8z"/>')}${signedIn ? t('d.signedIn') : t('d.switch')}</button>
     <div class="d-actions">
-      ${a.placeholder ? '' : `<button data-d="profile">${ic('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')}<span>${t('d.profile')}</span></button>`}
+      ${a.placeholder ? '' : `<button data-d="overview">${ic('<path d="M3 20h18"/><path d="M4 16l5-5 4 3 7-8"/>')}<span>${t('d.overview')}</span></button>`}
       <button data-d="login">${ic('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>')}<span>${t('d.login')}</span></button>
       ${a.placeholder ? '' : `<button data-d="open">${ic('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')}<span>${t('menu.openWith')}</span></button>`}
       <button data-d="note">${ic('<path d="M4 20h4L19 9l-4-4L4 16z"/>')}<span>${t('d.edit')}</span></button>
@@ -348,8 +362,19 @@ $('detail').addEventListener('click', async e => {
   if (!btn) return;
   const act = btn.dataset.d;
   if (act === 'move' || act === 'open') e.stopPropagation();
-  if (act === 'profile') openProfile(a.puuid);
-  if (act === 'login') openCred(a.puuid);
+  if (act === 'overview') openOverviewOf(a.puuid);
+  // Login: edit the saved login, or copy its name / password (a small menu)
+  if (act === 'login') {
+    e.stopPropagation();
+    const r = btn.getBoundingClientRect();
+    const m = $('siteMenu');
+    m.innerHTML = `<button data-lg="edit">${esc(t('menu.login'))}</button>` + (a.hasCred ? `<div class="menu-sep"></div><button data-pcopy="user">${esc(t('p.copyUser'))}</button>`
+      + `<button data-pcopy="pass" title="${esc(t('p.copyPassT'))}">${esc(t('p.copyPass'))}</button>` : '');
+    m.dataset.id = a.puuid;
+    m.hidden = false;
+    m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 8) + 'px';
+    m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
+  }
   if (act === 'open') {
     const r = btn.getBoundingClientRect();
     const m = $('siteMenu');
@@ -384,6 +409,12 @@ siteMenu.addEventListener('click', e => {
   const b = e.target.closest('[data-site]');
   const c = e.target.closest('[data-cat]');
   const a = S.accounts.find(x => x.puuid === siteMenu.dataset.id);
+  // the panel's Login menu
+  const lg = e.target.closest('[data-lg], [data-pcopy]');
+  if (lg && a) {
+    siteMenu.hidden = true;
+    return lg.dataset.pcopy ? copyLogin(a.puuid, lg.dataset.pcopy) : openCred(a.puuid);
+  }
   const p = siteMenu.dataset.player ? JSON.parse(siteMenu.dataset.player) : null;
   const many = siteMenu.dataset.many ? JSON.parse(siteMenu.dataset.many) : null;
   siteMenu.hidden = true;

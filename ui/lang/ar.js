@@ -34,7 +34,7 @@
     'cat.dropHere': 'اسحب الحسابات إلى هنا', 'cat.rename': 'انقر مرتين لإعادة التسمية', 'cat.expand': 'توسيع', 'cat.collapse': 'طي', 'cat.menu': 'فئة',
     'cat.none': 'بدون فئة', 'cat.new': 'فئة جديدة', 'cat.mRename': 'إعادة تسمية', 'cat.mUp': 'تحريك لأعلى', 'cat.mDown': 'تحريك لأسفل', 'cat.mDelete': 'حذف الفئة',
     'cat.delTitle': 'حذف «{name}»؟', 'cat.delOne': 'تنتقل البطاقة إلى «بدون فئة». لا يُحذف أي حساب.', 'cat.delMany': 'تنتقل البطاقات الـ {n} إلى «بدون فئة». لا يُحذف أي حساب.',
-    'menu.switch': "تسجيل الدخول", 'menu.profile': 'عرض الملف الشخصي', 'menu.openWith': 'فتح باستخدام', 'menu.login': 'بيانات الدخول …', 'menu.note': 'تعديل الملاحظة',
+    'menu.switch': "تسجيل الدخول", 'menu.profile': "افتح في النظرة العامة", 'menu.openWith': 'فتح باستخدام', 'menu.login': 'بيانات الدخول …', 'menu.note': 'تعديل الملاحظة',
     'menu.moveTo': 'نقل إلى', 'menu.remove': 'إزالة', 'menu.notePh': 'مثال: Main، Duo', 'menu.removeTitle': 'إزالة {name}؟',
     'menu.removeText': 'سيُحذف الدخول المحفوظ. حساب Riot نفسه يبقى بالطبع.',
     'p.region': 'المنطقة', 'p.lastPlayed': 'آخر لعب: {ago}', 'p.decay': ' – من الألماس فما فوق قد تفقد LP', 'p.history': 'سجل LP',
@@ -146,7 +146,6 @@
     'p.estimated': "تقديري (±20 LP لكل مباراة)",
     'd.switch': "تسجيل الدخول",
     'd.signedIn': "مسجّل الدخول",
-    'd.profile': "الملف",
     'd.login': "الدخول",
     'd.edit': "ملاحظة",
     'd.decayIn': "تراجع الرتبة خلال {d} يوم",
@@ -901,6 +900,7 @@
     'sh.allRars': "الكل",
     'sh.allYears': "كل السنوات",
     'sh.yearT': "السنة التي حصلت فيها على الزي",
+    'd.overview': "نظرة عامة",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ar = L;

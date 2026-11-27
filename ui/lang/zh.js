@@ -34,7 +34,7 @@
     'cat.dropHere': '将账号拖到这里', 'cat.rename': '双击重命名', 'cat.expand': '展开', 'cat.collapse': '收起', 'cat.menu': '分类',
     'cat.none': '未分类', 'cat.new': '新分类', 'cat.mRename': '重命名', 'cat.mUp': '上移', 'cat.mDown': '下移', 'cat.mDelete': '删除分类',
     'cat.delTitle': '删除“{name}”？', 'cat.delOne': '该卡片会移到“未分类”。不会删除任何账号。', 'cat.delMany': '这 {n} 张卡片会移到“未分类”。不会删除任何账号。',
-    'menu.switch': "登录", 'menu.profile': '查看资料', 'menu.openWith': '打开方式', 'menu.login': '登录信息 …', 'menu.note': '编辑备注',
+    'menu.switch': "登录", 'menu.profile': "在概览中打开", 'menu.openWith': '打开方式', 'menu.login': '登录信息 …', 'menu.note': '编辑备注',
     'menu.moveTo': '移动到', 'menu.remove': '移除', 'menu.notePh': '例如：主号、双排', 'menu.removeTitle': '移除 {name}？',
     'menu.removeText': '已保存的登录会被删除。你的 Riot 账号本身当然不受影响。',
     'p.region': '服务器', 'p.lastPlayed': '最近游戏：{ago}', 'p.decay': ' – 钻石及以上可能掉分', 'p.history': 'LP 记录',
@@ -145,7 +145,6 @@
     'p.estimated': "估算（每场 ±20 LP）",
     'd.switch': "登录",
     'd.signedIn': "已登录",
-    'd.profile': "资料",
     'd.login': "登录",
     'd.edit': "备注",
     'd.decayIn': "{d} 天后段位衰减",
@@ -900,6 +899,7 @@
     'sh.allRars': "全部",
     'sh.allYears': "所有年份",
     'sh.yearT': "你获得这款皮肤的年份",
+    'd.overview': "概览",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

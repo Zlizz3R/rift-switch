@@ -245,7 +245,8 @@ $('viewDash').addEventListener('click', e => {
     return ovToggle(id, e.ctrlKey || e.metaKey);
   }
   const row = e.target.closest('[data-dacc]');
-  if (row && !e.target.closest('select')) openProfile(row.dataset.dacc);
+  // a row: only this account (a click on its chip brings the others back)
+  if (row && !e.target.closest('select')) ovOnly(row.dataset.dacc);
 });
 $('viewDash').addEventListener('change', e => {
   const s = e.target.closest('[data-goal]');

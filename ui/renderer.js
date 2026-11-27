@@ -406,21 +406,6 @@ function rankedBlock(a) {
     ${extra.map(x => `<div class="rk-row warn">${esc(x)}</div>`).join('')}
   </div>`;
 }
-function rankedChecklist(a) {
-  const st = rankedStatus(a);
-  if (!st) return '';
-  const row = (ok, label, val) => `<div class="ck ${ok === true ? 'ok' : ok === false ? 'no' : 'na'}"><span class="ico">${ok === true ? '✓' : ok === false ? '✕' : '?'}</span>${label}<b>${val}</b></div>`;
-  const q = (name, x) => !x ? row(null, t('rk.riot', { q: name }), t('rk.afterLogin'))
-    : row(x.ok, t('rk.riot', { q: name }), x.ok ? t('rk.cleared') : esc(x.reasons.map(reasonText).join(', ') || t('rk.blocked')));
-  return `<h3>${t('rk.section')} ${st.rc ? '<i>' + t('rk.riotAsOf', { date: fmtDate(st.rc.at) }) + '</i>' : ''}</h3>
-    <div class="checklist">
-      ${row(st.lvlOk, t('rk.lvl30'), st.level + '/30')}
-      ${row(st.chOk, t('rk.champs20'), st.champs == null ? t('rk.afterLogin') : st.champs + '/20')}
-      ${row(st.nOk, t('rk.normals10'), st.nOk === true && (st.ranked || st.normals < 10) ? t('rk.cleared') : st.normals == null ? t('rk.afterLogin') : st.normals + '/10')}
-      ${QUEUES.map(([k, n]) => q(n, st.rc && st.rc[k])).join('')}
-    </div>`;
-}
-
 // ---------- open with ----------
 const SITE_REGION = {
   short: { EUW: 'euw', EUNE: 'eune', NA: 'na', KR: 'kr', BR: 'br', LAN: 'lan', LAS: 'las', OCE: 'oce', OC1: 'oce', TR: 'tr', RU: 'ru', JP: 'jp' },
@@ -441,12 +426,9 @@ function siteUrl(a, site) {
 }
 function openSite(a, site) { const u = siteUrl(a, site); if (u) api.openExternal(u); }
 
-// ---------- profile window ----------
+// ---------- sites, the LP chart ----------
 const CHAMP_ICON = id => `${CDRAGON}/rcp-be-lol-game-data/global/default/v1/champion-icons/${id}.png`;
 const SITES = [['opgg', 'op.gg'], ['poro', 'Porofessor'], ['log', 'League of Graphs'], ['moba', 'Mobalytics'], ['ugg', 'u.gg']];
-let profileFor = null;
-let profileHistory = [];
-let profileEst = {};
 
 // LP estimate: from the oldest real data point (or the current rank) walk back through
 // the ranked games we have seen: every win was about +20 LP, every loss about -20 LP.
@@ -492,70 +474,13 @@ function historyChart(h, est = {}, small = false) {
     <div class="chart-legend"><span class="k solo"></span>Solo/Duo <span class="k flex"></span>Flex${hasEst ? ` <span class="k est"></span>${t('p.estimated')}` : ''} <i>${fmtDate(t0)} – ${fmtDate(t1)}</i></div>`;
 }
 
-// "Season peak Solo/Duo: Platinum IV · last season Silver I" for each queue the client told
-function peaksHtml(a) {
-  const name = r => tierName(r.tier) + (APEX.includes(r.tier) ? '' : ' ' + r.division);
-  const lines = QUEUES.filter(([k]) => a[k] && (a[k].peak || a[k].lastSeason)).map(([k, n]) =>
-    `<div><b>${n}</b> ${a[k].peak ? esc(t('p.peak', { r: name(a[k].peak) })) : ''}${a[k].peak && a[k].lastSeason ? ' · ' : ''}${a[k].lastSeason ? esc(t('dash.lastSeason', { r: name(a[k].lastSeason) })) : ''}</div>`);
-  return lines.length ? `<div class="peaks">${lines.join('')}</div>` : '';
+// one account's Overview: the panel's "Overview", the tile menu, P – the Overview shows only it
+// (the profile window it replaces showed the same, and more, twice)
+function openOverviewOf(id) {
+  if (typeof ovOnly === 'function') ovOnly(id);
+  showView('dash');
+  if (typeof showDashTab === 'function') showDashTab('stats');
 }
-function renderProfile() {
-  const a = S.accounts.find(x => x.puuid === profileFor);
-  if (!a) { $('profileBox').hidden = true; return; }
-  const p = a.profile || {};
-  const stat = (label, val, sub) => `<div class="stat"><b>${val}</b><span>${label}</span>${sub ? '<i>' + sub + '</i>' : ''}</div>`;
-  const idle = decayWarning(a);
-  $('profileCard').innerHTML = `
-    <button class="icon pclose" data-pclose title="${esc(t('common.close'))}"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
-    <div class="p-head">
-      <div class="avatar">${a.iconId != null && !hides('icon') ? `<img src="${iconUrl(a.iconId)}" alt="">` : '<div class="ph"></div>'}${a.level && !hides('level') ? `<span class="level">${a.level}</span>` : ''}</div>
-      <div>
-        <h2>${esc(dispName(a))}${dispTag(a) ? `<small>#${esc(dispTag(a))}</small>` : ''}</h2>
-        <div class="p-sub">${esc(a.region || '')}${a.note && !hides('note') ? ' · <span class="gold">' + esc(a.note) + '</span>' : ''}</div>
-        <div class="p-sub ${idle ? 'warn' : ''}">${t('p.lastPlayed', { ago: ago(a.lastPlayed) })}${a.lastPlayed ? ' (' + fmtDate(a.lastPlayed) + ')' : ''}${idle ? t('p.decay') : ''}</div>
-        ${(a.oldNames || []).length && !hides('name') ? `<div class="p-sub" title="${esc(a.oldNames.map(o => `${o.n} · ${fmtDate(o.t)}`).join('\n'))}">${esc(t('p.oldNames', { names: a.oldNames.slice(0, 3).map(o => o.n).join(', ') }))}</div>` : ''}
-      </div>
-    </div>
-    ${hides('ranks') ? `<div class="chart-empty">${t('stream.ranksHidden')}</div>` : `<div class="ranks two">${QUEUES.map(([k, n]) => rankRow(n, a[k])).join('')}</div>
-    ${peaksHtml(a)}
-    ${rankedChecklist(a)}
-    <h3>${t('p.history')}</h3>
-    ${historyChart(profileHistory, profileEst)}`}
-    <h3>${t('p.account')} ${p.at ? '<i>' + t('p.asOf', { date: fmtDate(p.at) }) + '</i>' : ''}</h3>
-    ${p.at ? `<div class="stats">
-      ${stat(t('p.be'), hides('wallet') ? '•••' : num(p.be))}${stat(t('p.rp'), hides('wallet') ? '•••' : num(p.rp))}
-      ${stat(t('p.champs'), num(p.champs), p.champsTotal ? t('p.of', { n: p.champsTotal }) : '')}${stat(t('p.skins'), num(p.skins))}
-      ${stat(t('p.honor'), p.honor == null ? '–' : t('p.honorLvl', { n: p.honor }))}${stat(t('p.mastery'), num(p.masteryScore))}
-    </div>
-    ${(p.topMastery || []).length ? `<div class="top-m">${p.topMastery.map(m => `<div class="tm"><img src="${CHAMP_ICON(m.id)}" alt=""><b>${t('p.mLevel', { n: m.level })}</b><span>${t('p.points', { n: num(m.points) })}</span></div>`).join('')}</div>` : ''}`
-    : `<div class="chart-empty">${t('p.loadLater')}</div>`}
-    ${a.hasCred ? `<div class="p-login"><span class="p-open">${t('p.login')}</span><button class="chip" data-pcopy="user">${t('p.copyUser')}</button><button class="chip" data-pcopy="pass" title="${esc(t('p.copyPassT'))}">${t('p.copyPass')}</button></div>` : ''}
-    <div class="p-actions">
-      <span class="p-open">${t('p.openWith')}</span>${SITES.map(([k, n]) => `<button class="chip" data-site="${k}">${n}</button>`).join('')}
-      <span class="grow"></span>
-      ${a.puuid === S.active && S.live && S.live.puuid === a.puuid ? '' : `<button class="btn gold" data-pswitch>${t('p.switch')}</button>`}
-    </div>`;
-  $('profileBox').hidden = false;
-}
-async function openProfile(id) {
-  profileFor = id;
-  profileHistory = []; profileEst = {};
-  renderProfile();
-  profileHistory = await api.getHistory(id);
-  const acc = S.accounts.find(x => x.puuid === id);
-  profileEst = acc ? lpEstimate(acc, await api.rankedGames(id), profileHistory) : {};
-  if (profileFor === id) renderProfile();
-}
-function closeProfile() { profileFor = null; $('profileBox').hidden = true; }
-$('profileBox').addEventListener('click', e => {
-  if (e.target === $('profileBox') || e.target.closest('[data-pclose]')) return closeProfile();
-  const a = S.accounts.find(x => x.puuid === profileFor);
-  const site = e.target.closest('[data-site]');
-  if (site && a) return openSite(a, site.dataset.site);
-  if (e.target.closest('[data-pswitch]')) { const id = profileFor; closeProfile(); switchTo(id); }
-  const cp = e.target.closest('[data-pcopy]');
-  if (cp) copyLogin(profileFor, cp.dataset.pcopy);
-});
 
 // ---------- tile editor ----------
 let teOpen = false;
@@ -831,7 +756,6 @@ function renderMain() {
   document.body.classList.toggle('streaming', streaming());
   $('sort').value = sortMode();
   $('scaleSelect').value = String(st.uiScale || '100');
-  if (profileFor) renderProfile();
   renderTileEditor();
   if (S.saveError && S.saveError !== shownSaveError) toast(t('saveFailed', { e: S.saveError }), true);
   shownSaveError = S.saveError;
@@ -1084,7 +1008,7 @@ $('menu').addEventListener('click', async e => {
   if (act === 'move') moveTo(id, btn.dataset.cat || '');
   if (act === 'cred') openCred(id);
   if (act === 'open' && a) openSite(a, btn.dataset.site);
-  if (act === 'profile') openProfile(id);
+  if (act === 'profile') openOverviewOf(id);
   if (act === 'remove' && a && await confirmBox(t('menu.removeTitle', { name: dispName(a) }), t('menu.removeText'), t('menu.remove'))) {
     api.remove(id);
   }
@@ -1124,7 +1048,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  $('menu').hidden = true; openDrawer(false); openSettings(false); closeProfile(); closeTileEditor();
+  $('menu').hidden = true; openDrawer(false); openSettings(false); closeTileEditor();
   if (!$('credBox').hidden) closeCred();
 });
 

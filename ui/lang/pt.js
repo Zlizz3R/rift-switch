@@ -34,7 +34,7 @@
     'cat.dropHere': 'Arraste contas para cá', 'cat.rename': 'Clique duas vezes para renomear', 'cat.expand': 'Expandir', 'cat.collapse': 'Recolher', 'cat.menu': 'Categoria',
     'cat.none': 'Sem categoria', 'cat.new': 'Nova categoria', 'cat.mRename': 'Renomear', 'cat.mUp': 'Mover para cima', 'cat.mDown': 'Mover para baixo', 'cat.mDelete': 'Excluir categoria',
     'cat.delTitle': 'Excluir “{name}”?', 'cat.delOne': 'O card vai para “Sem categoria”. Nenhuma conta é excluída.', 'cat.delMany': 'Os {n} cards vão para “Sem categoria”. Nenhuma conta é excluída.',
-    'menu.switch': "Entrar", 'menu.profile': 'Ver perfil', 'menu.openWith': 'Abrir com', 'menu.login': 'Dados de login …', 'menu.note': 'Editar nota',
+    'menu.switch': "Entrar", 'menu.profile': "Abrir na visão geral", 'menu.openWith': 'Abrir com', 'menu.login': 'Dados de login …', 'menu.note': 'Editar nota',
     'menu.moveTo': 'Mover para', 'menu.remove': 'Remover', 'menu.notePh': 'ex. Main, Duo', 'menu.removeTitle': 'Remover {name}?',
     'menu.removeText': 'O login salvo é apagado. Sua conta Riot continua existindo, claro.',
     'p.region': 'Região', 'p.lastPlayed': 'Última partida: {ago}', 'p.decay': ' – a partir do Diamante pode haver perda de PDL', 'p.history': 'Histórico de PDL',
@@ -148,7 +148,6 @@
     'p.estimated': "estimado (±20 PDL por partida)",
     'd.switch': "Entrar",
     'd.signedIn': "Conectada",
-    'd.profile': "Perfil",
     'd.login': "Login",
     'd.edit': "Nota",
     'd.decayIn': "Decaimento do elo em {d} dias",
@@ -903,6 +902,7 @@
     'sh.allRars': "Todas",
     'sh.allYears': "Todos os anos",
     'sh.yearT': "O ano em que você conseguiu a skin",
+    'd.overview': "Visão geral",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

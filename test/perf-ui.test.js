@@ -327,3 +327,22 @@ test('showcase: favourites from the collections in the head – pick, order, siz
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
+
+test('own Overview: "Open with" in the head – op.gg multi-search for several accounts, one account its pages', async () => {
+  const app = await boot({ replies });
+  try {
+    await app.click('#navDash');
+    await app.settle();
+    const row = app.$('#ovWho .pl-open');
+    assert.ok(row, 'the row is there for the own accounts too');
+    await app.click('#ovWho [data-ovsite="multi"]');
+    assert.equal(app.called('open-multi').length, 1);
+    // only one account chosen: no multi-search, its op.gg page
+    app.w.eval(`ovOnly('${P(1)}')`);
+    app.w.eval('renderOvHero()');
+    assert.equal(app.$('#ovWho [data-ovsite="multi"]'), null);
+    await app.click('#ovWho [data-ovsite="opgg"]');
+    assert.match(app.called('open-external').pop().args[0], /op\.gg/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});

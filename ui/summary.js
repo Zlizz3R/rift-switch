@@ -86,7 +86,7 @@ function sumWho(o) {
     ? `<div class="ov-stack">${icons.slice(0, 4).map(i => `<img src="${iconUrl(i)}" alt="">`).join('')}${icons.length > 4 ? `<span>+${icons.length - 4}</span>` : ''}</div>`
     : `<div class="ov-ava">${icons.length ? `<img src="${iconUrl(icons[0])}" alt="">` : '<span></span>'}</div>`;
   return `<div class="ov-id">${av}<div class="ov-nm"><h1>${esc(o.name)}${o.tag ? `<small>#${esc(o.tag)}</small>` : ''}</h1>${o.sub ? `<p class="sub">${o.sub}</p>` : ''}</div></div>
-    ${o.ranks ? `<div class="ov-ranks">${o.ranks}</div>` : ''}`;
+    ${o.ranks ? `<div class="ov-ranks">${o.ranks}</div>` : ''}${o.open || ''}`;
 }
 
 // the own Overview's head: one account – that account; several – all of them, each queue's best rank
@@ -111,6 +111,11 @@ function renderOvHero() {
       sub: esc([t('ov.nAccounts', { n: chosen.length }), season.length ? t('dash.nGames', { n: num(Stats.uniqueGames(season)) }) : ''].filter(Boolean).join(' · ')),
       ranks: hides('ranks') ? '' : sumRank('Solo/Duo', bs && bs.solo, of(bs)) + sumRank('Flex', bf && bf.flex, of(bf)) };
   }
+  // "Open with" for the own accounts too: one – its pages; several – op.gg's multi-search first,
+  // then a tab per account (as the Accounts page does for several). Not in streamer mode.
+  const named = chosen.filter(a => !a.placeholder && a.gameName && a.tagLine);
+  who.open = named.length && !hides('name') ? `<div class="pl-open"><span class="p-open">${t('p.openWith')}</span>${named.length > 1 ? `<button class="chip" data-ovsite="multi">${esc(t('multi.opgg'))}</button>` : ''}`
+    + SITES.map(([k, n]) => `<button class="chip" data-ovsite="${k}">${n}</button>`).join('') + '</div>' : '';
   el.innerHTML = sumWho(who);
   sumArt($('ovArt'), sumTopChamp(season.length ? season : rows));
   if (typeof renderShowcase === 'function') renderShowcase();
@@ -134,6 +139,11 @@ function sumRes(games, puuids, level, mastery, scope, rows = null, role = '') {
 api.onState(() => { if (view === 'dash') renderOvHero(); });
 // a way into a tab ("Traits →" in the key figures)
 $('viewDash').addEventListener('click', e => {
+  const os = e.target.closest('[data-ovsite]');
+  if (os) {
+    const named = ovChosen().filter(a => !a.placeholder && a.gameName && a.tagLine);
+    return named.length === 1 && os.dataset.ovsite !== 'multi' ? openSite(named[0], os.dataset.ovsite) : openMany(named, os.dataset.ovsite);
+  }
   const go = e.target.closest('[data-ovgo]');
   if (!go) return;
   showDashTab(go.dataset.ovgo);

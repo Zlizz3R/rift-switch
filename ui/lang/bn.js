@@ -34,7 +34,7 @@
     'cat.dropHere': 'অ্যাকাউন্ট এখানে টেনে আনুন', 'cat.rename': 'নাম বদলাতে ডাবল-ক্লিক করুন', 'cat.expand': 'খুলুন', 'cat.collapse': 'গুটান', 'cat.menu': 'ক্যাটাগরি',
     'cat.none': 'ক্যাটাগরি ছাড়া', 'cat.new': 'নতুন ক্যাটাগরি', 'cat.mRename': 'নাম বদলান', 'cat.mUp': 'উপরে নিন', 'cat.mDown': 'নিচে নিন', 'cat.mDelete': 'ক্যাটাগরি মুছুন',
     'cat.delTitle': '"{name}" মুছবেন?', 'cat.delOne': 'টাইলটি "ক্যাটাগরি ছাড়া"-তে যাবে। কোনো অ্যাকাউন্ট মোছা হবে না।', 'cat.delMany': '{n}টি টাইল "ক্যাটাগরি ছাড়া"-তে যাবে। কোনো অ্যাকাউন্ট মোছা হবে না।',
-    'menu.switch': "লগ ইন", 'menu.profile': 'প্রোফাইল দেখুন', 'menu.openWith': 'দিয়ে খুলুন', 'menu.login': 'লগইন তথ্য …', 'menu.note': 'নোট বদলান',
+    'menu.switch': "লগ ইন", 'menu.profile': "সংক্ষিপ্ত বিবরণে খুলুন", 'menu.openWith': 'দিয়ে খুলুন', 'menu.login': 'লগইন তথ্য …', 'menu.note': 'নোট বদলান',
     'menu.moveTo': 'সরিয়ে নিন', 'menu.remove': 'সরান', 'menu.notePh': 'যেমন Main, Duo', 'menu.removeTitle': '{name} সরাবেন?',
     'menu.removeText': 'সেভ করা লগইন মুছে যাবে। আপনার Riot অ্যাকাউন্ট অবশ্যই থেকে যাবে।',
     'p.region': 'রিজিয়ন', 'p.lastPlayed': 'শেষ খেলা: {ago}', 'p.decay': ' – ডায়মন্ড ও তার উপরে LP কমতে পারে', 'p.history': 'LP ইতিহাস',
@@ -146,7 +146,6 @@
     'p.estimated': "আনুমানিক (প্রতি গেমে ±20 LP)",
     'd.switch': "লগ ইন",
     'd.signedIn': "লগইন আছে",
-    'd.profile': "প্রোফাইল",
     'd.login': "লগইন",
     'd.edit': "নোট",
     'd.decayIn': "{d} দিনে র‍্যাঙ্ক ডিকে",
@@ -901,6 +900,7 @@
     'sh.allRars': "সব",
     'sh.allYears': "সব বছর",
     'sh.yearT': "যে বছর আপনি স্কিনটি পেয়েছেন",
+    'd.overview': "সংক্ষিপ্ত বিবরণ",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).bn = L;

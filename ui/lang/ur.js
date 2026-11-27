@@ -34,7 +34,7 @@
     'cat.dropHere': 'اکاؤنٹس یہاں گھسیٹیں', 'cat.rename': 'نام بدلنے کے لیے ڈبل کلک کریں', 'cat.expand': 'کھولیں', 'cat.collapse': 'سمیٹیں', 'cat.menu': 'زمرہ',
     'cat.none': 'بغیر زمرہ', 'cat.new': 'نیا زمرہ', 'cat.mRename': 'نام بدلیں', 'cat.mUp': 'اوپر لے جائیں', 'cat.mDown': 'نیچے لے جائیں', 'cat.mDelete': 'زمرہ حذف کریں',
     'cat.delTitle': '«{name}» حذف کریں؟', 'cat.delOne': 'ٹائل «بغیر زمرہ» میں چلی جائے گی۔ کوئی اکاؤنٹ حذف نہیں ہوگا۔', 'cat.delMany': '{n} ٹائلیں «بغیر زمرہ» میں چلی جائیں گی۔ کوئی اکاؤنٹ حذف نہیں ہوگا۔',
-    'menu.switch': "لاگ اِن", 'menu.profile': 'پروفائل دیکھیں', 'menu.openWith': 'اس میں کھولیں', 'menu.login': 'لاگ اِن تفصیلات …', 'menu.note': 'نوٹ بدلیں',
+    'menu.switch': "لاگ اِن", 'menu.profile': "جائزے میں کھولیں", 'menu.openWith': 'اس میں کھولیں', 'menu.login': 'لاگ اِن تفصیلات …', 'menu.note': 'نوٹ بدلیں',
     'menu.moveTo': 'منتقل کریں', 'menu.remove': 'ہٹائیں', 'menu.notePh': 'مثلاً Main، Duo', 'menu.removeTitle': '{name} ہٹائیں؟',
     'menu.removeText': 'محفوظ لاگ اِن حذف ہو جائے گا۔ آپ کا Riot اکاؤنٹ یقیناً باقی رہے گا۔',
     'p.region': 'ریجن', 'p.lastPlayed': 'آخری بار کھیلا: {ago}', 'p.decay': ' – ڈائمنڈ اور اوپر LP کم ہو سکتا ہے', 'p.history': 'LP کی تاریخ',
@@ -147,7 +147,6 @@
     'p.estimated': "اندازہ (ہر گیم ±20 LP)",
     'd.switch': "لاگ اِن",
     'd.signedIn': "لاگ اِن ہے",
-    'd.profile': "پروفائل",
     'd.login': "لاگ اِن",
     'd.edit': "نوٹ",
     'd.decayIn': "{d} دن میں رینک ڈیکے",
@@ -902,6 +901,7 @@
     'sh.allRars': "سب",
     'sh.allYears': "تمام سال",
     'sh.yearT': "وہ سال جب آپ کو اسکن ملی",
+    'd.overview': "جائزہ",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ur = L;

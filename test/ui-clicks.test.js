@@ -227,12 +227,14 @@ test('add: with a login it is saved with user and password', () => withApp({}, a
 test('login details: a known Riot ID shows read-only; a saved login without one can get it', () => withApp({ replies: { 'get-cred-user': 'me' } }, async (app) => {
   await app.click(tile(app, 1));
   await app.click('#detail [data-d="login"]');
+  await app.click('#siteMenu [data-lg="edit"]');
   assert.ok(app.visible('#credBox'));
   assert.equal(app.$('#credRiotId').value, 'Player1#EUW');
   assert.ok(app.$('#credRiotId').readOnly);
   await app.click('#credCancel');
   await app.click(tile(app, 4));
   await app.click('#detail [data-d="login"]');
+  await app.click('#siteMenu [data-lg="edit"]');
   assert.equal(app.$('#credRiotId').readOnly, false);
   app.$('#credRiotId').value = 'New#EUW';
   app.$('#credPass').value = 'pw';
@@ -243,6 +245,7 @@ test('login details: a known Riot ID shows read-only; a saved login without one 
 test('login details: the eye shows the saved password after Windows confirms', () => withApp({ replies: { 'get-cred-user': 'me', 'reveal-pass': { ok: true, p: 'Müller€' } } }, async (app) => {
   await app.click(tile(app, 1));
   await app.click('#detail [data-d="login"]');
+  await app.click('#siteMenu [data-lg="edit"]');
   await app.click('[data-eye="credPass"]');
   assert.equal(lastCall(app, 'reveal-pass').args[0], P(1));
   assert.equal(app.$('#credPass').value, 'Müller€');
@@ -255,6 +258,7 @@ test('login details: without Windows Hello the app password is asked', () => wit
 }, async (app) => {
   await app.click(tile(app, 1));
   await app.click('#detail [data-d="login"]');
+  await app.click('#siteMenu [data-lg="edit"]');
   await app.click('[data-eye="credPass"]');
   assert.ok(app.visible('#passBox'), 'app password asked');
   app.$('#passIn').value = '1234';
@@ -266,6 +270,7 @@ test('login details: without Windows Hello the app password is asked', () => wit
 test('login details: cancelling Windows Hello leaves the field empty', () => withApp({ replies: { 'get-cred-user': 'me', 'reveal-pass': { ok: false } } }, async (app) => {
   await app.click(tile(app, 1));
   await app.click('#detail [data-d="login"]');
+  await app.click('#siteMenu [data-lg="edit"]');
   await app.click('[data-eye="credPass"]');
   assert.equal(app.$('#credPass').value, '');
   assert.equal(app.$('#credPass').type, 'password');
@@ -1021,9 +1026,8 @@ test('a renamed account: a note, its old Riot ID in the panel and in the search'
   await app.type('#search', 'player2');
   assert.deepEqual(app.$$('#board .tile[data-id]').map(x => x.dataset.id), [P(2)]);
   await app.type('#search', '');
-  app.w.openProfile(P(2));
-  await app.settle();
-  assert.match(app.$('#profileCard').textContent, /Formerly: Player2#EUW/);
+  await app.click(`#board .tile[data-id="${P(2)}"]`);
+  assert.match(app.$('#detail').textContent, /Formerly: Player2#EUW/);
 }));
 
 // ---------- export, diagnostics, what's new, data sources ----------
@@ -1189,11 +1193,11 @@ test('overview: every account in one LP chart, the period in numbers, a goal per
   await app.click('[data-dq="flex"]');
   await app.click('[data-dq="r5"]');
   assert.match(app.$('#dashBody').textContent, /No ranked data yet/);
-  // a row opens the profile
+  // a row: only this account
   await app.click('[data-dq="solo"]');
   await app.click('[data-dq="flex"]');
   await app.click(app.$(`tr[data-dacc="${P(1)}"] td`));
-  assert.ok(!app.$('#profileBox').hidden);
+  assert.deepEqual(app.w.eval('ovChosen().map(a => a.puuid)'), [P(1)]);
 }));
 
 // ---------- everything clickable ----------

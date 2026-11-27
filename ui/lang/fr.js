@@ -34,7 +34,7 @@
     'cat.dropHere': 'Glisse des comptes ici', 'cat.rename': 'Double-clic pour renommer', 'cat.expand': 'Déplier', 'cat.collapse': 'Replier', 'cat.menu': 'Catégorie',
     'cat.none': 'Sans catégorie', 'cat.new': 'Nouvelle catégorie', 'cat.mRename': 'Renommer', 'cat.mUp': 'Monter', 'cat.mDown': 'Descendre', 'cat.mDelete': 'Supprimer la catégorie',
     'cat.delTitle': 'Supprimer « {name} » ?', 'cat.delOne': 'La tuile passe dans « Sans catégorie ». Aucun compte n’est supprimé.', 'cat.delMany': 'Les {n} tuiles passent dans « Sans catégorie ». Aucun compte n’est supprimé.',
-    'menu.switch': "Se connecter", 'menu.profile': 'Voir le profil', 'menu.openWith': 'Ouvrir avec', 'menu.login': 'Identifiants …', 'menu.note': 'Modifier la note',
+    'menu.switch': "Se connecter", 'menu.profile': "Ouvrir dans l'aperçu", 'menu.openWith': 'Ouvrir avec', 'menu.login': 'Identifiants …', 'menu.note': 'Modifier la note',
     'menu.moveTo': 'Déplacer vers', 'menu.remove': 'Retirer', 'menu.notePh': 'p. ex. Main, Duo', 'menu.removeTitle': 'Retirer {name} ?',
     'menu.removeText': 'La connexion enregistrée est supprimée. Ton compte Riot reste bien sûr intact.',
     'p.region': 'Région', 'p.lastPlayed': 'Dernière partie : {ago}', 'p.decay': ' – à partir de Diamant, perte de LP possible', 'p.history': 'Historique des LP',
@@ -149,7 +149,6 @@
     'p.estimated': "estimé (±20 LP par partie)",
     'd.switch': "Se connecter",
     'd.signedIn': "Connecté",
-    'd.profile': "Profil",
     'd.login': "Connexion",
     'd.edit': "Note",
     'd.decayIn': "Déclin du rang dans {d} jours",
@@ -904,6 +903,7 @@
     'sh.allRars': "Toutes",
     'sh.allYears': "Toutes les années",
     'sh.yearT': "L'année où tu as obtenu le skin",
+    'd.overview': "Aperçu",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;

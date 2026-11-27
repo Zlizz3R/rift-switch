@@ -34,7 +34,7 @@
     'cat.dropHere': 'Arrastra cuentas aquí', 'cat.rename': 'Doble clic para renombrar', 'cat.expand': 'Desplegar', 'cat.collapse': 'Plegar', 'cat.menu': 'Categoría',
     'cat.none': 'Sin categoría', 'cat.new': 'Nueva categoría', 'cat.mRename': 'Renombrar', 'cat.mUp': 'Subir', 'cat.mDown': 'Bajar', 'cat.mDelete': 'Eliminar categoría',
     'cat.delTitle': '¿Eliminar «{name}»?', 'cat.delOne': 'La tarjeta pasa a «Sin categoría». No se elimina ninguna cuenta.', 'cat.delMany': 'Las {n} tarjetas pasan a «Sin categoría». No se elimina ninguna cuenta.',
-    'menu.switch': "Iniciar sesión", 'menu.profile': 'Ver perfil', 'menu.openWith': 'Abrir con', 'menu.login': 'Datos de acceso …', 'menu.note': 'Editar nota',
+    'menu.switch': "Iniciar sesión", 'menu.profile': "Abrir en el resumen", 'menu.openWith': 'Abrir con', 'menu.login': 'Datos de acceso …', 'menu.note': 'Editar nota',
     'menu.moveTo': 'Mover a', 'menu.remove': 'Quitar', 'menu.notePh': 'p. ej. Main, Duo', 'menu.removeTitle': '¿Quitar {name}?',
     'menu.removeText': 'Se borra el acceso guardado. Tu cuenta de Riot sigue existiendo, por supuesto.',
     'p.region': 'Región', 'p.lastPlayed': 'Última partida: {ago}', 'p.decay': ' – desde Diamante puedes perder LP por inactividad', 'p.history': 'Historial de LP',
@@ -149,7 +149,6 @@
     'p.estimated': "estimado (±20 LP por partida)",
     'd.switch': "Iniciar sesión",
     'd.signedIn': "Sesión iniciada",
-    'd.profile': "Perfil",
     'd.login': "Acceso",
     'd.edit': "Nota",
     'd.decayIn': "El rango decae en {d} días",
@@ -904,6 +903,7 @@
     'sh.allRars': "Todas",
     'sh.allYears': "Todos los años",
     'sh.yearT': "El año en que conseguiste el aspecto",
+    'd.overview': "Resumen",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

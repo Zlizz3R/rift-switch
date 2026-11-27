@@ -34,7 +34,7 @@
     'cat.dropHere': 'Перетащи аккаунты сюда', 'cat.rename': 'Двойной клик – переименовать', 'cat.expand': 'Развернуть', 'cat.collapse': 'Свернуть', 'cat.menu': 'Категория',
     'cat.none': 'Без категории', 'cat.new': 'Новая категория', 'cat.mRename': 'Переименовать', 'cat.mUp': 'Выше', 'cat.mDown': 'Ниже', 'cat.mDelete': 'Удалить категорию',
     'cat.delTitle': 'Удалить «{name}»?', 'cat.delOne': 'Плитка переместится в «Без категории». Аккаунты не удаляются.', 'cat.delMany': '{n} плиток переместятся в «Без категории». Аккаунты не удаляются.',
-    'menu.switch': "Войти", 'menu.profile': 'Открыть профиль', 'menu.openWith': 'Открыть в', 'menu.login': 'Данные входа …', 'menu.note': 'Изменить заметку',
+    'menu.switch': "Войти", 'menu.profile': "Открыть в обзоре", 'menu.openWith': 'Открыть в', 'menu.login': 'Данные входа …', 'menu.note': 'Изменить заметку',
     'menu.moveTo': 'Переместить в', 'menu.remove': 'Удалить', 'menu.notePh': 'напр. Main, Duo', 'menu.removeTitle': 'Удалить {name}?',
     'menu.removeText': 'Сохранённый вход будет удалён. Сам аккаунт Riot, конечно, останется.',
     'p.region': 'Регион', 'p.lastPlayed': 'Последняя игра: {ago}', 'p.decay': ' – с Алмаза возможна потеря LP', 'p.history': 'История LP',
@@ -148,7 +148,6 @@
     'p.estimated': "оценка (±20 LP за игру)",
     'd.switch': "Войти",
     'd.signedIn': "Вход выполнен",
-    'd.profile': "Профиль",
     'd.login': "Вход",
     'd.edit': "Заметка",
     'd.decayIn': "Снижение ранга через {d} дн.",
@@ -903,6 +902,7 @@
     'sh.allRars': "Все",
     'sh.allYears': "Все годы",
     'sh.yearT': "Год, когда ты получил образ",
+    'd.overview': "Обзор",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).ru = L;

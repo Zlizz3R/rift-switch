@@ -222,5 +222,5 @@ $('viewColl').addEventListener('click', e => {
   const k = e.target.closest('[data-ck]');
   if (k) { coll.kind = k.dataset.ck; return renderColl(); }
   const a = e.target.closest('[data-cacc]');
-  if (a) openProfile(a.dataset.cacc);
+  if (a) openOverviewOf(a.dataset.cacc);
 });

@@ -70,13 +70,16 @@ test('panel: copy the login name, the password after Windows Hello – or the ap
   let passReply = { ok: false, noHello: true };
   const st = sampleState({ hasLock: true });
   return withApp({ state: st, replies: { 'copy-login': (id, what, pass) => (what === 'user' ? { ok: true } : pass ? { ok: true } : passReply) } }, async (app) => {
-    app.w.openProfile(P(2));
-    await app.settle();
-    await app.click('[data-pcopy="user"]');
+    await app.click(`#board .tile[data-id="${P(2)}"]`);
+    // the panel's Login button: a small menu – edit the login, copy its name or password
+    await app.click('#detail [data-d="login"]');
+    assert.ok(app.$('#siteMenu [data-lg="edit"]'));
+    await app.click('#siteMenu [data-pcopy="user"]');
     assert.deepEqual(last(app, 'copy-login').args, [P(2), 'user', null]);
     assert.match(app.$('#toast').textContent, /Login name copied/);
     // no Windows Hello: the app password is asked, then it is copied
-    await app.click('[data-pcopy="pass"]');
+    await app.click('#detail [data-d="login"]');
+    await app.click('#siteMenu [data-pcopy="pass"]');
     assert.ok(app.visible('#passBox'));
     app.$('#passIn').value = 'apppassword';
     await app.submit('#passForm');
@@ -85,7 +88,8 @@ test('panel: copy the login name, the password after Windows Hello – or the ap
     // with Windows Hello (said no): nothing copied, no error note
     passReply = { ok: false, denied: true };
     const before = app.$('#toast').textContent;
-    await app.click('[data-pcopy="pass"]');
+    await app.click('#detail [data-d="login"]');
+    await app.click('#siteMenu [data-pcopy="pass"]');
     assert.equal(app.$('#toast').textContent, before);
   });
 });
@@ -94,9 +98,10 @@ test('panel: no copy buttons for an account without a saved login', () => {
   const st = sampleState();
   st.accounts[2].hasCred = false;
   return withApp({ state: st }, async (app) => {
-    app.w.openProfile(P(3));
-    await app.settle();
+    await app.click(`#board .tile[data-id="${P(3)}"]`);
+    await app.click('#detail [data-d="login"]');
     assert.equal(app.$('[data-pcopy]'), null);
+    assert.ok(app.$('#siteMenu [data-lg="edit"]'));
   });
 });
 
@@ -168,10 +173,10 @@ test('replay: right after "download" the client may still say "download" – the
 test('panel: copying with the app password – a wrong one says so, any other failure says it could not copy', () => {
   let reply = { ok: false, denied: true };
   return withApp({ state: sampleState({ hasLock: true }), replies: { 'copy-login': (id, what, pass) => (pass ? reply : { ok: false, noHello: true }) } }, async (app) => {
-    app.w.openProfile(P(2));
-    await app.settle();
+    await app.click(`#board .tile[data-id="${P(2)}"]`);
     const viaApp = async () => {
-      await app.click('[data-pcopy="pass"]');
+      await app.click('#detail [data-d="login"]');
+      await app.click('#siteMenu [data-pcopy="pass"]');
       app.$('#passIn').value = 'apppassword';
       await app.submit('#passForm');
     };

@@ -57,7 +57,7 @@
     'cat.delTitle': 'Delete "{name}"?', 'cat.delOne': 'The tile moves to "No category". No account is deleted.',
     'cat.delMany': 'The {n} tiles move to "No category". No account is deleted.',
     // tile menu
-    'menu.switch': "Log in", 'menu.profile': 'Show profile', 'menu.openWith': 'Open with', 'menu.login': 'Login details …',
+    'menu.switch': "Log in", 'menu.profile': "Open in the Overview", 'menu.openWith': 'Open with', 'menu.login': 'Login details …',
     'menu.note': 'Edit note', 'menu.moveTo': 'Move to', 'menu.remove': 'Remove', 'menu.notePh': 'e.g. Main, Duo',
     'menu.removeTitle': 'Remove {name}?', 'menu.removeText': 'The saved login is deleted. Your Riot account itself stays, of course.',
     // profile
@@ -198,7 +198,6 @@
     'p.estimated': "estimated (±20 LP per game)",
     'd.switch': "Log in",
     'd.signedIn': "Signed in",
-    'd.profile': "Profile",
     'd.login': "Login",
     'd.edit': "Note",
     'd.decayIn': "Rank decay in {d} days",
@@ -950,6 +949,7 @@
     'sh.allRars': "All",
     'sh.allYears': "Every year",
     'sh.yearT': "The year you got the skin",
+    'd.overview': "Overview",
   };
 
   const de = {
@@ -998,7 +998,7 @@
     'cat.mRename': 'Umbenennen', 'cat.mUp': 'Nach oben', 'cat.mDown': 'Nach unten', 'cat.mDelete': 'Kategorie löschen',
     'cat.delTitle': '„{name}“ löschen?', 'cat.delOne': 'Die Kachel landet unter „Ohne Kategorie“. Es wird kein Account gelöscht.',
     'cat.delMany': 'Die {n} Kacheln landen unter „Ohne Kategorie“. Es wird kein Account gelöscht.',
-    'menu.switch': "Einloggen", 'menu.profile': 'Profil anzeigen', 'menu.openWith': 'Öffnen mit', 'menu.login': 'Login-Daten …',
+    'menu.switch': "Einloggen", 'menu.profile': "In der Übersicht öffnen", 'menu.openWith': 'Öffnen mit', 'menu.login': 'Login-Daten …',
     'menu.note': 'Notiz bearbeiten', 'menu.moveTo': 'Verschieben nach', 'menu.remove': 'Entfernen', 'menu.notePh': 'z. B. Main, Duo',
     'menu.removeTitle': '{name} entfernen?', 'menu.removeText': 'Die gespeicherte Anmeldung wird gelöscht. Dein Riot-Account selbst bleibt natürlich bestehen.',
     'p.region': 'Region', 'p.lastPlayed': 'Zuletzt gespielt: {ago}', 'p.decay': ' – ab Diamant droht LP-Verfall',
@@ -1131,7 +1131,6 @@
     'p.estimated': "geschätzt (±20 LP pro Spiel)",
     'd.switch': "Einloggen",
     'd.signedIn': "Eingeloggt",
-    'd.profile': "Profil",
     'd.login': "Login",
     'd.edit': "Notiz",
     'd.decayIn': "Rang-Verfall in {d} Tagen",
@@ -1883,6 +1882,7 @@
     'sh.allRars': "Alle",
     'sh.allYears': "Alle Jahre",
     'sh.yearT': "Das Jahr, in dem du den Skin bekommen hast",
+    'd.overview': "Übersicht",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

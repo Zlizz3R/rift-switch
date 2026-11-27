@@ -70,7 +70,7 @@ document.addEventListener('keydown', async e => {
   if (!a) return;
   if (k === 'Enter') { e.preventDefault(); return switchTo(a.puuid); }
   if (k === 'F2' || k.toLowerCase() === 'e') { e.preventDefault(); return editNote(a.puuid); }
-  if (k.toLowerCase() === 'p' && !a.placeholder) { e.preventDefault(); return openProfile(a.puuid); }
+  if (k.toLowerCase() === 'p' && !a.placeholder) { e.preventDefault(); return openOverviewOf(a.puuid); }
   if (k === 'Delete') {
     e.preventDefault();
     if (picked.size > 1) return document.querySelector('[data-m="remove"]')?.click();
