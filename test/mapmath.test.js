@@ -125,4 +125,10 @@ test('assists: a place of their own; Arena: the seven arenas, no sides', () => {
   assert.deepEqual(e2.map(e => [e.kind, e.zone, e.x, e.y]), [['kill', 'ar1', 40, 40], ['kill', 'arOther', 90, 80]]);
   assert.equal(DM.mainMap([{ g: ar, p: red }]), 'arena');
   assert.equal(DM.ARENAS.length, 7);
+  // where in its own arena: the middle of arena 1 is (0.5, ~0.44); between the arenas: none
+  const s = DM.arenaSpot(e2[0]);
+  assert.equal(s.n, 1);
+  assert.equal(s.u, 0.5);
+  assert.ok(Math.abs(s.v - 16 / 36) < 1e-9);
+  assert.equal(DM.arenaSpot(e2[1]), null);
 });

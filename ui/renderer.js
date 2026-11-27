@@ -1114,6 +1114,16 @@ $('board').addEventListener('drop', e => {
 });
 
 $('min').onclick = () => api.win('min');
+// the whole screen and back, like a browser's button; its icon follows the window (also a double-click
+// on the title bar or Windows + arrow keys – every resize asks again)
+function winMaxShow(r) {
+  if (!r || typeof r.max !== 'boolean') return;
+  $('max').classList.toggle('on', r.max);
+  $('max').title = t(r.max ? 'win.restore' : 'win.max');
+}
+$('max').onclick = async () => winMaxShow(await api.win('max'));
+let winMaxT = 0;
+window.addEventListener('resize', () => { clearTimeout(winMaxT); winMaxT = setTimeout(async () => winMaxShow(await api.win('is-max')), 200); });
 $('toTray').onclick = async () => {
   const r = await api.win('tray');
   if (r && r.hint) { toast(t('tray.balloon')); setTimeout(() => api.win('tray'), 2600); }

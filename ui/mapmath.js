@@ -42,6 +42,15 @@
     if (z === 'jungle200') return 'jungleEnemy';
     return z;
   }
+  // Arena: where in its own arena an event lies – u across, v up, each 0–1 over the arena's box –
+  // and which arena it is (n 1–7); null between the arenas. "All arenas" lays the seven on each other.
+  function arenaSpot(e) {
+    const m = /^ar(\d)$/.exec((e && e.zone) || '');
+    if (!m) return null;
+    const [x0, x1, y0, y1] = ARENAS[m[1] - 1];
+    const c = v => Math.max(0, Math.min(1, v));
+    return { n: +m[1], u: c((e.x - x0) / (x1 - x0)), v: c((e.y - y0) / (y1 - y0)) };
+  }
   const phaseOf = s => (PHASES.find(([, a, b]) => s / 60 >= a && s / 60 < b) || PHASES[2])[0];
 
   // every death, kill and assist of the participations [{ g, p }] that has a place →
@@ -132,7 +141,7 @@
     return rows.sort((a, b) => b.deaths + b.kills - (a.deaths + a.kills));
   }
 
-  const api = { SIZE, ARAM_SIZE, ARENA_SIZE, ARENAS, PHASES, ZONES, KINDS, mapOf, sizeOf, toBlue, zoneOf, phaseOf, events, deaths, games, mainMap, inWindow, sum, summary, hotspot, perMinute, zonesBoth, zonesBy };
+  const api = { SIZE, ARAM_SIZE, ARENA_SIZE, ARENAS, PHASES, ZONES, KINDS, mapOf, sizeOf, toBlue, zoneOf, arenaSpot, phaseOf, events, deaths, games, mainMap, inWindow, sum, summary, hotspot, perMinute, zonesBoth, zonesBy };
   if (node) module.exports = api;
   else root.MapMath = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -53,7 +53,7 @@ function tagText(x) {
   if (x.id === 'generalist') return (v.list || []).map(([r, p]) => `${t('pos.' + r)} ${p} %`).join(', ');
   return t(`tag.${x.id}.t`, { ...v, v: tagFmt(x, v.v), n: v.n, champ: x.champ ? tagChampName(x.champ) : '' });
 }
-const TAG_COLOR = { master: 'master', great: 'good', weak: 'warn', terrible: 'bad', millionaire: 'info', veteran: 'info', expert: 'info' };
+const TAG_COLOR = { master: 'master', great: 'good', weak: 'warn', terrible: 'bad', legend: 'master', multi: 'info', millionaire: 'info', veteran: 'info', expert: 'info' };
 const tagColor = x => TAG_COLOR[x.level] || x.color || 'info';
 const tagPeriod = x => (x.period === 'season' ? t('perf.season', { y: new Date().getFullYear() }) : x.period ? t('tags.p.' + x.period) : '');
 

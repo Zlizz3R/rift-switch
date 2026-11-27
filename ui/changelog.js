@@ -3,6 +3,29 @@
 (function (root) {
   const CHANGELOG = [
     {
+      v: '1.3.5',
+      en: [
+        "MVP and ACE: every player is set against players on the same role with the same result (winners against winners) – kill participation, the team's kills and damage, deaths, farm, vision, damage taken, objectives, crowd control, the lane and KDA. Tuned on 2,600 stored games of other players: every role is MVP equally often now (supports were MVP in 8 % of the games, now 20 %), and KDA counts less than kill participation and kills.",
+        "Match details: Columns – choose the figures of the players' table: damage, taken, gold, damage or gold per minute, mitigated, healing, objectives, towers, crowd control, wards placed (up to five).",
+        "The tab bars sit right under the pages, and the tab you are on has the gold tint of the page above. Nothing of a page lies over the settings any more.",
+        "Player page: the progress bar moves with every game that comes in – it stood still until you switched tabs.",
+        "Play style: your own accounts can switch to the play profile other players get (Exact | Play profile); its labels fit into the card.",
+        "Arena's map: one arena – all seven on top of each other, or one of them (its number, or a click on its row).",
+        "Mastery: the play time at ~600 points per game (a win gives much more, a loss much less – about the same before and after Riot's 2024 rework); the slider is gone. Traits and milestones for 5 and 10 million points on a champion.",
+        "Clash sits next to the ranked queues, before Classic 5v5. A full screen button in the title bar.",
+      ],
+      de: [
+        "MVP und ACE: Jeder Spieler wird mit Spielern auf derselben Rolle mit demselben Ergebnis verglichen (Gewinner mit Gewinnern) – Kill-Beteiligung, Kills und Schaden des Teams, Tode, Farm, Sicht, erlittener Schaden, Objectives, Crowd Control, die Lane und KDA. Abgestimmt an 2.600 gespeicherten Spielen anderer Spieler: Jede Rolle wird jetzt gleich oft MVP (Supporter waren in 8 % der Spiele MVP, jetzt 20 %), und KDA zählt weniger als Kill-Beteiligung und Kills.",
+        "Spieldetails: „Spalten“ – wähle die Zahlen der Spieler-Tabelle: Schaden, Erlitten, Gold, Schaden oder Gold pro Minute, Abgewehrt, Heilung, Objectives, Türme, Crowd Control, gesetzte Wards (bis zu fünf).",
+        "Die Reiter-Leisten sitzen direkt unter den Seiten, und der aktive Reiter hat den goldenen Hintergrund der Seite darüber. Nichts von einer Seite liegt mehr über den Einstellungen.",
+        "Spieler-Seite: Der Ladebalken bewegt sich mit jedem Spiel, das ankommt – er stand still, bis man den Reiter wechselte.",
+        "Spielstil: Deine eigenen Accounts können auf das Spielprofil umschalten, das andere Spieler bekommen („Genau | Spielprofil“); seine Beschriftung passt in die Kachel.",
+        "Arena-Karte: eine Arena – alle sieben übereinander oder eine davon (ihre Nummer oder ein Klick auf ihre Zeile).",
+        "Mastery: Die Spielzeit mit ~600 Punkten pro Spiel (ein Sieg bringt deutlich mehr, eine Niederlage viel weniger – vor und nach Riots Umbau 2024 etwa gleich); der Regler ist weg. Traits und Meilensteine für 5 und 10 Millionen Punkte auf einem Champion.",
+        "Clash steht bei den Ranked-Queues, vor Classic 5v5. Ein Vollbild-Knopf in der Titelleiste.",
+      ],
+    },
+    {
       v: '1.3.4',
       en: [
         'Overview: Performance is the start page. Its key figures are one strip now – wins in green, losses in red, the win rate as a ring, the trend of your newest 10 games on every figure – with your traits on the right; "Traits →" opens them all. A roles card joins champions, play style and map.',

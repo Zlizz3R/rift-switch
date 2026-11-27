@@ -797,9 +797,17 @@ test('positions: Riot\'s wrong guesses are fixed (Smite = jungle, support item =
   assert.equal(ro.get(mid), 'mid');
   assert.equal(ro.get(bot), 'bot');
   assert.equal(ro.get(sup), 'support');
-  assert.equal(app.w.pgOpponent(g, top), g.players[5], 'top against the enemy top, not the jungler');
+  assert.equal(app.w.pgLane(g, top).opp, g.players[5], 'top against the enemy top, not the jungler');
   assert.ok(app.w.pgLane(g, top).mult >= 0.6 && app.w.pgLane(g, top).mult <= 1.4);
   assert.equal(app.w.gameRoles({ ...g, mode: 'ARAM' }), null, 'no positions in ARAM');
+}));
+
+test('title bar: full screen and back – the icon and its tooltip follow', () => withApp({ replies: { win: (what) => (what === 'max' ? { max: true } : null) } }, async (app) => {
+  assert.equal(app.$('#max').title, 'Full screen');
+  await app.click('#max');
+  assert.deepEqual(app.called('win').map(c => c.args[0]), ['max']);
+  assert.ok(app.$('#max').classList.contains('on'));
+  assert.equal(app.$('#max').title, 'Back to a window');
 }));
 
 test('match history: the lists above show 5, "+5" five more, "less" back to 5', () => {

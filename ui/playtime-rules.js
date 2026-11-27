@@ -1,15 +1,13 @@
 // The numbers behind the play time estimate (mastery points -> games -> hours), each with its source.
 // One plain number, no range: points ÷ points per game × (minutes per game + 7 around it). Sources checked
-// 24.11.2026 (docs/plans/Pruefbericht.md).
+// 24.11.2026; points per game set by the user on 27.11.2026.
 (function (root) {
   const PLAYTIME_RULES = {
-    // Points per game at a 50 % win rate: ~500 before Riot's mastery rework (patch 14.10, May 2024),
-    // ~1,200 after. The points can't be split into before / after: the share of games played before
-    // the rework is the user's to set (Mastery, a slider; 50 % by default = 850 points per game).
-    pointsBefore: 500,
-    pointsAfter: 1200,
-    pointsPerGame: 850,
-    pointsSrc: 'Jack J Gaming 2023 (before: win ~900–1,100, loss ~100–300); lolvalue.com 2026 (after: median 1,219)',
+    // Points per game on average: a win gives much more, a loss much less – about 600 both before and
+    // after Riot's mastery rework of May 2024 (patch 14.10). The user's own search through players'
+    // reports from before and after the rework (Reddit) – Riot publishes no numbers.
+    pointsPerGame: 600,
+    pointsSrc: 'players\' reports from before and after the rework of May 2024 (Reddit)',
     // average game length in minutes when an account has too few stored games of its own
     minutes: {
       sr: 28.5,     // tier averages ~26–31 min (e.g. Gold 30:06, Challenger 25:52) – bo3.gg

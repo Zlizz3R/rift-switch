@@ -49,14 +49,39 @@ async function loadPlayer() {
   if (view === 'player' && !mvDrag) renderPlayer();
   else if (view === 'player') setTimeout(() => { if (view === 'player' && !mvDrag) renderPlayer(); }, 600);
 }
-// more of this player's games stored: fetch again, at most every 2 s
+// more of this player's games stored: the bar moves at once, the games are fetched again at most
+// every 2 s (a timer that is already running stays – restarting it on every message held the page
+// back for as long as messages kept coming, the whole load)
 api.onPlayerChanged(e => {
   if (!e || !plv.p || e.puuid !== plv.p.puuid) return;
   plv.progress = e.progress || plv.progress;
   if (view !== 'player') return;
-  clearTimeout(plv.timer);
-  plv.timer = setTimeout(loadPlayer, 2000);
+  plProgDraw();
+  if (plv.timer) return;
+  plv.timer = setTimeout(function again() {
+    if (plv.loading) { plv.timer = setTimeout(again, 500); return; }
+    plv.timer = 0;
+    loadPlayer();
+  }, 2000);
 });
+// the loading line in the head: what is read, how far (null: nothing to show)
+function plProgHtml(pr) {
+  if (!pr) return '';
+  // first every game's details (all figures), then their timelines (some traits come with them)
+  const tl = pr.tl == null ? pr.total : pr.tl;
+  const txt = !pr.listed ? t('pl.reading') : pr.done < pr.total ? t('scout.games', { done: pr.done, total: pr.total })
+    : tl < pr.total ? t('scout.timelines', { done: tl, total: pr.total }) : '';
+  const pct = !pr.listed ? 5 : !pr.total ? 100 : Math.round((100 * (pr.done < pr.total ? pr.done : tl)) / pr.total);
+  return txt ? `<div class="sc-prog pl-prog"><span>${esc(txt)}</span><b>${pct} %</b><span class="bar"><i style="width:${pct}%"></i></span></div>` : '';
+}
+// only the loading line, without drawing the page again
+function plProgDraw() {
+  const box = $('plHead') && $('plHead').querySelector('.pl-prog');
+  if (!box) return;
+  const html = plProgHtml(plv.progress);
+  if (html) box.outerHTML = html;
+  else box.remove();
+}
 
 // every known game of the player: own stored games first (all ten players), then theirs
 function plGames() {
@@ -112,14 +137,7 @@ function renderPlayer() {
   let load = '';
   // League seemed closed: "Try again" asks at once (a busy client can look closed for a moment)
   if (halt) load = `<div class="pl-note${halt === 'pl.noClient' ? ' warn' : ''}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg><span>${esc(t(halt))}</span>${halt === 'pl.noClient' ? `<button class="btn" data-plretry>${esc(t('pl.retry'))}</button>` : ''}</div>`;
-  else if (!own && pr) {
-    // first every game's details (all figures), then their timelines (some traits come with them)
-    const tl = pr.tl == null ? pr.total : pr.tl;
-    const txt = !pr.listed ? t('pl.reading') : pr.done < pr.total ? t('scout.games', { done: pr.done, total: pr.total })
-      : tl < pr.total ? t('scout.timelines', { done: tl, total: pr.total }) : '';
-    const pct = !pr.listed ? 5 : !pr.total ? 100 : Math.round((100 * (pr.done < pr.total ? pr.done : tl)) / pr.total);
-    if (txt) load = `<div class="sc-prog pl-prog"><span>${esc(txt)}</span><b>${pct} %</b><span class="bar"><i style="width:${pct}%"></i></span></div>`;
-  }
+  else if (!own) load = plProgHtml(pr);
   const all = plGames();
   const rowsAll = Stats.byParticipation(all, [p.puuid]);
   // the chosen scope – none chosen (or one without games): the one with the most games

@@ -70,47 +70,40 @@ async function pgRanks(g) {
   if (view === 'live') renderLive();
 }
 
-// the lane opponent: the enemy on the same position (none outside Summoner's Rift, e.g. ARAM)
-function pgOpponent(g, p) {
-  const ro = gameRoles(g);
-  if (!ro) return null;
-  return g.players.find(x => x.team !== p.team && ro.get(x) === ro.get(p)) || null;
-}
-// how much better than the lane opponent: per stat my share of the two of us (0.5 = even),
-// weighted, turned into a factor from ×0.60 to ×1.40 (a 60 : 40 lane is ×1.15)
-const PG_LANE = { gold: 0.3, dmg: 0.25, kda: 0.25, cs: 0.1, vis: 0.1 };
-function pgLane(g, p) {
-  const o = pgOpponent(g, p);
-  if (!o) return null;
-  const v = x => ({ gold: x.gold || 0, dmg: x.dmg || 0, kda: Stats.kda(x.k, x.d, x.a), cs: x.cs || 0, vis: x.vis || 0 });
-  const a = v(p), b = v(o);
-  const share = Object.keys(PG_LANE).reduce((s, k) => s + PG_LANE[k] * (a[k] + b[k] > 0 ? a[k] / (a[k] + b[k]) : 0.5), 0);
-  return { opp: o, share, mult: Math.min(1.4, Math.max(0.6, 1 + (share - 0.5) * 1.5)) };
-}
+// lane against lane, and MVP / ACE with the placement of all ten: ui/mvp.js
+function pgLane(g, p) { return Mvp.lane(g, p); }
+function pgPlacements(g) { return Mvp.placements(g); }
 
-// a score per player from what the game says, each part relative to the best of the ten,
-// then multiplied by the lane factor (how much better or worse than the lane opponent)
-function pgPlacements(g) {
-  const ps = g.players;
-  const val = p => ({
-    kda: Math.min(10, Stats.kda(p.k, p.d, p.a)),
-    kp: Stats.kp(g, p) ?? 0,
-    dmg: p.dmg || 0,
-    gold: p.gold || 0,
-    taken: (p.x && p.x.taken) || 0,
-    vis: p.vis || 0,
-    cs: Stats.csMin(g, p),
-  });
-  const W = { kda: 0.25, kp: 0.2, dmg: 0.2, gold: 0.1, taken: 0.1, vis: 0.1, cs: 0.05 };
-  const vals = ps.map(val);
-  const max = Object.fromEntries(Object.keys(W).map(k => [k, Math.max(1e-9, ...vals.map(v => v[k]))]));
-  const lanes = ps.map(p => pgLane(g, p));
-  const score = vals.map((v, i) => Object.keys(W).reduce((s, k) => s + W[k] * (v[k] / max[k]), 0) * (lanes[i] ? lanes[i].mult : 1));
-  const order = ps.map((p, i) => i).sort((a, b) => score[b] - score[a]);
-  const place = new Map(order.map((i, n) => [i, n + 1]));
-  const best = win => order.find(i => ps[i].win === win);
-  return { place: i => place.get(i), mvp: best(true), ace: best(false), lane: i => lanes[i] };
+// ---------- the players' table: which figures are its columns (Columns, kept per window) ----------
+// every column: its heading, the value (null or missing: the game doesn't say), the bar's colour
+// ('side' = the team's), the format. Stored games leave out a figure that is 0 – missing counts as 0
+// while another player of the game has it, the whole column says "–" when nobody has.
+const pgMin = g => Math.max(1, (g.dur || 0) / 60);
+const pgX = (p, k) => (p.x ? p.x[k] : undefined);
+const PG_COLS = {
+  dmg: { h: 'pg.dealt', v: p => p.dmg, bar: 'side' },
+  taken: { h: 'pg.taken', v: p => pgX(p, 'taken'), bar: 'taken' },
+  gold: { h: 'mh.gold', v: p => p.gold, bar: 'gold' },
+  dpm: { h: 'pg.c.dpm', v: (p, g) => (p.dmg == null ? undefined : p.dmg / pgMin(g)), bar: 'side', fmt: 'int' },
+  gpm: { h: 'pg.c.gpm', v: (p, g) => (p.gold == null ? undefined : p.gold / pgMin(g)), bar: 'gold', fmt: 'int' },
+  mitig: { h: 'pg.c.mitig', v: p => pgX(p, 'mitig'), bar: 'taken' },
+  heal: { h: 'pg.c.heal', v: p => pgX(p, 'heal'), bar: 'heal' },
+  obj: { h: 'pg.c.obj', v: p => pgX(p, 'obj'), bar: 'obj' },
+  turret: { h: 'pg.c.turret', v: p => pgX(p, 'turretDmg'), bar: 'obj' },
+  cc: { h: 'pg.c.cc', v: p => pgX(p, 'cc'), bar: 'cc', fmt: 'sec' },
+  wards: { h: 'pg.c.wards', v: p => pgX(p, 'wards'), bar: 'vis', fmt: 'int' },
+};
+const PG_COLS_DEFAULT = ['dmg', 'taken', 'gold'];
+const PG_COLS_MAX = 5;
+function pgColsChosen() {
+  try {
+    const k = JSON.parse(localStorage.getItem('rs.pgCols') || 'null');
+    if (Array.isArray(k)) { const ok = k.filter(x => PG_COLS[x]).slice(0, PG_COLS_MAX); if (ok.length) return ok; }
+  } catch { /* the default */ }
+  return PG_COLS_DEFAULT.slice();
 }
+// the tables on screen, to draw them again when the columns change (the newest 20)
+const pgTables = new Map();
 
 // both teams as one table: header per team, a row per player (mine = own accounts, marked). Arena:
 // a block per team of the arena by its placing (1st … 6th) – red and blue mean nothing there
@@ -118,8 +111,19 @@ function pgTableHtml(g, as, mine) {
   as = as || {};
   const { place, mvp, ace, lane } = pgPlacements(g);
   const all = g.players;
-  const max = k => Math.max(1, ...all.map(k));
-  const maxDmg = max(p => p.dmg || 0), maxTaken = max(p => (p.x && p.x.taken) || 0), maxGold = max(p => p.gold || 0);
+  const key = String(g.id);
+  pgTables.delete(key);
+  pgTables.set(key, { g, as, mine });
+  if (pgTables.size > 20) pgTables.delete(pgTables.keys().next().value);
+  // the chosen columns: each value (0 for a figure left out while others have it), the best of the ten
+  const cols = pgColsChosen();
+  const colVal = {};
+  for (const k of cols) {
+    const raw = all.map(p => PG_COLS[k].v(p, g));
+    const has = raw.some(v => v != null);
+    colVal[k] = { v: raw.map(v => (v == null ? (has ? 0 : null) : v)), max: Math.max(1e-9, ...raw.map(v => v || 0)) };
+  }
+  const colFmt = (k, v) => (PG_COLS[k].fmt === 'int' ? num(Math.round(v)) : PG_COLS[k].fmt === 'sec' ? `${num(Math.round(v))} s` : k1(Math.round(v)));
   // Arena, ARAM: Mayhem: every player's augments in a column of their own, right of the gold
   const augs = all.some(p => p.aug && p.aug.length);
   const arena = Stats.isArena(g) && all.some(p => p.place);
@@ -176,15 +180,61 @@ function pgTableHtml(g, as, mine) {
         <span class="pg-items">${(p.items || []).map((id, k) => (id ? icon(as.items, id, 'pg-it' + (k === 6 ? ' trinket' : '')) : `<span class="pg-it none${k === 6 ? ' trinket' : ''}"></span>`)).join('')}</span>
         <span class="pg-k"><b>${p.k} / <em>${p.d}</em> / ${p.a}</b><small><span class="${kda == null || kda >= 5 ? 'hi' : ''}">${kda == null ? t('mh.perfect') : kda.toFixed(2) + ' KDA'}</span> · ${st.kp == null ? '–' : Math.round(100 * st.kp) + '%'} KP</small></span>
         <span class="pg-k"${wards}><b>${p.cs} CS</b><small>${st.csMin.toFixed(1)}/min · ${p.vis || 0} ${t('det.vision')}</small></span>
-        <span class="pg-b"><b>${k1(p.dmg)}</b>${bar(p.dmg, maxDmg, side)}</span>
-        <span class="pg-b"><b>${x.taken != null ? k1(x.taken) : '–'}</b>${bar(x.taken || 0, maxTaken, 'taken')}</span>
-        <span class="pg-b"><b>${k1(p.gold)}</b>${bar(p.gold, maxGold, 'gold')}</span>
+        ${cols.map(k => { const v = colVal[k].v[i]; return v == null ? '<span class="pg-b"><b>–</b></span>' : `<span class="pg-b"><b>${colFmt(k, v)}</b>${bar(v, colVal[k].max, PG_COLS[k].bar === 'side' ? side : PG_COLS[k].bar)}</span>`; }).join('')}
         ${augs ? `<span class="pg-aug">${augIcons(p, as, 'pg-augs')}</span>` : ''}
       </div>`;
   };
-  const cols = `<div class="pg-cols"><span></span><span></span><span></span><span></span><span></span><span>K / D / A · KP</span><span>CS · ${t('det.vision')}</span><span>${t('pg.dealt')}</span><span>${t('pg.taken')}</span><span>${t('mh.gold')}</span>${augs ? `<span>${t('pg.augs')}</span>` : ''}</div>`;
-  return `<div class="pg-wrap"><div class="pg-table${augs ? ' with-aug' : ''}">${cols}${teams.map(teamHtml).join('')}</div></div>`;
+  // the head: Columns over the items (choose the figures), then a heading per column
+  const colBtn = `<button class="pg-colbtn" data-pgcols title="${esc(t('pg.colsT', { n: PG_COLS_MAX }))}"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>${esc(t('pg.cols'))}</button>`;
+  const head = `<div class="pg-cols"><span></span><span></span><span></span><span></span><span>${colBtn}</span><span>K / D / A · KP</span><span>CS · ${t('det.vision')}</span>${cols.map(k => `<span>${esc(t(PG_COLS[k].h))}</span>`).join('')}${augs ? `<span>${t('pg.augs')}</span>` : ''}</div>`;
+  const grid = `40px 48px minmax(96px, 190px) 50px 186px 112px 104px ${cols.map(() => 'minmax(76px, 110px)').join(' ')}${augs ? ' minmax(116px, 170px)' : ''}`;
+  const minW = 612 + 96 * cols.length + (augs ? 140 : 0);
+  return `<div class="pg-wrap" data-pgid="${esc(key)}"><div class="pg-table${augs ? ' with-aug' : ''}" style="--pg-grid: ${grid}; min-width: ${minW}px">${head}${teams.map(teamHtml).join('')}</div></div>`;
 }
+
+// Columns: a menu of every figure (up to PG_COLS_MAX at once, at least one); every table on screen
+// follows at once
+const pgColMenu = document.createElement('div');
+pgColMenu.className = 'menu pg-colmenu'; pgColMenu.id = 'pgColMenu'; pgColMenu.hidden = true;
+document.body.appendChild(pgColMenu);
+function pgColMenuFill() {
+  const on = pgColsChosen();
+  pgColMenu.innerHTML = `<div class="menu-label">${esc(t('pg.colsT', { n: PG_COLS_MAX }))}</div>`
+    + Object.keys(PG_COLS).map(k => `<button data-pgcol="${k}" class="${on.includes(k) ? 'on' : ''}"${!on.includes(k) && on.length >= PG_COLS_MAX ? ' disabled' : ''}><i class="pg-check">${on.includes(k) ? '✓' : ''}</i>${esc(t(PG_COLS[k].h))}</button>`).join('')
+    + `<hr><button data-pgcol="">${esc(t('pg.colsReset'))}</button>`;
+}
+function pgColsRedraw() {
+  document.querySelectorAll('.pg-wrap[data-pgid]').forEach(el => {
+    const d = pgTables.get(el.dataset.pgid);
+    if (d) el.outerHTML = pgTableHtml(d.g, d.as, d.mine);
+  });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-pgcols]');
+  if (b) {
+    e.stopPropagation();
+    if (!pgColMenu.hidden) { pgColMenu.hidden = true; return; }
+    pgColMenuFill();
+    const r = b.getBoundingClientRect();
+    pgColMenu.hidden = false;
+    pgColMenu.style.left = Math.max(8, Math.min(r.left, innerWidth - pgColMenu.offsetWidth - 8)) + 'px';
+    pgColMenu.style.top = Math.min(r.bottom + 4, innerHeight - pgColMenu.offsetHeight - 8) + 'px';
+    return;
+  }
+  const c = e.target.closest('[data-pgcol]');
+  if (c && pgColMenu.contains(c)) {
+    const k = c.dataset.pgcol, on = pgColsChosen();
+    const next = !k ? PG_COLS_DEFAULT.slice() : on.includes(k) ? on.filter(x => x !== k) : [...on, k].slice(0, PG_COLS_MAX);
+    if (!next.length) return;
+    // in the catalogue's order, so a column always sits in the same place
+    const ordered = Object.keys(PG_COLS).filter(x => next.includes(x));
+    try { localStorage.setItem('rs.pgCols', JSON.stringify(ordered)); } catch { /* only for now */ }
+    pgColMenuFill();
+    pgColsRedraw();
+    return;
+  }
+  if (!pgColMenu.hidden && !e.target.closest('#pgColMenu')) pgColMenu.hidden = true;
+});
 
 function postgameHtml() {
   if (pgWaiting()) return `<div class="live-card pg-card pg-wait"><div class="lc-head"><h3>${t('pg.title')}</h3></div>

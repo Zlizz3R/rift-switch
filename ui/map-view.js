@@ -5,9 +5,10 @@
 
 // kinds: the kinds shown ('kill' | 'death' | 'assist', at least one; kept per window); the window in
 // minutes [from, to) – to null = the end; preset: the phase button that is on ('all', 'early' …) or ''
-// for minutes picked on the chart; map: 'sr' | 'aram' | 'arena' – '' = the one most games were on
+// for minutes picked on the chart; map: 'sr' | 'aram' | 'arena' – '' = the one most games were on;
+// arena: Arena's arena shown – 0 all seven on top of each other, 1–7 one of them
 const mvKindsSaved = () => { try { const k = JSON.parse(localStorage.getItem('rs.mapKinds') || 'null'); return Array.isArray(k) && k.length && k.every(x => MapMath.KINDS.includes(x)) ? k : null; } catch { return null; } };
-const mv = { kinds: mvKindsSaved() || ['kill', 'death'], from: 0, to: null, preset: 'all', map: '' };
+const mv = { kinds: mvKindsSaved() || ['kill', 'death'], from: 0, to: null, preset: 'all', map: '', arena: 0 };
 const MV_PRESETS = { all: [0, null], early: [0, 10], mid: [10, 20], late: [20, null] };
 // a kind's word ('mp.kills' …), its class on the map and in the bars
 const MV_CLS = { kill: 'kills', death: 'deaths', assist: 'assists' };
@@ -16,7 +17,7 @@ const MV_CLS = { kill: 'kills', death: 'deaths', assist: 'assists' };
 const mvDotR = n => (n > 1200 ? 1.6 : n > 600 ? 2.2 : n > 200 ? 3 : 4.5);
 const mvDots = (list, Y, r) => MapMath.KINDS.map(kind => `<g class="dm-dots ${MV_CLS[kind]}">${list.filter(e => e.kind === kind).map(e => `<circle cx="${e.x.toFixed(1)}" cy="${Y(e.y)}" r="${r}"/>`).join('')}</g>`).join('');
 // Summoner's Rift as a sketch (0–148, blue base bottom left; SVG y runs down) – or ARAM's map
-// (0–128): one lane from base to base, two towers on each side – or Arena's (0–240): its seven arenas
+// (0–128): one lane from base to base, two towers on each side – or one arena of Arena
 function mapSvg(list, map = 'sr') {
   if (map === 'aram') return mapSvgAram(list);
   if (map === 'arena') return mapSvgArena(list);
@@ -45,14 +46,22 @@ function mapSvgAram(list) {
     ${mvDots(list, Y, mvDotR(list.length))}
   </svg>`;
 }
-// Arena: the seven arenas where they lie on its map, numbered like the zone rows
+// Arena: one arena – the seven on top of each other, or the one picked (mv.arena) – with every place
+// where it lies in its own arena (MapMath.arenaSpot)
 function mapSvgArena(list) {
-  const S = MapMath.ARENA_SIZE, Y = y => (S - y).toFixed(1);
-  const rings = MapMath.ARENAS.map(([x0, x1, y0, y1], i) => `<rect class="dm-arena" x="${x0 - 3}" y="${(S - y1 - 3).toFixed(1)}" width="${x1 - x0 + 6}" height="${y1 - y0 + 6}" rx="10"/>
-    <text class="dm-arena-n" x="${x0 - 1}" y="${(S - y1 - 5).toFixed(1)}">${i + 1}</text>`).join('');
-  return `<svg class="dm-map arena${list.length > 300 ? ' dense' : ''}" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(t('dash.tabMap'))} – Arena">
-    <rect class="dm-bg" width="${S}" height="${S}" rx="8"/>${rings}
-    ${mvDots(list, Y, mvDotR(list.length) * 1.4)}
+  const S = 120, P = 12, A = S - 2 * P;
+  const spots = list.map(e => ({ e, s: MapMath.arenaSpot(e) })).filter(x => x.s);
+  // a smaller field than the Rift's: smaller dots
+  const r = +(mvDotR(spots.length) * 0.7).toFixed(2);
+  const dots = MapMath.KINDS.map(kind => `<g class="dm-dots ${MV_CLS[kind]}">${spots.filter(x => x.e.kind === kind)
+    .map(({ s }) => `<circle cx="${(P + s.u * A).toFixed(1)}" cy="${(P + (1 - s.v) * A).toFixed(1)}" r="${r}"/>`).join('')}</g>`).join('');
+  const name = mv.arena ? t('dm.z.arN', { n: mv.arena }) : t('mp.allArenas');
+  return `<svg class="dm-map arena${spots.length > 300 ? ' dense' : ''}" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(t('dash.tabMap'))} – ${esc(name)}">
+    <rect class="dm-bg" width="${S}" height="${S}" rx="8"/>
+    <rect class="dm-arena" x="${P - 4}" y="${P - 4}" width="${A + 8}" height="${A + 8}" rx="30"/>
+    <circle class="dm-arena-mid" cx="${S / 2}" cy="${S / 2}" r="${(A * 0.2).toFixed(1)}"/>
+    <text class="dm-arena-n" x="${S / 2}" y="${S - 3}" text-anchor="middle">${esc(name)}</text>
+    ${dots}
   </svg>`;
 }
 // the minute chart: kills (and assists, lighter, on top) up, deaths down, the chosen minutes lit; drag
@@ -90,10 +99,17 @@ function perfMapHtml(parts, opts = {}) {
   // Summoner's Rift, ARAM or Arena: the chosen one if there are games on it, else the one most were played on
   const avail = ['sr', 'aram', 'arena'].filter(m => MapMath.games(parts, m).length);
   const map = avail.includes(mv.map) ? mv.map : MapMath.mainMap(parts) || 'sr';
-  const all = MapMath.events(parts, map);
-  const nGames = MapMath.games(parts, map).length;
-  if (!all.length) return `<div class="chart-empty">${t(mvOnlyOff(parts) ? 'mp.rift' : 'mp.none')}</div>`;
+  const every = MapMath.events(parts, map);
+  if (!every.length) return `<div class="chart-empty">${t(mvOnlyOff(parts) ? 'mp.rift' : 'mp.none')}</div>`;
   const maps = avail.length > 1 ? `<div class="seg mp-maps">${avail.map(m => `<button data-mpmap="${m}"${m === map ? ' class="on"' : ''}>${esc(MV_MAP_NAMES[m]())}</button>`).join('')}</div>` : '';
+  // Arena: all seven arenas on top of each other, or one of them (only those with something on them)
+  const arenaOf = e => { const m = /^ar(\d)$/.exec(e.zone); return m ? +m[1] : 0; };
+  const arenas = map === 'arena' ? MapMath.ARENAS.map((_, i) => i + 1).filter(n => every.some(e => arenaOf(e) === n)) : [];
+  if (!arenas.includes(mv.arena)) mv.arena = 0;
+  const all = mv.arena ? every.filter(e => arenaOf(e) === mv.arena) : every;
+  const nGames = mv.arena ? new Set(all.map(e => e.gameId)).size : MapMath.games(parts, map).length;
+  const arenaBtns = arenas.length > 1 ? `<div class="seg mp-arenas"><button data-mparena="0"${mv.arena ? '' : ' class="on"'}>${esc(t('mp.allArenas'))}</button>${arenas
+    .map(n => `<button data-mparena="${n}" title="${esc(t('dm.z.arN', { n }))}"${mv.arena === n ? ' class="on"' : ''}>${n}</button>`).join('')}</div>` : '';
   const win = all.filter(e => MapMath.inWindow(e, mv.from, mv.to));
   const kinds = MapMath.KINDS.filter(k => mv.kinds.includes(k));
   const shown = win.filter(e => kinds.includes(e.kind));
@@ -116,10 +132,12 @@ function perfMapHtml(parts, opts = {}) {
   if (kinds.includes('assist')) lines.push(t('mp.lineA', { n: num(as.n), games: num(nGames), per: perfDec(as.perGame) }));
   // per zone: each kind's number first, its bar after it (one kind: also the share)
   const one = kinds.length === 1;
-  const zrows = MapMath.zonesBy(win, kinds);
-  const rows = `<div class="mp-rows k${kinds.length}"><div class="mp-row head"><span></span>${kinds.map(k => `<span class="${MV_CLS[k]}">${esc(t('mp.' + MV_CLS[k]))}</span>`).join('')}</div>${zrows.map(r => `<div class="mp-row">
+  // Arena: a row per arena (all of them, also with one picked – a click on a row picks it)
+  const zrows = MapMath.zonesBy(map === 'arena' ? every.filter(e => MapMath.inWindow(e, mv.from, mv.to)) : win, kinds);
+  const rowAt = r => (map === 'arena' && /^ar\d$/.test(r.zone) ? ` data-mparena="${r.zone.slice(2)}" class="mp-row ${mv.arena === +r.zone.slice(2) ? 'on' : 'pick'}"` : ' class="mp-row"');
+  const rows = `<div class="mp-rows k${kinds.length}"><div class="mp-row head"><span></span>${kinds.map(k => `<span class="${MV_CLS[k]}">${esc(t('mp.' + MV_CLS[k]))}</span>`).join('')}</div>${zrows.map(r => `<div${rowAt(r)}>
       <span>${esc(mvZone(r.zone))}</span>${kinds.map(k => `<span class="mp-cell"><b>${r.n[k]}</b>${one ? `<small>${Math.round(r.share[k] * 100)} %</small>` : ''}<i class="dm-track ${MV_CLS[k]}"><i style="width:${(r.share[k] * 100).toFixed(1)}%"></i></i></span>`).join('')}</div>`).join('')}</div>`;
-  return `<div class="mp-bar">${maps}${kindBtns}${presets}</div>
+  return `<div class="mp-bar">${maps}${arenaBtns}${kindBtns}${presets}</div>
     <div class="dm-wrap"><div class="mp-left">${mapSvg(shown, map)}${mapChart(all.filter(e => kinds.includes(e.kind)))}</div><div class="dm-side">
       ${hots.length ? `<ul class="dm-hots">${hots.join('')}</ul>` : ''}
       ${lines.map(l => `<p class="muted">${esc(l)}</p>`).join('')}
@@ -144,6 +162,8 @@ document.addEventListener('click', e => {
   }
   const mp = e.target.closest('[data-mpmap]');
   if (mp) { mv.map = mp.dataset.mpmap; return mapRerender(); }
+  const ma = e.target.closest('[data-mparena]');
+  if (ma) { mv.arena = +ma.dataset.mparena; return mapRerender(); }
   const b = e.target.closest('[data-dmph]');
   if (b) { [mv.from, mv.to] = MV_PRESETS[b.dataset.dmph]; mv.preset = b.dataset.dmph; mapRerender(); }
 });

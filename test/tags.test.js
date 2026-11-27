@@ -142,9 +142,9 @@ test('lane gold at 15 minutes against the lane opponent', () => {
 
 test('mastery: never read = too little data; the highest step per champion, every champion past a milestone', () => {
   assert.equal(get(run([]), 'mastery')[0].state, 'few');
-  const m = [{ id: 420, total: 2200000, n: 3 }, { id: 74, total: 600000, n: 1 }, { id: 1, total: 150000, n: 1 }, { id: 2, total: 120000, n: 1 }];
+  const m = [{ id: 83, total: 10400000, n: 4 }, { id: 266, total: 5100000, n: 2 }, { id: 420, total: 2200000, n: 3 }, { id: 74, total: 600000, n: 1 }, { id: 1, total: 150000, n: 1 }, { id: 2, total: 120000, n: 1 }];
   const r = get(run([], { mastery: m }), 'mastery');
-  assert.deepEqual(r.map(x => [x.champ, x.level]), [[420, 'millionaire'], [74, 'veteran'], [1, 'expert'], [2, 'expert']]);
+  assert.deepEqual(r.map(x => [x.champ, x.level]), [[83, 'legend'], [266, 'multi'], [420, 'millionaire'], [74, 'veteran'], [1, 'expert'], [2, 'expert']]);
 });
 
 test('every threshold sits in tag-rules.js; every rule has a known type', () => {

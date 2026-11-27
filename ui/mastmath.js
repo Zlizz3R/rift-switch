@@ -2,7 +2,7 @@
 // table, milestones and the play time estimate.
 (function (root) {
   const R = typeof module !== 'undefined' && module.exports ? require('./playtime-rules.js') : root.PLAYTIME_RULES;
-  const MILESTONES = [100000, 500000, 1000000, 2000000];
+  const MILESTONES = [100000, 500000, 1000000, 2000000, 5000000, 10000000];
   const ARAM_QUEUES = [450, 2400, 3220, 3270, 720];
 
   // the highest milestone reached (0 = none)
@@ -52,16 +52,14 @@
     const own = (v, n) => (v != null && n >= R.minOwnGames ? v : null);
     return { sr: own(len && len.sr, len && len.srN) ?? R.minutes.sr, aram: own(len && len.aram, len && len.aramN) ?? R.minutes.aram };
   }
-  // points per game when this share (0..1) of the games was played before the mastery rework of May
-  // 2024: ~500 then, ~1,200 after; half and half = 850
-  const pointsPerGame = before => (before == null ? R.pointsPerGame : before * R.pointsBefore + (1 - before) * R.pointsAfter);
+  // points per game on average (playtime-rules.js: ~600, wins more, losses less)
+  const pointsPerGame = () => R.pointsPerGame;
   // Points → games → hours: points ÷ points per game × (minutes per game + 7 for queue, champ select,
   // loading and the post-game screen). One number ("approx."), no range.
-  // o: { aram: share 0..1 of ARAM on this champion, min: gameMinutes() of the account, before: share
-  //      0..1 of the games played before the rework (none: 850 points per game) }
+  // o: { aram: share 0..1 of ARAM on this champion, min: gameMinutes() of the account }
   function estimate(points, o = {}) {
     const s = o.aram || 0, m = o.min || gameMinutes(null);
-    const games = points / pointsPerGame(o.before);
+    const games = points / pointsPerGame();
     const mins = (1 - s) * m.sr + s * m.aram + R.extraMinutes;
     return { games, hours: games * mins / 60, mins, aram: s };
   }

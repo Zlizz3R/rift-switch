@@ -125,6 +125,26 @@ test('player page: the window sends the keys of the games it holds; "player-chan
   } finally { app.close(); }
 });
 
+test('player page: the progress bar moves with every message; the games are fetched every 2 s while messages keep coming', async () => {
+  const app = await boot({ replies: {
+    'player-games': () => ({ ids: [], games: [], info, mastery: null, progress: { listed: true, done: 0, total: 12 } }),
+  } });
+  try {
+    app.w.eval(`openPlayer({ puuid: 'x1', gameName: 'Faker', tagLine: 'KR1' })`);
+    await app.settle();
+    assert.match(app.$('#plHead .pl-prog').textContent, /0 %/);
+    const before = app.called('player-games').length;
+    for (let i = 1; i <= 6; i++) {
+      await app.emit('player-changed', { puuid: 'x1', progress: { listed: true, done: i, total: 12 } });
+      assert.equal(app.$('#plHead .pl-prog b').textContent, `${Math.round((100 * i) / 12)} %`, 'at once, without a tab switch');
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    // three seconds of messages: fetched again meanwhile (a restarted timer would wait for them to stop)
+    assert.ok(app.called('player-games').length > before);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
 test('player page: League closed – a note instead of a progress bar stuck at 5 %; it goes on once League is open', async () => {
   const { sampleState } = require('./harness');
   const st = sampleState({ live: { clientUp: false, puuid: null, phase: null, waits: [] } });

@@ -54,8 +54,9 @@ const perfAvg = r => `${perfDec(r.avg.k)} / ${perfDec(r.avg.d)} / ${perfDec(r.av
 const perfKda = r => (r.perfect ? t('mh.perfect') : perfDec(r.kda, 2));
 const perfGames = n => (n === 1 ? t('perf.game1') : t('dash.nGames', { n: num(n) }));
 const perfChamp = id => (champById(id) || {}).name || '#' + id;
-const PERF_QUEUES = () => [['solo', 'Solo/Duo'], ['flex', 'Flex'], ['r5', 'Ranked 5v5'], ['classic', 'Classic 5v5'], ['normal', t('mh.normal')],
-  ['aram', 'ARAM'], ['arena', 'Arena'], ['clash', 'Clash'], ['custom', t('mh.custom')]];
+// the ranked queues side by side (Clash among them), then the rest
+const PERF_QUEUES = () => [['solo', 'Solo/Duo'], ['flex', 'Flex'], ['r5', 'Ranked 5v5'], ['clash', 'Clash'], ['classic', 'Classic 5v5'], ['normal', t('mh.normal')],
+  ['aram', 'ARAM'], ['arena', 'Arena'], ['custom', t('mh.custom')]];
 // what the filter counts, for select(): the chosen accounts and queues
 const perfF = () => ({ ...perf.f, accs: ovChosen().map(a => a.puuid) });
 
@@ -169,7 +170,8 @@ function perfAllHtml(parts, ag, opts = {}) {
       card('map', t('dash.tabMap'), perfMapHtml(sel, opts.player ? { foot: false } : {})),
       opts.role ? '' : card('roles', t('ov.roles'), perfRolesHtml(sel)),
       // another player: the play profile (no figures, no lane opponent); own accounts: the exact radar
-      card('style', t('dash.tabStyle'), opts.others ? gpiHtml(sel, opts.role) : perfStyleHtml(sel, opts.role))];
+      // (switched in the head: the same play profile for an own account)
+      card('style', t('dash.tabStyle'), opts.others || rdv.mode === 'profile' ? gpiHtml(sel, opts.role, !opts.others) : perfStyleHtml(sel, opts.role), opts.others ? '' : rdModesHtml())];
   return `${perfStripHtml(sel, agS, opts.traits)}<div class="perf-grid${off ? ' off' : opts.role ? ' one-role' : ''}">${cards.join('')}</div>`;
 }
 // a way into a section ("Champions →" on At a glance): Performance, scrolled to it

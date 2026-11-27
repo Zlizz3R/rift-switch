@@ -16,6 +16,7 @@
     <label class="aa-toggle" data-i18n-title="aa.title"><input type="checkbox" id="aaToggle"><span class="sw"></span><span data-i18n="aa.label"></span></label>
     <div class="winbtns">
       <button id="min" data-i18n-title="win.min"><svg viewBox="0 0 10 10"><path d="M1 5h8"/></svg></button>
+      <button id="max" data-i18n-title="win.max"><svg class="w-max" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8"/></svg><svg class="w-restore" viewBox="0 0 10 10"><rect x="1" y="3" width="6" height="6"/><path d="M3 3V1h6v6H7"/></svg></button>
       <button id="toTray" data-i18n-title="win.tray"><svg viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
       <button id="close" class="x" data-i18n-title="win.quit"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></button>
     </div>
@@ -135,7 +136,7 @@
           <div class="mh-filter">
             <label class="search coll-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
               <input id="mastSearch" data-i18n-ph="mast.search" spellcheck="false"></label>
-            <label class="mast-before" data-i18n-title="mast.beforeT"><span data-i18n="mast.before"></span><input type="range" id="mastBefore" min="0" max="100" step="5" value="50"><b id="mastBeforeV">50 %</b></label>
+            
             <span class="grow"></span><span class="coll-for" id="mastSub"></span>
           </div>
           <div id="mastBody"></div>
@@ -144,8 +145,8 @@
           <div class="mh-filter">
             <div class="seg">
               <button data-mhq="" data-i18n="mh.allQueues"></button><button data-mhq="solo">Solo/Duo</button><button data-mhq="flex">Flex</button>
-              <button data-mhq="r5">Ranked 5v5</button><button data-mhq="classic">Classic 5v5</button>
-              <button data-mhq="normal" data-i18n="mh.normal"></button><button data-mhq="aram">ARAM</button><button data-mhq="arena">Arena</button><button data-mhq="clash">Clash</button><button data-mhq="custom" data-i18n="mh.custom"></button>
+              <button data-mhq="r5">Ranked 5v5</button><button data-mhq="clash">Clash</button><button data-mhq="classic">Classic 5v5</button>
+              <button data-mhq="normal" data-i18n="mh.normal"></button><button data-mhq="aram">ARAM</button><button data-mhq="arena">Arena</button><button data-mhq="custom" data-i18n="mh.custom"></button>
             </div>
             <span class="grow"></span>
             <span class="coll-for mh-sub" id="mhSub"></span><button class="help-btn" data-help="mh" data-i18n-title="help.open">?</button>
@@ -592,6 +593,8 @@
 <script src="i18n.js"></script>
 <script src="rankmath.js"></script>
 <script src="stats.js"></script>
+<script src="mvp-rules.js"></script>
+<script src="mvp.js"></script>
 <script src="changelog.js"></script>
 <script src="bulkparse.js"></script>
 <script src="renderer.js"></script>

@@ -24,15 +24,18 @@ test('milestones: the highest one reached', () => {
   assert.equal(M.milestone(99999), 0);
   assert.equal(M.milestone(100000), 100000);
   assert.equal(M.milestone(2214330), 2000000);
+  assert.equal(M.milestone(5000000), 5000000);
+  assert.equal(M.milestone(12000000), 10000000);
 });
 
-test('estimate: points ÷ 850 × minutes per game, one number', () => {
+test('estimate: points ÷ 600 × minutes per game, one number', () => {
   const e = M.estimate(2200000);
-  assert.equal(R.pointsPerGame, 850);
-  assert.equal(e.games, 2200000 / 850);
+  assert.equal(R.pointsPerGame, 600);
+  assert.equal(M.pointsPerGame(), 600);
+  assert.equal(e.games, 2200000 / 600);
   // 28.5 min in the game + 7 for queue, champ select, loading and the post-game screen
-  assert.equal(e.hours, (2200000 / 850) * (28.5 + 7) / 60);     // ≈ 1,530 h
-  assert.equal(M.roundNice(e.hours), 1500);
+  assert.equal(e.hours, (2200000 / 600) * (28.5 + 7) / 60);     // ≈ 2,170 h
+  assert.equal(M.roundNice(e.hours), 2200);
   // ARAM is shorter; half ARAM: the mean of both lengths
   assert.ok(M.estimate(2200000, { aram: 1 }).hours < e.hours);
   assert.equal(M.estimate(850, { aram: 0.5 }).mins, (28.5 + 20) / 2 + 7);
@@ -59,11 +62,3 @@ test('ARAM share and own game length', () => {
   assert.equal(len.n, 3);
 });
 
-test('points per game by the share of games before the rework of May 2024: 500 before, 1,200 after', () => {
-  assert.equal(M.pointsPerGame(1), 500);
-  assert.equal(M.pointsPerGame(0), 1200);
-  assert.equal(M.pointsPerGame(0.5), 850);
-  assert.equal(M.pointsPerGame(null), 850);
-  assert.equal(M.estimate(120000, { before: 0 }).games, 100);
-  assert.equal(M.estimate(50000, { before: 1 }).games, 100);
-});

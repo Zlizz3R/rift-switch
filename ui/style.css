@@ -454,6 +454,9 @@ main { transition: margin-left .22s cubic-bezier(.2,.8,.2,1); }
 .body.pushed main { margin-left: 300px; }
 .body.pushed .drawer { box-shadow: none; }
 .winbtns #toTray svg { width: 15px; height: 15px; stroke-width: 1.6; }
+.winbtns #max svg { fill: none; stroke: currentColor; }
+.winbtns #max .w-restore, .winbtns #max.on .w-max { display: none; }
+.winbtns #max.on .w-restore { display: block; }
 /* quit notice with a bar that runs out, then the app closes */
 .quit-card { width: 340px; }
 .quit-bar { height: 4px; border-radius: 2px; background: #232b3b; overflow: hidden; }
@@ -1019,8 +1022,13 @@ h3 .help-btn { width: 17px; height: 17px; font-size: 10px; vertical-align: 1px; 
 .dm-dots.kills circle { fill: #2fc4b2; opacity: .3; }
 .dm-dots.assists circle { fill: #6aa6ff; opacity: .3; }
 /* Arena's map: its seven arenas, numbered */
-.dm-arena { fill: rgba(240, 230, 210, .04); stroke: var(--line); stroke-width: 1.2; }
-.dm-arena-n { fill: var(--muted); font-size: 11px; font-weight: 700; }
+.dm-arena { fill: rgba(240, 230, 210, .045); stroke: rgba(200,170,110,.35); stroke-width: 1.2; }
+.dm-arena-mid { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
+.dm-arena-n { fill: var(--muted); stroke: none; font-size: 5px; font-weight: 600; letter-spacing: .2px; }
+.mp-arenas button { min-width: 30px; font-weight: 600; }
+.mp-row.pick, .mp-row.on { cursor: pointer; border-radius: 6px; }
+.mp-row.pick:hover { background: rgba(255,255,255,.03); }
+.mp-row.on { background: rgba(200,170,110,.08); }
 .mc { position: relative; }
 .mc-svg { width: 340px; height: 64px; display: block; cursor: crosshair; user-select: none; }
 /* the icons' outline style (svg { stroke }) is not for the map and the chart */
@@ -1354,8 +1362,19 @@ span.mh-ch { cursor: default; }
 /* ---------- Live: the last game ---------- */
 .pg-wrap { overflow-x: auto; }
 .pg-table { min-width: 900px; display: grid; gap: 2px; }
-.pg-cols, .pg-row { display: grid; grid-template-columns: 40px 48px minmax(96px, 190px) 50px 186px 112px 104px minmax(70px, 110px) minmax(76px, 110px) minmax(76px, 110px);
+/* the columns come with the table (--pg-grid: the chosen figures, postgame.js) */
+.pg-cols, .pg-row { display: grid; grid-template-columns: var(--pg-grid, 40px 48px minmax(96px, 190px) 50px 186px 112px 104px minmax(70px, 110px) minmax(76px, 110px) minmax(76px, 110px));
   gap: 8px; align-items: center; justify-content: start; }
+.pg-cols > span:not(:nth-child(-n+5)) { text-align: right; }
+.pg-cols > span:nth-child(6), .pg-cols > span:nth-child(7) { text-align: center; }
+.pg-table.with-aug .pg-cols > span:last-child { text-align: left; padding-left: 10px; }
+.pg-colbtn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 7px; border: 1px solid var(--line); background: rgba(255,255,255,.03);
+  font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.pg-colbtn svg { width: 13px; height: 13px; stroke-width: 2; }
+.pg-colbtn:hover { color: var(--gold2); border-color: var(--gold); }
+.pg-colmenu button { display: flex; align-items: center; gap: 8px; }
+.pg-colmenu button:disabled { opacity: .45; cursor: default; }
+.pg-colmenu .pg-check { width: 14px; font-style: normal; color: var(--gold); text-align: center; }
 .pg-cols { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 0 10px 4px; }
 .pg-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 8px 10px; margin-top: 8px; border-radius: 8px; font-size: 12.5px; background: var(--panel2); }
 .pg-head .pg-side { min-width: 140px; }
@@ -1387,8 +1406,6 @@ span.mh-ch { cursor: default; }
 .mh-augs { margin-top: 4px; }
 .pg-augs { flex-basis: 100%; margin-top: 2px; }
 /* the augments' column (Arena, ARAM: Mayhem) right of the gold */
-.pg-table.with-aug { min-width: 1040px; }
-.pg-table.with-aug .pg-cols, .pg-table.with-aug .pg-row { grid-template-columns: 40px 48px minmax(96px, 190px) 50px 186px 112px 104px minmax(70px, 110px) minmax(76px, 110px) minmax(76px, 110px) minmax(116px, 170px); }
 .pg-aug { padding-left: 10px; }
 .pg-aug .pg-augs { margin-top: 0; gap: 4px; }
 .pg-aug .aug { width: 25px; height: 25px; border-radius: 7px; }
@@ -1410,6 +1427,7 @@ div.mh-more { gap: 10px; }
 .pg-bar { height: 5px; border-radius: 3px; background: var(--panel2); overflow: hidden; display: block; }
 .pg-bar i { display: block; height: 100%; border-radius: 3px; }
 .pg-bar.blue i { background: #5aa9e6; } .pg-bar.red i { background: #e5737a; } .pg-bar.taken i { background: #8a93a6; } .pg-bar.gold i { background: var(--gold); }
+.pg-bar.heal i { background: #4cc38a; } .pg-bar.obj i { background: #f0a35e; } .pg-bar.cc i { background: #8f7cf7; } .pg-bar.vis i { background: #0ac8b9; }
 
 /* match history summary: a thin line between the lists, "+5" / "less" at their end */
 .mh-sum .mh-champs { border-top: 1px solid var(--line); padding-top: 10px; }
@@ -1705,6 +1723,11 @@ div.mh-more { gap: 10px; }
 .rd-bar b.up { color: #4cc38a; } .rd-bar b.down { color: #e5737a; }
 /* another player's play profile (gpi.js): the shape and the areas, a word only for what stands out */
 .rd-shape.gpi { fill: rgba(10,200,185,.16); stroke: #0ac8b9; }
+/* own accounts: exact radar or play profile, in the card's head */
+.rd-modes { float: right; display: inline-flex; gap: 2px; margin: -4px 0 0; padding: 2px; border-radius: 8px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.rd-modes button { padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.rd-modes button:hover { color: var(--text); }
+.rd-modes button.on { color: var(--gold); background: rgba(200,170,110,.12); }
 .gpi-list { display: grid; grid-template-columns: 1fr; gap: 6px; min-width: 200px; flex: 1 1 200px; }
 .gpi-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,.025); font-size: 12.5px; cursor: help; }
 .gpi-row b { font-size: 11px; font-weight: 600; color: var(--muted); }
@@ -1906,15 +1929,20 @@ span.ov-crest { border-radius: 50%; border: 2px dashed #3a4560; width: 40px; hei
 .ov-tabs [data-dt].on, .ov-tabs [data-pltab].on { text-shadow: 0 0 14px rgba(200,170,110,.55); }
 .ov-tabs .load-btn { margin-bottom: 8px; }
 .ov-bar .pl-q small, .pl-bar .pl-q small { opacity: .55; font-size: 11px; margin-left: 2px; }
-/* the second row of pages (Overview, a player, Collection): right under the top bar, on top while scrolling */
-.subnav { position: sticky; top: 0; z-index: 6; margin: -26px -30px 0 !important; padding: 0 30px; min-height: 42px; display: flex; align-items: center;
-  gap: 2px; flex-wrap: wrap; background: rgba(11,14,20,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line) !important; }
+/* the second row of pages (Overview, a player, Collection): flush under the top bar, on top while
+   scrolling. top: -26px – a sticky box keeps main's padding free above it, so this cancels it. The
+   active tab looks like the active page above: the gold tint and the line at the bottom. */
+.subnav { position: sticky; top: -26px; z-index: 6; margin: -26px -30px 0 !important; padding: 0 30px; min-height: 48px; display: flex; align-items: center;
+  gap: 4px; flex-wrap: wrap; background: rgba(11,14,20,.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line) !important; }
 .subnav + .ov-hero { margin-top: 0; }
-.subnav [data-dt], .subnav [data-pltab], .subnav [data-ct] { padding: 11px 14px 10px; font-size: 13px; font-weight: 600; letter-spacing: .2px; color: var(--muted);
-  border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.subnav [data-dt]:hover, .subnav [data-pltab]:hover, .subnav [data-ct]:hover { color: var(--text); }
-.subnav [data-dt].on, .subnav [data-pltab].on, .subnav [data-ct].on { color: var(--gold2); border-bottom-color: var(--gold); text-shadow: 0 0 14px rgba(200,170,110,.45); }
+.subnav [data-dt], .subnav [data-pltab], .subnav [data-ct] { position: relative; height: 32px; padding: 0 13px; border-radius: 9px; border: 0; margin: 0;
+  font-size: 13px; font-weight: 600; letter-spacing: .2px; color: var(--muted); transition: background .15s, color .15s; }
+.subnav [data-dt]:hover, .subnav [data-pltab]:hover, .subnav [data-ct]:hover { color: var(--text); background: var(--panel2); }
+.subnav [data-dt].on, .subnav [data-pltab].on, .subnav [data-ct].on { color: var(--gold); background: rgba(200,170,110,.1); }
+.subnav .on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -8px; height: 2px; border-radius: 2px; background: var(--gold); }
 .subnav .load-btn { margin: 4px 0; }
+/* nothing of a page above the side panels and the settings (they lie over main) */
+main { isolation: isolate; }
 
 /* ---------- Overview → Performance: the strip on top – the key figures and the traits ---------- */
 #perfBody, #plBody { container-type: inline-size; }
@@ -1981,11 +2009,6 @@ span.ov-crest { border-radius: 50%; border: 2px dashed #3a4560; width: 40px; hei
 .perf-card .muted { color: var(--muted); font-size: 12.5px; }
 .perf-card-h small { margin-left: 10px; font-size: 10.5px; font-weight: 500; letter-spacing: .2px; text-transform: none; color: var(--muted); }
 
-/* Mastery: the share of the games played before the mastery rework */
-.mast-before { display: inline-flex; align-items: center; gap: 10px; height: 32px; padding: 0 12px; border-radius: 8px; font-size: 12.5px;
-  color: var(--muted); background: var(--panel); border: 1px solid var(--line); cursor: help; }
-.mast-before input { width: 140px; accent-color: var(--gold); cursor: pointer; }
-.mast-before b { min-width: 40px; text-align: right; color: var(--gold2); font-variant-numeric: tabular-nums; }
 /* the match history: the activity under the totals */
 .mh-act { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 8px; font-size: 12.5px; }
 .mh-act .muted { color: var(--muted); }

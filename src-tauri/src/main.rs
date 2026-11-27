@@ -3981,6 +3981,20 @@ async fn dispatch(ch: &str, args: Vec<Value>) -> Value {
                         let _ = w.minimize();
                     }
                 }
+                // the button next to it: the whole screen and back (like a browser's); says which it is now
+                "max" => {
+                    if let Some(w) = window() {
+                        let on = w.is_maximized().unwrap_or(false);
+                        let _ = if on { w.unmaximize() } else { w.maximize() };
+                        return json!({ "max": !on });
+                    }
+                }
+                "is-max" => {
+                    let on = window()
+                        .and_then(|w| w.is_maximized().ok())
+                        .unwrap_or(false);
+                    return json!({ "max": on });
+                }
                 "tray" => {
                     let first = with(|c| {
                         let seen = c.st.set_bool("trayHintShown");

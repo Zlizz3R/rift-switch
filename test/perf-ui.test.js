@@ -111,6 +111,19 @@ test('play style: a radar against the lane opponent on the main role, the same v
     // the lane phase needs the gold per minute: none stored – dashed, no value (not 0)
     assert.ok(bars[6].classList.contains('few'));
     assert.match(app.$('.rd-head').textContent, /Mid \(main role\)/);
+    // the switch in the card's head: the play profile other players get, and back (kept)
+    assert.ok(app.$('.pc-style [data-rdmode="exact"]').classList.contains('on'));
+    await app.click('.pc-style [data-rdmode="profile"]');
+    assert.ok(app.$('#perfBody .pc-style svg.radar.gpi'), 'the play profile');
+    assert.equal(app.$$('.pc-style .gpi-row').length, 8);
+    assert.equal(app.w.localStorage.getItem('rs.rdMode'), 'profile');
+    // the labels have room on both sides (the shape is in the middle of a wider picture)
+    const vb = app.$('.pc-style svg.gpi').getAttribute('viewBox').split(' ').map(Number);
+    assert.ok(vb[2] > vb[3]);
+    assert.equal(app.$('.pc-style svg.gpi .rd-label:nth-of-type(7)').getAttribute('text-anchor'), 'end', 'Consistency on the left runs leftwards');
+    await app.click('.pc-style [data-rdmode="exact"]');
+    assert.equal(app.$('#perfBody .pc-style svg.gpi'), null);
+    assert.equal(app.$$('.rd-bar').length, 8);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });
@@ -155,6 +168,42 @@ test('overview filter: queues one by one, accounts as chips for every tab (kept)
     await app.click('[data-dt="stats"]');
     await app.click('[data-ovacc=""]');
     assert.match(app.$('#perfLine').textContent, /^6 games/);
+    assert.deepEqual(app.errors.map(String), []);
+  } finally { app.close(); }
+});
+
+test('map: Arena – all seven arenas on top of each other, or one of them (its button or a click on its row)', async () => {
+  // three Arena games: a kill in arena 1, a kill and a death in arena 5
+  const ar = [];
+  for (let i = 0; i < 3; i++) {
+    const players = Array.from({ length: 6 }, (_, k) => ({ puuid: k === 0 ? P(1) : `a${i}${k}`, name: 'A' + k, tag: 'EUW', team: k < 3 ? 100 : 200, champ: 10 + k,
+      k: 2, d: 1, a: 1, cs: 0, gold: 9000, dmg: 20000, vis: 0, lvl: 18, items: [0, 0, 0, 0, 0, 0, 0], spells: [4, 14], place: k < 3 ? 1 : 2, win: k < 3 }));
+    ar.push({ id: 'ar' + i, t: now - (i + 1) * 1800000, dur: 1500, q: 1750, mode: 'CHERRY', remake: false, v: 7, players,
+      kills: [[100, 0, 3, [], 40, 40], [400, 0, 4, [], 150, 140], [600, 4, 0, [], 150, 142]] });
+  }
+  const all = [...games, ...ar];
+  const app = await boot({ replies: { ...replies, matches: { index: all.map(g => [g.id, g.t, g.q, P(1)]), waiting: 0, loadingOlder: false, clientUp: true }, 'matches-get': all } });
+  try {
+    await app.click('#navDash');
+    await app.click('[data-dt="stats"]');
+    await app.settle();
+    await app.click('[data-pq="arena"]');
+    await app.settle();
+    const dots = () => app.$$('.dm-map .dm-dots circle').length;
+    assert.ok(app.$('.dm-map.arena'), 'one arena, not the seven on a big map');
+    assert.deepEqual(app.$$('[data-mparena]').filter(b => b.tagName === 'BUTTON').map(b => b.dataset.mparena), ['0', '1', '5']);
+    assert.ok(app.$('button[data-mparena="0"]').classList.contains('on'));
+    assert.equal(dots(), 9, 'all arenas on top of each other: six kills, three deaths');
+    await app.click('button[data-mparena="5"]');
+    assert.equal(dots(), 6);
+    assert.match(app.$('.dm-map.arena').getAttribute('aria-label'), /Arena 5/);
+    assert.match(app.$('.dm-side').textContent, /3 kills in 3 games/);
+    // a click on a zone row picks that arena
+    await app.click('.mp-row[data-mparena="1"]');
+    assert.equal(dots(), 3);
+    assert.ok(app.$('.mp-row[data-mparena="1"]').classList.contains('on'));
+    await app.click('button[data-mparena="0"]');
+    assert.equal(dots(), 9);
     assert.deepEqual(app.errors.map(String), []);
   } finally { app.close(); }
 });

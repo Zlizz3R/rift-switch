@@ -146,10 +146,11 @@ into one category.
   **Another player** (Live, the player page) gets a *play profile* instead: eight areas – fighting, farming, vision,
   survival, objectives, aggression, consistency, versatility – each weighed against what is usual for the role, the
   shape only: no figures and never against one opponent (Riot's policies: no player shown up by their performance).
-- **Mastery** – every champion's points over all accounts, milestones, and the play time behind them
-  (points ÷ points per game × game length + 7 minutes around each game). Riot changed the points in May 2024 (an
-  estimate: ~500 a game before, ~1,200 after – Riot publishes no numbers): a slider says how many of your games were
-  played before – 50 % means 850. The mastery traits name every champion past a milestone.
+  Your own accounts can switch to it too (*Exact* | *Play profile*) – to see yourself the way others do.
+- **Mastery** – every champion's points over all accounts, milestones up to 10 million, and the play time behind
+  them (points ÷ ~600 points per game × game length + 7 minutes around each game – a win gives much more, a loss
+  much less; Riot publishes no numbers). The mastery traits name every champion past a milestone (5 and 10 million
+  included).
 
 <img src="docs/screens/tags.png" alt="Tags: strengths and things to work on">
 
@@ -163,7 +164,8 @@ into one category.
   against the games of the other players in that mode – also on Live's cards in an ARAM or Arena game.
   Other players (Live, the player page) only get what speaks for them – the things to work on are for your own accounts.
 - **Map** – Summoner's Rift, ARAM's map (its one lane from base to base: own base, own towers, the middle, enemy
-  towers, enemy base) or Arena's seven arenas (a switch when the games are on more than one) – where you kill, die
+  towers, enemy base) or Arena (*All arenas* on top of each other, or one of its seven; a switch when the games are
+  on more than one map) – where you kill, die
   and help: **Kills, Deaths and Assists**, each on or off (the same filter: account, queue, season, role), for a game
   phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart under the map (kills and
   assists up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min: 45 % of the
@@ -209,7 +211,10 @@ A tab of the Overview – its accounts are the Overview's chips.
   Overview's head (Ctrl+K) finds anyone: suggestions from everyone in your games, any other Riot ID looked up through
   the client (without a tag: your server's, like EUW). League closed? The page says so instead of waiting.
 - **Open a game**: every player's stats, items, runes and ranks (and in Arena and ARAM: Mayhem every player's
-  augments, right of the gold; Arena's six teams by their placing), team gold over time (hover for the lead at each
+  augments, right of the gold; Arena's six teams by their placing) – the table's figures are yours to choose
+  (*Columns*: damage, taken, gold, per minute, mitigated, healing, objectives, towers, crowd control, wards; up to
+  five) – the **placement** of all ten with MVP and ACE: every player against players on the same role with the
+  same result, tuned on thousands of stored games so that every role is MVP equally often – team gold over time (hover for the lead at each
   minute), any two players side by side – and its **replay**: download it and watch it in League (games of the
   current patch on the server League runs on).
 
@@ -266,7 +271,7 @@ site in your browser if you want a second opinion.
   folder are taken out).
 - **Keyboard** – Ctrl+F search, Ctrl+1…6 pages (Ctrl+5: the match history), Ctrl+N add (Ctrl+Shift+N many), arrow keys + Enter to log in,
   E note, P the account's Overview, Del remove, Ctrl+A pick all – `?` shows them all.
-- **Auto-accept** in the title bar, **streamer mode** – in the app (hide names, ranks … – you choose) and **in the
+- **Auto-accept** and **full screen** in the title bar, **streamer mode** – in the app (hide names, ranks … – you choose) and **in the
   game** (League's own "Hide player names" for every account you log in with), system / light / dark,
   interface size, app lock with a password (and Windows Hello to show a saved password).
 - **Export / import** – without logins (a safe backup), or with logins encrypted by a password of their own

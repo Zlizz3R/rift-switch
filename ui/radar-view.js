@@ -1,8 +1,11 @@
-// Play style against the lane opponent (docs/plans Phase 6): Overview → "Play style" (the filter of
+// Play style against the lane opponent: Overview → "Play style" (the filter of
 // Performance, one role – the chosen one or the main role –, optionally one champion) and, in Live,
 // a card's radar when its champion is clicked. Maths in radar.js. Uses the globals of perf.js etc.
 
-const rdv = { champ: 0, flipped: new Set() };
+// mode: own accounts – 'exact' (the radar against the lane opponent) or 'profile' (the play profile
+// other players get, gpi.js); kept per window (rs.rdMode)
+const rdModeSaved = () => { try { return localStorage.getItem('rs.rdMode') === 'profile' ? 'profile' : 'exact'; } catch { return 'exact'; } };
+const rdv = { champ: 0, flipped: new Set(), mode: rdModeSaved() };
 
 // the SVG: 100 % (as good as the opponent) is the middle ring, 200 % the edge
 function radarSvg(axes, size = 220) {
@@ -71,6 +74,18 @@ function perfStyleHtml(parts, chosenRole = perf.f.role) {
   if (!axes.some(a => a.n)) return `${head}<div class="chart-empty">${t('rad.none')}</div>`;
   return `${head}<div class="rd-wrap">${radarSvg(axes, 300)}${radarBars(axes)}</div><p class="coll-foot">${t('rad.basis')}</p>`;
 }
+// the switch in the play style card's head (own accounts only)
+function rdModesHtml() {
+  const b = (k, l, tip) => `<button data-rdmode="${k}" title="${esc(t(tip))}"${rdv.mode === k ? ' class="on"' : ''}>${esc(t(l))}</button>`;
+  return `<span class="rd-modes">${b('exact', 'rad.modeExact', 'rad.modeExactT')}${b('profile', 'rad.modeProfile', 'rad.modeProfileT')}</span>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-rdmode]');
+  if (!b || rdv.mode === b.dataset.rdmode) return;
+  rdv.mode = b.dataset.rdmode;
+  try { localStorage.setItem('rs.rdMode', rdv.mode); } catch { /* not kept */ }
+  perfRerender();
+});
 document.addEventListener('change', e => {
   if (e.target.id !== 'rdChamp') return;
   rdv.champ = +e.target.value;
@@ -87,19 +102,22 @@ function gpiTip(a) {
 ${t('gpi.d.' + a.id)}`;
 }
 function gpiSvg(areas, size = 220) {
-  const c = size / 2, R = size / 2 - 34, n = areas.length;
+  // side: room left and right for the labels (they run outwards from the shape, never across it)
+  const side = Math.round(size * 0.22), c = size / 2, R = size / 2 - 30, n = areas.length;
   // 0 is not the middle: the shape never collapses into a point (it shows a profile, not a rank)
-  const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n, r = (0.18 + 0.82 * (v / 100)) * R; return [c + r * Math.cos(a), c + r * Math.sin(a)]; };
+  const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n, r = (0.18 + 0.82 * (v / 100)) * R; return [side + c + r * Math.cos(a), c + r * Math.sin(a)]; };
   const ring = k => areas.map((_, i) => pt(i, k).map(v => v.toFixed(1)).join(',')).join(' ');
   const rings = [25, 55, 80, 100].map(k => `<polygon class="rd-ring${k === 55 ? ' mid' : ''}" points="${ring(k)}"/>`).join('');
-  const spokes = areas.map((a, i) => { const [x, y] = pt(i, 100); return `<line class="rd-axis${a.v == null ? ' few' : ''}" x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
+  const spokes = areas.map((a, i) => { const [x, y] = pt(i, 100); return `<line class="rd-axis${a.v == null ? ' few' : ''}" x1="${side + c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
   const known = areas.map((a, i) => (a.v == null ? null : pt(i, a.v))).filter(Boolean);
   const shape = known.length >= 3 ? `<polygon class="rd-shape gpi" points="${known.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}"/>` : '';
   const labels = areas.map((a, i) => {
-    const [x, y] = pt(i, 128);
-    return `<text class="rd-label${a.v == null ? ' few' : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${esc(t('gpi.' + a.id))}<title>${esc(gpiTip(a))}</title></text>`;
+    const [x, y] = pt(i, 112);
+    const dx = x - side - c, anchor = dx < -4 ? 'end' : dx > 4 ? 'start' : 'middle';
+    return `<text class="rd-label${a.v == null ? ' few' : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle">${esc(t('gpi.' + a.id))}<title>${esc(gpiTip(a))}</title></text>`;
   }).join('');
-  return `<svg class="radar gpi" viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px">${rings}${spokes}${shape}${labels}</svg>`;
+  const w = size + 2 * side;
+  return `<svg class="radar gpi" viewBox="0 0 ${w} ${size}" style="width:${w}px;height:${size}px">${rings}${spokes}${shape}${labels}</svg>`;
 }
 // the areas as a list: what each means, a word for what stands out
 function gpiList(areas) {
@@ -108,13 +126,14 @@ function gpiList(areas) {
     return `<div class="gpi-row${a.v == null ? ' few' : ''}" title="${esc(gpiTip(a))}"><span>${esc(t('gpi.' + a.id))}</span>${band ? `<b class="${a.v >= 75 ? 'up' : ''}">${esc(band)}</b>` : ''}</div>`;
   }).join('')}</div>`;
 }
-function gpiHtml(parts, chosenRole) {
+// own: an own account switched to it (its own footnote)
+function gpiHtml(parts, chosenRole, own = false) {
   const rows = parts.filter(x => !Stats.offRift(x.g));
   const role = chosenRole || Gpi.roleOf(rows);
   const areas = Gpi.profile(rows, role);
   const note = role ? `<span class="muted">${esc(t('gpi.role', { role: t('pos.' + role) }))}</span>` : '';
   if (!areas.some(a => a.v != null)) return `<div class="rd-head">${note}</div><div class="chart-empty">${t('rad.none')}</div>`;
-  return `<div class="rd-head">${note}</div><div class="rd-wrap">${gpiSvg(areas, 300)}${gpiList(areas)}</div><p class="coll-foot">${t('gpi.basis')}</p>`;
+  return `<div class="rd-head">${note}</div><div class="rd-wrap">${gpiSvg(areas, 280)}${gpiList(areas)}</div><p class="coll-foot">${t(own ? 'gpi.basisOwn' : 'gpi.basis')}</p>`;
 }
 
 // ---------- Live: a card shows its radar when its champion is clicked ----------

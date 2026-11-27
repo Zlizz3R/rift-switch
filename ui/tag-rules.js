@@ -1,4 +1,4 @@
-// The tag catalogue (docs/plans section 5) as data: every threshold lives here and only here.
+// The tag catalogue as data: every threshold lives here and only here.
 // A new tag is a new entry; tags.js knows the types. Names and texts are i18n keys:
 // 'tag.<id>' (short name; leveled tags: 'tag.<id>.great' / '.weak' / '.terrible', master = great + ★)
 // and 'tag.<id>.t' (the exact text with the numbers). Values marked "V" are suggestions still to be
@@ -209,7 +209,7 @@
     { id: 'passiveJungler', group: 'fight', type: 'avg', metric: 'takedowns15', below: 2, min: 6, stage: 'C', roles: ['jungle'], color: 'warn', period: 'season', dec: 1 },
 
     // ---------- mastery (all accounts together on the own accounts) ----------
-    { id: 'mastery', group: 'mastery', type: 'mastery', stage: 'M', color: 'info', steps: { millionaire: 1000000, veteran: 500000, expert: 100000 } },
+    { id: 'mastery', group: 'mastery', type: 'mastery', stage: 'M', color: 'info', steps: { legend: 10000000, multi: 5000000, millionaire: 1000000, veteran: 500000, expert: 100000 } },
   ];
   // ---------- ARAM: this season's ARAM games (no roles, no lane, no vision) ----------
   // Thresholds from the stored ARAM games of the other players (1,462 games, 3,451 player games,

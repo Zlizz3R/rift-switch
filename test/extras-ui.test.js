@@ -212,6 +212,41 @@ test('match details: every player\'s augments (ARAM: Mayhem, Arena) in a column 
   });
 });
 
+test('match details: Columns – the figures of the table chosen by the user (up to five, kept)', () => {
+  const g = mhGame(5, 420, { v: 7 });
+  g.players.forEach((p, i) => { p.x = { taken: 10000 + i, heal: 1000 * i }; });
+  const replies = {
+    matches: { index: [[g.id, g.t, g.q, P(1)]], waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': [g],
+  };
+  return withApp({ replies }, async (app) => {
+    await app.openMatches();
+    await app.click(app.$('.mh-row .mh-meta'));
+    await app.settle();
+    const heads = () => app.$$('.pg-cols > span').slice(7).map(s => s.textContent);
+    assert.deepEqual(heads(), ['Damage dealt', 'Damage taken', 'Gold']);
+    await app.click('[data-pgcols]');
+    assert.equal(app.$('#pgColMenu').hidden, false);
+    await app.click('#pgColMenu [data-pgcol="heal"]');
+    assert.deepEqual(heads(), ['Damage dealt', 'Damage taken', 'Gold', 'Healing']);
+    assert.equal(app.w.localStorage.getItem('rs.pgCols'), JSON.stringify(['dmg', 'taken', 'gold', 'heal']));
+    assert.equal(app.$$('.pg-row')[3].querySelectorAll('.pg-b')[3].querySelector('b').textContent, '3k');
+    // a figure the game doesn't have (no objectives stored): "–" in every row
+    await app.click('#pgColMenu [data-pgcol="obj"]');
+    assert.equal(app.$$('.pg-row')[0].querySelectorAll('.pg-b')[4].textContent, '–');
+    // five at most: the others can't be picked
+    assert.ok(app.$('#pgColMenu [data-pgcol="cc"]').disabled);
+    // gold off, then back to the default
+    await app.click('#pgColMenu [data-pgcol="gold"]');
+    assert.deepEqual(heads(), ['Damage dealt', 'Damage taken', 'Healing', 'Objective damage']);
+    await app.click('#pgColMenu [data-pgcol=""]');
+    assert.deepEqual(heads(), ['Damage dealt', 'Damage taken', 'Gold']);
+    // a click elsewhere closes it
+    await app.click('.pg-cols');
+    assert.equal(app.$('#pgColMenu').hidden, true);
+  });
+});
+
 test('match history: Arena (queue 1750, mode CHERRY) says "Arena" and shows its six teams by placing', () => {
   // 18 players, six teams of three: placings 1–6, the top three win
   const players = Array.from({ length: 18 }, (_, i) => ({ puuid: i === 0 ? P(1) : `x${i}`, name: 'N' + i, tag: 'EUW', team: i < 9 ? 100 : 200, champ: i + 1,

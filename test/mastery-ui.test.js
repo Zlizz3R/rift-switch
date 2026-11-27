@@ -93,26 +93,15 @@ test('load: a press runs it once and says what came in', () => withApp({ replies
   assert.match(app.$('#toast').textContent, /✓ Loaded – 162 champions, 87 skins, 12 new games/);
 }));
 
-test('mastery: the play time follows the share of games played before the mastery rework (slider, kept)', () => withApp({ replies: {
+test('mastery: the play time at 600 points per game, no slider', () => withApp({ replies: {
   champions: [{ id: 420, name: 'Illaoi' }],
-  masteries: [{ puuid: P(1), at: 1700000000000, champs: { 420: [1700000, 161] } }],
+  masteries: [{ puuid: P(1), at: 1700000000000, champs: { 420: [1800000, 161] } }],
 } }, async (app) => {
   await app.click('#navDash');
   await app.click('[data-dt="mast"]');
-  const hours = () => Number(app.$('.mast-totals > div:nth-child(2) b').textContent.replace(/[^\d]/g, ''));
-  assert.equal(app.$('#mastBeforeV').textContent, '50 %');
-  const half = hours();
-  // all games before May 2024: ~500 points per game – more games for the same points, more hours
-  app.$('#mastBefore').value = '100';
-  app.$('#mastBefore').dispatchEvent(new app.w.Event('input', { bubbles: true }));
-  await app.settle();
-  assert.equal(app.$('#mastBeforeV').textContent, '100 %');
-  assert.ok(hours() > half * 1.5, `${hours()} > 1.5 × ${half}`);
-  assert.match(app.$('.mast-totals > div:nth-child(2)').title, /100 % of the games before Riot's mastery rework/);
-  // all after: ~1,200 points per game – fewer hours
-  app.$('#mastBefore').value = '0';
-  app.$('#mastBefore').dispatchEvent(new app.w.Event('input', { bubbles: true }));
-  await app.settle();
-  assert.ok(hours() < half, `${hours()} < ${half}`);
-  assert.equal(app.w.localStorage.getItem('rs.mastBefore'), '0', 'kept');
+  assert.equal(app.$('#mastBefore'), null);
+  // 1,800,000 ÷ 600 = 3,000 games × (28.5 + 7) min ≈ 1,775 h → "≈ 1,800 h"
+  const hours = Number(app.$('.mast-totals > div:nth-child(2) b').textContent.replace(/[^\d]/g, ''));
+  assert.equal(hours, 1800);
+  assert.match(app.$('.mast-totals > div:nth-child(2)').title, /Points ÷ 600 per game ≈ 3,000 games/);
 }));
