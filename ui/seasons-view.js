@@ -1,6 +1,6 @@
 // Overview → Seasons: every account's seasons from three sources, never added up – what the client
 // tells (last season's end and peak, this season's peak), what the stored ranked games say per
-// calendar year, and what the user entered by hand (pasted text, with a preview). docs/plans Phase 8.
+// calendar year, and what the user entered by hand (pasted text, with a preview).
 
 const ssv = { games: null, edit: '', text: '' };
 

@@ -10,8 +10,11 @@ src-tauri/target-dist/
 ki-export/
 tools/screens/site/
 tools/screens/frames/
-# inspiration screenshots for the analysis plan (third-party pictures, other players: local only)
-docs/plans/screenshots/
+# only for the developer, kept on this PC: the planning notes (backlog, endpoint list …) and the
+# export of the code for an AI review
+docs/plans/
+KI-Export.cmd
+tools/ai-export.js
 
 # exports of the app (accounts, maybe logins) never go into the repository
 *rift-switch-backup*.json

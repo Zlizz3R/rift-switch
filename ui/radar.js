@@ -1,4 +1,4 @@
-// Play style against the lane opponent (docs/plans Phase 6): per axis the own average ÷ the lane
+// Play style against the lane opponent: per axis the own average ÷ the lane
 // opponents' average over the same games (a ratio per game and then a mean would let one game with a
 // near-zero opponent – 300 tower damage – blow it up). 1 = as good as the opponent; deaths the other
 // way round (fewer is better). Shown as the difference: +13 % = 13 % better. Games without a clear lane opponent don't count; an axis with

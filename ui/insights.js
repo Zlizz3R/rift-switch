@@ -1,4 +1,4 @@
-// Live, more (docs/plans Phase 5b): premades, "do I know them?", the own record against the lane
+// Live, more: premades, "do I know them?", the own record against the lane
 // opponent's champion, the damage mix of a team and what changed in the own tags with a game.
 // Pure functions on stored games (format of matches.rs); no DOM; shared by the window and the tests.
 (function (root) {

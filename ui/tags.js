@@ -432,7 +432,7 @@
   // ("All roles": with the role at the end – each role keeps its own)
   const keys = results => new Set(results.filter(x => x.state === 'met' && x.level).map(x => `${x.id}:${x.level}${x.role ? ':' + x.role : ''}`));
 
-  // Live tags: they are about the current game, so they come first on a card (docs/plans 5.4).
+  // Live tags: they are about the current game, so they come first on a card.
   // d: { games, puuid, champ (played now), mastery (points on it, null = unknown), position (from the
   //      client, '' = unknown or guessed), enemyChamps, bans, results (evaluate() of this player), now }
   function liveTags(d) {

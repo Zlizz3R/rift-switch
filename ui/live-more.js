@@ -1,4 +1,4 @@
-// Live, more (docs/plans Phase 5b), on top of scout-view.js: premades as coloured frames, "do I
+// Live, more, on top of scout-view.js: premades as coloured frames, "do I
 // know them?", the own record against the lane opponent's champion, each team's damage mix, the
 // champ-select helper by game phase and the own tags before / after a game in the post-game view.
 // The maths is in insights.js; uses the globals of renderer.js / views.js / scout-view.js / tags-view.js.

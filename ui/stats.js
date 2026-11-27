@@ -1,7 +1,7 @@
 // Every key figure, computed in exactly one place – match history, overview, live, tags and the
 // profile all use these functions. No DOM; shared by the window and the tests.
 //
-// Rules (docs/plans, section 1):
+// Rules:
 // - KDA = (K + A) / max(1, D), over sums when it's about several games; "Ø K / D / A" are three means.
 // - Missing ≠ 0: a value that can't be known is null and left out of averages, never counted as 0.
 // - Weighted: totals over games, never means of win rates.
@@ -159,7 +159,7 @@
   const pIdx = (g, p) => g.players.indexOf(p);
   // CS of player i at minute m; null when the game has no such minute
   const csAt = (g, i, m) => (g.csm && g.csm.length > m && g.csm[m] ? g.csm[m][i] : null);
-  // solo kill: a kill on a champion without any assist, by a champion (docs/plans 5.2)
+  // solo kill: a kill on a champion without any assist, by a champion
   const soloKills = (g, p) => g.kills.filter(k => k[1] === pIdx(g, p) && k[2] >= 0 && !k[3].length).length;
   // solo death: killed by one enemy champion without assists; gank death: with at least one assist
   const soloDeaths = (g, p) => g.kills.filter(k => k[2] === pIdx(g, p) && k[1] >= 0 && !k[3].length).length;
