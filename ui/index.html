@@ -92,6 +92,10 @@
       </div>
 
       <section id="viewDash" hidden>
+        <div class="subtabs subnav" id="dashTabs">
+          <button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="tags" data-i18n="dash.tabTags"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="matches" data-i18n="mh.title"></button><button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="seasons" data-i18n="dash.tabSeasons"></button>
+          <span class="grow"></span><button class="btn load-btn" data-loadall=""></button>
+        </div>
         <div class="ov-hero">
           <div class="ov-art" id="ovArt"></div>
           <div class="ov-top">
@@ -100,10 +104,6 @@
           </div>
           <div class="ov-show" id="ovShow" hidden></div>
           <div class="seg ov-accs" id="ovAccs" hidden></div>
-          <div class="subtabs ov-tabs" id="dashTabs">
-          <button data-dt="stats" data-i18n="dash.tabStats"></button><button data-dt="tags" data-i18n="dash.tabTags"></button><button data-dt="mast" data-i18n="dash.tabMast"></button><button data-dt="matches" data-i18n="mh.title"></button><button data-dt="lp" data-i18n="dash.tabLp"></button><button data-dt="seasons" data-i18n="dash.tabSeasons"></button>
-          <span class="grow"></span><button class="btn load-btn" data-loadall=""></button>
-          </div>
         </div>
         <div id="dashLp" hidden>
           <div class="mh-filter">
@@ -190,8 +190,9 @@
       </section>
 
       <section id="viewColl" hidden>
+        <div class="subtabs subnav" id="collTabs"><button data-ct="list" data-i18n="coll.tabList"></button><button data-ct="rar" data-i18n="coll.tabRar"></button></div>
         <div class="head ov-hero pg-hero"><div class="ov-art" id="pgArtColl"></div><h1><span data-i18n="coll.title"></span></h1><p class="sub" data-i18n="coll.sub"></p></div>
-        <div class="mh-filter">
+        <div class="mh-filter" id="collFilter">
           <label class="search coll-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
             <input id="collSearch" data-i18n-ph="coll.search" spellcheck="false"></label>
           <div class="seg"><button data-ck="all" data-i18n="mh.allQueues"></button><button data-ck="champ" data-i18n="coll.champs"></button><button data-ck="skin" data-i18n="coll.skins"></button><button data-ck="shard" data-i18n="coll.shards"></button></div>
@@ -209,13 +210,13 @@
       </section>
 
       <section id="viewPlayer" hidden>
+        <div class="subtabs subnav" id="plTabs"></div>
         <div class="ov-hero pl-hero">
           <div class="ov-art" id="plArt"></div>
           <div class="ov-top">
             <div class="ov-who pl-head" id="plHead"></div>
             <div class="ov-side"><div class="ov-search-slot" id="plSearchSlot"></div><button class="btn small ov-mine" id="plMine"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span data-i18n="ov.yourAccounts"></span></button></div>
           </div>
-          <div class="subtabs ov-tabs" id="plTabs"></div>
         </div>
         <div id="plBody"></div>
       </section>

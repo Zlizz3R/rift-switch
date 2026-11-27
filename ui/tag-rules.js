@@ -33,7 +33,7 @@
     // ---------- activity & form ----------
     { id: 'hotStreak', group: 'form', type: 'streak', win: true, n: 3, min: 3, stage: 'A', color: 'good', period: 'all' },
     { id: 'lossStreak', group: 'form', type: 'streak', win: false, n: 3, min: 3, stage: 'A', color: 'bad', period: 'all' },
-    { id: 'backAgain', group: 'form', type: 'break', days: 14, within: 3, min: 1, stage: 'A', color: 'warn', period: 'all' },
+    { id: 'backAgain', group: 'form', type: 'break', days: 14, within: 3, min: 1, stage: 'A', color: 'info', period: 'all' },
     // 10 ranked games in 7 days (about 43 a month): reachable with the 20 games Live knows
     { id: 'grinder', group: 'form', type: 'count', games: 10, days: 7, stage: 'A', color: 'info', period: 'd7' },
     { id: 'smurf', group: 'form', type: 'level', below: 100, stage: 'A', color: 'warn' },
@@ -200,16 +200,16 @@
     { id: 'duelist', group: 'fight', type: 'avg', metric: 'duels', atLeast: 0.66, min: 10, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
     { id: 'unkillable', group: 'fight', type: 'avg', metric: 'deaths10', below: 1, min: 6, stage: 'C', roles: ALL, color: 'good', period: 'season', dec: 1 },
     { id: 'gankVictim', group: 'fight', type: 'avg', metric: 'gankDeaths15', atLeast: 2, min: 6, stage: 'C', roles: ALL, color: 'bad', period: 'season', dec: 1 },
-    { id: 'readyToRumble', group: 'fight', type: 'avg', metric: 'firstKill5', atLeast: 0.66, min: 6, stage: 'C', roles: ALL, color: 'warn', period: 'season', pct: true },
+    { id: 'readyToRumble', group: 'fight', type: 'avg', metric: 'firstKill5', atLeast: 0.66, min: 6, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
     // off: the League client's timelines have no ward events (checked 24.11.2026) – back on if a source has them
     { id: 'earlyWarder', off: true, group: 'fight', type: 'avg', metric: 'ward3', atLeast: 0.9, min: 6, stage: 'C', roles: ALL, color: 'good', period: 'season', pct: true },
     { id: 'dragonSlayer', group: 'fight', type: 'avg', metric: 'firstDrake', atLeast: 0.66, min: 10, stage: 'B', roles: ALL, color: 'good', period: 'season', pct: true },
     { id: 'ganker', group: 'fight', type: 'avg', metric: 'gank', atLeast: 0.666, min: 6, stage: 'C', roles: ['jungle'], color: 'good', period: 'season', pct: true },
-    { id: 'aggroJungler', group: 'fight', type: 'avg', metric: 'takedowns15', atLeast: 4, min: 6, stage: 'C', roles: ['jungle'], color: 'warn', period: 'season', dec: 1 },
+    { id: 'aggroJungler', group: 'fight', type: 'avg', metric: 'takedowns15', atLeast: 4, min: 6, stage: 'C', roles: ['jungle'], color: 'good', period: 'season', dec: 1 },
     { id: 'passiveJungler', group: 'fight', type: 'avg', metric: 'takedowns15', below: 2, min: 6, stage: 'C', roles: ['jungle'], color: 'warn', period: 'season', dec: 1 },
 
     // ---------- mastery (all accounts together on the own accounts) ----------
-    { id: 'mastery', group: 'mastery', type: 'mastery', stage: 'M', color: 'info', steps: { millionaire: 1000000, veteran: 500000, expert: 100000 }, max: 3 },
+    { id: 'mastery', group: 'mastery', type: 'mastery', stage: 'M', color: 'info', steps: { millionaire: 1000000, veteran: 500000, expert: 100000 } },
   ];
   // ---------- ARAM: this season's ARAM games (no roles, no lane, no vision) ----------
   // Thresholds from the stored ARAM games of the other players (1,462 games, 3,451 player games,

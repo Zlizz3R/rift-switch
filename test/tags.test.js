@@ -52,6 +52,19 @@ test('only ranked games count; the main role decides the key figures', () => {
   assert.equal(get(run(Array.from({ length: 12 }, (_, i) => game({ ago: i + 1 }))), 'kda')[0].level, 'master');
 });
 
+test('a filter\'s games (rows): the traits judge exactly those – here the newest 10 normals, not the season\'s ranked', () => {
+  const St = require('../ui/stats');
+  const ranked = Array.from({ length: 12 }, (_, i) => game({ ago: 100 + i, me: { cs: 150 } }));         // 5 CS/min
+  const normals = Array.from({ length: 12 }, (_, i) => game({ q: 400, ago: i + 1, me: { cs: 300 } }));   // 10 CS/min
+  const all = [...ranked, ...normals];
+  assert.equal(get(run(all), 'farm')[0].level, 'terrible');
+  const rows = St.byParticipation(normals.slice(0, 10));
+  const r = run(all, { rows });
+  assert.equal(get(r, 'farm')[0].state, 'met');
+  assert.equal(get(r, 'farm')[0].level, 'master');
+  assert.equal(get(r, 'farm')[0].n, 10);
+});
+
 test('only this season: last year\'s ranked games are left out, in the live tags too', () => {
   const thisYear = Array.from({ length: 12 }, (_, i) => game({ ago: i + 1, me: { cs: 300 } }));
   // last December, a lot of them: they would make the farm "terrible"
@@ -127,11 +140,11 @@ test('lane gold at 15 minutes against the lane opponent', () => {
   assert.equal(get(run(Array.from({ length: 6 }, (_, i) => game({ ago: i + 1 }))), 'laneGold')[0].state, 'few');
 });
 
-test('mastery: never read = too little data; the highest step per champion, at most three', () => {
+test('mastery: never read = too little data; the highest step per champion, every champion past a milestone', () => {
   assert.equal(get(run([]), 'mastery')[0].state, 'few');
   const m = [{ id: 420, total: 2200000, n: 3 }, { id: 74, total: 600000, n: 1 }, { id: 1, total: 150000, n: 1 }, { id: 2, total: 120000, n: 1 }];
   const r = get(run([], { mastery: m }), 'mastery');
-  assert.deepEqual(r.map(x => [x.champ, x.level]), [[420, 'millionaire'], [74, 'veteran'], [1, 'expert']]);
+  assert.deepEqual(r.map(x => [x.champ, x.level]), [[420, 'millionaire'], [74, 'veteran'], [1, 'expert'], [2, 'expert']]);
 });
 
 test('every threshold sits in tag-rules.js; every rule has a known type', () => {

@@ -130,11 +130,12 @@ function renderPerf() {
   // a champion no longer among these games: all champions again
   if (perf.champ && !parts.some(x => x.p.champ === perf.champ)) perf.champ = 0;
   if (perf.champ) $('perfLine').textContent = perfLine(Stats.aggregate(parts.filter(x => x.p.champ === perf.champ)));
-  el.innerHTML = perfAllHtml(parts, ag, { role: perf.f.role, champ: perf.champ, traits: perfOwnTraits(perf.champ) });
+  el.innerHTML = perfAllHtml(parts, ag, { role: perf.f.role, champ: perf.champ, traits: perfOwnTraits(perf.champ, parts) });
 }
-// the own accounts' traits for the strip: ranked (or ARAM when only ARAM is chosen), every role –
-// with a champion picked, from that champion's games only
-function perfOwnTraits(champ = 0) {
+// the own accounts' traits for the strip: from exactly the games the filter chose (accounts, queues,
+// season or dates, the newest n, the role) – ARAM's catalogue when only ARAM is chosen, Arena's for
+// Arena; with a champion picked, from that champion's games only
+function perfOwnTraits(champ = 0, parts = null) {
   const chosen = ovChosen(), ids = chosen.map(a => a.puuid);
   const q = perf.f.queues;
   const scope = q.length && q.every(x => x === 'aram') ? 'aram' : q.length && q.every(x => x === 'arena') ? 'arena' : 'ranked';
@@ -142,7 +143,8 @@ function perfOwnTraits(champ = 0) {
   const table = read.length ? MastMath.masteryTable(read) : null;
   const acc = chosen.length === 1 ? chosen[0] : null;
   const games = champ ? perf.games.filter(g => g.players.some(p => ids.includes(p.puuid) && p.champ === champ)) : perf.games;
-  return { res: sumRes(games, ids, acc && acc.level != null ? acc.level : null, table, scope), scope, champ };
+  const rows = parts ? (champ ? parts.filter(x => x.p.champ === champ) : parts) : null;
+  return { res: sumRes(games, ids, acc && acc.level != null ? acc.level : null, table, scope, rows, perf.f.role), scope, champ };
 }
 // one page: the key figures and the traits on top, then the champions, the roles, the play style and
 // the map as cards – champions left of the others on a medium window, three columns on a wide one, one

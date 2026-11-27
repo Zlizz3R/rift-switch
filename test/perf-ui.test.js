@@ -274,7 +274,8 @@ test('performance: the key figures in one strip – wins and losses in colour, t
 });
 
 test('showcase: favourites from the collections in the head – pick, order, size, empty; kept as a setting', async () => {
-  const colls = [{ puuid: 'p1', skins: [[103001, 'Dynasty Ahri', '/lol-game-data/assets/ahri1.jpg'], [103015, 'K/DA Ahri', '/lol-game-data/assets/ahri15.jpg']], icons: [29, 7],
+  // skins read with the game data: [id, name, picture, rarity, legacy, year got]
+  const colls = [{ puuid: 'p1', skins: [[103001, 'Dynasty Ahri', '/lol-game-data/assets/ahri1.jpg', 2, 1, 2019], [103015, 'K/DA Ahri', '/lol-game-data/assets/ahri15.jpg', 3, 0, 2024]], icons: [29, 7],
     wards: [[3, 'Poro Ward', '/lol-game-data/assets/w3.png']] }, { puuid: 'p2', skins: [[103001, 'Dynasty Ahri', '/lol-game-data/assets/ahri1.jpg']], emotes: [[4096, 'Thumbs up', '/lol-game-data/assets/e.png']] }];
   const app = await boot({ replies: { ...replies, collections: colls } });
   try {
@@ -285,6 +286,20 @@ test('showcase: favourites from the collections in the head – pick, order, siz
     await app.settle();
     assert.ok(!app.$('#showBox').hidden);
     // each skin once, across the accounts
+    assert.equal(app.$$('.sh-grid .sh-pick').length, 2);
+    // filters: a rarity, Legacy, the year it was got
+    await app.click('[data-shrar="3"]');
+    assert.deepEqual(app.$$('.sh-grid .sh-pick').map(b => b.dataset.shadd), ['skin:103015']);
+    await app.click('[data-shrar=""]');
+    await app.click('[data-shleg]');
+    assert.deepEqual(app.$$('.sh-grid .sh-pick').map(b => b.dataset.shadd), ['skin:103001']);
+    await app.click('[data-shleg]');
+    assert.deepEqual([...app.$('#showYear').options].map(o => o.value), ['', '2024', '2019']);
+    app.$('#showYear').value = '2024';
+    app.$('#showYear').dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    assert.deepEqual(app.$$('.sh-grid .sh-pick').map(b => b.dataset.shadd), ['skin:103015']);
+    app.$('#showYear').value = '';
+    app.$('#showYear').dispatchEvent(new app.w.Event('change', { bubbles: true }));
     assert.equal(app.$$('.sh-grid .sh-pick').length, 2);
     await app.click('[data-shadd="skin:103015"]');
     await app.click('[data-shkind="icon"]');

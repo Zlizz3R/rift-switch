@@ -123,11 +123,13 @@ function sumRing(v) {
   return `<svg class="ov-ring ${cls}" viewBox="0 0 38 38"><circle cx="19" cy="19" r="${r}"/><circle class="v" cx="19" cy="19" r="${r}" stroke-dasharray="${(f * c).toFixed(1)} ${c.toFixed(1)}"/></svg>`;
 }
 // the traits of a scope: ranked (all roles) or ARAM
-function sumRes(games, puuids, level, mastery, scope) {
-  if (scope === 'aram') return typeof Tags.evaluateAram === 'function' ? Tags.evaluateAram({ games, own: puuids, now: Date.now() }) : null;
-  // Arena: no traits catalogue (yet)
-  if (scope === 'arena') return null;
-  return Tags.evaluateAll({ games, own: puuids, level, mastery, now: Date.now() });
+// rows: the participations a filter chose (Performance: queues, period, last n games, champion) – the
+// traits judge exactly those; role: one role (the role filter) instead of every role
+function sumRes(games, puuids, level, mastery, scope, rows = null, role = '') {
+  const ctx = { games, own: puuids, level, mastery, now: Date.now(), ...(rows ? { rows } : {}) };
+  if (scope === 'aram') return typeof Tags.evaluateAram === 'function' ? Tags.evaluateAram(ctx) : null;
+  if (scope === 'arena') return typeof Tags.evaluateArena === 'function' ? Tags.evaluateArena(ctx) : null;
+  return role ? Tags.evaluate({ ...ctx, role }) : Tags.evaluateAll(ctx);
 }
 api.onState(() => { if (view === 'dash') renderOvHero(); });
 // a way into a tab ("Traits →" in the key figures)

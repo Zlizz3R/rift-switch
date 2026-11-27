@@ -3,7 +3,8 @@
 // Riot only tells the signed-in account's collection: each account is read while you are logged
 // in to it (every 5 minutes, or now with "Load"). Uses the globals of renderer.js / views.js.
 
-const coll = { data: null, champs: null, q: '', kind: 'all', stamp: '' };
+// tab: 'list' (every account, the search) or 'rar' (by rarity) – the Collection's two tabs, kept
+const coll = { data: null, champs: null, q: '', kind: 'all', stamp: '', tab: (() => { try { return localStorage.getItem('rs.collTab') === 'rar' ? 'rar' : 'list'; } catch { return 'list'; } })() };
 
 async function loadColl() {
   coll.stamp = collStamp();
@@ -53,42 +54,45 @@ function collMatch(e, q) {
 // also plain. Finishers (standard or Exalted) and emotes aren't here.
 const COLL_RAR_KINDS = [['skin', 'coll.skins', [0, 2, 3, 4, 5, 6, 7]], ['icon', 'coll.n.icon', [0, 1, 2, 3, 4, 5, 6, 7]],
   ['ward', 'coll.n.ward', [0, 1, 2, 4]], ['chroma', 'coll.n.chroma', [0, 1, 2, 3, 4, 5]]];
-const collBdOpen = () => { try { return localStorage.getItem('rs.collBd') === '1'; } catch { return false; } };
 // the kinds folded out (all folded at first)
 const collBdKinds = () => { try { return new Set(JSON.parse(localStorage.getItem('rs.collBdKinds') || '[]')); } catch { return new Set(); } };
+// the "By rarity" tab. Legacy (no longer sold) is a mark of its own, not a rarity – a skin can be
+// Mythic and Legacy – so it has a column of its own apart from the rarities (skins only: Riot marks
+// no other kind). "Rare" skins: Riot's data gives that rarity to skins that were never in the shop
+// (Victorious skins from ranked, the Arcane skins, Conqueror Alistar …) – the client's collection
+// has no Rare tier, so a note says where they come from (checked 27.11.2026: 19 such skins).
 function collRarityHtml(known, by) {
-  const open = collBdOpen();
-  const btn = `<button class="btn small coll-bd-btn${open ? ' open' : ''}" data-collbd>${t(open ? 'coll.bdHide' : 'coll.bdShow')}</button>`;
-  if (!open) return `<div class="coll-bd">${btn}</div>`;
-  const rowsOf = k => known.map(a => ({ a, r: ((by.get(a.puuid).counts || {}).rar || {})[k] })).filter(x => Array.isArray(x.r));
+  const rowsOf = k => known.map(a => { const c = by.get(a.puuid).counts || {}; return { a, r: (c.rar || {})[k], legacy: k === 'skin' && c.rar ? c.rar.skinLegacy : null }; })
+    .filter(x => Array.isArray(x.r));
   // every rarity there is, lowest first – also the ones nobody owns yet (Exalted, Transcendent …).
   // Mythic (4) sits below Legendary (3) here, whatever Riot's numbers say
   const cols = [0, 1, 2, 4, 3, 5, 6, 7];
   const kinds = COLL_RAR_KINDS.filter(([k]) => rowsOf(k).some(x => x.r.some(v => v > 0)));
-  if (!kinds.length) return `<div class="coll-bd">${btn}<p class="coll-foot">${t('coll.bdLater')}</p><p class="coll-foot">${t('coll.bdNote')}</p></div>`;
+  if (!kinds.length) return `<div class="coll-bd"><p class="coll-foot">${t('coll.bdLater')}</p><p class="coll-foot">${t('coll.bdNote')}</p></div>`;
   const unfolded = collBdKinds();
   // a rarity this kind doesn't have: an empty cell, not 0
   const cell = (v, has) => (!has ? '<td class="rar-none"></td>' : `<td>${v ? num(v) : '<span class="muted">0</span>'}</td>`);
+  // Legacy: read before it was counted = "–"
+  const legCell = (v, k) => (k !== 'skin' ? '<td class="rar-leg rar-none"></td>'
+    : `<td class="rar-leg">${v == null ? '<span class="muted">–</span>' : v ? num(v) : '<span class="muted">0</span>'}</td>`);
   const body = kinds.map(([k, label, has]) => {
     const rows = rowsOf(k), on = unfolded.has(k);
     const sum = cols.map(i => rows.reduce((s, x) => s + (x.r[i] || 0), 0));
-    const head = `<tr class="rar-kind${on ? ' on' : ''}" data-rarkind="${k}"><td><span class="rar-tw">${on ? '▾' : '▸'}</span>${t(label)}</td>${sum.map((v, i) => cell(v, has.includes(cols[i]) || v > 0)).join('')}</tr>`;
-    return head + (on ? rows.map(({ a, r }) => `<tr class="rar-acc"><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => cell(r[i], has.includes(i) || r[i] > 0)).join('')}</tr>`).join('') : '');
+    const leg = rows.some(x => x.legacy != null) ? rows.reduce((s, x) => s + (x.legacy || 0), 0) : null;
+    const head = `<tr class="rar-kind${on ? ' on' : ''}" data-rarkind="${k}"><td><span class="rar-tw">${on ? '▾' : '▸'}</span>${t(label)}</td>${sum.map((v, i) => cell(v, has.includes(cols[i]) || v > 0)).join('')}${legCell(leg, k)}</tr>`;
+    return head + (on ? rows.map(({ a, r, legacy }) => `<tr class="rar-acc"><td><span class="dash-name">${esc(dispName(a))}</span></td>${cols.map(i => cell(r[i], has.includes(i) || r[i] > 0)).join('')}${legCell(legacy, k)}</tr>`).join('') : '');
   }).join('');
-  return `<div class="coll-bd">${btn}<table class="dash-table coll-table coll-rar"><colgroup><col class="rar-name">${cols.map(() => '<col>').join('')}</colgroup>
-    <thead><tr><th></th>${cols.map(i => `<th><i class="rar r${i}"></i>${t('rar.' + i)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
-    <p class="coll-foot">${t('coll.bdNote')}</p></div>`;
+  const th = i => `<th${i === 1 ? ` title="${esc(t('coll.rareT'))}"` : ''}><i class="rar r${i}"></i>${t('rar.' + i)}${i === 1 ? ' <sup>?</sup>' : ''}</th>`;
+  return `<div class="coll-bd"><table class="dash-table coll-table coll-rar"><colgroup><col class="rar-name">${cols.map(() => '<col>').join('')}<col class="rar-legcol"></colgroup>
+    <thead><tr><th></th>${cols.map(th).join('')}<th class="rar-leg" title="${esc(t('coll.legacyT'))}">${t('coll.legacy')}</th></tr></thead><tbody>${body}</tbody></table>
+    <p class="coll-foot">${t('coll.rareT')}</p><p class="coll-foot">${t('coll.legacyT')}</p><p class="coll-foot">${t('coll.bdNote')}</p></div>`;
 }
 document.addEventListener('click', e => {
   const kind = e.target.closest('[data-rarkind]');
-  if (kind) {
-    const s = collBdKinds();
-    if (s.has(kind.dataset.rarkind)) s.delete(kind.dataset.rarkind); else s.add(kind.dataset.rarkind);
-    try { localStorage.setItem('rs.collBdKinds', JSON.stringify([...s])); } catch { /* not kept */ }
-    return renderColl();
-  }
-  if (!e.target.closest('[data-collbd]')) return;
-  try { localStorage.setItem('rs.collBd', collBdOpen() ? '0' : '1'); } catch { /* not kept */ }
+  if (!kind) return;
+  const s = collBdKinds();
+  if (s.has(kind.dataset.rarkind)) s.delete(kind.dataset.rarkind); else s.add(kind.dataset.rarkind);
+  try { localStorage.setItem('rs.collBdKinds', JSON.stringify([...s])); } catch { /* not kept */ }
   renderColl();
 });
 
@@ -110,6 +114,12 @@ function renderColl() {
   const el = $('collBody');
   if (!el) return;
   document.querySelectorAll('[data-ck]').forEach(b => b.classList.toggle('on', b.dataset.ck === coll.kind));
+  document.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', b.dataset.ct === coll.tab));
+  // "By rarity": no search, no kinds, no account tiles – the table (Load stays in the bar)
+  const rar = coll.tab === 'rar';
+  $('collSearch').closest('label').hidden = rar;
+  document.querySelectorAll('#collFilter .seg').forEach(x => { x.hidden = rar; });
+  $('collTiles').hidden = rar;
   renderCollBar();
   if (!coll.data) { el.innerHTML = `<div class="chart-empty">${t('mh.loading')}</div>`; $('collTiles').innerHTML = ''; return; }
   const accs = S.accounts.filter(a => !a.placeholder);
@@ -117,6 +127,7 @@ function renderColl() {
   const known = accs.filter(a => by.has(a.puuid));
   const missing = accs.length - known.length;
   const foot = missing ? `<p class="coll-foot">${t('coll.missing', { n: missing })}</p>` : '';
+  if (rar) { el.innerHTML = known.length ? collRarityHtml(known, by) + foot : `<div class="chart-empty">${t('coll.empty')}</div>`; return; }
   const q = collNorm(coll.q);
   renderCollTiles(accs, by, q);
   if (!q && coll.kind === 'all') {
@@ -148,7 +159,7 @@ function renderColl() {
     }
     const head = ['coll.champs', 'coll.skins', ...COLL_COUNTS.map(k => 'coll.n.' + k), 'p.be', 'coll.rp', 'coll.asOf'];
     el.innerHTML = `<table class="dash-table coll-table"><thead><tr><th>${t('dash.account')}</th>${head.map(k => `<th>${t(k)}</th>`).join('')}</tr></thead><tbody>
-      ${rows.join('')}</tbody>${foot2}</table>${collCountsHint(known, by)}${collRarityHtml(known, by)}`;
+      ${rows.join('')}</tbody>${foot2}</table>${collCountsHint(known, by)}`;
     return;
   }
   if (!known.length) { el.innerHTML = `<div class="chart-empty">${t('coll.empty')}</div>`; return; }
@@ -202,6 +213,12 @@ function renderCollTiles(accs, by, q) {
 
 $('collSearch').addEventListener('input', () => { coll.q = $('collSearch').value; renderColl(); });
 $('viewColl').addEventListener('click', e => {
+  const tb = e.target.closest('[data-ct]');
+  if (tb) {
+    coll.tab = tb.dataset.ct;
+    try { localStorage.setItem('rs.collTab', coll.tab); } catch { /* not kept */ }
+    return renderColl();
+  }
   const k = e.target.closest('[data-ck]');
   if (k) { coll.kind = k.dataset.ck; return renderColl(); }
   const a = e.target.closest('[data-cacc]');

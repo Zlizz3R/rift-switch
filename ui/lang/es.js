@@ -529,8 +529,6 @@
     'perf.unfold': "Clic: mostrar u ocultar sus campeones",
     'rad.basis': "Cada eje: tu media frente a la de tus rivales de línea en las mismas partidas.",
     'coll.rp': "RP",
-    'coll.bdShow': "Por rareza ▾",
-    'coll.bdHide': "Por rareza ▴",
     'coll.bdNote': "Rarezas según los datos de juego del cliente. Los gestos y remates no tienen.",
     'coll.bdLater': "Se cuenta desde la próxima lectura: pulsa «Cargar» con la sesión iniciada.",
     'rar.0': "Sin rareza",
@@ -898,6 +896,14 @@
     'gpi.few': "aún no hay suficientes partidas",
     'gpi.role': "Comparado con lo habitual en {role}",
     'gpi.basis': "El perfil de juego de otra persona: cada área pondera varias cifras frente a lo habitual en el rol; la forma muestra dónde están sus puntos fuertes. Sin cifras y sin comparar con un rival concreto (tus cuentas tienen el radar exacto).",
+    'coll.tabList': "Por cuenta",
+    'coll.tabRar': "Por rareza",
+    'coll.legacy': "Legado",
+    'coll.legacyT': "Legado: aspectos que ya no se venden (marca de la propia Riot). Un aspecto puede ser Legado y tener a la vez una rareza, por eso se cuentan aparte.",
+    'coll.rareT': "Raro: los datos de Riot dan esta rareza a aspectos que nunca estuvieron en la tienda: los aspectos Victoriosos de clasificatoria, los de Arcane, Alistar Conquistador y algunos más. Por eso la colección del cliente no tiene nivel Raro.",
+    'sh.allRars': "Todas",
+    'sh.allYears': "Todos los años",
+    'sh.yearT': "El año en que conseguiste el aspecto",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).es = L;

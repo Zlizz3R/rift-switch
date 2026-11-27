@@ -575,8 +575,6 @@
     'perf.unfold': "Click: show or hide its champions",
     'rad.basis': "Each axis: your average against your lane opponents' average in the same games.",
     'coll.rp': "RP",
-    'coll.bdShow': "By rarity ▾",
-    'coll.bdHide': "By rarity ▴",
     'coll.bdNote': "Rarities from the client's own game data. Emotes and finishers have none.",
     'coll.bdLater': "Counted from the next reading – press \"Load\" while logged in.",
     'rar.0': "No rarity",
@@ -944,6 +942,14 @@
     'gpi.few': "not enough games for it yet",
     'gpi.role': "Compared with what is usual for {role}",
     'gpi.basis': "The play profile of another player: each area weighs several figures against what is usual for the role – the shape shows where their strengths lie. No figures and no comparison with one opponent (your own accounts get the exact radar).",
+    'coll.tabList': "Per account",
+    'coll.tabRar': "By rarity",
+    'coll.legacy': "Legacy",
+    'coll.legacyT': "Legacy: skins that are no longer sold (Riot's own mark). A skin can be Legacy and have a rarity at the same time – so they are counted apart.",
+    'coll.rareT': "Rare: Riot's data gives this rarity to skins that were never in the shop – the Victorious skins from ranked, the Arcane skins, Conqueror Alistar and a few more. That's why the client's collection has no Rare tier.",
+    'sh.allRars': "All",
+    'sh.allYears': "Every year",
+    'sh.yearT': "The year you got the skin",
   };
 
   const de = {
@@ -1502,8 +1508,6 @@
     'perf.unfold': "Klick: Champions ein- oder ausklappen",
     'rad.basis': "Jede Achse: dein Schnitt gegen den Schnitt deiner Lane-Gegner in denselben Spielen.",
     'coll.rp': "RP",
-    'coll.bdShow': "Nach Rarität ▾",
-    'coll.bdHide': "Nach Rarität ▴",
     'coll.bdNote': "Raritäten aus den Spieldaten des Clients. Emotes und Finisher haben keine.",
     'coll.bdLater': "Wird ab der nächsten Lesung gezählt – „Laden“ drücken, während du eingeloggt bist.",
     'rar.0': "Ohne Rarität",
@@ -1871,6 +1875,14 @@
     'gpi.few': "dafür noch zu wenige Spiele",
     'gpi.role': "Verglichen mit dem Üblichen auf {role}",
     'gpi.basis': "Das Spielprofil eines anderen Spielers: Jeder Bereich wiegt mehrere Werte gegen das Übliche auf der Rolle – die Form zeigt, wo die Stärken liegen. Keine Zahlen und kein Vergleich mit einem einzelnen Gegner (deine eigenen Accounts bekommen den genauen Radar).",
+    'coll.tabList': "Pro Account",
+    'coll.tabRar': "Nach Rarität",
+    'coll.legacy': "Legacy",
+    'coll.legacyT': "Legacy: Skins, die nicht mehr verkauft werden (Riots eigene Markierung). Ein Skin kann Legacy sein und zugleich eine Rarität haben – deshalb werden sie extra gezählt.",
+    'coll.rareT': "Rare: Riots Daten geben diese Rarität Skins, die es nie im Shop gab – den Victorious-Skins aus Ranked, den Arcane-Skins, Conqueror Alistar und ein paar weiteren. Deshalb kennt die Kollektion im Client keine Rare-Stufe.",
+    'sh.allRars': "Alle",
+    'sh.allYears': "Alle Jahre",
+    'sh.yearT': "Das Jahr, in dem du den Skin bekommen hast",
   };
 
   // further languages: one file each in src/lang/ (missing keys fall back to English)

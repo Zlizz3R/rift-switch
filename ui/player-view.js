@@ -143,11 +143,13 @@ function renderPlayer() {
   const level = info.level != null ? info.level : null;
   const roleSeg = `<div class="seg perf-roles">` + `<button data-plrole=""${!plv.role ? ' class="on"' : ''}>${t(plv.tab === 'tags' ? 'tags.allRoles' : 'perf.allRoles')}</button>` +
     Stats.POSITIONS.map(r => `<button data-plrole="${r}" title="${esc(t('pos.' + r))}"${plv.role === r ? ' class="on"' : ''}><img src="${posIcon(r)}" alt="${esc(t('pos.' + r))}"></button>`).join('') + '</div>';
-  // the traits of the scope (another player: only what speaks for them)
-  const traitsOf = (role, champ = 0) => {
+  // the traits of the scope (another player: only what speaks for them); sel: the games Performance's
+  // filter chose (the newest n, the role) – the traits judge exactly those
+  const traitsOf = (role, champ = 0, sel = null) => {
     const games = champ ? all.filter(g => g.players.some(x => x.puuid === p.puuid && x.champ === champ)) : all;
-    const ctx = { games, own: [p.puuid], level, mastery: mastRows, now: Date.now() };
-    const res = scope === 'aram' || scope === 'arena' ? sumRes(games, [p.puuid], level, mastRows, scope) : role ? Tags.evaluate({ ...ctx, role }) : Tags.evaluateAll(ctx);
+    const rowsSel = sel ? (champ ? sel.filter(x => x.p.champ === champ) : sel) : null;
+    const ctx = { games, own: [p.puuid], level, mastery: mastRows, now: Date.now(), ...(rowsSel ? { rows: rowsSel } : {}) };
+    const res = scope === 'aram' || scope === 'arena' ? sumRes(games, [p.puuid], level, mastRows, scope, rowsSel) : role ? Tags.evaluate({ ...ctx, role }) : Tags.evaluateAll(ctx);
     return res && !own ? plOthers(res) : res;
   };
   let body, head = `${bar}${basis}`;
@@ -170,7 +172,7 @@ function renderPlayer() {
     const agR = Stats.aggregate(parts);
     if (plv.champ && !parts.some(x => x.p.champ === plv.champ)) plv.champ = 0;
     body = !agR ? `<div class="chart-empty">${t('mh.noMatch')}</div>`
-      : perfAllHtml(parts, agR, { player: true, others: !own, role: plv.role, champ: plv.champ, traits: { res: traitsOf('', plv.champ), scope, player: true, role: plv.role, champ: plv.champ } });
+      : perfAllHtml(parts, agR, { player: true, others: !own, role: plv.role, champ: plv.champ, traits: { res: traitsOf(plv.role, plv.champ, parts), scope, player: true, role: plv.role, champ: plv.champ } });
     head = `${bar}${roleSeg}${basis}`;
   }
   el.innerHTML = `<div class="pl-bar">${head}</div><div class="pl-tabbody">${body}</div>`;

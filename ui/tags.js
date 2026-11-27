@@ -309,7 +309,8 @@
       case 'mastery': {
         if (!d.mastery) return [out('few', { n: 0, need: 1, unread: true })];
         const steps = Object.entries(r.steps).sort((a, b) => b[1] - a[1]);
-        const hits = d.mastery.filter(m => m.total >= steps[steps.length - 1][1]).slice(0, r.max);
+        // every champion past a milestone (not only the top three)
+        const hits = d.mastery.filter(m => m.total >= steps[steps.length - 1][1]);
         if (!hits.length) return [out('not', { value: d.mastery.length ? d.mastery[0].total : 0, th: steps[steps.length - 1][1] })];
         return hits.map(m => out('met', { level: steps.find(([, at]) => m.total >= at)[0], value: m.total, champ: m.id, vars: { pts: m.total, k: m.n } }));
       }
@@ -322,17 +323,19 @@
   const seasonStart = now => new Date(new Date(now).getFullYear(), 0, 1).getTime();
 
   // ctx: { games, own: puuids counted, now, role: forced position or null, level, mastery: masteryTable rows or null,
-  //        prev: Set of 'id:level' shown before }
+  //        prev: Set of 'id:level' shown before, rows: the participations to judge (a filter's choice –
+  //        queues, period, last n games, champion; Summoner's Rift only) instead of this season's ranked }
   // → { role, main, most, results }
   function evaluate(ctx) {
     const now = ctx.now || Date.now();
     const own = new Set(ctx.own || []);
-    // this season's ranked games only
+    // this season's ranked games only – or exactly the games a filter chose
     const seasonFrom = seasonStart(now);
-    const all = St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && RANKED.includes(x.g.q) && x.g.t >= seasonFrom);
+    const all = ctx.rows ? ctx.rows.filter(x => own.has(x.p.puuid) && !St.offRift(x.g))
+      : St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && RANKED.includes(x.g.q) && x.g.t >= seasonFrom);
     const d = {
       all, now, level: ctx.level == null ? null : ctx.level, mastery: ctx.mastery || null, prev: ctx.prev || new Set(),
-      season: all.filter(x => x.g.t >= seasonFrom), d7: all.filter(x => now - x.g.t <= 7 * DAY), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY),
+      season: ctx.rows ? all : all.filter(x => x.g.t >= seasonFrom), d7: all.filter(x => now - x.g.t <= 7 * DAY), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY),
     };
     const mr = mainRole(d.season);
     d.role = ctx.role || mr.main || mr.most || null;
@@ -370,7 +373,8 @@
   function evaluateAram(ctx) {
     const now = ctx.now || Date.now();
     const own = new Set(ctx.own || []);
-    const all = St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && ARAM_Q.includes(x.g.q) && x.g.t >= seasonStart(now));
+    const all = ctx.rows ? ctx.rows.filter(x => own.has(x.p.puuid) && ARAM_Q.includes(x.g.q))
+      : St.byParticipation(ctx.games || []).filter(x => own.has(x.p.puuid) && ARAM_Q.includes(x.g.q) && x.g.t >= seasonStart(now));
     const d = { all, now, level: null, mastery: null, prev: ctx.prev || new Set(), role: null, roleRows: all, season: all,
       d7: all.filter(x => now - x.g.t <= 7 * DAY), d30: all.filter(x => now - x.g.t <= 30 * DAY), d60: all.filter(x => now - x.g.t <= 60 * DAY) };
     const results = [];

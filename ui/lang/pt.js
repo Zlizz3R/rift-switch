@@ -528,8 +528,6 @@
     'perf.unfold': "Clique: mostrar ou ocultar os campeões",
     'rad.basis': "Cada eixo: sua média contra a dos oponentes de rota nas mesmas partidas.",
     'coll.rp': "RP",
-    'coll.bdShow': "Por raridade ▾",
-    'coll.bdHide': "Por raridade ▴",
     'coll.bdNote': "Raridades dos dados de jogo do cliente. Emotes e finalizadores não têm.",
     'coll.bdLater': "Contado a partir da próxima leitura – aperte \"Carregar\" com a sessão iniciada.",
     'rar.0': "Sem raridade",
@@ -897,6 +895,14 @@
     'gpi.few': "ainda não há partidas suficientes",
     'gpi.role': "Comparado com o habitual em {role}",
     'gpi.basis': "O perfil de jogo de outra pessoa: cada área pesa vários números contra o habitual da função – a forma mostra onde estão os pontos fortes. Sem números e sem comparação com um único oponente (suas contas têm o radar exato).",
+    'coll.tabList': "Por conta",
+    'coll.tabRar': "Por raridade",
+    'coll.legacy': "Legado",
+    'coll.legacyT': "Legado: skins que não são mais vendidas (marca da própria Riot). Uma skin pode ser Legado e ter uma raridade ao mesmo tempo – por isso são contadas à parte.",
+    'coll.rareT': "Raro: os dados da Riot dão essa raridade a skins que nunca estiveram na loja – as skins Vitoriosas do ranqueado, as skins de Arcane, Alistar Conquistador e mais algumas. Por isso a coleção do cliente não tem o nível Raro.",
+    'sh.allRars': "Todas",
+    'sh.allYears': "Todos os anos",
+    'sh.yearT': "O ano em que você conseguiu a skin",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).pt = L;

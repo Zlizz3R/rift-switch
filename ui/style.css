@@ -1704,6 +1704,15 @@ div.mh-more { gap: 10px; }
 
 .coll-rar { table-layout: fixed; }
 .coll-rar col.rar-name { width: 200px; }
+/* Legacy: a mark of its own, set apart from the rarities */
+.coll-rar .rar-leg { border-left: 2px solid rgba(200,170,110,.25); color: var(--gold2); }
+.coll-rar th.rar-leg { color: var(--gold2); cursor: help; }
+.coll-rar th[title] { cursor: help; }
+.coll-rar th sup { font-size: 9px; opacity: .6; }
+/* the showcase editor: skins by rarity, Legacy, the year they were got */
+.sh-filters .seg button { display: inline-flex; align-items: center; }
+.sh-filters .chip.on { border-color: var(--gold); color: var(--gold2); background: rgba(200,170,110,.1); }
+.sh-filters select { height: 30px; padding: 0 8px; border-radius: 8px; font: inherit; font-size: 12.5px; color: var(--text); background: #0d1119; border: 1px solid var(--line); }
 .coll-rar tr.rar-kind { cursor: pointer; }
 .coll-rar tr.rar-kind td:first-child { color: var(--text); font-weight: 600; }
 .coll-rar tr.rar-kind:hover td { background: rgba(255,255,255,.03); }
@@ -1876,6 +1885,15 @@ span.ov-crest { border-radius: 50%; border: 2px dashed #3a4560; width: 40px; hei
 .ov-tabs [data-dt].on, .ov-tabs [data-pltab].on { text-shadow: 0 0 14px rgba(200,170,110,.55); }
 .ov-tabs .load-btn { margin-bottom: 8px; }
 .ov-bar .pl-q small, .pl-bar .pl-q small { opacity: .55; font-size: 11px; margin-left: 2px; }
+/* the second row of pages (Overview, a player, Collection): right under the top bar, on top while scrolling */
+.subnav { position: sticky; top: 0; z-index: 6; margin: -26px -30px 0 !important; padding: 0 30px; min-height: 42px; display: flex; align-items: center;
+  gap: 2px; flex-wrap: wrap; background: rgba(11,14,20,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line) !important; }
+.subnav + .ov-hero { margin-top: 0; }
+.subnav [data-dt], .subnav [data-pltab], .subnav [data-ct] { padding: 11px 14px 10px; font-size: 13px; font-weight: 600; letter-spacing: .2px; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.subnav [data-dt]:hover, .subnav [data-pltab]:hover, .subnav [data-ct]:hover { color: var(--text); }
+.subnav [data-dt].on, .subnav [data-pltab].on, .subnav [data-ct].on { color: var(--gold2); border-bottom-color: var(--gold); text-shadow: 0 0 14px rgba(200,170,110,.45); }
+.subnav .load-btn { margin: 4px 0; }
 
 /* ---------- Overview → Performance: the strip on top – the key figures and the traits ---------- */
 #perfBody, #plBody { container-type: inline-size; }
@@ -2044,6 +2062,48 @@ main { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org
 /* another player's traits: strengths only (Riot's policies: no shaming) */
 .tag-top.one { grid-template-columns: 1fr; }
 
+/* restored 27.11.2026 (lost with At a glance's CSS in de3e7a2) */
+/* ---------- Overview head: the showcase (showcase.js) – favourites over the splash art ---------- */
+.ov-show { --sh: 64px; position: relative; display: flex; flex-wrap: wrap; gap: 10px; width: fit-content; max-width: 100%; margin: 16px 0 0; padding: 10px 12px;
+  border-radius: 14px; background: rgba(10,13,20,.5); border: 1px solid rgba(200,170,110,.18); backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.3); }
+.ov-show[hidden] { display: none; }
+.ov-show.s-1 { --sh: 44px; gap: 7px; padding: 7px 9px; }
+.ov-show.s-3 { --sh: 104px; gap: 14px; padding: 14px 16px; }
+.shi { display: block; width: var(--sh); height: var(--sh); flex: none; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,.04);
+  box-shadow: 0 0 0 1px rgba(200,170,110,.45), 0 6px 16px rgba(0,0,0,.4); transition: transform .15s ease, box-shadow .15s ease; }
+.shi:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(200,170,110,.35); }
+.shi img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.shi.k-skin { width: calc(var(--sh) * 1.5); }
+.shi.k-icon { border-radius: 50%; }
+.shi.k-ward img, .shi.k-emote img { object-fit: contain; padding: 4px; }
+.ov-side #ovShowBtn .btn { margin-top: 2px; }
+.ov-mine svg path { fill: none; }
+.show-card { width: min(820px, calc(100vw - 32px)); max-height: calc(100vh - 60px); display: flex; flex-direction: column; gap: 12px; }
+.show-card .sub { margin-top: -6px; color: var(--muted); font-size: 13px; }
+#showEd { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; padding-right: 4px; }
+.sh-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sh-row .mh-input { flex: 1; min-width: 160px; }
+.sh-l { font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+.sh-kinds small { opacity: .55; font-size: 11px; margin-left: 2px; }
+.sh-curs { display: flex; flex-wrap: wrap; gap: 8px; min-height: 56px; padding: 8px; border-radius: 10px; background: var(--panel2); border: 1px dashed var(--line); }
+.sh-cur { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.04); box-shadow: 0 0 0 1px rgba(200,170,110,.4); }
+.sh-cur.k-skin { width: 84px; }
+.sh-cur img { width: 100%; height: 100%; object-fit: cover; }
+.sh-cur.k-ward img, .sh-cur.k-emote img { object-fit: contain; padding: 3px; }
+.sh-tools { position: absolute; inset: auto 0 0 0; display: flex; justify-content: space-between; background: rgba(8,10,16,.82); opacity: 0; transition: opacity .12s; }
+.sh-cur:hover .sh-tools, .sh-cur:focus-within .sh-tools { opacity: 1; }
+.sh-tools button { flex: 1; border: 0; background: none; color: var(--text); font-size: 11px; padding: 3px 0; cursor: pointer; }
+.sh-tools button:hover { color: var(--gold2); }
+.sh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.sh-grid.k-skin { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.sh-pick { position: relative; aspect-ratio: 1; padding: 0; border-radius: 8px; overflow: hidden; cursor: pointer; background: rgba(255,255,255,.04);
+  border: 1px solid var(--line); transition: border-color .12s, transform .12s; }
+.sh-pick.k-skin { aspect-ratio: 3 / 2; }
+.sh-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sh-pick.k-ward img, .sh-pick.k-emote img { object-fit: contain; padding: 4px; }
+.sh-pick small { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 6px 4px; font-size: 10.5px; text-align: left; color: #e8e2d4;
+  background: linear-gradient(0deg, rgba(8,10,16,.9), transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sh-pick:hover { border-color: var(--gold); transform: translateY(-1px); }
 .sh-pick.on { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold) inset; }
 .sh-pick.on::after { content: "✓"; position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;

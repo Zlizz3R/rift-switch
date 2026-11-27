@@ -525,8 +525,6 @@
     'perf.unfold': "点击：展开或收起英雄",
     'rad.basis': "每条轴：你的平均值对比同场对线对手的平均值。",
     'coll.rp': "点券",
-    'coll.bdShow': "按稀有度 ▾",
-    'coll.bdHide': "按稀有度 ▴",
     'coll.bdNote': "稀有度来自客户端自身的游戏数据。表情和终结特效没有稀有度。",
     'coll.bdLater': "从下一次读取开始统计——登录时按\"加载\"。",
     'rar.0': "无稀有度",
@@ -894,6 +892,14 @@
     'gpi.few': "对局还不够",
     'gpi.role': "与{role}位置的常见水平相比",
     'gpi.basis': "其他玩家的游戏画像：每个方面综合多项数据，与该位置的常见水平比较——形状显示其优势所在。不显示具体数值，也不与某个对手比较（你自己的账号会显示精确雷达图）。",
+    'coll.tabList': "按账号",
+    'coll.tabRar': "按稀有度",
+    'coll.legacy': "绝版",
+    'coll.legacyT': "绝版：已不再出售的皮肤（Riot 自己的标记）。一款皮肤可以既是绝版又有稀有度——所以单独统计。",
+    'coll.rareT': "稀有：Riot 的数据把这个稀有度给了从未在商店出售的皮肤——排位的胜利皮肤、双城之战皮肤、征服者阿利斯塔等少数几款。所以客户端的收藏里没有稀有这一档。",
+    'sh.allRars': "全部",
+    'sh.allYears': "所有年份",
+    'sh.yearT': "你获得这款皮肤的年份",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).zh = L;

@@ -855,6 +855,8 @@ pub struct GameData {
     pub at: i64,
     pub skin: HashMap<i64, u8>,
     pub skin_info: HashMap<i64, (String, String)>,
+    /// skins no longer sold ("isLegacy") – a mark of its own, apart from the rarity
+    pub skin_legacy: HashSet<i64>,
     pub chroma: HashMap<i64, u8>,
     pub ward: HashMap<i64, u8>,
     pub icon: HashMap<i64, u8>,
@@ -895,6 +897,9 @@ pub fn game_data_of(skins: &Value, wards: &Value, icons: &Value, emotes: &Value)
         if s["isBase"] != true {
             g.skin
                 .insert(id, rarity_of_name(s["rarity"].as_str().unwrap_or("")));
+            if s["isLegacy"] == true {
+                g.skin_legacy.insert(id);
+            }
             g.skin_info.insert(
                 id,
                 (
@@ -1022,6 +1027,13 @@ pub fn rarities_of(inv: &Value, g: &GameData, skins: &[i64]) -> Value {
     } else {
         skins.to_vec()
     };
+    let legacy = skin_ids
+        .iter()
+        .filter(|id| g.skin_legacy.contains(id))
+        .count();
+    if skin_ids.iter().any(|id| g.skin.contains_key(id)) {
+        out.insert("skinLegacy".into(), json!(legacy));
+    }
     for (k, ids, map) in [
         ("skin", &skin_ids, &g.skin),
         ("chroma", &all_skins, &g.chroma),
@@ -1033,6 +1045,35 @@ pub fn rarities_of(inv: &Value, g: &GameData, skins: &[i64]) -> Value {
         }
     }
     Value::Object(out)
+}
+
+/// The collection's skins ([id, name, picture]) get [rarity, legacy 0/1, the year they were got]
+/// added – the showcase's filters. The year from the inventory's purchase date (0: unknown).
+pub fn skin_meta(skins: &mut Value, inv: &Value, g: &GameData) {
+    let got: HashMap<i64, i64> = inv
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|x| x["inventoryType"] == "CHAMPION_SKIN")
+        .filter_map(|x| {
+            let id = x["itemId"].as_i64()?;
+            let y = x["purchaseDate"].as_str()?.get(0..4)?.parse::<i64>().ok()?;
+            Some((id, y))
+        })
+        .collect();
+    for e in skins.as_array_mut().into_iter().flatten() {
+        let Some(a) = e.as_array_mut() else { continue };
+        let Some(id) = a.first().and_then(Value::as_i64) else {
+            continue;
+        };
+        a.truncate(3);
+        while a.len() < 3 {
+            a.push(json!(""));
+        }
+        a.push(json!(g.skin.get(&id).copied().unwrap_or(0)));
+        a.push(json!(u8::from(g.skin_legacy.contains(&id))));
+        a.push(json!(got.get(&id).copied().unwrap_or(0)));
+    }
 }
 
 /// What the Overview's showcase can show: the owned summoner icons (ids – their picture is known by
@@ -1208,6 +1249,9 @@ pub async fn profile_data(me: &Obj) -> Obj {
             if !list.is_empty() {
                 c["skins"] = json!(list);
             }
+        }
+        if let Some(sk) = c.get_mut("skins") {
+            skin_meta(sk, inv, &gd);
         }
     }
     if let Some(n) = counts {
@@ -2418,6 +2462,33 @@ mod tests {
         assert_eq!(
             rarities_of(&inv, &g, &[1001])["skin"],
             json!([0, 0, 1, 0, 0, 0, 0, 0])
+        );
+        assert_eq!(r["skinLegacy"], json!(0));
+    }
+
+    #[test]
+    fn legacy_skins_and_the_year_they_were_got() {
+        let skins = json!([
+            { "id": 1001, "isBase": false, "rarity": "kEpic", "isLegacy": true, "name": "Goth Annie" },
+            { "id": 1002, "isBase": false, "rarity": "kRare", "name": "Victorious Annie" }
+        ]);
+        let g = game_data_of(&skins, &Value::Null, &Value::Null, &Value::Null);
+        let inv = json!([
+            { "inventoryType": "CHAMPION_SKIN", "itemId": 1001, "owned": true, "purchaseDate": "20190312T101010.000Z" },
+            { "inventoryType": "CHAMPION_SKIN", "itemId": 1002, "owned": true, "purchaseDate": "" }
+        ]);
+        assert_eq!(rarities_of(&inv, &g, &[])["skinLegacy"], json!(1));
+        let mut list = json!([
+            [1001, "Goth Annie", "/t.jpg"],
+            [1002, "Victorious Annie", "/v.jpg", 9]
+        ]);
+        skin_meta(&mut list, &inv, &g);
+        assert_eq!(list[0], json!([1001, "Goth Annie", "/t.jpg", 2, 1, 2019]));
+        // read again: replaced, not added twice; no purchase date: year 0
+        skin_meta(&mut list, &inv, &g);
+        assert_eq!(
+            list[1],
+            json!([1002, "Victorious Annie", "/v.jpg", 1, 0, 0])
         );
     }
 }

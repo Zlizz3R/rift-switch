@@ -529,8 +529,6 @@
     'perf.unfold': "Clic : afficher ou masquer ses champions",
     'rad.basis': "Chaque axe : ta moyenne face à celle de tes adversaires de voie dans les mêmes parties.",
     'coll.rp': "RP",
-    'coll.bdShow': "Par rareté ▾",
-    'coll.bdHide': "Par rareté ▴",
     'coll.bdNote': "Raretés issues des données de jeu du client. Les emotes et finishers n’en ont pas.",
     'coll.bdLater': "Compté à partir de la prochaine lecture – appuie sur « Charger » une fois connecté.",
     'rar.0': "Sans rareté",
@@ -898,6 +896,14 @@
     'gpi.few': "pas encore assez de parties",
     'gpi.role': "Comparé à ce qui est habituel en {role}",
     'gpi.basis': "Le profil de jeu d'un autre joueur : chaque domaine pèse plusieurs valeurs face à ce qui est habituel pour le rôle – la forme montre où sont ses points forts. Pas de chiffres ni de comparaison avec un adversaire précis (tes comptes ont le radar exact).",
+    'coll.tabList': "Par compte",
+    'coll.tabRar': "Par rareté",
+    'coll.legacy': "Héritage",
+    'coll.legacyT': "Héritage : les skins qui ne sont plus vendus (marque de Riot). Un skin peut être Héritage et avoir une rareté en même temps – ils sont donc comptés à part.",
+    'coll.rareT': "Rare : les données de Riot donnent cette rareté à des skins qui n'ont jamais été en boutique – les skins Victorieux du classé, les skins Arcane, Alistar Conquérant et quelques autres. C'est pourquoi la collection du client n'a pas de palier Rare.",
+    'sh.allRars': "Toutes",
+    'sh.allYears': "Toutes les années",
+    'sh.yearT': "L'année où tu as obtenu le skin",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else (window.RS_LANG = window.RS_LANG || {}).fr = L;
