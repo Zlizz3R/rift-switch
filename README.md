@@ -13,7 +13,9 @@ Pick an account, press **Log in** – League restarts with it. No typing, no log
 ![Size](https://img.shields.io/badge/installer-2%20MB-0ac8b9)
 [![License: MIT](https://img.shields.io/badge/license-MIT-8a93a6)](LICENSE)
 
-<img src="docs/demo.gif" width="860" alt="Rift Switch in action: accounts, logging in, overview, collection, match history, champ select helper">
+<img src="docs/demo.webp" width="860" alt="Rift Switch in action: one-click login, every game of every account, auto-accept, random skin, live game analysis, traits, mastery">
+
+<sub>Sharper: <a href="docs/demo.mp4">the same video as MP4</a></sub>
 
 <sub>Every account in the pictures is made up (`tools/screens/demo.js`).</sub>
 
@@ -23,7 +25,8 @@ Pick an account, press **Log in** – League restarts with it. No typing, no log
 
 - **One click per account** – it saves the Riot Client's *Stay signed in* session of every account and swaps it back
   in. Passwords are optional.
-- **Everything about your accounts in one window** – ranks, LP history, penalties, collection, match history.
+- **Everything about your accounts in one window** – ranks, performance, traits, mastery, match history, LP history,
+  penalties and collection – across all accounts at once.
 - **Light** – about **8 MB** in the tray with no window and almost no CPU, a **2 MB** installer. Rust + the WebView2
   that comes with Windows; no Electron.
 - **Private** – logins and sessions never leave your PC (encrypted for your Windows user). No account, no tracking, no ads.
@@ -95,21 +98,22 @@ into one category.
 
 ### 📈 Overview
 
-<img src="docs/screens/overview.png" alt="Overview: LP history of all accounts in one chart">
+<img src="docs/screens/performance.png" alt="Overview: Performance – the key figures with the traits, champions and roles">
 
 - **One page for your accounts and for anyone else**: a head with the splash art of the champion played most,
   the avatar(s), Solo/Duo and Flex with their crest, the account chips – and the **player search** (Ctrl+K).
-  Another player's page looks the same, with *Open with* and the games with you.
+  The same tabs for everyone: **Performance**, **Traits**, **Mastery**, **Match history**, **LP history** and
+  **Seasons** – another player's page has all of them but the LP history, plus *Open with* and the games with you.
 - **Showcase** – your favourite skins, icons, ward skins and emotes from all your accounts in the Overview's head,
   over the splash art: any mix, your order, small, medium or large (*★ Showcase* next to the search). Only you see it.
-- **At a glance** – the start page: key figures with their trend (the last 10 games against the 10 before), the
-  recent games, traits (of your main position – one click shows every position), champions, roles, play style,
-  highlights (most kills, best KDA, multikills, longest win streak) and mastery – each card leads into its tab.
-  *Ranked*, *ARAM*, *Arena* or *All games*; an ARAM player starts on ARAM (the share of the team and the activity instead of
-  roles and the radar). **Customize**: drag the cards into your order, make them small, wide or full width, hide
-  some, add the *Form* (the last 20 games as pictures, the LP of 30 days) and a *Map* – *Reset* brings the designed
-  layout back.
-- **The LP history of every account in one chart**, on coloured tier bands. Hover: every account's rank on that day.
+- **Performance** – the start page: one strip with the key figures (games with wins and losses, win rate, KDA, CS,
+  damage, kill participation, vision), each with its trend – the last 10 games against the 10 before – and your
+  traits right next to them (*Traits →* opens them all). Then the champions, the roles, the play style and the map.
+  An ARAM player starts on ARAM (the share of the team and the activity instead of roles, play style and map).
+
+<img src="docs/screens/overview.png" alt="LP history of all accounts in one chart">
+
+- **LP history** – every account in one chart, on coloured tier bands. Hover: every account's rank on that day.
 - **Any combination of queues** – Solo/Duo, Flex, Ranked 5v5, Classic 5v5: one colour per account, one line style
   per queue.
 - **7 / 30 / 90 days or everything** – ranked games, wins and losses, LP won or lost and the best climb, for all
@@ -119,15 +123,13 @@ into one category.
   account's **season peak** and last season's rank, straight from the client.
 
 <details>
-<summary><b>Performance, champions, play style, mastery, traits, seasons</b></summary>
-
-<img src="docs/screens/performance.png" alt="Performance: key figures and a table by role">
+<summary><b>Performance, champions, play style, map, traits, mastery, seasons</b></summary>
 
 - **Performance** – one page with one filter (account, queue, season, last 7 / 30 / 90 days or your own dates, role –
-  and **only the newest games**: last 10, 20, 50, 100, 200 or a number of your own): eight key figures and the trend
-  of the last 10–100 games against the ones before on top, then three cards – side by side on a wide window,
-  Champions left of the other two on a medium one:
+  and **only the newest games**: last 10, 20, 50, 100, 200 or a number of your own): the strip with the key figures
+  and the traits on top, then four cards – Champions left of the others on a medium window, three columns on a wide one:
 - **Champions** – the op.gg-style list: KDA, CS, win rate and games per champion; a click opens those games.
+- **Roles** – each position's share of your games, with its win rate.
 
 <img src="docs/screens/play-style.png" alt="Play style: a radar against the lane opponent">
 
@@ -144,7 +146,7 @@ into one category.
   **ARAM** has traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
   hunter, team carry …), measured against the ARAM games of the other players – also on Live's cards in an ARAM game.
   Other players (Live, the player page) only get what speaks for them – the things to work on are for your own accounts.
-- **Map** – Summoner's Rift games only (ARAM and Arena are other maps) – where you die and where you kill (deaths, kills or both; the same filter: account, queue, season,
+- **Map** – Summoner's Rift games only (ARAM and Arena are other maps) – where you die and where you kill (both at first, or deaths or kills; the same filter: account, queue, season,
   role), for a game phase – before 10 minutes, 10–20, after 20 – or any minutes you pick on the minute chart
   under the map (kills up, deaths down). Seen from the blue side, with the spots that stand out ("Before 10 min:
   45 % of the deaths: top river") and every zone's share, deaths and kills side by side.
@@ -164,6 +166,8 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
 
 <img src="docs/screens/matches.png" alt="Match history with a game opened">
 
+A tab of the Overview – its accounts are the Overview's chips.
+
 - **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed.
   One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and the 200 newest
   games of every account – the most the League client hands out. Rift Switch keeps them all, so the history grows
@@ -175,10 +179,10 @@ rune pages and Blue Essence per account, and all accounts together. (Read while 
   damage, streaks and records.
 - **Most played**: your top five champions, games and **play time per account**, and the teammates you played with
   most – each with its win rate. **Clash** and **Custom** games have their own filters.
-- **Click a name** (here, on Live or after a game): the **player page** – any player's rank, key figures, roles,
-  champions, traits, recent games and the games with you, from their 200 newest games (all of them read in detail),
-  with *Open with* (op.gg …) – and the Overview's own views for them: *Performance*, *Champions*, *Play style* and
-  *Map* and *Traits*, by queue and role – the same page as your own Overview. **Back / forward** arrows in the title
+- **Click a name** (here, on Live or after a game): the **player page** – the same page as your own Overview for any
+  player, from their 200 newest games (the newest ranked ones read in detail): *Performance* (key figures, traits,
+  champions, roles, play style, map – by queue and role), *Traits*, *Mastery* (their points and the play time behind
+  them), *Match history* (the games with you on top) and *Seasons* – with *Open with* (op.gg …). **Back / forward** arrows in the title
   bar (also Alt+← / Alt+→ and the mouse's side buttons) go through the pages like a browser. The **search** in the
   Overview's head (Ctrl+K) finds anyone: suggestions from everyone in your games, any other Riot ID looked up through
   the client (without a tag: your server's, like EUW). League closed? The page says so instead of waiting.
@@ -233,7 +237,7 @@ site in your browser if you want a second opinion.
 - **Tools** – refresh ranks, close all Riot processes, restart League, clear the Riot Client cache (sign-ins stay),
   open the logs or the app's data folder, **save a diagnostics file** for a bug report (names, ids and your user
   folder are taken out).
-- **Keyboard** – Ctrl+F search, Ctrl+1…6 pages, Ctrl+N add (Ctrl+Shift+N many), arrow keys + Enter to log in,
+- **Keyboard** – Ctrl+F search, Ctrl+1…6 pages (Ctrl+5: the match history), Ctrl+N add (Ctrl+Shift+N many), arrow keys + Enter to log in,
   E note, P profile, Del remove, Ctrl+A pick all – `?` shows them all.
 - **Auto-accept** in the title bar, **streamer mode** (hide names, ranks … – you choose), system / light / dark,
   interface size, app lock with a password (and Windows Hello to show a saved password).
@@ -306,8 +310,8 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
 - `ui/` – the window (`index.html`, `style.css`; `tauri-api.js` is its link to the background part):
   - accounts and frame: `renderer.js`, `views.js` (also Live and the champ select helper), `bulk.js` + `bulkparse.js`,
     `keys.js`, `changelog.js`
-  - Overview: `summary.js` (the head of the Overview and the player page, *At a glance*, every page's picture),
-    `dashboard.js`, `ovfilter.js`, `perf.js` + `perfmath.js`, `radar.js` + `radar-view.js`,
+  - Overview: `summary.js` (the head of the Overview and the player page, every page's picture),
+    `dashboard.js`, `ovfilter.js`, `perf.js` (Performance, the start page) + `perfmath.js`, `radar.js` + `radar-view.js`,
     `deathmath.js` + `deaths-view.js`, `mastery.js` +
     `mastmath.js` + `playtime-rules.js`, `seasons-view.js` + `seasonparse.js`, `insights.js`
   - tags: `tag-rules.js` (every threshold, Summoner's Rift and ARAM), `tags.js` (the engine), `tags-view.js`;
@@ -318,7 +322,8 @@ npm run dist     # installer in src-tauri/target/release/bundle/nsis/
   - texts: `i18n.js` (English, German) + `lang/*.js` (loaded only when chosen)
 - Tray and jump-list texts are copied from the window's texts: `npm run strings` after changing one
 - Tests: `npm test` (the real window in jsdom with a fake background part + `cargo test`); they run on every push
-- Pictures and the demo video: `node tools/screens/demo.js`, then `python tools/screens/capture.py` (headless Edge, ffmpeg)
+- Pictures and the promo video: `node tools/screens/demo.js`, then `python tools/screens/capture.py` (headless Edge,
+  ffmpeg; `shots` or `film` for one of the two) – `docs/demo.webp` in this README, `docs/demo.mp4`
 - Releases: add the version's notes to `ui/changelog.js` (the app's *What's new* and the release text,
   `node tools/release-notes.js vX.Y.Z`), then `npm run release X.Y.Z` – it runs every check of the release workflow
   first (on main, nothing uncommitted, changelog entry, `cargo fmt --check`, clippy, all tests), sets the version in

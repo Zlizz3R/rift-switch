@@ -68,28 +68,23 @@ Ziel: alles unten umsetzen, dann als **1.3** veröffentlichen (Version in `src-t
 - [x] Live lädt viel schneller: alle Match-Listen auf einmal, dann 12 Spiele gleichzeitig ohne Pause zwischen den Runden, Spiel + Timeline parallel; im Spiel 6 gleichzeitig statt 1 alle 4 s; kurze Pause, wenn der Client ablehnt. Die Spieler-Seite lädt ebenso 12 gleichzeitig.
 - [x] Spielersuche in der Titelleiste (Strg+K): Vorschläge aus allen Spielern deiner Spiele, sonst Riot ID über den Client (ohne Tag: der eigene Server).
 - [x] ✔ 26.11.2026 Als 1.3.2 veröffentlicht (Release-Lauf grün), danach 1.3.3.
-- [ ] **GitHub-Seite neu machen** (Nutzer, 26.11.2026 – noch nicht anfangen): Seit 1.3.2/1.3.3 sieht vieles anders
-  aus (Übersicht mit Kopfbild und Showcase, „Auf einen Blick“, ein Performance-Tab, Live nach dem Spiel, Augments).
-  Vor allem das **Video `docs/screens/demo.gif`** ist hinfällig; dazu die README-Bilder. Neu aufnehmen mit
-  `tools/screens` (demo.js = erfundene Accounts, capture.py = headless Edge + ffmpeg), README-Texte dabei mit prüfen.
-- [ ] **Karte: standardmäßig „Beides“** (Nutzer, 26.11.2026 – noch nicht anfangen): Performance → Karte startet auf
-  „Beides“ statt „Tode“, und „Beides“ steht in der Auswahl vorne (Beides / Tode / Kills). `ui/map-view.js`
-  (`mv.kind`, die Reihenfolge in `kinds`); auch die Karten-Kachel auf „Auf einen Blick“ (`sumMap`, zeigt nur Tode) und
-  den Test in `test/perf-ui.test.js` („deaths only at first“) anpassen.
-- [ ] **Trend-Zeile in Performance entfernen** (Nutzer, 26.11.2026 – „nichtssagend“; noch nicht anfangen): die Zeile
-  „Letzte 20 Spiele gegen die davor: Winrate 65 % → 30 % · KDA 2.01 → 2.54“ unter den Kennzahlen. `perfTrendHtml`
-  in `ui/perf.js` (Aufruf in `perfAllHtml`, die Auswahl `trendN` / `trendKey`, `perf.trendN` / `perf.trendKey`) und
-  die Tests dazu. `PerfMath.trend` bleibt – die Trendpfeile der Kennzahlen auf „Auf einen Blick“ nutzen es.
+- [x] ✔ 27.11.2026 **GitHub-Seite neu gemacht:** README-Bilder neu aufgenommen, das Video ist jetzt ein Promo-Film
+  (Titelkarte, je Funktion eine Szene mit Bauchbinde, Mauszeiger, Zoom und Überblendung, Endkarte: Login mit einem
+  Klick → alle Spiele aller Accounts (Leistung) → Auto-Accept → zufälliger Skin → Live-Analyse → Traits → Mastery mit
+  Spielzeit). Im README als animiertes WebP (`docs/demo.webp`, ~5 MB; ein GIF wäre ~18 MB), dazu `docs/demo.mp4`.
+  `python tools/screens/capture.py film` bzw. `shots`.
+- [x] ✔ 27.11.2026 **Karte startet auf „Beides“**, „Beides“ steht vorne.
+- [x] ✔ 27.11.2026 **Trend-Zeile in Performance entfernt** – die Trendpfeile stehen jetzt an den Kennzahlen selbst.
 - [ ] **Live während des Spiels zu langsam** (Nutzer, 27.11.2026 – noch nicht anfangen): Die App liest pro Mitspieler
   bis zu 50 Ranked-Spiele samt Timeline (`OTHERS_DETAILS`, `scout_loop` in `main.rs`, `PAR_IN_GAME` / `IN_GAME_GAP`),
   im Spiel bewusst gedrosselt. Offen: bremst das den Client, oder lehnt er Anfragen ab? Das sieht man nur in einem
   echten Spiel – dafür Log-Ausgaben der Scout-Runden (Zeit, Anzahl abgelehnt) sammeln und auswerten.
-- [ ] **Übersicht-Reiter neu ordnen, Performance als Startseite?** (Nutzer, 26.11.2026 – erst besprechen, nicht
-  einfach bauen): Der Nutzer findet Performance inzwischen schöner und nützlicher als „Auf einen Blick“ – nur die
-  Kennzahlen-Zeile von „Auf einen Blick“ (`sumFigs`: Ring für die Winrate, Trendpfeile) gefällt ihm besser als die
-  `perf-bar` von Performance. Ideen zum Vorschlagen: Performance wird der Start-Tab (`dashTabNow` in `ui/mastery.js`)
-  mit der Kennzahlen-Zeile von „Auf einen Blick“; „Auf einen Blick“ geht in Performance auf oder wird ein späterer
-  Tab; die Reihenfolge der Reiter (`#dashTabs` in `ui/index.html`, `PL_TABS` der Spieler-Seite) neu denken.
+- [x] ✔ 27.11.2026 **Übersicht neu geordnet** (Nutzer: „At a glance kann weg“): Leistung ist die Startseite, eine
+  Kennzahlen-Leiste (Ring, Trendpfeile, Siege grün / Niederlagen rot) mit den Traits rechts („Traits →“), dazu eine
+  Rollen-Kachel. Reiter für eigene Accounts und andere Spieler gleich: Leistung, Traits, Mastery, Spielverlauf,
+  LP-Verlauf, Seasons (andere Spieler ohne LP-Verlauf). Der Spielverlauf ist ein Tab der Übersicht (keine eigene Seite
+  mehr, Strg+5 öffnet ihn). „Auf einen Blick“ samt Anpassen (Einstellung `ovLayout`, im Backend noch erlaubt) ist weg.
+  Alle Seitenköpfe 100 px hoch.
 
 ### C. Ideen-Runde (25.11.2026)
 

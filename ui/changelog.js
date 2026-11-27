@@ -3,6 +3,23 @@
 (function (root) {
   const CHANGELOG = [
     {
+      v: '1.3.4',
+      en: [
+        'Overview: Performance is the start page. Its key figures are one strip now – wins in green, losses in red, the win rate as a ring, the trend of your newest 10 games on every figure – with your traits on the right; "Traits →" opens them all. A roles card joins champions, play style and map.',
+        'The match history is a tab of the Overview: the same account chips as every other tab, one Load button. The tabs: Performance, Traits, Mastery, Match history, LP history, Seasons.',
+        'Player page: the same tabs for anyone you click – their mastery points with the play time behind them, their match history (the games with you on top) and their seasons.',
+        'At a glance is gone – everything it showed lives on in Performance, the match history and Mastery. An ARAM player still starts on ARAM.',
+        'The map starts on "Both"; every page\'s head has the same height (the Accounts head stays one row on a narrow window).',
+      ],
+      de: [
+        'Übersicht: Leistung ist die Startseite. Die Kennzahlen sind jetzt eine Leiste – Siege grün, Niederlagen rot, die Winrate als Ring, an jeder Zahl der Trend deiner letzten 10 Spiele – mit deinen Traits rechts daneben; „Traits →“ öffnet alle. Dazu eine Rollen-Kachel neben Champions, Spielstil und Karte.',
+        'Der Spielverlauf ist ein Tab der Übersicht: dieselben Account-Chips wie überall, ein Laden-Knopf. Die Tabs: Leistung, Traits, Mastery, Spielverlauf, LP-Verlauf, Seasons.',
+        'Spieler-Seite: dieselben Tabs für jeden, den du anklickst – seine Mastery-Punkte mit der Spielzeit dahinter, sein Spielverlauf (die Spiele mit dir obenauf) und seine Seasons.',
+        '„Auf einen Blick“ ist weg – alles, was dort stand, gibt es in Leistung, im Spielverlauf und unter Mastery. Wer vor allem ARAM spielt, startet weiter auf ARAM.',
+        'Die Karte startet auf „Beides“; alle Seitenköpfe sind gleich hoch (der Kopf der Accounts-Seite bleibt auch im schmalen Fenster einzeilig).',
+      ],
+    },
+    {
       v: '1.3.3',
       en: [
         'Showcase: put your favourite skins, icons, ward skins and emotes from all your accounts in the Overview\'s head – any mix, your order, small, medium or large (the ★ Showcase button next to the search).',

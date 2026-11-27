@@ -219,6 +219,7 @@ const shim = `<script>
           info: me && { puuid: args[0], gameName: me.name, tagLine: me.tag, iconId: 4568, level: 214, solo: { tier: 'EMERALD', division: 'II', lp: 41, wins: 88, losses: 79 }, flex: null } };
       }
       case 'others-storage': return { bytes: 31400000, games: 2870 };
+      case 'random-skin': return { ok: true, skin: 'Spirit Blossom Ahri' };
       case 'counters': { const c = D.counters[args[0]]; return c ? { ok: true, share: c.share, list: c.list } : { ok: true, share: 0, list: [] }; }
       case 'matches': return { index: D.games.map(g => [g.id, g.t, g.q, ...g.owners]), waiting: 0, loadingOlder: false, clientUp: true };
       case 'matches-get': return D.games.filter(g => args[0].includes(g.id));
