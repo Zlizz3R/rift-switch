@@ -65,6 +65,32 @@ test('the end screen (only damage taken) and the lane factor', () => {
   assert.ok(l.mult > 1 && l.mult <= 1.4);
 });
 
+test('the score from 0 to 10, and minute by minute (the last minute is the game\'s own score)', () => {
+  const g = game({ '100-mid': { k: 9, d: 0, a: 6 }, '200-mid': { k: 0, d: 9, a: 1 } });
+  const pl = Mvp.placements(g);
+  for (let i = 0; i < 10; i++) assert.ok(pl.rating(i) >= 0 && pl.rating(i) <= 10);
+  assert.ok(pl.rating(at(g, '100-mid')) > 7, 'a great winner far above 5');
+  assert.ok(pl.rating(at(g, '200-mid')) < 3, 'a bad loser far below');
+  assert.equal(Mvp.timeline(g), null, 'no timeline: no curve');
+  // a timeline: 26 frames; the mid kills the enemy mid at minutes 2, 4 … 18
+  g.gold = Array.from({ length: 26 }, (_, m) => g.players.map(() => 500 + m * 380));
+  g.csm = Array.from({ length: 26 }, (_, m) => g.players.map(p => (p.pos === 'support' ? m : m * 7)));
+  const mid = at(g, '100-mid'), enemy = at(g, '200-mid');
+  g.kills = Array.from({ length: 9 }, (_, k) => [120 + k * 120, mid, enemy, [], 70, 70]);
+  const tl = Mvp.timeline(g);
+  assert.equal(tl.length, 10);
+  assert.equal(tl[mid].length, 25);
+  assert.equal(tl[mid][24], +pl.rating(mid).toFixed(1));
+  assert.ok(tl[mid][10] > 5 && tl[enemy][10] < 5, 'ahead and behind from the kills on');
+  // the first minutes stay near 5
+  assert.ok(Math.abs(tl[mid][0] - 5) < Math.abs(tl[mid][10] - 5));
+  // the game at a minute: the kills so far, gold from the timeline
+  const at5 = Mvp.atMinute(g, 5);
+  assert.equal(at5.players[mid].k, 2, 'the kills at minute 2 and 4');
+  assert.equal(at5.players[mid].gold, 500 + 5 * 380);
+  assert.equal(at5.dur, 300);
+});
+
 test('ARAM (no roles): every figure against the best of the ten', () => {
   const g = game({ '100-mid': { k: 20, d: 2, a: 20, dmg: 50000 } }, { q: 450, mode: 'ARAM' });
   const pl = Mvp.placements(g);

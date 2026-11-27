@@ -395,5 +395,33 @@ test('Arena: its own catalogue – placing, podium, crown; ARAM and the Rift lef
   // only the chosen games (a filter's rows)
   const r2 = T.evaluateArena({ games, own: ['me'], now: NOW, rows: St.byParticipation(games.slice(0, 3)) });
   assert.equal(r2.n, 3);
-  assert.ok(TR.ARENA_RULES.length >= 15 && TR.ARAM_RULES.length >= 30);
+  assert.ok(TR.ARENA_RULES.length >= 30 && TR.ARAM_RULES.length >= 30);
+});
+
+test('Arena: the team figures – six teams of three by their place; finalist, carry, kill leader, always in on it, specialist', () => {
+  // me (champion 7) with two team mates on place 1 or 2; I deal half the team's damage and land most kills
+  const arenaGame = (i) => {
+    const place = i % 2 ? 1 : 2;
+    const players = Array.from({ length: 18 }, (_, k) => ({ puuid: k === 0 ? 'me' : 'p' + k, team: k < 9 ? 100 : 200, champ: k === 0 ? 7 : 50 + k,
+      place: k < 3 ? place : 3 + Math.floor((k - 3) / 3), win: k < 9, k: k === 0 ? 6 : 1, d: 2, a: k === 0 ? 2 : 1, dmg: k === 0 ? 40000 : 20000, gold: 12000,
+      x: { phys: 0, magic: 10000, true: 3000 } }));
+    return { id: 'ar' + i, t: NOW - (i + 1) * 3600000, dur: 1500, q: 1750, mode: 'CHERRY', owners: ['me'], players };
+  };
+  const games = Array.from({ length: 12 }, (_, i) => arenaGame(i));
+  const r = T.evaluateArena({ games, own: ['me'], now: NOW });
+  const met = id => r.results.find(x => x.id === id && x.state === 'met');
+  assert.ok(met('arnFinal'), 'always in the last two');
+  const carry = met('arnCarry');
+  assert.ok(carry && Math.abs(carry.value - 1.5) < 1e-9, 'half the damage of three = 1.5 even shares');
+  assert.ok(Math.abs(met('arnKillShare').value - 2.25) < 1e-9, '6 of 8 kills against 8 / 3 each');
+  assert.equal(met('arnTeam').value, 1, 'in on every kill');
+  assert.equal(met('arnSpecialist').champ, 7);
+  assert.ok(met('arnTrue'), 'three of thirteen thousand is true damage');
+  assert.ok(met('arnMage'));
+  assert.ok(!met('arnWeapon'));
+  // a game read from a match list only (no team mates) doesn't count for the team figures
+  const lite = { ...arenaGame(20), lite: true };
+  lite.players = [lite.players[0]];
+  const r2 = T.evaluateArena({ games: [lite], own: ['me'], now: NOW });
+  assert.equal(r2.results.find(x => x.id === 'arnCarry').state, 'few');
 });

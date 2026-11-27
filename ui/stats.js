@@ -147,11 +147,46 @@
   // where player i stood at second s (game format 6: "at" per minute, in between interpolated)
   function placeAt(g, i, s) {
     if (!g.at) return null;
-    const m = Math.floor(s / 60), a = g.at[m] && g.at[m][i], b = g.at[m + 1] && g.at[m + 1][i];
+    const m = Math.floor(s / 60), a = posAt(g, m, i), b = posAt(g, m + 1, i);
     if (!a) return b || null;
     if (!b) return a;
     const f = s / 60 - m;
     return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  }
+
+  // ---------- the window's store: games packed small ----------
+  // The window keeps every loaded game (the Overview counts them all). As stored, each player's place
+  // per minute ("at": ten [x, y] a minute) is the biggest part – hundreds of tiny arrays per game, a
+  // third of the memory – so it is packed into one Int16Array; posAt() reads both forms. Kills
+  // without help share one empty list, and Riot IDs repeated in hundreds of games are one string
+  // each. The figures stay the same; nothing is sent back. Returns the game (changed in place).
+  const NO_POS = -32768;
+  const NO_HELP = Object.freeze([]);
+  const names = new Map();
+  const intern = s => { if (typeof s !== 'string') return s; const o = names.get(s); if (o !== undefined) return o; names.set(s, s); return s; };
+  function packGame(g) {
+    if (!g || g.packed) return g;
+    const n = g.players ? g.players.length : 0;
+    if (Array.isArray(g.at) && g.at.length && n) {
+      const M = g.at.length, d = new Int16Array(M * n * 2).fill(NO_POS);
+      g.at.forEach((f, m) => (f || []).forEach((p, i) => {
+        if (p && i < n) { d[(m * n + i) * 2] = p[0]; d[(m * n + i) * 2 + 1] = p[1]; }
+      }));
+      g.at = { m: M, n, d };
+    }
+    for (const k of Array.isArray(g.kills) ? g.kills : []) if (Array.isArray(k[3]) && !k[3].length) k[3] = NO_HELP;
+    for (const p of g.players || []) { p.puuid = intern(p.puuid); p.name = intern(p.name); p.tag = intern(p.tag); }
+    Object.defineProperty(g, 'packed', { value: true });
+    return g;
+  }
+  // the place [x, y] of player i at minute m (null: not known) – stored or packed form
+  function posAt(g, m, i) {
+    const a = g && g.at;
+    if (!a) return null;
+    if (Array.isArray(a)) return (a[m] && a[m][i]) || null;
+    if (m < 0 || m >= a.m || i < 0 || i >= a.n) return null;
+    const o = (m * a.n + i) * 2;
+    return a.d[o] === NO_POS ? null : [a.d[o], a.d[o + 1]];
   }
 
   // ---------- timeline (game format 4: "csm", "kills" [second, killer, victim, [assists]], "w1", "drake1") ----------
@@ -242,7 +277,7 @@
     return new Map([...m].map(([k, list]) => [k, aggregate(list)]));
   }
 
-  const api = { REMAKE_SEC, ARAM_QUEUES, ARENA_QUEUES, isArena, RANKED_QUEUES, winPct, isRemake, offRift, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
+  const api = { REMAKE_SEC, ARAM_QUEUES, ARENA_QUEUES, isArena, RANKED_QUEUES, packGame, posAt, winPct, isRemake, offRift, minutes, kda, perfect, team, teamKills, kp, csMin, dmgMin,
     visMin, dmgShare, perGame, POSITIONS, roles, role, laneOpponent, goldDiffAt, xpDiffAt, teamGoldDiffAt, zone, placeAt, hasKills, csAt, soloKills, soloDeaths, deathsBefore, gankDeathsBefore, takedownsBefore, killBefore, farmShare, gankedBefore, me, byGame, byParticipation, uniqueGames, aggregate, groupBy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Stats = api;

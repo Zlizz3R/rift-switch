@@ -96,3 +96,20 @@ test('a lite game (one player from a match list): no team figures, Riot\'s posit
   assert.equal(Stats.role(g, { ...p, spells: [11, 4] }), 'jungle');
   assert.equal(Stats.laneOpponent(g, p), null);
 });
+
+test('the window\'s store: a game packed small reads the same (places per minute, kills, Riot IDs)', () => {
+  const players = Array.from({ length: 10 }, (_, i) => ({ puuid: 'p' + i, name: 'Name', tag: 'EUW', team: i < 5 ? 100 : 200, k: 1, d: 1, a: 1 }));
+  const g = { id: 'x', dur: 600, players, at: Array.from({ length: 11 }, (_, m) => players.map((_, i) => (i === 3 && m === 4 ? null : [m * 10 + i, 140 - m]))),
+    kills: [[90, 0, 5, [], 70, 70], [130, 1, 6, [2, 3], 30, 20]] };
+  const plain = JSON.parse(JSON.stringify(g));
+  const p = St.packGame(g);
+  assert.ok(!Array.isArray(p.at), 'the places are one typed array');
+  for (let m = 0; m < 11; m++) for (let i = 0; i < 10; i++) assert.deepEqual(St.posAt(p, m, i), St.posAt(plain, m, i));
+  assert.equal(St.posAt(p, 4, 3), null);
+  assert.equal(St.posAt(p, 11, 0), null, 'past the end');
+  assert.deepEqual(St.placeAt(p, 2, 150), St.placeAt(plain, 2, 150));
+  assert.deepEqual(p.kills[0][3], []);
+  assert.deepEqual(p.kills[1][3], [2, 3]);
+  assert.equal(St.packGame(p), p, 'once is enough');
+  assert.equal(St.packGame({ id: 'y', players: [] }).id, 'y', 'a game without places');
+});

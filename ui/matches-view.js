@@ -94,12 +94,13 @@ function detailsHtml(g, as, mine) {
   const left = Math.min(...g.players.map(p => p.team));
   const old = !g.v || g.v < 3;
   // folding sections like the settings (several may be open); players open at first
-  const open = mh.secs.get(String(g.id)) || new Set(['players']);
+  const open = mh.secs.get(String(g.id)) || new Set(['players', 'score']);
   const sec = (key, title, body) => body ? `<div class="det-g${open.has(key) ? ' open' : ''}" data-sec="${key}" role="button" tabindex="0"><span>${title}</span><svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
     <div class="det-body">${open.has(key) ? body : ''}</div>` : '';
   return `<div class="mh-det" data-det="${esc(String(g.id))}">
     ${old ? `<p class="fine">${t('det.upgrading')}</p>` : ''}
     ${sec('players', t('det.players'), pgTableHtml(g, as, mine))}
+    ${sec('score', t('det.score'), scoreHtml(g, a, b, roles, mine))}
     ${sec('h2h', t('det.h2h'), h2h)}
     ${sec('gold', t('det.goldDiff'), g.gold && g.gold.length > 2 ? goldChart(g, left) : '')}
     ${sec('compare', t('det.compare'), compareHtml(g, a, b, roles, mine))}
@@ -193,10 +194,11 @@ const CMP_ROWS = [
   ['det.cc', p => p.x && p.x.cc, false, v => v + ' s'], ['det.turretDmg', p => p.x && p.x.turretDmg], ['det.obj', p => p.x && p.x.obj],
   ['det.spree', p => p.x && p.x.spree], ['det.crit', p => p.x && p.x.crit], ['Level', p => p.lvl],
 ];
-function compareHtml(g, a, b, roles, mine) {
+// the two players side by side (Compare, and the score over the game): first me against my lane
+// opponent (or the first of the other team), then whoever was picked; with the two pickers
+function cmpPair(g, a, b, roles, mine) {
   const ps = [...a, ...b];
-  if (ps.length < 2) return '';
-  // first time: me against my lane opponent (or the first of the other team)
+  if (ps.length < 2) return null;
   let pair = mh.cmp.get(String(g.id));
   if (!pair) {
     const me = ps.find(p => mine.has(p.puuid)) || ps[0];
@@ -206,6 +208,57 @@ function compareHtml(g, a, b, roles, mine) {
   }
   const [P, Q] = [ps[pair[0]] || ps[0], ps[pair[1]] || ps[1]];
   const pick = (which, sel) => `<label class="cmp-pick ${which}"><img src="${CHAMP_ICON(sel.champ)}" alt=""><select data-cmp="${which === 'l' ? 0 : 1}">${ps.map((p, i) => `<option value="${i}" ${p === sel ? 'selected' : ''}>${esc((p.name || '?') + (champName(p.champ) ? ' – ' + champName(p.champ) : ''))}</option>`).join('')}</select></label>`;
+  return { P, Q, head: `<div class="cmp-head">${pick('l', P)}<span class="cmp-vs">VS</span>${pick('r', Q)}</div>` };
+}
+// the score over the game (ui/mvp.js, 0–10 per minute): the two players' curves, 5 = an average game;
+// hovering shows both at that minute. Worked out once per game.
+const mhTimelines = new WeakMap();
+function scoreTimeline(g) {
+  if (!mhTimelines.has(g)) mhTimelines.set(g, Mvp.timeline(g));
+  return mhTimelines.get(g);
+}
+function scoreHtml(g, a, b, roles, mine) {
+  const tl = scoreTimeline(g);
+  const pr = tl && cmpPair(g, a, b, roles, mine);
+  if (!pr) return '';
+  const s1 = tl[g.players.indexOf(pr.P)], s2 = tl[g.players.indexOf(pr.Q)];
+  if (!s1 || !s2) return '';
+  const W = 600, H = 140, n = s1.length;
+  const x = j => (j / Math.max(1, n - 1)) * W, y = v => H - 6 - (v / 10) * (H - 12);
+  const line = s => s.map((v, j) => `${x(j).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  // point j is minute j + 1, the last one the end of the game
+  const ms = [5, 10, 15, 20, 25, 30, 35, 40].filter(m => m - 1 < n - 1);
+  const labels = ms.map(m => `<span style="left:${(100 * (m - 1) / Math.max(1, n - 1)).toFixed(2)}%">${m}′</span>`).join('');
+  const end = (p, v, cls) => `<span class="${cls}">${esc(p.name || '?')} <b>${pgRate(v)}</b></span>`;
+  return `${pr.head}<div class="det-chart sc-chart">
+    <div class="sc-plot" data-a="${s1.join(',')}" data-b="${s2.join(',')}"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      ${ms.map(m => `<line x1="${x(m - 1)}" x2="${x(m - 1)}" y1="0" y2="${H}" class="gl"/>`).join('')}
+      <line x1="0" x2="${W}" y1="${y(5)}" y2="${y(5)}" class="mid"/>
+      <polyline points="${line(s2)}" class="ln2"/><polyline points="${line(s1)}" class="ln1"/></svg>
+      <span class="sc-axis"><i>10</i><i>5</i><i>0</i></span><i class="dc-cur" hidden></i><span class="dc-tip" hidden></span></div>
+    <div class="det-mins">${labels}</div>
+    <div class="det-scale sc-end"><span>${t('det.scoreEnd')}</span>${end(pr.P, s1[n - 1], 'l')}${end(pr.Q, s2[n - 1], 'r')}</div></div>
+    <p class="fine">${t('det.scoreNote')}</p>`;
+}
+document.addEventListener('mousemove', e => {
+  const plot = e.target.closest && e.target.closest('.sc-plot');
+  document.querySelectorAll('.sc-plot.hov').forEach(p => { if (p !== plot) { p.classList.remove('hov'); p.querySelector('.dc-cur').hidden = p.querySelector('.dc-tip').hidden = true; } });
+  if (!plot) return;
+  const a = plot.dataset.a.split(',').map(Number), b = plot.dataset.b.split(',').map(Number);
+  const r = plot.getBoundingClientRect();
+  const j = Math.max(0, Math.min(a.length - 1, Math.round(((e.clientX - r.left) / Math.max(1, r.width)) * (a.length - 1))));
+  const left = (100 * j) / Math.max(1, a.length - 1);
+  const cur = plot.querySelector('.dc-cur'), tip = plot.querySelector('.dc-tip');
+  plot.classList.add('hov');
+  cur.hidden = tip.hidden = false;
+  cur.style.left = left + '%';
+  tip.innerHTML = `${j === a.length - 1 ? t('det.scoreEndShort') : j + 1 + '′'} <b class="l">${pgRate(a[j])}</b> · <b class="r">${pgRate(b[j])}</b>`;
+  tip.style.left = Math.min(90, Math.max(10, left)) + '%';
+});
+function compareHtml(g, a, b, roles, mine) {
+  const pr = cmpPair(g, a, b, roles, mine);
+  if (!pr) return '';
+  const { P, Q } = pr;
   const fmtN = v => Math.round(v).toLocaleString(locale());
   const rows = CMP_ROWS.map(([key, f, lowBetter, fmt]) => {
     const x = f(P, g), y = f(Q, g);
@@ -225,8 +278,7 @@ function compareHtml(g, a, b, roles, mine) {
     chart = `<div class="det-h cmp-gh">${t('det.goldLead', { a: esc(P.name || '?'), b: esc(Q.name || '?') })}</div>${diffChart(s1.map((v, i) => v - s2[i]), 'c' + g.id, 'cmp-chart')}
       <div class="det-scale cmp-at">${[10, 15, 20].filter(m => m < s1.length).map(at).join('')}</div>`;
   }
-  return `<div class="cmp-head">${pick('l', P)}<span class="cmp-vs">VS</span>${pick('r', Q)}</div>
-    <div class="cmp-rows">${rows}</div>${chart}`;
+  return `${pr.head}<div class="cmp-rows">${rows}</div>${chart}`;
 }
 
 // ---------- the ten players ----------
@@ -331,7 +383,8 @@ let assets = null;
 async function mhGames(index) {
   const lack = index.map(r => r[0]).filter(id => !mh.cache.has(id));
   for (let i = 0; i < lack.length; i += 500) {
-    for (const g of (await api.matchesGet(lack.slice(i, i + 500))) || []) mh.cache.set(String(g.id), g);
+    // packed small (stats.js packGame): the window keeps them all
+    for (const g of (await api.matchesGet(lack.slice(i, i + 500))) || []) mh.cache.set(String(g.id), Stats.packGame(g));
   }
   return index.filter(r => mh.cache.has(r[0])).map(r => ({ ...mh.cache.get(r[0]), owners: r.slice(3) }));
 }
@@ -562,14 +615,15 @@ function icon(map, id, cls) {
   return x && x[0] ? `<img class="${cls}" src="${esc(x[0])}" title="${esc(x[1] || '')}" alt="">` : `<span class="${cls} none"></span>`;
 }
 
-// the placement of a game's player among all of them – MVP, ACE or #n, the same as in its details
-// (ui/mvp.js); none without every player's numbers (a game read from a list only) or in a remake
+// the placement of a game's player among all of them – MVP or #n (the best loser's in colour) and
+// the score, the same as in its details (ui/mvp.js); none without every player's numbers (a game
+// read from a list only) or in a remake
 function mhPlaceChip(g, p) {
   if (g.lite || Stats.isRemake(g) || !g.players || g.players.length < 2) return '';
   const r = Mvp.placements(g), i = g.players.indexOf(p);
   if (i < 0) return '';
-  const k = i === r.mvp ? 'mvp' : i === r.ace ? 'ace' : '';
-  return `<span class="mh-pl ${k}" title="${esc(t('pg.placeT'))}">${k ? k.toUpperCase() : '#' + r.place(i)}</span>`;
+  const k = i === r.mvp ? 'mvp' : i === r.ace ? 'best-loss' : '';
+  return `<span class="mh-pl ${k}" title="${esc(t('pg.placeT'))}">${k === 'mvp' ? 'MVP' : '#' + r.place(i)}<b>${pgRate(r.rating(i))}</b></span>`;
 }
 function gameRow(g, as) {
   const ownerId = g.owners[0];
@@ -739,7 +793,8 @@ for (const host of [$('mhList'), $('liveBody'), $('plBody')]) {
     const sel = e.target.closest('[data-cmp]');
     if (!sel) return;
     const det = sel.closest('[data-det]');
-    const both = [...det.querySelectorAll('[data-cmp]')].map(s => Number(s.value));
+    // the two pickers of this section (Compare and the score have a pair each, for the same two)
+    const both = [...(sel.closest('.det-body') || det).querySelectorAll('[data-cmp]')].map(s => Number(s.value));
     mh.cmp.set(det.dataset.det, both);
     detRedraw(sel);
   });

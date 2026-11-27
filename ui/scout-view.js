@@ -22,7 +22,7 @@ async function loadScout(ids) {
     const [d, own] = await Promise.all([api.scoutGames(ids, have), scv.own ? null : allGames()]);
     if (d && d.players && typeof d.players === 'object') {
       scv.data = d.players;
-      for (const g of Array.isArray(d.games) ? d.games : []) if (g && g.id != null) scv.games.set(String(g.id), g);
+      for (const g of Array.isArray(d.games) ? d.games : []) if (g && g.id != null) scv.games.set(String(g.id), Stats.packGame(g));
       // keep only the games of these players (the next game's premades still find theirs)
       const used = new Set(Object.values(scv.data).flatMap(v => (v && v.ids) || []).map(String));
       for (const id of scv.games.keys()) if (!used.has(id)) scv.games.delete(id);

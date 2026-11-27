@@ -35,8 +35,8 @@
 
   // every player's figures; null where the game doesn't say (the end screen has no objectives …).
   // null for the whole game: no roles (not Summoner's Rift, not five a side)
-  function features(g) {
-    const ro = g && g.players && St.roles(g);
+  function features(g, roIn) {
+    const ro = roIn || (g && g.players && St.roles(g));
     if (!ro) return null;
     const min = Math.max(1, (g.dur || 0) / 60);
     const known = k => g.players.some(p => p.x && p.x[k] != null);
@@ -119,18 +119,61 @@
     return vals.map(v => Object.keys(FALLBACK).reduce((s, k) => s + FALLBACK[k] * (v[k] / max[k]), 0));
   }
 
-  // { place(i) 1…10, mvp: index of the best winner, ace: of the best loser, lane(i), score(i) }
-  function placements(g) {
-    const rows = RULES && RULES.quant ? features(g) : null;
+  // the score on a scale from 0 to 10: 5 = an average game (winners above it, losers below); the
+  // other modes: the share of the best possible against the best of the ten
+  const clamp10 = v => Math.max(0, Math.min(10, v));
+  const RATE = { mid: 5, per: 1.6 };
+
+  // { place(i) 1…10, mvp: index of the best winner, ace: of the best loser, lane(i), score(i), rating(i) 0–10 }
+  // ro: the roles to use (a game rebuilt for one minute keeps the roles of the whole game)
+  function placements(g, ro) {
+    const rows = RULES && RULES.quant ? features(g, ro) : null;
     const score = rows ? scoreRows(rows) : fallback(g);
     const lanes = rows ? rows.map(x => x.lane_) : g.players.map(() => null);
     const order = g.players.map((p, i) => i).sort((a, b) => score[b] - score[a]);
     const place = new Map(order.map((i, n) => [i, n + 1]));
     const best = win => order.find(i => !!g.players[i].win === win);
-    return { place: i => place.get(i), mvp: best(true), ace: best(false), lane: i => lanes[i], score: i => score[i] };
+    const rating = i => clamp10(rows ? RATE.mid + RATE.per * score[i] : 10 * score[i]);
+    return { place: i => place.get(i), mvp: best(true), ace: best(false), lane: i => lanes[i], score: i => score[i], rating };
   }
 
-  const api = { FEAT, WEIGHTS, NOT_FOR, WIN_BONUS, lane, features, groupOf, raw, probit, cdf, scoreRows, placements };
+  // the game as if it had ended at minute m: kills, deaths and assists from its kills, gold and CS
+  // from the timeline, everything else (damage, vision, damage taken …) that share of the end figures
+  function atMinute(g, m) {
+    const sec = m * 60, frac = Math.min(1, sec / Math.max(60, g.dur || 0));
+    const kills = (g.kills || []).filter(k => k[0] <= sec);
+    const players = g.players.map((p, i) => {
+      const x = {};
+      for (const [k, v] of Object.entries(p.x || {})) x[k] = typeof v === 'number' ? v * frac : v;
+      const gold = g.gold && g.gold[m] && g.gold[m][i], cs = g.csm && g.csm[m] && g.csm[m][i];
+      return { ...p, x,
+        k: kills.filter(k => k[1] === i).length, d: kills.filter(k => k[2] === i).length, a: kills.filter(k => (k[3] || []).includes(i)).length,
+        gold: gold != null ? gold : (p.gold || 0) * frac, cs: cs != null ? cs : (p.cs || 0) * frac,
+        dmg: (p.dmg || 0) * frac, vis: (p.vis || 0) * frac };
+    });
+    return { ...g, dur: Math.min(sec, g.dur || sec), players };
+  }
+  // the score minute by minute – per player an array of 0–10 values, minute 1 … the end (the last
+  // one is the game's own score); the first minutes are pulled towards 5 (a kill or two say little
+  // yet). null without a timeline (gold per minute and the kills).
+  function timeline(g) {
+    const n = g && Array.isArray(g.gold) ? g.gold.length : 0;
+    if (n < 4 || !Array.isArray(g.kills) || !g.players) return null;
+    const ro0 = St.roles(g);
+    const out = g.players.map(() => []);
+    for (let m = 1; m < n - 1; m++) {
+      const snap = atMinute(g, m);
+      const ro = ro0 && new Map(snap.players.map((p, i) => [p, ro0.get(g.players[i])]));
+      const pl = placements(snap, ro);
+      const c = Math.min(1, (m + 1) / 9);
+      for (let i = 0; i < g.players.length; i++) out[i].push(+(5 + (pl.rating(i) - 5) * c).toFixed(1));
+    }
+    const fin = placements(g);
+    for (let i = 0; i < g.players.length; i++) out[i].push(+fin.rating(i).toFixed(1));
+    return out;
+  }
+
+  const api = { FEAT, WEIGHTS, NOT_FOR, WIN_BONUS, RATE, lane, features, groupOf, raw, probit, cdf, scoreRows, placements, atMinute, timeline };
   if (node) module.exports = api;
   else root.Mvp = api;
 })(typeof window !== 'undefined' ? window : this);

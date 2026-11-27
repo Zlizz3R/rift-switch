@@ -1,5 +1,5 @@
 // Live page, right after a game: the overview of both teams (K/D/A, items, runes, ranks, damage,
-// taken and gold as bars, MVP / ACE) – the short form; lane against lane, the gold lead and the
+// taken and gold as bars, the placement with MVP and the score) – the short form; lane against lane, the gold lead and the
 // replay stay in the match history ("Open in match history"). It stands the moment the client's end
 // screen opens, while you still honor: from the end-of-game numbers (liveData.eog, live.rs); the
 // stored game replaces it when the match history has it. Shown up to 12 hours after the game, until
@@ -70,8 +70,10 @@ async function pgRanks(g) {
   if (view === 'live') renderLive();
 }
 
-// lane against lane, and MVP / ACE with the placement of all ten: ui/mvp.js
+// lane against lane, MVP and the placement and score of all ten: ui/mvp.js
 function pgLane(g, p) { return Mvp.lane(g, p); }
+// a score of 0–10 with one decimal, in the language's format
+const pgRate = v => v.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 function pgPlacements(g) { return Mvp.placements(g); }
 
 // ---------- the players' table: which figures are its columns (Columns, kept per window) ----------
@@ -109,7 +111,7 @@ const pgTables = new Map();
 // a block per team of the arena by its placing (1st … 6th) – red and blue mean nothing there
 function pgTableHtml(g, as, mine) {
   as = as || {};
-  const { place, mvp, ace, lane } = pgPlacements(g);
+  const { place, mvp, ace, lane, rating } = pgPlacements(g);
   const all = g.players;
   const key = String(g.id);
   pgTables.delete(key);
@@ -169,7 +171,9 @@ function pgTableHtml(g, as, mine) {
       const x = p.x || {};
       const st = Stats.perGame(g, p);
       const kda = st.perfect ? null : st.kda;
-      const badge = i === mvp ? `<b class="pg-pl mvp">MVP</b>` : i === ace ? `<b class="pg-pl ace">ACE</b>` : `<b class="pg-pl">#${place(i)}</b>`;
+      // MVP (the best winner) or the place; the best of the losers keeps its number, in colour; under
+      // it the score (0–10)
+      const badge = `<b class="pg-pl${i === mvp ? ' mvp' : i === ace ? ' best-loss' : ''}"${i === ace ? ` title="${esc(t('pg.bestLossT'))}"` : ''}>${i === mvp ? 'MVP' : '#' + place(i)}<em>${pgRate(rating(i))}</em></b>`;
       const r = mh.ranks[p.puuid] || {};
       const wards = x.wards != null ? ` title="${esc(t('det.visionT'))}: ${x.wards} / ${x.wardsKilled || 0} / ${x.pinks || 0}"` : '';
       return `<div class="pg-row${mine.has(p.puuid) ? ' me' : ''}">

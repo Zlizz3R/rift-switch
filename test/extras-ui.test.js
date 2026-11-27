@@ -212,7 +212,7 @@ test('match details: every player\'s augments (ARAM: Mayhem, Arena) in a column 
   });
 });
 
-test('match history: the placement (MVP, ACE, #n) in the folded row; items and augments in places of their own', () => {
+test('match history: the placement (MVP or #n) and score in the folded row; items and augments in places of their own', () => {
   const won = mhGame(1, 2400, { v: 7 });
   Object.assign(won.players[0], { k: 12, d: 0, a: 9, dmg: 45000, aug: [101, 102], multi: 2 });
   const lost = mhGame(2, 420, { v: 7 });
@@ -227,16 +227,55 @@ test('match history: the placement (MVP, ACE, #n) in the folded row; items and a
   return withApp({ replies }, async (app) => {
     await app.openMatches();
     const row = (id) => app.$(`.mh-row[data-gid="${id}"]`);
-    assert.equal(row('1').querySelector('.mh-pl').textContent, 'MVP');
+    assert.equal(row('1').querySelector('.mh-pl').firstChild.textContent, 'MVP');
     assert.ok(row('1').querySelector('.mh-pl').classList.contains('mvp'));
-    assert.match(row('2').querySelector('.mh-pl').textContent, /^#\d+$/, 'the worst of the losers: a number');
+    assert.match(row('1').querySelector('.mh-pl b').textContent, /^(10|\d)\.\d$/, 'with the score');
+    assert.match(row('2').querySelector('.mh-pl').firstChild.textContent, /^#\d+$/, 'the worst of the losers: a number');
     assert.equal(row('3').querySelector('.mh-pl'), null, 'a game from a list only: no placement');
     // items, augments and badges each in a place of its own – the items hold only the seven items
     const r1 = row('1');
     assert.equal(r1.querySelectorAll('.mh-items > *').length, 7);
     assert.equal(r1.querySelectorAll('.mh-aug-col .aug').length, 2);
-    assert.match(r1.querySelector('.mh-badges').textContent, /MVP\s*Double Kill/);
+    assert.match(r1.querySelector('.mh-badges').textContent, /MVP\s*[\d.]+\s*Double Kill/);
     assert.equal(row('2').querySelector('.mh-aug-col').children.length, 0, 'no augments: the place stays empty');
+  });
+});
+
+test('match details: the score over the game – two players\' curves from 0 to 10, the pair shared with Compare', () => {
+  const g = mhGame(6, 420, { v: 7, mode: 'CLASSIC' });
+  // a timeline: 21 frames of gold and CS; player 0 kills player 5 early and often
+  g.gold = Array.from({ length: 21 }, (_, m) => g.players.map((p, i) => 500 + m * (i === 0 ? 450 : 350)));
+  g.csm = Array.from({ length: 21 }, (_, m) => g.players.map(() => m * 7));
+  g.kills = Array.from({ length: 6 }, (_, k) => [120 + k * 150, 0, 5, [1], 50, 50]);
+  Object.assign(g.players[0], { k: 6, d: 0, a: 2 });
+  Object.assign(g.players[5], { k: 0, d: 6, a: 0 });
+  Object.assign(g.players[1], { a: 10 });
+  const replies = {
+    matches: { index: [[g.id, g.t, g.q, P(1)]], waiting: 0, loadingOlder: false, clientUp: true },
+    'matches-get': [g],
+  };
+  return withApp({ replies }, async (app) => {
+    await app.openMatches();
+    await app.click(app.$('.mh-row .mh-meta'));
+    await app.settle();
+    const plot = app.$('.mh-det .sc-plot');
+    assert.ok(plot, 'the score section is open with the players');
+    const a = plot.dataset.a.split(',').map(Number), b = plot.dataset.b.split(',').map(Number);
+    assert.equal(a.length, 20, 'minute 1 … 19 and the end');
+    assert.ok(a.every(v => v >= 0 && v <= 10) && b.every(v => v >= 0 && v <= 10));
+    assert.ok(a[a.length - 1] > b[b.length - 1], 'me above the player I killed');
+    // the last point is the score under the placement
+    const myEm = app.$$('.mh-det .pg-row')[0].querySelector('.pg-pl em').textContent;
+    assert.equal(a[a.length - 1].toFixed(1), myEm);
+    assert.match(app.$('.mh-det .sc-end').textContent, new RegExp(myEm.replace('.', '\\.')));
+    // another player in the score's own picker: the pair changes, Compare follows
+    const sel = app.$('.mh-det [data-sec="score"] + .det-body [data-cmp="1"]');
+    sel.value = '2';
+    sel.dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    await app.settle();
+    assert.equal(app.$('.mh-det [data-sec="score"] + .det-body [data-cmp="0"]').value, '0', 'the first one stays');
+    assert.equal(app.$('.mh-det [data-sec="score"] + .det-body [data-cmp="1"]').value, '2');
+    assert.deepEqual(app.errors.map(String), []);
   });
 });
 

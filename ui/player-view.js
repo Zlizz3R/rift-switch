@@ -35,7 +35,7 @@ async function loadPlayer() {
     if (as) assets = as;
     if (Array.isArray(ch) && ch.length) champs = ch;
     if (d && plv.p && plv.p.puuid === p.puuid) {
-      for (const g of Array.isArray(d.games) ? d.games : []) if (g && g.id != null) plv.games.set(String(g.id), g);
+      for (const g of Array.isArray(d.games) ? d.games : []) if (g && g.id != null) plv.games.set(String(g.id), Stats.packGame(g));
       plv.ids = (d.ids || []).map(String);
       const keep = new Set(plv.ids);
       for (const id of plv.games.keys()) if (!keep.has(id)) plv.games.delete(id);

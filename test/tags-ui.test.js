@@ -50,7 +50,7 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     // weak ≤ 6.4 … master ≥ 7.8) and where they come from
     const farmAll = [...all().querySelectorAll('.tchip')].find(c => /Great farmer/.test(c.textContent));
     assert.match(farmAll.title, /^CS per minute \(minions and monsters\)/);
-    assert.match(farmAll.title, /Thresholds for Mid: Master ≥ 7\.8 · Good ≥ 7\.3 · Weak ≤ 6\.4 · Very weak ≤ 5\.9\nThe thresholds come from/);
+    assert.match(farmAll.title, /Thresholds for Mid: Master ≥ 7\.9 · Good ≥ 7\.4 · Weak ≤ 6\.5 · Very weak ≤ 6\.0\nThe thresholds come from/);
     assert.match(all().querySelector('.tchip.tc-not').title, /\n\nNot met\nYour value: /);
     // the tags only Live shows are not here at all
     for (const re of [/Autofill/i, /Main taken/i, /Main banned/i, /New to/i]) assert.ok(![...all().querySelectorAll('.tchip')].some(c => re.test(c.textContent)), String(re));
@@ -65,7 +65,7 @@ test('tags: strengths on top, every tag by group, a click shows the numbers; per
     await app.click(farm);
     const det = app.$('.tdetail').textContent;
     assert.match(det, /Ø 10\.0 CS\/min in 12 games/);
-    assert.match(det, /Threshold: 7\.8/);
+    assert.match(det, /Threshold: 7\.9/);
     assert.match(det, /Season \d{4}/);
     // no text key without a translation
     assert.doesNotMatch(app.$('#dashTags').innerHTML, /\btags?\.[a-zA-Z]+\.?[a-zA-Z]*\b(?![^<]*>)/);

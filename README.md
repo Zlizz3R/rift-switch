@@ -159,8 +159,9 @@ into one category.
   the numbers behind it. "Too little data" is never shown as "not met".
   **ARAM** has 32 traits of its own (damage dealer, team fighter, frontliner, healing machine, CC machine, multikill
   and quadra hunter, team carry, finisher, enabler, poke master, tower crusher, gold machine, iron skin, spell slinger
-  or weapon master, never gives up, late or early game …) and **Arena** 19 (podium regular, crown collector, Arena
-  veteran, damage dealer, survivor, wingman, frontliner, healing machine, champion collector …), each measured
+  or weapon master, never gives up, late or early game …) and **Arena** 31 (podium regular, crown collector,
+  finalist, carry of the team, kill leader, always in on it, Arena specialist, damage dealer, survivor, wingman,
+  frontliner, healing machine, gold machine, iron skin, true damage dealer, champion collector …), each measured
   against the games of the other players in that mode – also on Live's cards in an ARAM or Arena game.
   Other players (Live, the player page) only get what speaks for them – the things to work on are for your own accounts.
 - **Map** – Summoner's Rift, ARAM's map (its one lane from base to base: own base, own towers, the middle, enemy
@@ -192,7 +193,7 @@ you are logged in to that account.)
 A tab of the Overview – its accounts are the Overview's chips.
 
 - **Every game of every account** in one list, kept by Rift Switch itself – no limit, also with League closed. Each
-  row shows your **placement** in that game (MVP, ACE or #n) next to the items and augments.
+  row shows your **placement** in that game (MVP or #n) and your **score** (0–10) next to the items and augments.
   One **Load** button (on every page) fetches everything at once: collection, mastery, ranks and the 200 newest
   games of every account – the most the League client hands out. Rift Switch keeps them all, so the history grows
   with every Load – and it **loads by itself** when an account signs in (Settings → Logging in; once per account in
@@ -214,8 +215,10 @@ A tab of the Overview – its accounts are the Overview's chips.
 - **Open a game**: every player's stats, items, runes and ranks (and in Arena and ARAM: Mayhem every player's
   augments, right of the gold; Arena's six teams by their placing) – the table's figures are yours to choose
   (*Columns*: damage, taken, gold, per minute, mitigated, healing, objectives, towers, crowd control, wards; up to
-  five) – the **placement** of all ten with MVP and ACE: every player against players on the same role with the
-  same result, tuned on thousands of stored games so that every role is MVP equally often – team gold over time (hover for the lead at each
+  five) – the **placement** of all ten with MVP (the best of the losers keeps its number, in purple) and a **score**
+  from 0 to 10 (5 = an average game): every player against players on the same role with the same result, tuned on
+  thousands of stored games so that every role is MVP equally often – the **score over the game**, minute by minute,
+  for any two players (the game as if it had ended then) – team gold over time (hover for the lead at each
   minute), any two players side by side – and its **replay**: download it and watch it in League (games of the
   current patch on the server League runs on).
 
@@ -243,7 +246,7 @@ A tab of the Overview – its accounts are the Overview's chips.
   together before) get a coloured frame, players you met before a tag ("Yesterday: enemy (Kennen)"), and each team's
   **damage mix** (AD / AP / True) shows what to build against.
 - **After the game**: the overview of both teams stands the moment the end screen opens – while you still honor –
-  from the client's end-of-game numbers: K/D/A, CS, items, damage, taken, gold, MVP / ACE. When the match history
+  from the client's end-of-game numbers: K/D/A, CS, items, damage, taken, gold, placement, MVP and score. When the match history
   has the game it takes over (with what changed in your tags, ▲ / ▼); lane against lane, the gold lead and the replay
   are one click away in the match history.
 - A **blue dot** on *Live* while a game is on (champion select or in game), whatever page you are on.

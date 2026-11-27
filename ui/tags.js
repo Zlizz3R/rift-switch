@@ -13,6 +13,18 @@
   const avgOf = list => (list.length ? list.reduce((s, x) => s + x, 0) / list.length : null);
   const withX = rows => rows.filter(x => x.p.x && typeof x.p.x === 'object');
   const dmgAll = x => (x.phys || 0) + (x.magic || 0) + (x.true || 0);
+  // Arena: f(player, the players of their team) over the games with the whole team stored → { v, n }
+  function arenaTeam(rows, f) {
+    const vals = [];
+    for (const x of rows) {
+      if (x.g.lite || !(x.p.place > 0)) continue;
+      const team = x.g.players.filter(o => o.place === x.p.place);
+      if (team.length < 2) continue;
+      const v = f(x.p, team);
+      if (v != null && Number.isFinite(v)) vals.push(v);
+    }
+    return { v: avgOf(vals), n: vals.length };
+  }
   const METRICS = {
     csMin: rows => { const a = St.aggregate(rows); return { v: a && a.csMin, n: rows.length }; },
     dmgMin: rows => { const a = St.aggregate(rows); return { v: a && a.dmgMin, n: rows.length }; },
@@ -156,6 +168,13 @@
     placeAvg: rows => { const r = rows.filter(x => x.p.place > 0); return { v: avgOf(r.map(x => x.p.place)), n: r.length }; },
     top3: rows => { const r = rows.filter(x => x.p.place > 0); return { v: avgOf(r.map(x => (x.p.place <= 3 ? 1 : 0))), n: r.length }; },
     first: rows => { const r = rows.filter(x => x.p.place > 0); return { v: avgOf(r.map(x => (x.p.place === 1 ? 1 : 0))), n: r.length }; },
+    top2: rows => { const r = rows.filter(x => x.p.place > 0); return { v: avgOf(r.map(x => (x.p.place <= 2 ? 1 : 0))), n: r.length }; },
+    trueShare: rows => { const r = withX(rows).filter(x => dmgAll(x.p.x)); return { v: avgOf(r.map(x => (x.p.x.true || 0) / dmgAll(x.p.x))), n: r.length }; },
+    // Arena's team: the players with the same place (games with every player stored); each player
+    // against an even share of the team (1 = as much as each team mate), and the kill participation
+    arenaDmgShare: rows => arenaTeam(rows, (p, t) => { const s = t.reduce((a, o) => a + (o.dmg || 0), 0); return s ? (p.dmg || 0) / (s / t.length) : null; }),
+    arenaKillShare: rows => arenaTeam(rows, (p, t) => { const s = t.reduce((a, o) => a + (o.k || 0), 0); return s ? p.k / (s / t.length) : null; }),
+    arenaKp: rows => arenaTeam(rows, (p, t) => { const s = t.reduce((a, o) => a + (o.k || 0), 0); return s ? Math.min(1, (p.k + p.a) / s) : null; }),
     comeback10: rows => {
       const r = rows.filter(x => { const d = St.teamGoldDiffAt(x.g, x.p, 10); return d != null && d <= -ARAM_COMEBACK_GOLD; });
       return { v: r.length ? r.filter(x => x.p.win).length / r.length : null, n: r.length, vars: { w: r.filter(x => x.p.win).length } };
@@ -177,7 +196,7 @@
     for (let m = 0; m + 1 < g.jcs.length; m++) {
       const d = (g.jcs[m + 1][i] || 0) - (g.jcs[m][i] || 0);
       if (d <= 0) continue;
-      const a = g.at[m] && g.at[m][i], b = g.at[m + 1] && g.at[m + 1][i];
+      const a = St.posAt(g, m, i), b = St.posAt(g, m + 1, i);
       s += d * (((a && St.zone(a[0], a[1]) === theirs) ? 0.5 : 0) + ((b && St.zone(b[0], b[1]) === theirs) ? 0.5 : 0));
     }
     return s;

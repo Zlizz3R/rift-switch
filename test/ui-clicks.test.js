@@ -397,7 +397,7 @@ test('live page: in the lobby each penalty sits on its player\'s row – own acc
   });
 });
 
-test('live page after a game: the last game with both teams, MVP / ACE, bars with the best = 100 %; opens in the match history', () => {
+test('live page after a game: the last game with both teams, MVP, the best loser numbered in colour, a score each, bars with the best = 100 %; opens in the match history', () => {
   const pl = (i) => ({ puuid: i === 0 ? P(1) : 'x' + i, name: 'N' + i, tag: 'EUW', team: i < 5 ? 100 : 200, win: i < 5, champ: i + 1, lvl: 12, k: i, d: 2, a: 3, cs: 150 + i,
     gold: 9000 + i * 100, dmg: 10000 + i * 1000, vis: 20, spells: [4, 14], keystone: 8112, sub: 8300, items: [3031, 0, 0, 0, 0, 0, 3340], x: { taken: 20000 + i * 500 } });
   const game = { id: '77', t: Date.now() - 40 * 60000, dur: 1800, q: 420, players: Array.from({ length: 10 }, (_, i) => pl(i)),
@@ -413,7 +413,12 @@ test('live page after a game: the last game with both teams, MVP / ACE, bars wit
     assert.ok(rows[0].classList.contains('me'), 'my own row is marked');
     assert.equal(app.$$('.pg-pl.mvp').length, 1);
     assert.ok(rows.slice(0, 5).some((r) => r.querySelector('.pg-pl.mvp')), 'MVP is on the winning side');
-    assert.ok(rows.slice(5).some((r) => r.querySelector('.pg-pl.ace')), 'ACE is on the losing side');
+    const best = rows.slice(5).map((r) => r.querySelector('.pg-pl.best-loss')).find(Boolean);
+    assert.ok(best, 'the best loser is marked on the losing side');
+    assert.match(best.firstChild.textContent, /^#\d+$/, 'with its number, no ACE');
+    assert.doesNotMatch(app.$('.pg-table').textContent, /ACE/);
+    // every player's score from 0 to 10 under the placement
+    for (const r of rows) assert.match(r.querySelector('.pg-pl em').textContent, /^(10|\d)\.\d$/);
     assert.equal(app.$$('.pg-bans img').length, 2);
     assert.doesNotMatch(app.$('#liveBody').textContent, /Nothing going on/i);
     // the best damage (the last player) fills its bar
@@ -735,7 +740,7 @@ test('match history: a click opens the details (not on a name); a name opens the
   await app.click(app.$('.mh-row .mh-kda') || app.$('.mh-row .mh-meta'));
   assert.ok(app.$('.mh-det'), 'details open');
   assert.equal(app.$$('.mh-det .pg-row').length, 10, 'players open at first, as the post-game table');
-  assert.ok(app.$('.mh-det .pg-pl.mvp') && app.$('.mh-det .pg-pl.ace'), 'MVP and ACE');
+  assert.ok(app.$('.mh-det .pg-pl.mvp') && app.$('.mh-det .pg-pl.best-loss'), 'MVP and the best loser');
   const lanes = app.$$('.mh-det .pg-lane');
   assert.equal(lanes.length, 10, 'a lane factor for everyone with a position');
   assert.ok(lanes[0].classList.contains('down') && lanes[5].classList.contains('up'), 'top N0 (0 kills) lost his lane to N5');
